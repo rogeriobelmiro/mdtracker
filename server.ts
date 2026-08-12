@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
 import bcrypt from 'bcryptjs';
@@ -1009,6 +1008,7 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
 async function startLocalServer() {
   const PORT = 3000;
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
