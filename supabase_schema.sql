@@ -188,3 +188,9 @@ CREATE POLICY "Permitir insert anonimo em companies" ON companies FOR INSERT TO 
 CREATE POLICY "Permitir insert anonimo em users" ON users FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "Permitir select anonimo em companies" ON companies FOR SELECT TO anon USING (true);
 CREATE POLICY "Permitir select anonimo em users" ON users FOR SELECT TO anon USING (true);
+
+-- Políticas RLS adicionais para tabelas de aplicação
+CREATE POLICY "Permitir all anonimo em campaign_links" ON campaign_links FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em leads" ON leads FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em webhook_logs" ON webhook_logs FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em settings" ON settings FOR ALL TO anon USING (true) WITH CHECK (true);
