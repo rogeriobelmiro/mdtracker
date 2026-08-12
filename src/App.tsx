@@ -80,18 +80,15 @@ export default function App() {
       
       if (companiesRes && companiesRes.length > 0) {
         setCompanies(companiesRes);
-        // Se a empresa atual não existir mais ou não tiver sido carregada ainda, usar a primeira
-        if (!currentCompany || !companiesRes.find(c => c.id === currentCompany.id)) {
-          setCurrentCompany(companiesRes[0]);
-        } else {
+        if (currentCompany) {
           // Atualiza os dados da empresa atual caso tenham mudado (ex: logomarca, cnpj)
-          setCurrentCompany(companiesRes.find(c => c.id === currentCompany.id) || companiesRes[0]);
+          setCurrentCompany(companiesRes.find(c => c.id === currentCompany.id) || currentCompany);
         }
       }
       if (usersRes && usersRes.length > 0) {
         setUsers(usersRes);
-        if (!currentUser || !usersRes.find(u => u.id === currentUser.id)) {
-          setCurrentUser(usersRes[0]);
+        if (currentUser) {
+          setCurrentUser(usersRes.find(u => u.id === currentUser.id) || currentUser);
         }
       }
     } catch (err) {
