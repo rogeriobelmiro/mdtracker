@@ -660,6 +660,7 @@ app.get('/api/leads/export', async (req: Request, res: Response) => {
 
 // Settings API
 app.get('/api/settings', async (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const settings = await getSettings();
     res.json(settings);
 });
