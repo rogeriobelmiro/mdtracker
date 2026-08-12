@@ -3,7 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Mappers to convert between frontend camelCase and DB snake_case
 const mapCompanyToDB = (c: any) => ({
