@@ -3,7 +3,7 @@ import {
   Building2, Lock, Mail, ShieldCheck, RefreshCw, KeyRound, CheckCircle2, UserCheck, Sparkles, AlertCircle, Eye, EyeOff, UserPlus
 } from 'lucide-react';
 import { User, Company } from '../types';
-import { createCompany, createUser } from '../services/api';
+import { createCompany, createUser, loginUser } from '../services/api';
 
 interface LoginScreenProps {
   companies: Company[];
@@ -50,7 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     generateCaptcha();
   }, []);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     setCaptchaError(false);
@@ -63,29 +63,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    // 2. Find User by Email & Company
-    const foundUser = users.find(u => 
-      u.email.toLowerCase() === email.trim().toLowerCase() && 
-      u.companyId === selectedCompanyId &&
-      u.active
-    );
-
-    if (!foundUser) {
-      setAuthError('Usuário ou senha incorretos para a empresa selecionada.');
+    try {
+      const { user, company } = await loginUser(email, password);
+      onLoginSuccess(user, company);
+    } catch (err: any) {
+      setAuthError(err.message || 'Usuário ou senha incorretos.');
       generateCaptcha();
-      return;
     }
-
-    const foundCompany = companies.find(c => c.id === foundUser.companyId);
-
-    if (!foundCompany || !foundCompany.active) {
-      setAuthError('Empresa inativa ou não encontrada. Entre em contato com o suporte.');
-      generateCaptcha();
-      return;
-    }
-
-    // Login successful
-    onLoginSuccess(foundUser, foundCompany);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -187,7 +171,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <p className="text-xs text-slate-500 mt-1">
                   {isRegistering 
                     ? 'Cadastre sua empresa e crie o primeiro usuário administrador.' 
-                    : 'Selecione a empresa e informe suas credenciais de usuário.'}
+                    : 'Informe suas credenciais de acesso.'}
                 </p>
               </div>
               <button
@@ -212,24 +196,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             {!isRegistering ? (
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 
-                {/* Select Company */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                    Empresa / Organização
-                  </label>
-                  <select
-                    value={selectedCompanyId}
-                    onChange={(e) => setSelectedCompanyId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:bg-white focus:border-blue-600 focus:outline-none"
-                  >
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.cnpj ? `(${c.cnpj})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
 
                 {/* Email */}
                 <div>

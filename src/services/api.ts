@@ -49,6 +49,19 @@ export async function createUser(data: Partial<User>): Promise<User> {
   return res.json();
 }
 
+export async function loginUser(email: string, password: string): Promise<{ user: User, company: Company }> {
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao realizar login');
+  }
+  return res.json();
+}
+
 export async function updateUser(id: string, data: Partial<User>): Promise<User> {
   const res = await fetch(`/api/users/${id}`, {
     method: 'PUT',

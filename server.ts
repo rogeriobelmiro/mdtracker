@@ -3,6 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
+import bcrypt from 'bcrypt';
 
 // Mappers to convert between frontend camelCase and DB snake_case
 const mapCompanyToDB = (c: any) => ({
@@ -36,6 +37,7 @@ const mapUserToDB = (u: any) => ({
     company_id: u.companyId,
     name: u.name,
     email: u.email,
+    ...(u.password && { password: u.password }),
     role: u.role,
     avatar_url: u.avatarUrl,
     active: u.active,
@@ -319,10 +321,47 @@ app.get('/api/users', async (req: Request, res: Response) => {
 
 app.post('/api/users', async (req: Request, res: Response) => {
     const body = req.body;
+    if (body.password) {
+        body.password = await bcrypt.hash(body.password, 10);
+    }
     const dbRecord = mapUserToDB(body);
     const { error } = await supabase.from('users').insert(dbRecord);
     if (error) return res.status(500).json({ error: error.message });
     res.json(body);
+});
+
+app.post('/api/login', async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'E-mail e senha são obrigatórios' });
+
+    const { data: user, error: fetchErr } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('email', email.trim())
+        .eq('active', true)
+        .maybeSingle();
+        
+    if (fetchErr || !user || !user.password) {
+        return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+        return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
+    }
+    
+    const { data: company, error: companyErr } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', user.company_id)
+        .eq('active', true)
+        .maybeSingle();
+        
+    if (companyErr || !company) {
+        return res.status(401).json({ error: 'Empresa inativa ou não encontrada.' });
+    }
+
+    res.json({ user: mapUserFromDB(user), company: mapCompanyFromDB(company) });
 });
 
 app.put('/api/users/:id', async (req: Request, res: Response) => {

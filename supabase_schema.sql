@@ -178,3 +178,11 @@ INSERT INTO webhook_logs (id, company_id, url, event, status, payload, timestamp
 ('log-1', 'comp-alfa', 'https://webhook.site/demo-rastreamento-whatsapp', 'lead_created', 200, '{"event":"lead_created","lead":{"id":"lead-104","name":"Patricia Lima","source":"meta_ads","campaign":"black_friday_2026"}}', '2026-08-10T10:05:01.000Z', 'Patricia Lima'),
 ('log-2', 'comp-alfa', 'https://webhook.site/demo-rastreamento-whatsapp', 'lead_stage_updated', 200, '{"event":"lead_stage_updated","lead_id":"lead-101","old_stage":"Em Negociação","new_stage":"Convertido","value":1490.00}', '2026-08-10T11:20:01.000Z', 'Carlos Eduardo Silva')
 ON CONFLICT (id) DO NOTHING;
+
+-- Políticas de RLS (Row Level Security) para permitir cadastro
+-- Se preferir não usar RLS por enquanto, você pode desativar com:
+-- ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir insert anonimo em companies" ON companies FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Permitir insert anonimo em users" ON users FOR INSERT TO anon WITH CHECK (true);
