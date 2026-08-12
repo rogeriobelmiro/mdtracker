@@ -46,7 +46,39 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onUpdateSettings(formData);
+    
+    // Auto-add pending keywords from input fields
+    let updatedData = { ...formData };
+    const currentRules = updatedData.autoStageKeywords || [...DEFAULT_KEYWORDS];
+    let rulesChanged = false;
+    let newRules = [...currentRules];
+    
+    FUNNEL_STAGES.forEach(stage => {
+      const pendingKw = (newKeywordInputs[stage] || '').trim().toLowerCase();
+      if (pendingKw) {
+        rulesChanged = true;
+        const existingRuleIdx = newRules.findIndex(r => r.stage === stage);
+        if (existingRuleIdx >= 0) {
+          const currentKws = newRules[existingRuleIdx].keywords;
+          if (!currentKws.includes(pendingKw)) {
+            newRules[existingRuleIdx] = {
+              ...newRules[existingRuleIdx],
+              keywords: [...currentKws, pendingKw]
+            };
+          }
+        } else {
+          newRules.push({ stage, keywords: [pendingKw], enabled: true });
+        }
+      }
+    });
+
+    if (rulesChanged) {
+      updatedData = { ...updatedData, autoStageKeywords: newRules };
+      setFormData(updatedData);
+      setNewKeywordInputs({}); // Clear inputs
+    }
+
+    await onUpdateSettings(updatedData);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
