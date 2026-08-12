@@ -926,6 +926,7 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
 
           function autoRegisterLead(customName, customPhone) {
             const leadData = {
+              companyId: '${linkObj.companyId}',
               name: customName || 'Lead via ' + utmSource,
               phone: customPhone || '',
               location: locationData,
