@@ -11,6 +11,10 @@ export async function updateCompany(id: string, data: Partial<Company>): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
   return res.json();
 }
 

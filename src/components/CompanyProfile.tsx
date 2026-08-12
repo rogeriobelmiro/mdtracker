@@ -22,9 +22,15 @@ export function CompanyProfile({ currentCompany, onUpdateCompany }: CompanyProfi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await onUpdateCompany(currentCompany.id, formData);
-    setSaving(false);
-    alert('Dados da empresa atualizados com sucesso!');
+    try {
+      await onUpdateCompany(currentCompany.id, formData);
+      alert('Dados da empresa atualizados com sucesso!');
+    } catch (error) {
+      console.error(error);
+      alert('Houve um erro ao salvar os dados da empresa. Verifique sua conexão e tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
