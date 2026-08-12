@@ -186,3 +186,5 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Permitir insert anonimo em companies" ON companies FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "Permitir insert anonimo em users" ON users FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Permitir select anonimo em companies" ON companies FOR SELECT TO anon USING (true);
+CREATE POLICY "Permitir select anonimo em users" ON users FOR SELECT TO anon USING (true);
