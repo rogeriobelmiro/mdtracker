@@ -227,7 +227,7 @@ function buildWhatsAppUrl(phone: string, template: string, params: Record<string
 }
 
 // Simulated Geolocation lookup by IP
-function mockGeoFromIp(ip: string): { city: string; state: string; country: string } {
+function mockGeoFromIp(ip: string): { city: string; state: string; country: string; ip: string } {
   const sampleCities = [
     { city: 'São Paulo', state: 'SP', country: 'Brasil' },
     { city: 'Rio de Janeiro', state: 'RJ', country: 'Brasil' },
@@ -246,7 +246,7 @@ function mockGeoFromIp(ip: string): { city: string; state: string; country: stri
     hash |= 0;
   }
   const idx = Math.abs(hash) % sampleCities.length;
-  return sampleCities[idx];
+  return { ...sampleCities[idx], ip };
 }
 
 async function triggerWebhook(url: string, eventName: string, payload: any, leadName?: string) {
@@ -461,13 +461,24 @@ app.get('/api/leads', async (req: Request, res: Response) => {
 
 app.post('/api/leads', async (req: Request, res: Response) => {
     const body = req.body;
+    
+    // Real location from Vercel Headers or fallback to mock
+    const userIp = (req.headers['x-forwarded-for'] as string || req.ip || '177.100.20.10').split(',')[0].trim();
+    const vercelCity = req.headers['x-vercel-ip-city'] as string;
+    const locationObj = vercelCity ? {
+      city: decodeURIComponent(vercelCity),
+      state: req.headers['x-vercel-ip-country-region'] as string || '',
+      country: req.headers['x-vercel-ip-country'] as string || '',
+      ip: userIp
+    } : mockGeoFromIp(userIp);
+
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
       companyId: body.companyId || 'comp-alfa',
       name: body.name || 'Lead Anônimo',
       phone: body.phone || '',
       email: body.email || '',
-      location: body.location || mockGeoFromIp(req.ip || '177.100.20.10'),
+      location: body.location || locationObj,
       source: body.source || 'Direct / Meta Ads',
       utmSource: body.utmSource || 'meta_ads',
       utmMedium: body.utmMedium || 'cpc',
@@ -792,7 +803,19 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const userAgent = req.headers['user-agent'] || 'Mobile Browser';
     const isMobile = /mobile/i.test(userAgent);
     const deviceType = isMobile ? 'Dispositivo Móvel' : 'Desktop / Computador';
-    const location = mockGeoFromIp(userIp);
+    
+    // Real location from Vercel Headers or fallback to mock
+    const vercelCity = req.headers['x-vercel-ip-city'] as string;
+    const vercelState = req.headers['x-vercel-ip-country-region'] as string;
+    const vercelCountry = req.headers['x-vercel-ip-country'] as string;
+    
+    const location = vercelCity ? {
+      city: decodeURIComponent(vercelCity),
+      state: vercelState || '',
+      country: vercelCountry || '',
+      ip: userIp
+    } : mockGeoFromIp(userIp);
+
 
     // Build params for message formatting
     const msgParams: Record<string, string> = {
