@@ -7,8 +7,12 @@ import { IntegrationsAndEvents } from './components/IntegrationsAndEvents';
 import { BroadcastCampaigns } from './components/BroadcastCampaigns';
 import { WhatsAppChatInbox } from './components/WhatsAppChatInbox';
 import { UserManagement } from './components/UserManagement';
+import { CompanyProfile } from './components/CompanyProfile';
 import { LoginScreen } from './components/LoginScreen';
 import {
+  fetchCompanies,
+  fetchUsers,
+  updateCompany,
   fetchStats,
   fetchLinks,
   createLink,
@@ -26,7 +30,7 @@ import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User
 import { initialCompanies, initialUsers } from './data/seedData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Multi-tenant & User Management States
@@ -58,17 +62,36 @@ export default function App() {
   // Load Initial Application State
   const loadData = async () => {
     try {
-      const [linksRes, leadsRes, settingsRes, logsRes] = await Promise.all([
+      const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes] = await Promise.all([
         fetchLinks(),
         fetchLeads(),
         fetchSettings(),
         fetchWebhookLogs(),
+        fetchCompanies(),
+        fetchUsers()
       ]);
 
       setLinks(linksRes);
       setLeads(leadsRes);
       setSettings(settingsRes);
       setWebhookLogs(logsRes);
+      
+      if (companiesRes && companiesRes.length > 0) {
+        setCompanies(companiesRes);
+        // Se a empresa atual não existir mais ou não tiver sido carregada ainda, usar a primeira
+        if (!currentCompany || !companiesRes.find(c => c.id === currentCompany.id)) {
+          setCurrentCompany(companiesRes[0]);
+        } else {
+          // Atualiza os dados da empresa atual caso tenham mudado (ex: logomarca, cnpj)
+          setCurrentCompany(companiesRes.find(c => c.id === currentCompany.id) || companiesRes[0]);
+        }
+      }
+      if (usersRes && usersRes.length > 0) {
+        setUsers(usersRes);
+        if (!currentUser || !usersRes.find(u => u.id === currentUser.id)) {
+          setCurrentUser(usersRes[0]);
+        }
+      }
     } catch (err) {
       console.error('Erro ao carregar dados do sistema:', err);
     } finally {
@@ -214,6 +237,11 @@ export default function App() {
     await loadData();
   };
 
+  const handleUpdateCompany = async (id: string, data: Partial<Company>) => {
+    await updateCompany(id, data);
+    await loadData();
+  };
+
   const handleTestWebhook = async (url: string) => {
     const res = await testWebhook(url);
     await loadData();
@@ -236,7 +264,7 @@ export default function App() {
       <div className="min-h-screen bg-[#F1F5F9] text-slate-800 flex items-center justify-center p-4">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-semibold text-slate-600">Iniciando WhatsTracker Multiempresa...</p>
+          <p className="text-sm font-semibold text-slate-600">Iniciando MDTracker...</p>
         </div>
       </div>
     );
@@ -327,13 +355,20 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'company' && currentUser.role === 'admin' && (
+          <CompanyProfile
+            currentCompany={currentCompany}
+            onUpdateCompany={handleUpdateCompany}
+          />
+        )}
+
       </main>
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 py-4 mt-auto text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
-            WhatsTracker Multiempresa &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
+            MDTracker &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
           </p>
           <div className="flex items-center gap-3 text-[11px] text-slate-500">
             <span className="flex items-center gap-1">

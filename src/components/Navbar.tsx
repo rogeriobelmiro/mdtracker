@@ -6,8 +6,8 @@ import {
 import { User, Company } from '../types';
 
 interface NavbarProps {
-  activeTab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users';
-  setActiveTab: (tab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users') => void;
+  activeTab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company';
+  setActiveTab: (tab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company') => void;
   onOpenCreateModal: () => void;
   currentUser: User;
   currentCompany: Company;
@@ -67,12 +67,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Logo & Branding */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center text-white font-bold shadow-xs">
-              <span className="font-bold text-lg">W</span>
-            </div>
+            {currentCompany.logoUrl ? (
+              <img src={currentCompany.logoUrl} alt="Logo" className="h-8 w-8 object-contain rounded bg-slate-100" />
+            ) : (
+              <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center text-white font-bold shadow-xs">
+                <span className="font-bold text-lg">{currentCompany.name.charAt(0)}</span>
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base text-slate-900 tracking-tight">WhatsTracker</span>
+                <span className="font-bold text-base text-slate-900 tracking-tight">MDTracker</span>
                 <span className="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-200">
                   Multiempresa
                 </span>
@@ -171,17 +175,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Equipe / Usuários (Cadastro de Usuários pelo Adm) */}
             {currentUser.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                  activeTab === 'users'
-                    ? 'bg-purple-50 text-purple-700 font-bold border-l-4 border-purple-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <UserPlus className="w-3.5 h-3.5 text-purple-600" />
-                Usuários
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                    activeTab === 'users'
+                      ? 'bg-purple-50 text-purple-700 font-bold border-l-4 border-purple-600'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-purple-600" />
+                  Usuários
+                </button>
+                <button
+                  onClick={() => setActiveTab('company')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                    activeTab === 'company'
+                      ? 'bg-orange-50 text-orange-700 font-bold border-l-4 border-orange-600'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-orange-600" />
+                  Minha Empresa
+                </button>
+              </>
             )}
 
           </nav>
@@ -232,14 +249,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {currentUser.role === 'admin' && (
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                activeTab === 'users' ? 'bg-purple-50 text-purple-700 font-bold border-l-2 border-purple-600' : 'text-slate-600'
-              }`}
-            >
-              Usuários
-            </button>
+            <>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                  activeTab === 'users' ? 'bg-purple-50 text-purple-700 font-bold border-l-2 border-purple-600' : 'text-slate-600'
+                }`}
+              >
+                Usuários
+              </button>
+              <button
+                onClick={() => setActiveTab('company')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                  activeTab === 'company' ? 'bg-orange-50 text-orange-700 font-bold border-l-2 border-orange-600' : 'text-slate-600'
+                }`}
+              >
+                Empresa
+              </button>
+            </>
           )}
         </div>
 

@@ -1,4 +1,25 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User } from '../types';
+
+export async function fetchCompanies(): Promise<Company[]> {
+  const res = await fetch('/api/companies');
+  return res.json();
+}
+
+export async function updateCompany(id: string, data: Partial<Company>): Promise<Company> {
+  const res = await fetch(`/api/companies/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function fetchUsers(): Promise<User[]> {
+  const res = await fetch('/api/users');
+  return res.json();
+}
+
+
 
 export async function fetchStats(): Promise<StatsSummary> {
   const res = await fetch('/api/stats');

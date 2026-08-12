@@ -8,6 +8,10 @@ export interface Company {
   cnpj?: string;
   plan: 'starter' | 'pro' | 'enterprise';
   active: boolean;
+  logoUrl?: string;
+  responsibleName?: string;
+  phone?: string;
+  address?: string;
   createdAt: string;
 }
 

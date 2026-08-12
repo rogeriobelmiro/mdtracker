@@ -5,6 +5,43 @@ import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from
 import { supabase } from './src/lib/supabase.js';
 
 // Mappers to convert between frontend camelCase and DB snake_case
+const mapCompanyToDB = (c: any) => ({
+    id: c.id,
+    name: c.name,
+    cnpj: c.cnpj,
+    plan: c.plan,
+    active: c.active,
+    logo_url: c.logoUrl,
+    responsible_name: c.responsibleName,
+    phone: c.phone,
+    address: c.address,
+    updated_at: new Date().toISOString()
+});
+
+const mapCompanyFromDB = (db: any) => ({
+    id: db.id,
+    name: db.name,
+    cnpj: db.cnpj,
+    plan: db.plan,
+    active: db.active,
+    logoUrl: db.logo_url,
+    responsibleName: db.responsible_name,
+    phone: db.phone,
+    address: db.address,
+    createdAt: db.created_at
+});
+
+const mapUserFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    name: db.name,
+    email: db.email,
+    role: db.role,
+    avatarUrl: db.avatar_url,
+    active: db.active,
+    createdAt: db.created_at
+});
+
 const mapLinkToDB = (link: any) => ({
     id: link.id,
     company_id: link.companyId || 'comp-alfa',
@@ -237,6 +274,28 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Companies API
+app.get('/api/companies', async (req: Request, res: Response) => {
+    const { data, error } = await supabase.from('companies').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json((data || []).map(mapCompanyFromDB));
+});
+
+app.put('/api/companies/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const dbRecord = mapCompanyToDB(req.body);
+    const { error } = await supabase.from('companies').update(dbRecord).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ...req.body, id });
+});
+
+// Users API
+app.get('/api/users', async (req: Request, res: Response) => {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json((data || []).map(mapUserFromDB));
+});
 
 // API Routes
 app.get('/api/links', async (req: Request, res: Response) => {

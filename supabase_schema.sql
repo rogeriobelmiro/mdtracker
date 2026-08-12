@@ -1,5 +1,49 @@
 -- Script de inicialização do banco de dados Supabase
 
+-- Tabela: companies
+CREATE TABLE IF NOT EXISTS companies (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cnpj TEXT,
+  plan TEXT DEFAULT 'starter',
+  active BOOLEAN DEFAULT TRUE,
+  logo_url TEXT,
+  responsible_name TEXT,
+  phone TEXT,
+  address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela: users
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT,
+  role TEXT DEFAULT 'attendant',
+  avatar_url TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Inserindo Empresas de Exemplo
+INSERT INTO companies (id, name, cnpj, plan, active, created_at) VALUES
+('comp-alfa', 'Empresa Alfa Marketing', '12.345.678/0001-90', 'pro', TRUE, '2026-01-15T00:00:00.000Z'),
+('comp-beta', 'TechSolutions Beta Consultoria', '98.765.432/0001-10', 'enterprise', TRUE, '2026-03-20T00:00:00.000Z')
+ON CONFLICT (id) DO NOTHING;
+
+-- Inserindo Usuários de Exemplo
+INSERT INTO users (id, company_id, name, email, password, role, active, created_at) VALUES
+('usr-1', 'comp-alfa', 'Ana Cláudia (Administrador)', 'admin@alfa.com', '123', 'admin', TRUE, '2026-01-15T10:00:00.000Z'),
+('usr-2', 'comp-alfa', 'Rodrigo Gerente (Gerente de Vendas)', 'gerente@alfa.com', '123', 'manager', TRUE, '2026-02-01T10:00:00.000Z'),
+('usr-3', 'comp-alfa', 'Lucas Atendente (Atendimento Comercial)', 'atendente@alfa.com', '123', 'attendant', TRUE, '2026-02-10T10:00:00.000Z'),
+('usr-4', 'comp-beta', 'Juliana Torres (Admin Beta)', 'admin@beta.com', '123', 'admin', TRUE, '2026-03-20T10:00:00.000Z'),
+('usr-5', 'comp-beta', 'Marcos Vendedor (Atendente Beta)', 'atendente@beta.com', '123', 'attendant', TRUE, '2026-04-05T10:00:00.000Z')
+ON CONFLICT (id) DO NOTHING;
+
 -- Tabela: campaign_links
 CREATE TABLE IF NOT EXISTS campaign_links (
   id TEXT PRIMARY KEY,
