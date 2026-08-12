@@ -12,6 +12,9 @@ import { LoginScreen } from './components/LoginScreen';
 import {
   fetchCompanies,
   fetchUsers,
+  createUser,
+  updateUser,
+  deleteUser,
   updateCompany,
   fetchStats,
   fetchLinks,
@@ -27,19 +30,18 @@ import {
   testWebhook,
 } from './services/api';
 import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company } from './types';
-import { initialCompanies, initialUsers } from './data/seedData';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Multi-tenant & User Management States
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   
-  // Logged-in Session State (Defaults to Ana Cláudia - Admin Alfa for immediate preview)
-  const [currentUser, setCurrentUser] = useState<User | null>(initialUsers[0]);
-  const [currentCompany, setCurrentCompany] = useState<Company | null>(initialCompanies[0]);
+  // Logged-in Session State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
 
   // Application Data States
   const [links, setLinks] = useState<CampaignLink[]>([]);
@@ -179,22 +181,32 @@ export default function App() {
   };
 
   // User Management Handlers (Admin)
-  const handleAddUser = (newUser: Omit<User, 'id' | 'createdAt'>) => {
-    const createdUser: User = {
-      ...newUser,
-      id: `usr-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-    setUsers(prev => [...prev, createdUser]);
+  const handleAddUser = async (newUser: Omit<User, 'id' | 'createdAt'>) => {
+    try {
+      await createUser({ ...newUser, id: `usr-${Date.now()}` });
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao criar usuário');
+    }
   };
 
-  const handleUpdateUser = (userId: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+  const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
+    try {
+      await updateUser(userId, updates);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar usuário');
+    }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (window.confirm('Tem certeza que deseja remover este colaborador?')) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      try {
+        await deleteUser(userId);
+        await loadData();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Erro ao deletar usuário');
+      }
     }
   };
 

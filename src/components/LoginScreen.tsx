@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Building2, Lock, Mail, ShieldCheck, RefreshCw, KeyRound, CheckCircle2, UserCheck, Sparkles, AlertCircle, Eye, EyeOff
+  Building2, Lock, Mail, ShieldCheck, RefreshCw, KeyRound, CheckCircle2, UserCheck, Sparkles, AlertCircle, Eye, EyeOff, UserPlus
 } from 'lucide-react';
 import { User, Company } from '../types';
+import { createCompany, createUser } from '../services/api';
 
 interface LoginScreenProps {
   companies: Company[];
@@ -19,6 +20,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [password, setPassword] = useState('123');
   const [selectedCompanyId, setSelectedCompanyId] = useState('comp-alfa');
   const [showPassword, setShowPassword] = useState(false);
+
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [regCompanyName, setRegCompanyName] = useState('');
+  const [regCompanyCnpj, setRegCompanyCnpj] = useState('');
+  const [regUserName, setRegUserName] = useState('');
+  const [regUserEmail, setRegUserEmail] = useState('');
+  const [regUserPassword, setRegUserPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Captcha Math Challenge State
   const [num1, setNum1] = useState(0);
@@ -77,6 +86,40 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     // Login successful
     onLoginSuccess(foundUser, foundCompany);
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setIsSubmitting(true);
+
+    try {
+      const companyId = `comp-${Date.now()}`;
+      const newCompany = await createCompany({
+        id: companyId,
+        name: regCompanyName,
+        cnpj: regCompanyCnpj,
+        plan: 'starter',
+        active: true
+      });
+
+      const userId = `usr-${Date.now()}`;
+      const newUser = await createUser({
+        id: userId,
+        companyId: companyId,
+        name: regUserName,
+        email: regUserEmail,
+        password: regUserPassword,
+        role: 'admin',
+        active: true
+      });
+
+      onLoginSuccess(newUser, newCompany);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Erro ao realizar cadastro');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Quick preset click helper
@@ -182,11 +225,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <div className="md:col-span-7 p-8 flex flex-col justify-center bg-white">
           <div className="max-w-md mx-auto w-full">
             
-            <div className="mb-6">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Acessar Sistema</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Selecione a empresa e informe suas credenciais de usuário.
-              </p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {isRegistering ? 'Criar Conta' : 'Acessar Sistema'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isRegistering 
+                    ? 'Cadastre sua empresa e crie o primeiro usuário administrador.' 
+                    : 'Selecione a empresa e informe suas credenciais de usuário.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setAuthError('');
+                }}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition"
+              >
+                {isRegistering ? 'Voltar para Login' : 'Cadastrar Empresa'}
+              </button>
             </div>
 
             {authError && (
@@ -196,123 +255,204 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              
-              {/* Select Company */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                  Empresa / Organização
-                </label>
-                <select
-                  value={selectedCompanyId}
-                  onChange={(e) => setSelectedCompanyId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:bg-white focus:border-blue-600 focus:outline-none"
-                >
-                  {companies.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.cnpj ? `(${c.cnpj})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-blue-600" />
-                  E-mail de Acesso
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="seu.email@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
-                />
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-blue-600" />
-                  Senha
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* CAPTCHA DE SOMA MATEMÁTICA */}
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    Desafio de Segurança (Captcha de Soma)
+            {!isRegistering ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                
+                {/* Select Company */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                    Empresa / Organização
                   </label>
-                  <button
-                    type="button"
-                    onClick={generateCaptcha}
-                    className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
-                    title="Gerar novo cálculo"
+                  <select
+                    value={selectedCompanyId}
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 font-bold focus:bg-white focus:border-blue-600 focus:outline-none"
                   >
-                    <RefreshCw className="w-3 h-3" />
-                    Trocar
-                  </button>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.cnpj ? `(${c.cnpj})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="bg-slate-900 text-white font-mono font-bold text-base px-4 py-2 rounded-lg tracking-widest shadow-inner border border-slate-700 select-none">
-                    {num1} + {num2} = ?
-                  </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-blue-600" />
+                    E-mail de Acesso
+                  </label>
                   <input
-                    type="number"
+                    type="email"
                     required
-                    placeholder="Resultado"
-                    value={captchaInput}
-                    onChange={(e) => setCaptchaInput(e.target.value)}
-                    className={`flex-1 bg-white border rounded-lg px-3.5 py-2 text-xs font-bold text-slate-900 focus:outline-none ${
-                      captchaError ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-600'
-                    }`}
+                    placeholder="seu.email@empresa.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
                   />
                 </div>
 
-                {captchaError && (
-                  <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Resultado do cálculo incorreto! Tente novamente.
+                {/* Password */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-blue-600" />
+                    Senha
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* CAPTCHA DE SOMA MATEMÁTICA */}
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Desafio de Segurança (Captcha de Soma)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={generateCaptcha}
+                      className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+                      title="Gerar novo cálculo"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Trocar
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="bg-slate-900 text-white font-mono font-bold text-base px-4 py-2 rounded-lg tracking-widest shadow-inner border border-slate-700 select-none">
+                      {num1} + {num2} = ?
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      placeholder="Resultado"
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value)}
+                      className={`flex-1 bg-white border rounded-lg px-3.5 py-2 text-xs font-bold text-slate-900 focus:outline-none ${
+                        captchaError ? 'border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-600'
+                      }`}
+                    />
+                  </div>
+
+                  {captchaError && (
+                    <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Resultado do cálculo incorreto! Tente novamente.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-slate-400">
+                    Some os dois números acima e digite o valor exato no campo para liberar seu acesso.
                   </p>
-                )}
-                <p className="text-[10px] text-slate-400">
-                  Some os dois números acima e digite o valor exato no campo para liberar seu acesso.
-                </p>
-              </div>
+                </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-xs transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 mt-2"
-              >
-                <KeyRound className="w-4 h-4" />
-                Entrar na Empresa
-              </button>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-xs transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 mt-2"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  Entrar na Empresa
+                </button>
 
-            </form>
+              </form>
+            ) : (
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
+                  <h3 className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center gap-2">
+                    <Building2 className="w-4 h-4" /> Dados da Empresa
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Nome da Empresa *</label>
+                    <input
+                      type="text"
+                      required
+                      value={regCompanyName}
+                      onChange={(e) => setRegCompanyName(e.target.value)}
+                      placeholder="Sua Empresa Ltda"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">CNPJ (Opcional)</label>
+                    <input
+                      type="text"
+                      value={regCompanyCnpj}
+                      onChange={(e) => setRegCompanyCnpj(e.target.value)}
+                      placeholder="00.000.000/0001-00"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-4">
+                  <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck className="w-4 h-4" /> Conta do Administrador
+                  </h3>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Seu Nome *</label>
+                    <input
+                      type="text"
+                      required
+                      value={regUserName}
+                      onChange={(e) => setRegUserName(e.target.value)}
+                      placeholder="João da Silva"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">E-mail Profissional *</label>
+                    <input
+                      type="email"
+                      required
+                      value={regUserEmail}
+                      onChange={(e) => setRegUserEmail(e.target.value)}
+                      placeholder="joao@empresa.com"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Senha *</label>
+                    <input
+                      type="password"
+                      required
+                      value={regUserPassword}
+                      onChange={(e) => setRegUserPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-lg text-sm transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 mt-4"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  {isSubmitting ? 'Criando conta...' : 'Finalizar Cadastro'}
+                </button>
+              </form>
+            )}
 
           </div>
         </div>

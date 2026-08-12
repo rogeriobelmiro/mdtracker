@@ -31,6 +31,18 @@ const mapCompanyFromDB = (db: any) => ({
     createdAt: db.created_at
 });
 
+const mapUserToDB = (u: any) => ({
+    id: u.id,
+    company_id: u.companyId,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    avatar_url: u.avatarUrl,
+    active: u.active,
+    updated_at: new Date().toISOString(),
+    created_at: u.createdAt || new Date().toISOString()
+});
+
 const mapUserFromDB = (db: any) => ({
     id: db.id,
     companyId: db.company_id,
@@ -282,6 +294,14 @@ app.get('/api/companies', async (req: Request, res: Response) => {
     res.json((data || []).map(mapCompanyFromDB));
 });
 
+app.post('/api/companies', async (req: Request, res: Response) => {
+    const body = req.body;
+    const dbRecord = mapCompanyToDB(body);
+    const { error } = await supabase.from('companies').insert(dbRecord);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(body);
+});
+
 app.put('/api/companies/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const dbRecord = mapCompanyToDB(req.body);
@@ -295,6 +315,37 @@ app.get('/api/users', async (req: Request, res: Response) => {
     const { data, error } = await supabase.from('users').select('*');
     if (error) return res.status(500).json({ error: error.message });
     res.json((data || []).map(mapUserFromDB));
+});
+
+app.post('/api/users', async (req: Request, res: Response) => {
+    const body = req.body;
+    const dbRecord = mapUserToDB(body);
+    const { error } = await supabase.from('users').insert(dbRecord);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(body);
+});
+
+app.put('/api/users/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { data: existing, error: fetchErr } = await supabase.from('users').select('*').eq('id', id).single();
+    if (fetchErr || !existing) return res.status(404).json({ error: 'Usuário não encontrado' });
+    
+    const updated = {
+        ...mapUserFromDB(existing),
+        ...req.body
+    };
+    
+    const dbRecord = mapUserToDB(updated);
+    const { error } = await supabase.from('users').update(dbRecord).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(updated);
+});
+
+app.delete('/api/users/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, id });
 });
 
 // API Routes

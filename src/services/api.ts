@@ -5,6 +5,19 @@ export async function fetchCompanies(): Promise<Company[]> {
   return res.json();
 }
 
+export async function createCompany(data: Partial<Company>): Promise<Company> {
+  const res = await fetch('/api/companies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
+  return res.json();
+}
+
 export async function updateCompany(id: string, data: Partial<Company>): Promise<Company> {
   const res = await fetch(`/api/companies/${id}`, {
     method: 'PUT',
@@ -21,6 +34,36 @@ export async function updateCompany(id: string, data: Partial<Company>): Promise
 export async function fetchUsers(): Promise<User[]> {
   const res = await fetch('/api/users');
   return res.json();
+}
+
+export async function createUser(data: Partial<User>): Promise<User> {
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
+  return res.json();
+}
+
+export async function updateUser(id: string, data: Partial<User>): Promise<User> {
+  const res = await fetch(`/api/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
+  return res.json();
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await fetch(`/api/users/${id}`, { method: 'DELETE' });
 }
 
 
