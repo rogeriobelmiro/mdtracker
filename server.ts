@@ -925,10 +925,17 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
           const deviceType = '${deviceType}';
 
           function autoRegisterLead(customName, customPhone) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramPhone = urlParams.get('phone') || urlParams.get('whatsapp') || urlParams.get('wa') || '';
+            const paramName = urlParams.get('nome') || urlParams.get('name') || '';
+
+            const finalName = customName || paramName || 'Lead via ' + utmSource;
+            const finalPhone = customPhone || paramPhone || '';
+
             const leadData = {
               companyId: '${linkObj.companyId}',
-              name: customName || 'Lead via ' + utmSource,
-              phone: customPhone || '',
+              name: finalName,
+              phone: finalPhone,
               location: locationData,
               source: utmSource,
               utmSource,
