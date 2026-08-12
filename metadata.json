@@ -1,0 +1,6 @@
+{
+  "name": "RastreioWhatsApp",
+  "description": "Sistema de rastreamento de links WhatsApp com UTMs, gestão de leads, relatórios de conversão e integração Meta/Google Ads e Webhooks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

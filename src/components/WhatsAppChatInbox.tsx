@@ -1,0 +1,491 @@
+import React, { useState } from 'react';
+import { 
+  MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
+  Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter
+} from 'lucide-react';
+import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';
+
+interface WhatsAppChatInboxProps {
+  leads: Lead[];
+  links: CampaignLink[];
+  onUpdateLeadStage: (leadId: string, newStage: FunnelStage) => void;
+}
+
+export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({ 
+  leads, 
+  links, 
+  onUpdateLeadStage 
+}) => {
+  // Selected Lead for active conversation
+  const [selectedLeadId, setSelectedLeadId] = useState<string>(leads[0]?.id || '');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStage, setFilterStage] = useState<string>('Todos');
+
+  // Input message state
+  const [messageInput, setMessageInput] = useState('');
+
+  // Initial mock conversation histories mapped by lead ID
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({
+    'lead-1': [
+      {
+        id: 'msg-1',
+        leadId: 'lead-1',
+        sender: 'lead',
+        text: 'Olá! Vim pelo anúncio do Instagram sobre o curso de tráfego. Qual é o valor?',
+        timestamp: '10:14',
+        status: 'lido'
+      },
+      {
+        id: 'msg-2',
+        leadId: 'lead-1',
+        sender: 'attendant',
+        text: 'Olá Carlos! Seja muito bem-vindo. O nosso plano completo está com 30% de desconto hoje.',
+        timestamp: '10:15',
+        status: 'lido'
+      },
+      {
+        id: 'msg-3',
+        leadId: 'lead-1',
+        sender: 'lead',
+        text: 'Legal! Onde consigo ver os detalhes das aulas e o link para inscrição?',
+        timestamp: '10:18',
+        status: 'lido'
+      }
+    ],
+    'lead-2': [
+      {
+        id: 'msg-20',
+        leadId: 'lead-2',
+        sender: 'lead',
+        text: 'Oi, boa tarde! Gostaria de falar com um consultor comercial.',
+        timestamp: '09:40',
+        status: 'lido'
+      },
+      {
+        id: 'msg-21',
+        leadId: 'lead-2',
+        sender: 'attendant',
+        text: 'Boa tarde Fernanda! Sou o consultor da equipe. Como posso te ajudar hoje em São Paulo?',
+        timestamp: '09:42',
+        status: 'lido'
+      }
+    ]
+  });
+
+  const selectedLead = leads.find(l => l.id === selectedLeadId) || leads[0];
+
+  // Current lead messages
+  const currentMessages = messages[selectedLeadId] || [
+    {
+      id: 'msg-init-' + selectedLeadId,
+      leadId: selectedLeadId,
+      sender: 'system',
+      text: `Início do atendimento via WhatsApp para ${selectedLead?.name || 'Cliente'}. Origem: ${selectedLead?.utmSource || 'Direto'}`,
+      timestamp: '08:00',
+      status: 'lido'
+    },
+    {
+      id: 'msg-welcome-' + selectedLeadId,
+      leadId: selectedLeadId,
+      sender: 'lead',
+      text: `Olá! Cliquei no link da campanha ${selectedLead?.utmCampaign || 'geral'} e gostaria de atendimento.`,
+      timestamp: '08:02',
+      status: 'lido'
+    }
+  ];
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!messageInput.trim() || !selectedLeadId) return;
+
+    const newMessage: ChatMessage = {
+      id: 'msg-' + Date.now(),
+      leadId: selectedLeadId,
+      sender: 'attendant',
+      text: messageInput.trim(),
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      status: 'entregue'
+    };
+
+    setMessages(prev => ({
+      ...prev,
+      [selectedLeadId]: [...(prev[selectedLeadId] || currentMessages), newMessage]
+    }));
+
+    setMessageInput('');
+
+    // Check keyword stage automation for sent message
+    checkKeywordStageAutomation(messageInput.trim());
+
+    // Simulate lead auto-reply after 2 seconds
+    setTimeout(() => {
+      const autoReplies = [
+        'Perfeito! Qual é o preço e as formas de pagamento disponíveis?',
+        'Entendi! Vocês aceitam pagamento via PIX com desconto?',
+        'Ótimo! Quero fechar o pedido agora, qual é o comprovante?',
+        'Achei muito caro, sem interesse por enquanto, obrigado.'
+      ];
+      const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
+
+      const leadReply: ChatMessage = {
+        id: 'msg-' + (Date.now() + 1),
+        leadId: selectedLeadId,
+        sender: 'lead',
+        text: randomReply,
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        status: 'lido'
+      };
+
+      setMessages(prev => ({
+        ...prev,
+        [selectedLeadId]: [...(prev[selectedLeadId] || []), leadReply]
+      }));
+
+      // Check keyword stage automation for received message
+      checkKeywordStageAutomation(randomReply);
+    }, 2000);
+  };
+
+  const checkKeywordStageAutomation = (text: string) => {
+    if (!selectedLead) return;
+    const lower = text.toLowerCase();
+
+    if (lower.includes('pix') || lower.includes('comprar') || lower.includes('pagar') || lower.includes('fechado') || lower.includes('comprovante')) {
+      if (selectedLead.stage !== 'Convertido') {
+        onUpdateLeadStage(selectedLead.id, 'Convertido');
+      }
+    } else if (lower.includes('preço') || lower.includes('valor') || lower.includes('orçamento') || lower.includes('proposta') || lower.includes('desconto')) {
+      if (selectedLead.stage !== 'Em Negociação' && selectedLead.stage !== 'Convertido') {
+        onUpdateLeadStage(selectedLead.id, 'Em Negociação');
+      }
+    } else if (lower.includes('não quero') || lower.includes('cancelar') || lower.includes('muito caro') || lower.includes('sem interesse')) {
+      if (selectedLead.stage !== 'Perdido') {
+        onUpdateLeadStage(selectedLead.id, 'Perdido');
+      }
+    } else if (lower.includes('oi') || lower.includes('olá') || lower.includes('boa tarde') || lower.includes('bom dia')) {
+      if (selectedLead.stage === 'Novo Lead') {
+        onUpdateLeadStage(selectedLead.id, 'Contatado');
+      }
+    }
+  };
+
+  const handleSendQuickReply = (text: string) => {
+    setMessageInput(text);
+  };
+
+  const generateAiSuggestion = () => {
+    if (!selectedLead) return;
+    const suggestions = [
+      `Olá ${selectedLead.name}! Vi que você chegou pela nossa campanha no ${selectedLead.utmSource || 'Meta Ads'}. Posso te mandar o link exclusivo agora?`,
+      `Oi ${selectedLead.name}! Qualquer dúvida que tiver em ${selectedLead.location?.city || 'sua cidade'}, estou à disposição por aqui. Quer agendar uma demonstração?`,
+      `Olá! Tenho uma condição especial de fechamento para hoje. Conseguimos dar continuidade no seu pedido?`
+    ];
+    const picked = suggestions[Math.floor(Math.random() * suggestions.length)];
+    setMessageInput(picked);
+  };
+
+  // Filtered leads list
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = 
+      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (lead.phone && lead.phone.includes(searchQuery)) ||
+      lead.utmSource.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStage = filterStage === 'Todos' || lead.stage === filterStage;
+
+    return matchesSearch && matchesStage;
+  });
+
+  return (
+    <div className="space-y-4 text-slate-800">
+      
+      {/* Top Banner Status */}
+      <div className="bg-slate-900 text-white p-4 rounded-lg border border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+          <div>
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-emerald-400" />
+              Central de Atendimento WhatsApp (Chat em Tempo Real)
+            </h2>
+            <p className="text-xs text-slate-400">
+              Conexão com API / Evolution / WhatsApp Web ativa. Gerencie conversas e feche vendas diretamente nesta tela.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800 text-[11px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Sessão Conectada
+          </span>
+        </div>
+      </div>
+
+      {/* Main Chat Layout Container */}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-xs overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
+        
+        {/* LEFT SIDEBAR: Conversations List (4 cols) */}
+        <div className="md:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50">
+          
+          {/* Search & Filter Header */}
+          <div className="p-3 border-b border-slate-200 space-y-2 bg-white">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar conversa, nome ou telefone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+              />
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px]">
+              {['Todos', 'Novo Lead', 'Em Negociação', 'Convertido'].map(stg => (
+                <button
+                  key={stg}
+                  onClick={() => setFilterStage(stg)}
+                  className={`px-2 py-0.5 rounded font-medium whitespace-nowrap transition ${
+                    filterStage === stg ? 'bg-slate-900 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {stg}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Leads Conversations List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 max-h-[500px]">
+            {filteredLeads.length > 0 ? (
+              filteredLeads.map(lead => {
+                const leadMsgs = messages[lead.id];
+                const lastMsg = leadMsgs && leadMsgs.length > 0 ? leadMsgs[leadMsgs.length - 1] : null;
+                const isSelected = lead.id === selectedLeadId;
+
+                return (
+                  <div
+                    key={lead.id}
+                    onClick={() => setSelectedLeadId(lead.id)}
+                    className={`p-3 cursor-pointer transition flex items-start gap-3 ${
+                      isSelected ? 'bg-blue-50/80 border-l-4 border-blue-600' : 'hover:bg-slate-100/80'
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                      {lead.name ? lead.name.charAt(0).toUpperCase() : 'L'}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-bold text-xs text-slate-900 truncate">{lead.name || 'Visitante'}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {lastMsg ? lastMsg.timestamp : 'Hoje'}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-500 truncate mb-1">
+                        {lastMsg ? lastMsg.text : `Origem: ${lead.utmSource || 'Direto'}`}
+                      </p>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          lead.stage === 'Novo Lead' ? 'bg-blue-100 text-blue-700' :
+                          lead.stage === 'Em Negociação' ? 'bg-purple-100 text-purple-700' :
+                          lead.stage === 'Convertido' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {lead.stage}
+                        </span>
+                        {lead.utmContent && (
+                          <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[9px] font-bold border border-purple-200" title="Anúncio Criativo">
+                            🎨 {lead.utmContent}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {lead.location?.city ? `${lead.location.city}/${lead.location.state}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs text-slate-400 p-4 text-center italic">Nenhum lead encontrado com estes filtros.</p>
+            )}
+          </div>
+
+        </div>
+
+        {/* RIGHT MAIN WINDOW: Active WhatsApp Conversation (8 cols) */}
+        {selectedLead ? (
+          <div className="md:col-span-8 flex flex-col bg-slate-50/30">
+            
+            {/* Chat Top Bar */}
+            <div className="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                  {selectedLead.name ? selectedLead.name.charAt(0).toUpperCase() : 'L'}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-slate-900 truncate">{selectedLead.name}</h3>
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Online no WhatsApp
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
+                    <span>{selectedLead.phone || 'Sem telefone'}</span>
+                    <span>•</span>
+                    <span className="text-blue-600 font-semibold">{selectedLead.location?.city}, {selectedLead.location?.state}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Stage Quick Switcher */}
+              <div className="flex items-center gap-2">
+                <div className="text-right hidden sm:block">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Etapa do Funil:</span>
+                  <select
+                    value={selectedLead.stage}
+                    onChange={(e) => onUpdateLeadStage(selectedLead.id, e.target.value as FunnelStage)}
+                    className="bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none"
+                  >
+                    <option value="Novo Lead">Novo Lead</option>
+                    <option value="Contatado">Contatado</option>
+                    <option value="Em Negociação">Em Negociação</option>
+                    <option value="Convertido">Convertido</option>
+                    <option value="Perdido">Perdido</option>
+                  </select>
+                </div>
+
+                <a
+                  href={`https://wa.me/55${selectedLead.phone?.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition"
+                  title="Abrir no App Nativo do WhatsApp"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+
+            {/* Full Ad Attribution Hierarchy Sub-bar */}
+            <div className="bg-purple-50/80 px-4 py-2 border-b border-purple-200 text-[11px] text-slate-700 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3.5 flex-wrap">
+                <span className="flex items-center gap-1 font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded border border-purple-200">
+                  🎨 Anúncio: <strong>{selectedLead.utmContent || 'Padrão / Geral'}</strong>
+                </span>
+                <span className="flex items-center gap-1 text-slate-700">
+                  🎯 Conjunto: <strong className="text-slate-900">{selectedLead.utmTerm || 'Amplo'}</strong>
+                </span>
+                <span className="flex items-center gap-1 text-slate-700">
+                  📢 Campanha: <strong className="text-slate-900">{selectedLead.utmCampaign || 'Orgânico'}</strong>
+                </span>
+                <span className="flex items-center gap-1 text-slate-700">
+                  🌐 Origem: <strong className="text-blue-700">{selectedLead.utmSource || 'Direto'}</strong>
+                </span>
+              </div>
+              <span className="text-slate-400 font-mono text-[10px]">Lead ID: {selectedLead.id}</span>
+            </div>
+
+            {/* Messages Thread Display */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 min-h-[340px] max-h-[380px] bg-[#efeae2]/20">
+              {currentMessages.map(msg => {
+                if (msg.sender === 'system') {
+                  return (
+                    <div key={msg.id} className="text-center my-2">
+                      <span className="bg-slate-200/90 text-slate-600 text-[10px] font-semibold px-3 py-1 rounded-full shadow-2xs">
+                        {msg.text}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const isAttendant = msg.sender === 'attendant';
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex ${isAttendant ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[80%] sm:max-w-[70%] p-3 rounded-lg text-xs shadow-2xs ${
+                      isAttendant 
+                        ? 'bg-emerald-700 text-white rounded-br-none' 
+                        : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
+                    }`}>
+                      <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+                      
+                      <div className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
+                        isAttendant ? 'text-emerald-200' : 'text-slate-400'
+                      }`}>
+                        <span>{msg.timestamp}</span>
+                        {isAttendant && (
+                          <CheckCheck className="w-3 h-3 text-emerald-200" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quick Response Shortcuts */}
+            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Respostas Rápidas:</span>
+              <button
+                type="button"
+                onClick={() => handleSendQuickReply('Olá! Segue o link com o desconto exclusivo: ')}
+                className="bg-white hover:bg-slate-200 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-medium whitespace-nowrap transition"
+              >
+                🔗 Link de Desconto
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendQuickReply('Podemos agendar uma breve conversa por chamada telefônica ou vídeo hoje?')}
+                className="bg-white hover:bg-slate-200 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-medium whitespace-nowrap transition"
+              >
+                📅 Agendar Reunião
+              </button>
+              <button
+                type="button"
+                onClick={() => generateAiSuggestion()}
+                className="bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold border border-purple-200 rounded px-2.5 py-1 flex items-center gap-1 whitespace-nowrap transition"
+              >
+                <Sparkles className="w-3 h-3 text-purple-600" />
+                Sugestão IA
+              </button>
+            </div>
+
+            {/* Message Send Form Bar */}
+            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Digite sua mensagem para o cliente no WhatsApp..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-600"
+              />
+              <button
+                type="submit"
+                disabled={!messageInput.trim()}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold p-2.5 rounded-lg transition shadow-xs flex items-center justify-center shrink-0"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+
+          </div>
+        ) : (
+          <div className="md:col-span-8 flex items-center justify-center p-8 text-slate-400">
+            Selecione uma conversa ao lado para visualizar a troca de mensagens.
+          </div>
+        )}
+
+      </div>
+
+    </div>
+  );
+};
