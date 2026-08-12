@@ -16,9 +16,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   users,
   onLoginSuccess
 }) => {
-  const [email, setEmail] = useState('admin@alfa.com');
-  const [password, setPassword] = useState('123');
-  const [selectedCompanyId, setSelectedCompanyId] = useState('comp-alfa');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [isRegistering, setIsRegistering] = useState(false);
@@ -122,14 +122,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  // Quick preset click helper
-  const handleQuickPreset = (presetEmail: string, companyId: string) => {
-    setEmail(presetEmail);
-    setPassword('123');
-    setSelectedCompanyId(companyId);
-    setAuthError('');
-    setCaptchaError(false);
-  };
+  // Quick preset click helper (removed)
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -178,46 +171,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
           </div>
 
-          {/* Preset Quick Selectors */}
-          <div className="mt-8 pt-6 border-t border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-2">
-              Credenciais de Teste Rápido (Demonstração):
-            </span>
-            <div className="space-y-1.5 text-[11px]">
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('admin@alfa.com', 'comp-alfa')}
-                className={`w-full text-left px-2.5 py-1.5 rounded flex items-center justify-between transition ${
-                  email === 'admin@alfa.com' ? 'bg-blue-600/30 text-blue-300 font-bold border border-blue-500/50' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span>👑 Admin Alfa (Empresa Alfa)</span>
-                <span className="text-[10px] font-mono text-slate-400">admin@alfa.com</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('atendente@alfa.com', 'comp-alfa')}
-                className={`w-full text-left px-2.5 py-1.5 rounded flex items-center justify-between transition ${
-                  email === 'atendente@alfa.com' ? 'bg-emerald-600/30 text-emerald-300 font-bold border border-emerald-500/50' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span>🎧 Atendente Alfa (Empresa Alfa)</span>
-                <span className="text-[10px] font-mono text-slate-400">atendente@alfa.com</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('admin@beta.com', 'comp-beta')}
-                className={`w-full text-left px-2.5 py-1.5 rounded flex items-center justify-between transition ${
-                  email === 'admin@beta.com' ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-500/50' : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span>🏢 Admin TechSolutions Beta</span>
-                <span className="text-[10px] font-mono text-slate-400">admin@beta.com</span>
-              </button>
-            </div>
-          </div>
 
         </div>
 
