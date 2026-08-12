@@ -361,14 +361,31 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
                       {camp.status === 'concluido' ? 'Concluído' : camp.status === 'em_andamento' ? 'Em Execução' : 'Rascunho'}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-right">
-                    <button
-                      onClick={() => startCampaignExecution(camp)}
-                      className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 ml-auto"
-                    >
-                      <Play className="w-3.5 h-3.5" />
-                      Disparar Lote
-                    </button>
+                  <td className="py-3 px-3">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => startCampaignExecution(camp)}
+                        className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        Disparar Lote
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja apagar esta campanha do histórico?')) {
+                            setCampaigns(prev => prev.filter(c => c.id !== camp.id));
+                            if (activeCampaign?.id === camp.id) {
+                              setIsExecuting(false);
+                              setActiveCampaign(null);
+                            }
+                          }
+                        }}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                        title="Apagar do histórico"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
