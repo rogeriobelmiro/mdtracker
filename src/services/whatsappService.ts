@@ -117,6 +117,26 @@ export const startWhatsApp = async (): Promise<void> => {
                         const { data: firstCompany } = await supabase.from('companies').select('id').limit(1).maybeSingle();
                         const assignedCompanyId = firstCompany ? firstCompany.id : 'comp-alfa';
                         
+                        // Deduce state from Brazilian DDD
+                        let state = '';
+                        let city = 'Desconhecida';
+                        if (phone.startsWith('55') && phone.length >= 4) {
+                            const ddd = phone.substring(2, 4);
+                            const dddMap: Record<string, string> = {
+                                '68': 'AC', '82': 'AL', '92': 'AM', '97': 'AM', '96': 'AP', '71': 'BA', '73': 'BA', '74': 'BA', '75': 'BA', '77': 'BA',
+                                '85': 'CE', '88': 'CE', '61': 'DF', '27': 'ES', '28': 'ES', '62': 'GO', '64': 'GO', '98': 'MA', '99': 'MA',
+                                '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '37': 'MG', '38': 'MG', '67': 'MS', '65': 'MT', '66': 'MT',
+                                '91': 'PA', '93': 'PA', '94': 'PA', '83': 'PB', '81': 'PE', '87': 'PE', '86': 'PI', '89': 'PI',
+                                '41': 'PR', '42': 'PR', '43': 'PR', '44': 'PR', '45': 'PR', '46': 'PR', '21': 'RJ', '22': 'RJ', '24': 'RJ',
+                                '84': 'RN', '69': 'RO', '95': 'RR', '51': 'RS', '53': 'RS', '54': 'RS', '55': 'RS', '47': 'SC', '48': 'SC', '49': 'SC',
+                                '79': 'SE', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP', '63': 'TO'
+                            };
+                            if (dddMap[ddd]) {
+                                state = dddMap[ddd];
+                                city = 'DDD ' + ddd;
+                            }
+                        }
+
                         // Create new lead automatically so they show up in the Chat Inbox
                         const newLead = {
                             id: `lead-${Date.now()}`,
@@ -132,7 +152,7 @@ export const startWhatsApp = async (): Promise<void> => {
                             link_title: '',
                             device: 'WhatsApp',
                             browser: 'WhatsApp',
-                            location: { city: 'Desconhecida', state: '', country: 'BR' },
+                            location: { city: city, state: state, country: 'BR' },
                             conversion_events: [],
                             created_at: new Date().toISOString(),
                             updated_at: new Date().toISOString()
