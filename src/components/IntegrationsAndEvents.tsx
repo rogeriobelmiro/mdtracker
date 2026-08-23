@@ -275,6 +275,43 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
             </div>
           </div>
 
+          {/* Card 1.5: Evolution API Credentials */}
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xs">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+              <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Evolution API - WhatsApp</h3>
+                <p className="text-[11px] text-slate-500">Credenciais para conexão com a API do Evolution.</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">URL da Evolution API</label>
+                <input
+                  type="url"
+                  placeholder="Ex: https://sua-api.com"
+                  value={formData.evolutionApiUrl || ''}
+                  onChange={(e) => setFormData({ ...formData, evolutionApiUrl: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Global API Key</label>
+                <input
+                  type="password"
+                  placeholder="Sua chave secreta global"
+                  value={formData.evolutionApiKey || ''}
+                  onChange={(e) => setFormData({ ...formData, evolutionApiKey: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Card 2: Google Ads Credentials */}
           <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xs">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-3">

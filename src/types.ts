@@ -129,6 +129,9 @@ export interface IntegrationSettings {
   globalGoogleAdsId: string;
   globalGoogleAdsLabel: string;
   globalWebhookUrl: string;
+  evolutionInstance?: string;
+  evolutionApiUrl?: string;
+  evolutionApiKey?: string;
   autoFireMetaOnLead: boolean;
   autoFireMetaOnConversion: boolean;
   autoFireGoogleOnConversion: boolean;

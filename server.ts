@@ -163,6 +163,9 @@ const mapSettingsToDB = (s: any) => ({
     global_google_ads_id: s.globalGoogleAdsId,
     global_google_ads_label: s.globalGoogleAdsLabel,
     global_webhook_url: s.globalWebhookUrl,
+    evolution_instance: s.evolutionInstance,
+    evolution_api_url: s.evolutionApiUrl,
+    evolution_api_key: s.evolutionApiKey,
     auto_fire_meta_on_lead: s.autoFireMetaOnLead,
     auto_fire_meta_on_conversion: s.autoFireMetaOnConversion,
     auto_fire_google_on_conversion: s.autoFireGoogleOnConversion,
@@ -180,13 +183,16 @@ const mapSettingsFromDB = (db: any) => ({
     globalGoogleAdsId: db.global_google_ads_id || '',
     globalGoogleAdsLabel: db.global_google_ads_label || '',
     globalWebhookUrl: db.global_webhook_url || '',
-    autoFireMetaOnLead: !!db.auto_fire_meta_on_lead,
-    autoFireMetaOnConversion: !!db.auto_fire_meta_on_conversion,
-    autoFireGoogleOnConversion: !!db.auto_fire_google_on_conversion,
-    autoFireWebhookOnLead: !!db.auto_fire_webhook_on_lead,
-    autoFireWebhookOnStageChange: !!db.auto_fire_webhook_on_stage_change,
-    stageEventMappings: db.stage_event_mappings,
-    autoStageKeywords: db.auto_stage_keywords
+    evolutionInstance: db.evolution_instance || '',
+    evolutionApiUrl: db.evolution_api_url || '',
+    evolutionApiKey: db.evolution_api_key || '',
+    autoFireMetaOnLead: db.auto_fire_meta_on_lead || false,
+    autoFireMetaOnConversion: db.auto_fire_meta_on_conversion || false,
+    autoFireGoogleOnConversion: db.auto_fire_google_on_conversion || false,
+    autoFireWebhookOnLead: db.auto_fire_webhook_on_lead || false,
+    autoFireWebhookOnStageChange: db.auto_fire_webhook_on_stage_change || false,
+    stageEventMappings: db.stage_event_mappings || {},
+    autoStageKeywords: db.auto_stage_keywords || []
 });
 
 const mapWebhookFromDB = (db: any) => ({
@@ -289,9 +295,109 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Evolution API Webhook
+app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) => {
+    try {
+        const payload = req.body;
+        console.log('Recebido webhook Evolution API:', JSON.stringify(payload).substring(0, 200));
+
+        // Evolution API dispara events como "messages.upsert"
+        if (payload.event === 'messages.upsert') {
+            const data = payload.data;
+            const messageObj = data.message;
+            if (!messageObj) return res.status(200).json({ received: true });
+
+            const remoteJid = messageObj.key?.remoteJid || '';
+            if (remoteJid === 'status@broadcast') return res.status(200).json({ received: true });
+
+            const phone = remoteJid.split('@')[0];
+            const isFromMe = messageObj.key?.fromMe;
+            const textContent = messageObj.message?.conversation || 
+                                messageObj.message?.extendedTextMessage?.text || 
+                                messageObj.message?.imageMessage?.caption;
+
+            if (!textContent) return res.status(200).json({ received: true });
+
+            // Check if lead exists
+            const { data: existingLead } = await supabase
+                .from('leads')
+                .select('id')
+                .eq('phone', phone)
+                .maybeSingle();
+
+            if (!existingLead && !isFromMe) {
+                // Tenta achar a empresa usando a instancia
+                const instanceName = payload.instance;
+                let assignedCompanyId = 'comp-alfa';
+                if (instanceName) {
+                    const { data: cSettings } = await supabase.from('settings').select('company_id').eq('evolution_instance', instanceName).maybeSingle();
+                    if (cSettings) assignedCompanyId = cSettings.company_id;
+                }
+                
+                // Deduce state from Brazilian DDD
+                let state = '';
+                let city = 'Desconhecida';
+                if (phone.startsWith('55') && phone.length >= 4) {
+                    const ddd = phone.substring(2, 4);
+                    const dddMap: Record<string, string> = {
+                        '68': 'AC', '82': 'AL', '92': 'AM', '97': 'AM', '96': 'AP', '71': 'BA', '73': 'BA', '74': 'BA', '75': 'BA', '77': 'BA',
+                        '85': 'CE', '88': 'CE', '61': 'DF', '27': 'ES', '28': 'ES', '62': 'GO', '64': 'GO', '98': 'MA', '99': 'MA',
+                        '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '37': 'MG', '38': 'MG', '67': 'MS', '65': 'MT', '66': 'MT',
+                        '91': 'PA', '93': 'PA', '94': 'PA', '83': 'PB', '81': 'PE', '87': 'PE', '86': 'PI', '89': 'PI',
+                        '41': 'PR', '42': 'PR', '43': 'PR', '44': 'PR', '45': 'PR', '46': 'PR', '21': 'RJ', '22': 'RJ', '24': 'RJ',
+                        '84': 'RN', '69': 'RO', '95': 'RR', '51': 'RS', '53': 'RS', '54': 'RS', '55': 'RS', '47': 'SC', '48': 'SC', '49': 'SC',
+                        '79': 'SE', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP', '63': 'TO'
+                    };
+                    if (dddMap[ddd]) {
+                        state = dddMap[ddd];
+                        city = 'DDD ' + ddd;
+                    }
+                }
+
+                // Create new lead automatically so they show up in the Chat Inbox
+                const newLead = {
+                    id: `lead-${Date.now()}`,
+                    company_id: assignedCompanyId,
+                    name: messageObj.pushName || 'Novo Contato WhatsApp',
+                    phone: phone,
+                    source: 'whatsapp_direto',
+                    utm_source: 'whatsapp_direto',
+                    utm_medium: 'organico',
+                    utm_campaign: 'whatsapp',
+                    stage: 'Novo Lead',
+                    link_id: null,
+                    link_title: '',
+                    device: 'WhatsApp',
+                    browser: 'WhatsApp',
+                    location: { city: city, state: state, country: 'BR' },
+                    conversion_events: [],
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+                await supabase.from('leads').insert(newLead);
+            }
+
+            // Save to DB
+            await supabase.from('whatsapp_messages').insert({
+                id: messageObj.key?.id || `msg-${Date.now()}`,
+                lead_phone: phone,
+                sender: isFromMe ? 'attendant' : 'lead',
+                text: textContent,
+                status: 'entregue',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        res.status(200).json({ received: true });
+    } catch (err: any) {
+        console.error('Erro no webhook da Evolution API:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // WhatsApp API
-app.get('/api/whatsapp/status', (req: Request, res: Response) => {
-    res.json(getWhatsAppStatus());
+app.get('/api/whatsapp/status', async (req: Request, res: Response) => {
+    res.json(await getWhatsAppStatus());
 });
 
 app.post('/api/whatsapp/connect', async (req: Request, res: Response) => {

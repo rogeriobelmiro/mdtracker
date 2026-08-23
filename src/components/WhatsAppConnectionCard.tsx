@@ -67,7 +67,7 @@ export const WhatsAppConnectionCard: React.FC = () => {
                     waStatus.status === 'qr' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                     'bg-slate-100 text-slate-600 border-slate-200'
                 }`}>
-                    Status: {waStatus.status.toUpperCase()}
+                    Status: {waStatus?.status?.toUpperCase() || 'DESCONECTADO'}
                 </span>
             </div>
 

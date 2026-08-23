@@ -116,6 +116,9 @@ CREATE TABLE IF NOT EXISTS settings (
   global_google_ads_id TEXT,
   global_google_ads_label TEXT,
   global_webhook_url TEXT,
+  evolution_instance TEXT,
+  evolution_api_url TEXT,
+  evolution_api_key TEXT,
   auto_fire_meta_on_lead BOOLEAN DEFAULT FALSE,
   auto_fire_meta_on_conversion BOOLEAN DEFAULT FALSE,
   auto_fire_google_on_conversion BOOLEAN DEFAULT FALSE,
@@ -130,13 +133,15 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Inserindo Configurações de Exemplo (Settings)
 INSERT INTO settings (
   company_id, global_meta_pixel_id, global_meta_token, global_google_ads_id, 
-  global_google_ads_label, global_webhook_url, auto_fire_meta_on_lead, 
+  global_google_ads_label, global_webhook_url, evolution_instance, evolution_api_url, evolution_api_key, auto_fire_meta_on_lead, 
   auto_fire_meta_on_conversion, auto_fire_google_on_conversion, 
   auto_fire_webhook_on_lead, auto_fire_webhook_on_stage_change, 
   stage_event_mappings, auto_stage_keywords
 ) VALUES (
   'comp-alfa', '1234567890987654', 'EAAG1234567890abcdef...', 'AW-987654321', 
-  'ABc123xYz987', 'https://webhook.site/demo-rastreamento-whatsapp', TRUE, TRUE, TRUE, TRUE, TRUE, 
+  'ABc123xYz987', 'https://webhook.site/demo-rastreamento-whatsapp', 
+  'MudaDigital', 'https://evolution.mudadigital.net', 'sk_8f80f8a4ff97c60a4f9c478b4329597faa57abbbd7f1c3b2',
+  TRUE, TRUE, TRUE, TRUE, TRUE, 
   '{"Novo Lead":{"stage":"Novo Lead","metaEvent":"Lead","googleLabel":"lead_conversion","enabled":true},"Contatado":{"stage":"Contatado","metaEvent":"Contact","googleLabel":"contact_conversion","enabled":true},"Em Negociação":{"stage":"Em Negociação","metaEvent":"InitiateCheckout","googleLabel":"checkout_conversion","enabled":true},"Convertido":{"stage":"Convertido","metaEvent":"Purchase","googleLabel":"purchase_conversion","enabled":true},"Perdido":{"stage":"Perdido","metaEvent":"LeadLost","googleLabel":"loss_conversion","enabled":false}}',
   '[{"stage":"Contatado","keywords":["oi","olá","boa tarde","bom dia","atendimento","dúvida"],"enabled":true},{"stage":"Em Negociação","keywords":["preço","valor","orçamento","proposta","reunião","agendar","desconto","quanto custa"],"enabled":true},{"stage":"Convertido","keywords":["pix","comprar","pagar","comprovante","fechado","paguei","transferência","cartão"],"enabled":true},{"stage":"Perdido","keywords":["não quero","cancelar","muito caro","sem interesse","desistir","não tenho interesse"],"enabled":true}]'
 ) ON CONFLICT (company_id) DO UPDATE SET 
@@ -145,6 +150,9 @@ INSERT INTO settings (
   global_google_ads_id = EXCLUDED.global_google_ads_id,
   global_google_ads_label = EXCLUDED.global_google_ads_label,
   global_webhook_url = EXCLUDED.global_webhook_url,
+  evolution_instance = EXCLUDED.evolution_instance,
+  evolution_api_url = EXCLUDED.evolution_api_url,
+  evolution_api_key = EXCLUDED.evolution_api_key,
   auto_fire_meta_on_lead = EXCLUDED.auto_fire_meta_on_lead,
   auto_fire_meta_on_conversion = EXCLUDED.auto_fire_meta_on_conversion,
   auto_fire_google_on_conversion = EXCLUDED.auto_fire_google_on_conversion,
