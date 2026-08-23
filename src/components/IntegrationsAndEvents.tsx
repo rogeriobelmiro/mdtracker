@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule } from '../types';
 import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
 
 interface IntegrationsAndEventsProps {
   settings: IntegrationSettings;
@@ -218,6 +219,9 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
       {/* Main Settings Form */}
       <form onSubmit={handleSave} className="space-y-6">
+
+        {/* Conexão WhatsApp Card */}
+        <WhatsAppConnectionCard />
 
         {/* Global Tokens & Pixel IDs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

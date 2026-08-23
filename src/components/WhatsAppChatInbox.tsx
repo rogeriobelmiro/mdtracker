@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
   Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter
@@ -24,126 +24,93 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
   // Input message state
   const [messageInput, setMessageInput] = useState('');
 
-  // Initial mock conversation histories mapped by lead ID
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({
-    'lead-1': [
-      {
-        id: 'msg-1',
-        leadId: 'lead-1',
-        sender: 'lead',
-        text: 'Olá! Vim pelo anúncio do Instagram sobre o curso de tráfego. Qual é o valor?',
-        timestamp: '10:14',
-        status: 'lido'
-      },
-      {
-        id: 'msg-2',
-        leadId: 'lead-1',
-        sender: 'attendant',
-        text: 'Olá Carlos! Seja muito bem-vindo. O nosso plano completo está com 30% de desconto hoje.',
-        timestamp: '10:15',
-        status: 'lido'
-      },
-      {
-        id: 'msg-3',
-        leadId: 'lead-1',
-        sender: 'lead',
-        text: 'Legal! Onde consigo ver os detalhes das aulas e o link para inscrição?',
-        timestamp: '10:18',
-        status: 'lido'
-      }
-    ],
-    'lead-2': [
-      {
-        id: 'msg-20',
-        leadId: 'lead-2',
-        sender: 'lead',
-        text: 'Oi, boa tarde! Gostaria de falar com um consultor comercial.',
-        timestamp: '09:40',
-        status: 'lido'
-      },
-      {
-        id: 'msg-21',
-        leadId: 'lead-2',
-        sender: 'attendant',
-        text: 'Boa tarde Fernanda! Sou o consultor da equipe. Como posso te ajudar hoje em São Paulo?',
-        timestamp: '09:42',
-        status: 'lido'
-      }
-    ]
-  });
+  // Mensagens carregadas do banco de dados
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || leads[0];
 
-  // Current lead messages
-  const currentMessages = messages[selectedLeadId] || [
-    {
-      id: 'msg-init-' + selectedLeadId,
-      leadId: selectedLeadId,
-      sender: 'system',
-      text: `Início do atendimento via WhatsApp para ${selectedLead?.name || 'Cliente'}. Origem: ${selectedLead?.utmSource || 'Direto'}`,
-      timestamp: '08:00',
-      status: 'lido'
-    },
-    {
-      id: 'msg-welcome-' + selectedLeadId,
-      leadId: selectedLeadId,
-      sender: 'lead',
-      text: `Olá! Cliquei no link da campanha ${selectedLead?.utmCampaign || 'geral'} e gostaria de atendimento.`,
-      timestamp: '08:02',
-      status: 'lido'
+  // Função para buscar mensagens reais do servidor
+  const fetchMessages = async () => {
+    if (!selectedLead || !selectedLead.phone) return;
+    try {
+      const res = await fetch(`/api/whatsapp/messages/${selectedLead.phone}`);
+      if (res.ok) {
+        const data = await res.json();
+        const formattedMessages: ChatMessage[] = data.map((d: any) => {
+           const date = new Date(d.timestamp);
+           const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+           return {
+             id: d.id,
+             leadId: selectedLead.id,
+             sender: d.sender,
+             text: d.text,
+             timestamp: timeStr,
+             status: d.status
+           };
+        });
+        
+        // Sempre garantimos uma mensagem inicial do sistema para contexto
+        const systemMsg: ChatMessage = {
+          id: 'msg-init-' + selectedLead.id,
+          leadId: selectedLead.id,
+          sender: 'system',
+          text: `Início do atendimento via WhatsApp para ${selectedLead.name || 'Cliente'}. Origem: ${selectedLead.utmSource || 'Direto'}`,
+          timestamp: '08:00',
+          status: 'lido'
+        };
+
+        setMessages(prev => ({
+          ...prev,
+          [selectedLead.id]: [systemMsg, ...formattedMessages]
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching messages:', err);
     }
-  ];
+  };
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 3000); // Polling a cada 3s
+    return () => clearInterval(interval);
+  }, [selectedLead]);
+
+  const currentMessages = messages[selectedLeadId] || [];
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!messageInput.trim() || !selectedLeadId) return;
+    if (!messageInput.trim() || !selectedLeadId || !selectedLead?.phone) return;
 
+    const textToSend = messageInput.trim();
+    setMessageInput('');
+
+    // Atualização Otimista na UI
     const newMessage: ChatMessage = {
       id: 'msg-' + Date.now(),
       leadId: selectedLeadId,
       sender: 'attendant',
-      text: messageInput.trim(),
+      text: textToSend,
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       status: 'entregue'
     };
 
     setMessages(prev => ({
       ...prev,
-      [selectedLeadId]: [...(prev[selectedLeadId] || currentMessages), newMessage]
+      [selectedLeadId]: [...(prev[selectedLeadId] || []), newMessage]
     }));
 
-    setMessageInput('');
-
-    // Check keyword stage automation for sent message
-    checkKeywordStageAutomation(messageInput.trim());
-
-    // Simulate lead auto-reply after 2 seconds
-    setTimeout(() => {
-      const autoReplies = [
-        'Perfeito! Qual é o preço e as formas de pagamento disponíveis?',
-        'Entendi! Vocês aceitam pagamento via PIX com desconto?',
-        'Ótimo! Quero fechar o pedido agora, qual é o comprovante?',
-        'Achei muito caro, sem interesse por enquanto, obrigado.'
-      ];
-      const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-
-      const leadReply: ChatMessage = {
-        id: 'msg-' + (Date.now() + 1),
-        leadId: selectedLeadId,
-        sender: 'lead',
-        text: randomReply,
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        status: 'lido'
-      };
-
-      setMessages(prev => ({
-        ...prev,
-        [selectedLeadId]: [...(prev[selectedLeadId] || []), leadReply]
-      }));
-
-      // Check keyword stage automation for received message
-      checkKeywordStageAutomation(randomReply);
-    }, 2000);
+    try {
+      // Envia via API conectada ao Baileys
+      await fetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: selectedLead.phone, message: textToSend })
+      });
+      fetchMessages();
+      checkKeywordStageAutomation(textToSend);
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err);
+    }
   };
 
   const checkKeywordStageAutomation = (text: string) => {
@@ -186,10 +153,14 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
   // Filtered leads list
   const filteredLeads = leads.filter(lead => {
+    const safeName = lead.name || '';
+    const safePhone = lead.phone || '';
+    const safeUtm = lead.utmSource || '';
+
     const matchesSearch = 
-      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.phone && lead.phone.includes(searchQuery)) ||
-      lead.utmSource.toLowerCase().includes(searchQuery.toLowerCase());
+      safeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      safePhone.includes(searchQuery) ||
+      safeUtm.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStage = filterStage === 'Todos' || lead.stage === filterStage;
 

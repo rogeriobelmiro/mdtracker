@@ -3,6 +3,7 @@ import path from 'path';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
 import bcrypt from 'bcryptjs';
+import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage } from './src/services/whatsappService.js';
 
 // Mappers to convert between frontend camelCase and DB snake_case
 const mapCompanyToDB = (c: any) => ({
@@ -200,10 +201,10 @@ const mapWebhookFromDB = (db: any) => ({
 });
 
 // Fetch current settings directly from DB since it's needed for webhooks
-async function getSettings(companyId: string = 'comp-alfa') {
+async function getSettings(companyId: string = 'comp-alfa'): Promise<IntegrationSettings | any> {
     const { data } = await supabase.from('settings').select('*').eq('company_id', companyId).single();
     if (data) return mapSettingsFromDB(data);
-    return {};
+    return {} as any;
 }
 
 // Helper function to format WhatsApp message template
@@ -287,6 +288,69 @@ const app = express();
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// WhatsApp API
+app.get('/api/whatsapp/status', (req: Request, res: Response) => {
+    res.json(getWhatsAppStatus());
+});
+
+app.post('/api/whatsapp/connect', async (req: Request, res: Response) => {
+    try {
+        await startWhatsApp();
+        res.json({ success: true, message: 'Iniciando conexão...' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/logout', async (req: Request, res: Response) => {
+    try {
+        await logoutWhatsApp();
+        res.json({ success: true, message: 'Desconectado com sucesso' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/send', async (req: Request, res: Response) => {
+    const { phone, message } = req.body;
+    if (!phone || !message) {
+        return res.status(400).json({ error: 'Telefone e mensagem são obrigatórios' });
+    }
+    
+    try {
+        const success = await sendWhatsAppMessage(phone, message);
+        if (success) {
+            res.json({ success: true, message: 'Mensagem enviada com sucesso' });
+        } else {
+            res.status(500).json({ error: 'Erro ao enviar mensagem' });
+        }
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/whatsapp/messages/:phone', async (req: Request, res: Response) => {
+    let { phone } = req.params;
+    if (!phone) return res.status(400).json({ error: 'Telefone é obrigatório' });
+
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
+        cleanPhone = '55' + cleanPhone;
+    }
+
+    const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('lead_phone', cleanPhone)
+        .order('timestamp', { ascending: true });
+
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data || []);
+});
 
 // Companies API
 app.get('/api/companies', async (req: Request, res: Response) => {

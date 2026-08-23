@@ -194,3 +194,19 @@ CREATE POLICY "Permitir all anonimo em campaign_links" ON campaign_links FOR ALL
 CREATE POLICY "Permitir all anonimo em leads" ON leads FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir all anonimo em webhook_logs" ON webhook_logs FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir all anonimo em settings" ON settings FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Tabela de Histórico de Mensagens do WhatsApp
+CREATE TABLE public.whatsapp_messages (
+    id TEXT PRIMARY KEY,
+    lead_phone TEXT NOT NULL,
+    sender TEXT NOT NULL, -- 'lead', 'attendant', 'system'
+    text TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    status TEXT DEFAULT 'entregue'
+);
+
+-- Habilitar RLS
+ALTER TABLE public.whatsapp_messages ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso
+CREATE POLICY "Acesso total mensagens WhatsApp" ON public.whatsapp_messages FOR ALL USING (true);
