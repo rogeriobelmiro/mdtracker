@@ -47,7 +47,14 @@ export const startWhatsApp = async (): Promise<void> => {
             body: JSON.stringify({
                 instanceName: config.instance,
                 qrcode: true,
-                integration: "WHATSAPP-BAILEYS"
+                integration: "WHATSAPP-BAILEYS",
+                webhook: {
+                    enabled: true,
+                    url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+                    byEvents: false,
+                    base64: false,
+                    events: ["MESSAGES_UPSERT"]
+                }
             })
         });
 
