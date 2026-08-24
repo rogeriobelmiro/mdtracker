@@ -221,7 +221,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       <form onSubmit={handleSave} className="space-y-6">
 
         {/* Conexão WhatsApp Card */}
-        <WhatsAppConnectionCard />
+        <WhatsAppConnectionCard companyId={settings.companyId} />
 
         {/* Global Tokens & Pixel IDs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

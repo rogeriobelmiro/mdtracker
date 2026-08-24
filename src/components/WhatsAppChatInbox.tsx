@@ -104,7 +104,7 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
       await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: selectedLead.phone, message: textToSend })
+        body: JSON.stringify({ companyId: selectedLead.companyId || 'comp-alfa', phone: selectedLead.phone, message: textToSend })
       });
       fetchMessages();
       checkKeywordStageAutomation(textToSend);

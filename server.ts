@@ -397,12 +397,14 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
 
 // WhatsApp API
 app.get('/api/whatsapp/status', async (req: Request, res: Response) => {
-    res.json(await getWhatsAppStatus());
+    const companyId = req.query.companyId as string || 'comp-alfa';
+    res.json(await getWhatsAppStatus(companyId));
 });
 
 app.post('/api/whatsapp/connect', async (req: Request, res: Response) => {
     try {
-        await startWhatsApp();
+        const companyId = req.body.companyId || 'comp-alfa';
+        await startWhatsApp(companyId);
         res.json({ success: true, message: 'Iniciando conexão...' });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -411,7 +413,8 @@ app.post('/api/whatsapp/connect', async (req: Request, res: Response) => {
 
 app.post('/api/whatsapp/logout', async (req: Request, res: Response) => {
     try {
-        await logoutWhatsApp();
+        const companyId = req.body.companyId || 'comp-alfa';
+        await logoutWhatsApp(companyId);
         res.json({ success: true, message: 'Desconectado com sucesso' });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -425,7 +428,8 @@ app.post('/api/whatsapp/send', async (req: Request, res: Response) => {
     }
     
     try {
-        const success = await sendWhatsAppMessage(phone, message);
+        const companyId = req.body.companyId || 'comp-alfa';
+        const success = await sendWhatsAppMessage(companyId, phone, message);
         if (success) {
             res.json({ success: true, message: 'Mensagem enviada com sucesso' });
         } else {

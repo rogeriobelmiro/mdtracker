@@ -6,13 +6,17 @@ interface WhatsAppStatusData {
     qrCodeBase64: string | null;
 }
 
-export const WhatsAppConnectionCard: React.FC = () => {
+interface WhatsAppConnectionCardProps {
+    companyId?: string;
+}
+
+export const WhatsAppConnectionCard: React.FC<WhatsAppConnectionCardProps> = ({ companyId }) => {
     const [waStatus, setWaStatus] = useState<WhatsAppStatusData>({ status: 'disconnected', qrCodeBase64: null });
     const [loading, setLoading] = useState(false);
 
     const fetchStatus = async () => {
         try {
-            const res = await fetch('/api/whatsapp/status');
+            const res = await fetch(`/api/whatsapp/status?companyId=${companyId || 'comp-alfa'}`);
             const data = await res.json();
             setWaStatus(data);
         } catch (error) {
@@ -29,7 +33,11 @@ export const WhatsAppConnectionCard: React.FC = () => {
     const connectWhatsApp = async () => {
         setLoading(true);
         try {
-            await fetch('/api/whatsapp/connect', { method: 'POST' });
+            await fetch('/api/whatsapp/connect', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyId: companyId || 'comp-alfa' })
+            });
             await fetchStatus();
         } catch (error) {
             console.error('Erro ao conectar:', error);
@@ -40,7 +48,11 @@ export const WhatsAppConnectionCard: React.FC = () => {
     const logoutWhatsApp = async () => {
         setLoading(true);
         try {
-            await fetch('/api/whatsapp/logout', { method: 'POST' });
+            await fetch('/api/whatsapp/logout', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyId: companyId || 'comp-alfa' })
+            });
             await fetchStatus();
         } catch (error) {
             console.error('Erro ao desconectar:', error);

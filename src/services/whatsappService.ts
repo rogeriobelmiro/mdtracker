@@ -7,13 +7,17 @@ interface WhatsAppServiceState {
     qrCodeBase64: string | null;
 }
 
-const state: WhatsAppServiceState = {
-    status: 'disconnected',
-    qrCodeBase64: null,
-};
+const companyStates = new Map<string, WhatsAppServiceState>();
 
-async function getEvolutionConfig() {
-    const { data } = await supabase.from('settings').select('evolution_instance, evolution_api_url, evolution_api_key').eq('company_id', 'comp-alfa').single();
+function getState(companyId: string): WhatsAppServiceState {
+    if (!companyStates.has(companyId)) {
+        companyStates.set(companyId, { status: 'disconnected', qrCodeBase64: null });
+    }
+    return companyStates.get(companyId)!;
+}
+
+async function getEvolutionConfig(companyId: string) {
+    const { data } = await supabase.from('settings').select('evolution_instance, evolution_api_url, evolution_api_key').eq('company_id', companyId).single();
     return {
         instance: data?.evolution_instance,
         apiUrl: data?.evolution_api_url,
@@ -21,7 +25,8 @@ async function getEvolutionConfig() {
     };
 }
 
-export const startWhatsApp = async (): Promise<void> => {
+export const startWhatsApp = async (companyId: string): Promise<void> => {
+    const state = getState(companyId);
     if (state.status === 'connected' || state.status === 'connecting') {
         return;
     }
@@ -30,7 +35,7 @@ export const startWhatsApp = async (): Promise<void> => {
     state.qrCodeBase64 = null;
 
     try {
-        const config = await getEvolutionConfig();
+        const config = await getEvolutionConfig(companyId);
         if (!config.instance || !config.apiUrl || !config.apiKey) {
             throw new Error('Configurações da Evolution API não encontradas no banco de dados.');
         }
@@ -82,7 +87,7 @@ export const startWhatsApp = async (): Promise<void> => {
                 state.status = 'qr';
                 state.qrCodeBase64 = connectData.qrcode.base64;
             } else {
-                await getWhatsAppStatus();
+                await getWhatsAppStatus(companyId);
             }
         } else if (response.status === 401) {
              console.error('Erro de Autenticação (401): A Global API Key da Evolution é inválida.');
@@ -93,16 +98,18 @@ export const startWhatsApp = async (): Promise<void> => {
              state.status = 'disconnected';
              state.qrCodeBase64 = null;
         }
-
     } catch (error) {
-        console.error('Falha ao conectar via Evolution API:', error);
+        console.error('Erro ao conectar na Evolution API:', error);
+        const state = getState(companyId);
         state.status = 'disconnected';
+        state.qrCodeBase64 = null;
     }
 };
 
-export const logoutWhatsApp = async (): Promise<void> => {
+export const logoutWhatsApp = async (companyId: string): Promise<void> => {
+    const state = getState(companyId);
     try {
-        const config = await getEvolutionConfig();
+        const config = await getEvolutionConfig(companyId);
         if (!config.instance || !config.apiUrl || !config.apiKey) return;
 
         const baseUrl = config.apiUrl.replace(/\/$/, '');
@@ -122,9 +129,10 @@ export const logoutWhatsApp = async (): Promise<void> => {
     }
 };
 
-export const getWhatsAppStatus = async () => {
+export const getWhatsAppStatus = async (companyId: string) => {
     try {
-        const config = await getEvolutionConfig();
+        const state = getState(companyId);
+        const config = await getEvolutionConfig(companyId);
         if (!config.instance || !config.apiUrl || !config.apiKey) {
             return { status: 'disconnected', qrCodeBase64: null };
         }
