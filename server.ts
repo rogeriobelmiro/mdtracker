@@ -299,24 +299,32 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) => {
     try {
         const payload = req.body;
-        console.log('Recebido webhook Evolution API:', JSON.stringify(payload).substring(0, 200));
+        console.log('Recebido webhook Evolution API:', JSON.stringify(payload).substring(0, 300));
 
-        // Evolution API dispara events como "messages.upsert"
-        if (payload.event === 'messages.upsert') {
+        const eventType = (payload.event || '').toLowerCase();
+
+        // Evolution API dispara events como "messages.upsert" ou "MESSAGES_UPSERT"
+        if (eventType === 'messages.upsert' || eventType === 'messages_upsert') {
             const data = payload.data;
-            const messageObj = data.message;
-            if (!messageObj) return res.status(200).json({ received: true });
+            
+            // Em algumas versões da Evolution a estrutura vem em data.message, em outras, data já é o objeto da mensagem
+            const messageObj = (data?.message && data.message.key) ? data.message : data;
+            
+            if (!messageObj || !messageObj.key) return res.status(200).json({ received: true });
 
             const remoteJid = messageObj.key?.remoteJid || '';
             if (remoteJid === 'status@broadcast') return res.status(200).json({ received: true });
 
             const phone = remoteJid.split('@')[0];
             const isFromMe = messageObj.key?.fromMe;
+            
+            // O texto da mensagem pode estar em diferentes níveis dependendo do tipo
             const textContent = messageObj.message?.conversation || 
                                 messageObj.message?.extendedTextMessage?.text || 
-                                messageObj.message?.imageMessage?.caption;
+                                messageObj.message?.imageMessage?.caption ||
+                                messageObj.text || ''; // Fallback
 
-            if (!textContent) return res.status(200).json({ received: true });
+            if (!textContent && !isFromMe) return res.status(200).json({ received: true });
 
             // Check if lead exists
             const { data: existingLead } = await supabase

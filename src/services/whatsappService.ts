@@ -211,14 +211,14 @@ export const getWhatsAppStatus = async (companyId: string) => {
     };
 };
 
-export const sendWhatsAppMessage = async (phone: string, text: string): Promise<boolean> => {
+export const sendWhatsAppMessage = async (companyId: string, phone: string, text: string): Promise<boolean> => {
     let cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
         cleanPhone = '55' + cleanPhone;
     }
     
     try {
-        const config = await getEvolutionConfig();
+        const config = await getEvolutionConfig(companyId);
         if (!config.instance || !config.apiUrl || !config.apiKey) {
              throw new Error('Configurações da Evolution API não encontradas no banco de dados.');
         }
