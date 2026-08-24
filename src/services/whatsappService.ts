@@ -67,9 +67,29 @@ export const startWhatsApp = async (): Promise<void> => {
             state.status = 'qr';
             state.qrCodeBase64 = data.qrcode.base64;
         } else if (response.status === 403 || data.error) {
-            // Se já existe e retornou erro de existente, tenta buscar o estado
-            await getWhatsAppStatus();
+            // Se já existe, tentar pegar o QR Code de conexão
+            console.log('Instância já existe. Buscando QR Code...');
+            const connectRes = await fetch(`${baseUrl}/instance/connect/${config.instance}`, {
+                method: 'GET',
+                headers: { 'apikey': config.apiKey }
+            });
+            const connectData = await connectRes.json();
+            
+            if (connectData.base64) {
+                state.status = 'qr';
+                state.qrCodeBase64 = connectData.base64;
+            } else if (connectData.qrcode && connectData.qrcode.base64) {
+                state.status = 'qr';
+                state.qrCodeBase64 = connectData.qrcode.base64;
+            } else {
+                await getWhatsAppStatus();
+            }
+        } else if (response.status === 401) {
+             console.error('Erro de Autenticação (401): A Global API Key da Evolution é inválida.');
+             state.status = 'disconnected';
+             state.qrCodeBase64 = null;
         } else {
+             console.error('Erro desconhecido na Evolution API:', data);
              state.status = 'disconnected';
              state.qrCodeBase64 = null;
         }
