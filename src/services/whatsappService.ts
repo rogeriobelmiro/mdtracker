@@ -42,6 +42,14 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
 
         const baseUrl = config.apiUrl.replace(/\/$/, '');
         
+        const webhookPayload = {
+            enabled: true,
+            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+            byEvents: false,
+            base64: false,
+            events: ["MESSAGES_UPSERT", "messages.upsert"] // Send both formats just in case
+        };
+
         // 1. Tentar conectar / criar instância
         const response = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
@@ -54,13 +62,7 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
                 instanceName: config.instance,
                 qrcode: true,
                 integration: "WHATSAPP-BAILEYS",
-                webhook: {
-                    enabled: true,
-                    url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
-                    byEvents: false,
-                    base64: false,
-                    events: ["MESSAGES_UPSERT"]
-                }
+                webhook: webhookPayload
             })
         });
 
@@ -74,7 +76,18 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
             state.qrCodeBase64 = data.qrcode.base64;
         } else if (response.status === 403 || data.error) {
             // Se já existe, tentar pegar o QR Code de conexão
-            console.log('Instância já existe. Buscando QR Code...');
+            console.log('Instância já existe. Buscando QR Code e atualizando Webhook...');
+            
+            // Garantir que o webhook está configurado corretamente
+            await fetch(`${baseUrl}/webhook/set/${config.instance}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': config.apiKey
+                },
+                body: JSON.stringify({ webhook: webhookPayload })
+            }).catch(e => console.error('Erro ao atualizar webhook:', e));
+
             const connectRes = await fetch(`${baseUrl}/instance/connect/${config.instance}`, {
                 method: 'GET',
                 signal: AbortSignal.timeout(10000),
@@ -109,13 +122,7 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
                         instanceName: config.instance,
                         qrcode: true,
                         integration: "WHATSAPP-BAILEYS",
-                        webhook: {
-                            enabled: true,
-                            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
-                            byEvents: false,
-                            base64: false,
-                            events: ["MESSAGES_UPSERT"]
-                        }
+                        webhook: webhookPayload
                     })
                 });
                 
