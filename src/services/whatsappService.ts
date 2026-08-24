@@ -89,7 +89,47 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
                 state.status = 'qr';
                 state.qrCodeBase64 = connectData.qrcode.base64;
             } else {
-                await getWhatsAppStatus(companyId);
+                console.log('Instância presa ou sem QR Code. Deletando e recriando...');
+                // Deletar a instância travada
+                await fetch(`${baseUrl}/instance/delete/${config.instance}`, {
+                    method: 'DELETE',
+                    signal: AbortSignal.timeout(8000),
+                    headers: { 'apikey': config.apiKey }
+                });
+
+                // Tentar criar novamente
+                const retryResponse = await fetch(`${baseUrl}/instance/create`, {
+                    method: 'POST',
+                    signal: AbortSignal.timeout(15000),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': config.apiKey
+                    },
+                    body: JSON.stringify({
+                        instanceName: config.instance,
+                        qrcode: true,
+                        integration: "WHATSAPP-BAILEYS",
+                        webhook: {
+                            enabled: true,
+                            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+                            byEvents: false,
+                            base64: false,
+                            events: ["MESSAGES_UPSERT"]
+                        }
+                    })
+                });
+                
+                const retryData = await retryResponse.json();
+                if (retryData.qrcode && retryData.qrcode.base64) {
+                    state.status = 'qr';
+                    state.qrCodeBase64 = retryData.qrcode.base64;
+                } else if (retryData.instance?.status === 'open' || retryData.instance?.status === 'connected') {
+                    state.status = 'connected';
+                    state.qrCodeBase64 = null;
+                } else {
+                    state.status = 'disconnected';
+                    state.qrCodeBase64 = null;
+                }
             }
         } else if (response.status === 401) {
              console.error('Erro de Autenticação (401): A Global API Key da Evolution é inválida.');
