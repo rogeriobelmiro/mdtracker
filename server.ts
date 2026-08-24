@@ -421,6 +421,34 @@ app.post('/api/whatsapp/logout', async (req: Request, res: Response) => {
     }
 });
 
+app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => {
+    try {
+        const { url, apiKey } = req.body;
+        if (!url || !apiKey) {
+            return res.status(400).json({ success: false, message: 'URL e API Key são obrigatórios.' });
+        }
+        
+        const baseUrl = url.replace(/\/$/, '');
+        const response = await fetch(`${baseUrl}/instance/fetchInstances`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(8000),
+            headers: {
+                'apikey': apiKey
+            }
+        });
+        
+        if (response.ok) {
+            res.json({ success: true, message: 'Conexão bem-sucedida!' });
+        } else if (response.status === 401 || response.status === 403) {
+            res.json({ success: false, message: 'Acesso Negado. Verifique a Global API Key.' });
+        } else {
+            res.json({ success: false, message: `Erro no servidor da API (HTTP ${response.status})` });
+        }
+    } catch (err: any) {
+        res.json({ success: false, message: `Erro ao conectar: ${err.message}` });
+    }
+});
+
 app.post('/api/whatsapp/send', async (req: Request, res: Response) => {
     const { phone, message } = req.body;
     if (!phone || !message) {

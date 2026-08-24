@@ -41,6 +41,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   
   const [testUrl, setTestUrl] = useState<string>(settings.globalWebhookUrl || '');
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
+  const [evoTestStatus, setEvoTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [newKeywordInputs, setNewKeywordInputs] = useState<Record<string, string>>({});
@@ -168,6 +169,22 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       setTestStatus({ loading: false, message: res.message, success: res.success });
     } catch (err) {
       setTestStatus({ loading: false, message: 'Erro ao disparar webhook de teste.', success: false });
+    }
+  };
+
+  const handleTestEvolution = async () => {
+    if (!formData.evolutionApiUrl || !formData.evolutionApiKey) return;
+    setEvoTestStatus({ loading: true });
+    try {
+      const res = await fetch('/api/whatsapp/evolution/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: formData.evolutionApiUrl, apiKey: formData.evolutionApiKey })
+      });
+      const data = await res.json();
+      setEvoTestStatus({ loading: false, message: data.message, success: data.success });
+    } catch (err) {
+      setEvoTestStatus({ loading: false, message: 'Erro de conexão.', success: false });
     }
   };
 
@@ -308,6 +325,29 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                   onChange={(e) => setFormData({ ...formData, evolutionApiKey: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
                 />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestEvolution}
+                  disabled={evoTestStatus.loading || !formData.evolutionApiUrl || !formData.evolutionApiKey}
+                  className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
+                >
+                  {evoTestStatus.loading ? (
+                    <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                  )}
+                  Testar Conexão com Evolution
+                </button>
+                {evoTestStatus.message && (
+                  <div className={`mt-2 p-2 rounded text-xs font-semibold ${
+                    evoTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
+                  }`}>
+                    {evoTestStatus.message}
+                  </div>
+                )}
               </div>
             </div>
           </div>
