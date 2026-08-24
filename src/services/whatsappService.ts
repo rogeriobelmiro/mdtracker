@@ -173,8 +173,8 @@ export const logoutWhatsApp = async (companyId: string): Promise<void> => {
 };
 
 export const getWhatsAppStatus = async (companyId: string) => {
+    const state = getState(companyId);
     try {
-        const state = getState(companyId);
         const config = await getEvolutionConfig(companyId);
         if (!config.instance || !config.apiUrl || !config.apiKey) {
             return { status: 'disconnected', qrCodeBase64: null };
