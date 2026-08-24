@@ -45,6 +45,7 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
         // 1. Tentar conectar / criar instância
         const response = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
+            signal: AbortSignal.timeout(15000), // 15 seconds timeout
             headers: {
                 'Content-Type': 'application/json',
                 'apikey': config.apiKey
@@ -76,6 +77,7 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
             console.log('Instância já existe. Buscando QR Code...');
             const connectRes = await fetch(`${baseUrl}/instance/connect/${config.instance}`, {
                 method: 'GET',
+                signal: AbortSignal.timeout(10000),
                 headers: { 'apikey': config.apiKey }
             });
             const connectData = await connectRes.json();
@@ -116,6 +118,7 @@ export const logoutWhatsApp = async (companyId: string): Promise<void> => {
         
         await fetch(`${baseUrl}/instance/logout/${config.instance}`, {
             method: 'DELETE',
+            signal: AbortSignal.timeout(8000),
             headers: {
                 'apikey': config.apiKey
             }
@@ -141,6 +144,7 @@ export const getWhatsAppStatus = async (companyId: string) => {
         
         const response = await fetch(`${baseUrl}/instance/connectionState/${config.instance}`, {
             method: 'GET',
+            signal: AbortSignal.timeout(8000),
             headers: {
                 'apikey': config.apiKey
             }
