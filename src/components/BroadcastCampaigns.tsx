@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Send, Radio, Users, CheckCircle2, Clock, Play, Pause, RefreshCw, Download, 
-  ExternalLink, Plus, Filter, Sparkles, MessageSquare, Settings, AlertCircle, Trash2, Check, Copy
+  ExternalLink, Plus, Filter, Sparkles, MessageSquare, Settings, AlertCircle, Trash2, Check, Copy, Search
 } from 'lucide-react';
 import { Lead, CampaignLink, BroadcastCampaign, FunnelStage } from '../types';
 
