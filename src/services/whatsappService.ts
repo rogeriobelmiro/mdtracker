@@ -313,3 +313,60 @@ export const sendWhatsAppMessage = async (companyId: string, phone: string, text
         return false;
     }
 };
+
+export const sendWhatsAppMedia = async (companyId: string, phone: string, mediaBase64: string, mediaType: string, caption?: string): Promise<boolean> => {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
+        cleanPhone = '55' + cleanPhone;
+    }
+    
+    try {
+        const config = await getEvolutionConfig(companyId);
+        if (!config.instance || !config.apiUrl || !config.apiKey) {
+             throw new Error('Configurações da Evolution API não encontradas no banco de dados.');
+        }
+
+        const baseUrl = config.apiUrl.replace(/\/$/, '');
+
+        const response = await fetch(`${baseUrl}/message/sendMedia/${config.instance}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': config.apiKey
+            },
+            body: JSON.stringify({
+                number: cleanPhone,
+                options: {
+                    delay: 1200,
+                    presence: 'composing'
+                },
+                mediaMessage: {
+                    mediatype: mediaType,
+                    caption: caption || '',
+                    media: mediaBase64
+                }
+            })
+        });
+
+        if (!response.ok) {
+             throw new Error(`Erro na API Evolution: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+
+        // Save outgoing message to DB
+        await supabase.from('whatsapp_messages').insert({
+            id: result?.key?.id || `msg-out-${Date.now()}`,
+            lead_phone: cleanPhone,
+            sender: 'attendant',
+            text: caption ? `[Mídia] ${caption}` : '[Mídia]',
+            status: 'entregue',
+            timestamp: new Date().toISOString()
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Erro ao enviar mídia no WhatsApp (Evolution API):', error);
+        return false;
+    }
+};

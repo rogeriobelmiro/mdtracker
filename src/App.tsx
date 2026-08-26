@@ -34,6 +34,7 @@ import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
 
   // Multi-tenant & User Management States
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -324,6 +325,10 @@ export default function App() {
             leads={companyLeads}
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
+            onOpenWhatsApp={(leadId) => {
+              setChatSelectedLeadId(leadId);
+              setActiveTab('chat');
+            }}
           />
         )}
 
@@ -347,6 +352,7 @@ export default function App() {
           <WhatsAppChatInbox
             leads={companyLeads}
             links={companyLinks}
+            initialSelectedLeadId={chatSelectedLeadId}
             onUpdateLeadStage={(leadId, newStage) => {
               handleUpdateLead(leadId, { stage: newStage });
             }}

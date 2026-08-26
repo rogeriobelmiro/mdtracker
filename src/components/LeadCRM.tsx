@@ -6,6 +6,7 @@ interface LeadCRMProps {
   leads: Lead[];
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
+  onOpenWhatsApp?: (leadId: string) => void;
 }
 
 export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteLead }) => {
@@ -105,9 +106,13 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
         </div>
         <div className="flex items-center gap-1">
           {lead.phone && (
-            <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-green-600 hover:bg-green-50 p-1 rounded transition" title="WhatsApp">
-              <MessageSquare className="w-3.5 h-3.5" />
-            </a>
+            <button 
+              onClick={() => onOpenWhatsApp ? onOpenWhatsApp(lead.id) : window.open(`https://wa.me/${lead.phone.replace(/\D/g, '')}`, '_blank')}
+              className="text-green-600 hover:bg-green-50 p-1 rounded transition flex items-center justify-center" 
+              title="Abrir no Inbox"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
           )}
           <button onClick={() => handleOpenLeadDetails(lead)} className="text-slate-400 hover:text-blue-600 hover:bg-slate-50 p-1 rounded transition" title="Detalhes">
             <Edit3 className="w-3.5 h-3.5" />
@@ -350,15 +355,13 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                       
                       {/* WhatsApp Button */}
                       {lead.phone && (
-                        <a
-                          href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded transition border border-green-200"
-                          title="Abrir no WhatsApp"
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onOpenWhatsApp ? onOpenWhatsApp(lead.id) : window.open(`https://wa.me/${lead.phone.replace(/\D/g, '')}`, '_blank'); }}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded"
+                          title="Abrir no Inbox"
                         >
                           <MessageSquare className="w-4 h-4" />
-                        </a>
+                        </button>
                       )}
 
                       {/* Details Button */}

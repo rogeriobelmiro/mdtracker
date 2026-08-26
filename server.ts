@@ -3,7 +3,7 @@ import path from 'path';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
 import bcrypt from 'bcryptjs';
-import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage } from './src/services/whatsappService.js';
+import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage, sendWhatsAppMedia } from './src/services/whatsappService.js';
 
 // Mappers to convert between frontend camelCase and DB snake_case
 const mapCompanyToDB = (c: any) => {
@@ -366,9 +366,20 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                         '84': 'RN', '69': 'RO', '95': 'RR', '51': 'RS', '53': 'RS', '54': 'RS', '55': 'RS', '47': 'SC', '48': 'SC', '49': 'SC',
                         '79': 'SE', '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP', '63': 'TO'
                     };
+                    const dddCityMap: Record<string, string> = {
+                        '11': 'São Paulo', '12': 'São José dos Campos', '13': 'Santos', '14': 'Bauru', '15': 'Sorocaba', '16': 'Ribeirão Preto', '17': 'São José do Rio Preto', '18': 'Presidente Prudente', '19': 'Campinas',
+                        '21': 'Rio de Janeiro', '22': 'Campos dos Goytacazes', '24': 'Volta Redonda', '27': 'Vitória', '28': 'Cachoeiro de Itapemirim',
+                        '31': 'Belo Horizonte', '32': 'Juiz de Fora', '33': 'Governador Valadares', '34': 'Uberlândia', '35': 'Poços de Caldas', '37': 'Divinópolis', '38': 'Montes Claros',
+                        '41': 'Curitiba', '42': 'Ponta Grossa', '43': 'Londrina', '44': 'Maringá', '45': 'Cascavel', '46': 'Francisco Beltrão', '47': 'Joinville', '48': 'Florianópolis', '49': 'Chapecó',
+                        '51': 'Porto Alegre', '53': 'Pelotas', '54': 'Caxias do Sul', '55': 'Santa Maria',
+                        '61': 'Brasília', '62': 'Goiânia', '63': 'Palmas', '64': 'Rio Verde', '65': 'Cuiabá', '66': 'Sinop', '67': 'Campo Grande', '68': 'Rio Branco', '69': 'Porto Velho',
+                        '71': 'Salvador', '73': 'Ilhéus', '74': 'Juazeiro', '75': 'Feira de Santana', '77': 'Vitória da Conquista', '79': 'Aracaju',
+                        '81': 'Recife', '82': 'Maceió', '83': 'João Pessoa', '84': 'Natal', '85': 'Fortaleza', '86': 'Teresina', '87': 'Petrolina', '88': 'Juazeiro do Norte', '89': 'Picos',
+                        '91': 'Belém', '92': 'Manaus', '93': 'Santarém', '94': 'Marabá', '95': 'Boa Vista', '96': 'Macapá', '97': 'Coari', '98': 'São Luís', '99': 'Imperatriz'
+                    };
                     if (dddMap[ddd]) {
                         state = dddMap[ddd];
-                        city = 'DDD ' + ddd;
+                        city = dddCityMap[ddd] || ('DDD ' + ddd);
                     }
                 }
 
@@ -548,6 +559,25 @@ app.post('/api/whatsapp/send', async (req: Request, res: Response) => {
             res.json({ success: true, message: 'Mensagem enviada com sucesso' });
         } else {
             res.status(500).json({ error: 'Erro ao enviar mensagem' });
+        }
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/send-media', async (req: Request, res: Response) => {
+    const { phone, mediaBase64, mediaType, caption } = req.body;
+    if (!phone || !mediaBase64 || !mediaType) {
+        return res.status(400).json({ error: 'Telefone, mediaBase64 e mediaType são obrigatórios' });
+    }
+    
+    try {
+        const companyId = req.body.companyId || 'comp-alfa';
+        const success = await sendWhatsAppMedia(companyId, phone, mediaBase64, mediaType, caption);
+        if (success) {
+            res.json({ success: true, message: 'Mídia enviada com sucesso' });
+        } else {
+            res.status(500).json({ error: 'Erro ao enviar mídia' });
         }
     } catch (err: any) {
         res.status(500).json({ error: err.message });

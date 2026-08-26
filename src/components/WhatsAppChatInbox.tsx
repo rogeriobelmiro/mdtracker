@@ -1,28 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
-  Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter
+  Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter,
+  Smile, X, Image as ImageIcon, Video, File as FileIcon
 } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';
 
 interface WhatsAppChatInboxProps {
   leads: Lead[];
   links: CampaignLink[];
   onUpdateLeadStage: (leadId: string, newStage: FunnelStage) => void;
+  initialSelectedLeadId?: string | null;
 }
 
 export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({ 
   leads, 
   links, 
-  onUpdateLeadStage 
+  onUpdateLeadStage,
+  initialSelectedLeadId
 }) => {
   // Selected Lead for active conversation
-  const [selectedLeadId, setSelectedLeadId] = useState<string>(leads[0]?.id || '');
+  const [selectedLeadId, setSelectedLeadId] = useState<string>(initialSelectedLeadId || leads[0]?.id || '');
+  
+  useEffect(() => {
+    if (initialSelectedLeadId) {
+      setSelectedLeadId(initialSelectedLeadId);
+    }
+  }, [initialSelectedLeadId]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStage, setFilterStage] = useState<string>('Todos');
 
   // Input message state
   const [messageInput, setMessageInput] = useState('');
+  
+  // Emojis e Anexos
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [attachment, setAttachment] = useState<{file: File, base64: string, previewUrl: string, type: string} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mensagens carregadas do banco de dados
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -75,21 +91,55 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     return () => clearInterval(interval);
   }, [selectedLead]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 16 * 1024 * 1024) {
+      alert('O arquivo é muito grande. O limite máximo recomendado é de 16MB.');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    let type = 'document';
+    if (file.type.startsWith('image/')) type = 'image';
+    else if (file.type.startsWith('video/')) type = 'video';
+    else if (file.type.startsWith('audio/')) type = 'audio';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      // Extract just the base64 string without data type prefix for Evolution
+      const base64Data = base64.split(',')[1] || base64;
+      setAttachment({ file, base64: base64Data, previewUrl, type });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // reset
+  };
+
+  const onEmojiClick = (emojiData: any) => {
+    setMessageInput(prev => prev + emojiData.emoji);
+  };
+
   const currentMessages = messages[selectedLeadId] || [];
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!messageInput.trim() || !selectedLeadId || !selectedLead?.phone) return;
+    if ((!messageInput.trim() && !attachment) || !selectedLeadId || !selectedLead?.phone) return;
 
     const textToSend = messageInput.trim();
+    const currentAttachment = attachment;
+    
     setMessageInput('');
+    setAttachment(null);
+    setShowEmojiPicker(false);
 
     // Atualização Otimista na UI
     const newMessage: ChatMessage = {
       id: 'msg-' + Date.now(),
       leadId: selectedLeadId,
       sender: 'attendant',
-      text: textToSend,
+      text: textToSend + (currentAttachment ? (textToSend ? `\n\n[Mídia: ${currentAttachment.file.name}]` : `[Mídia: ${currentAttachment.file.name}]`) : ''),
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       status: 'entregue'
     };
@@ -100,12 +150,27 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     }));
 
     try {
-      // Envia via API conectada ao Baileys
-      await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: selectedLead.companyId || 'comp-alfa', phone: selectedLead.phone, message: textToSend })
-      });
+      if (currentAttachment) {
+        // Envia mídia
+        await fetch('/api/whatsapp/send-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            companyId: selectedLead.companyId || 'comp-alfa', 
+            phone: selectedLead.phone, 
+            mediaBase64: currentAttachment.base64,
+            mediaType: currentAttachment.type,
+            caption: textToSend
+          })
+        });
+      } else {
+        // Envia texto
+        await fetch('/api/whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyId: selectedLead.companyId || 'comp-alfa', phone: selectedLead.phone, message: textToSend })
+        });
+      }
       fetchMessages();
       checkKeywordStageAutomation(textToSend);
     } catch (err) {
@@ -431,22 +496,79 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
             </div>
 
             {/* Message Send Form Bar */}
-            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Digite sua mensagem para o cliente no WhatsApp..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-600"
-              />
-              <button
-                type="submit"
-                disabled={!messageInput.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold p-2.5 rounded-lg transition shadow-xs flex items-center justify-center shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
+            <div className="relative">
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 mb-2 z-50">
+                  <EmojiPicker onEmojiClick={onEmojiClick} />
+                </div>
+              )}
+              
+              {attachment && (
+                <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-3">
+                  <div className="relative w-12 h-12 rounded bg-slate-200 flex items-center justify-center overflow-hidden shrink-0 border border-slate-300">
+                    {attachment.type === 'image' ? (
+                      <img src={attachment.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : attachment.type === 'video' ? (
+                      <Video className="w-6 h-6 text-slate-500" />
+                    ) : (
+                      <FileIcon className="w-6 h-6 text-slate-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-700 truncate">{attachment.file.name}</p>
+                    <p className="text-[10px] text-slate-500">{(attachment.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setAttachment(null)}
+                    className="p-1.5 hover:bg-slate-200 rounded text-slate-500 transition"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition shrink-0"
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition shrink-0"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
+                <input
+                  type="text"
+                  placeholder={attachment ? "Adicione uma legenda..." : "Digite sua mensagem para o cliente no WhatsApp..."}
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-emerald-600"
+                />
+                
+                <button
+                  type="submit"
+                  disabled={!messageInput.trim() && !attachment}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold p-2.5 rounded-lg transition shadow-xs flex items-center justify-center shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
 
           </div>
         ) : (

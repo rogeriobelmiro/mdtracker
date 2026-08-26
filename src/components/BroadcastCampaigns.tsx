@@ -11,8 +11,11 @@ interface BroadcastCampaignsProps {
 }
 
 export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, links }) => {
-  // Mock stored broadcast campaigns
-  const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([
+  // Mock stored broadcast campaigns using localStorage for persistence
+  const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>(() => {
+    const saved = localStorage.getItem('mdtracker_campaigns');
+    if (saved) return JSON.parse(saved);
+    return [
     {
       id: 'bc-1',
       name: 'Disparo Black Friday - Reengajamento',
@@ -43,10 +46,16 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
       delaySeconds: 8,
       createdAt: new Date(Date.now() - 3600000 * 12).toISOString()
     }
-  ]);
+    ];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('mdtracker_campaigns', JSON.stringify(campaigns));
+  }, [campaigns]);
 
   // Modal / Form state for new broadcast
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [queueSearchQuery, setQueueSearchQuery] = useState('');
   const [campaignName, setCampaignName] = useState('');
   const [selectedStage, setSelectedStage] = useState<string>('Todos');
   const [selectedSource, setSelectedSource] = useState<string>('Todas');
@@ -396,20 +405,35 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
 
       {/* Manual Direct WhatsApp Web One-Click Queue */}
       <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
           <div>
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
               Fila de Disparo Individual de 1 Clique via WhatsApp Web
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 mt-1">
               Dispare mensagens diretamente para o aplicativo do WhatsApp Web sem risco de bloqueio de API.
             </p>
+          </div>
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar contato (nome ou telefone)..."
+              value={queueSearchQuery}
+              onChange={(e) => setQueueSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-1.5 border border-slate-200 rounded text-sm w-full sm:w-64 focus:outline-none focus:border-emerald-500 text-slate-700 bg-slate-50"
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
-          {matchingLeads.slice(0, 10).map((lead, idx) => {
+          {matchingLeads
+            .filter(l => !queueSearchQuery || 
+              (l.name?.toLowerCase().includes(queueSearchQuery.toLowerCase())) || 
+              (l.phone?.includes(queueSearchQuery))
+            )
+            .slice(0, 10).map((lead, idx) => {
             const formattedMsg = encodeURIComponent(formatMessageForLead(messageTemplate, lead));
             const cleanPhone = lead.phone?.replace(/\D/g, '') || '';
             const waUrl = `https://wa.me/55${cleanPhone}?text=${formattedMsg}`;
