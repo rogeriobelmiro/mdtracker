@@ -311,9 +311,12 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                   type="text"
                   placeholder="Ex: MudaDigital"
                   value={formData.evolutionInstance || ''}
-                  onChange={(e) => setFormData({ ...formData, evolutionInstance: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, evolutionInstance: e.target.value.replace(/\s+/g, '') })}
                   className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  O nome da instância não pode conter espaços (Ex: <code className="text-blue-600 font-mono">minha_agencia</code>).
+                </p>
               </div>
 
               <div>
