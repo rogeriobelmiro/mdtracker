@@ -452,7 +452,11 @@ app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => 
             const { instanceName } = req.body;
             let instanceExists = true;
             if (instanceName && Array.isArray(data)) {
-                instanceExists = data.some((inst: any) => inst.instance?.instanceName === instanceName);
+                instanceExists = data.some((inst: any) => 
+                    inst.instanceName === instanceName || 
+                    inst.instance?.instanceName === instanceName || 
+                    inst.name === instanceName
+                );
                 
                 // Se a instância já existe, garantir que o webhook está configurado corretamente
                 if (instanceExists) {
