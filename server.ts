@@ -473,6 +473,14 @@ app.post('/api/whatsapp/evolution/create-instance', async (req: Request, res: Re
         }
         
         const baseUrl = url.replace(/\/$/, '');
+        const webhookPayload = {
+            enabled: true,
+            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+            byEvents: false,
+            base64: true,
+            events: ["MESSAGES_UPSERT", "messages.upsert"]
+        };
+        
         const response = await fetch(`${baseUrl}/instance/create`, {
             method: 'POST',
             signal: AbortSignal.timeout(15000),
@@ -483,13 +491,14 @@ app.post('/api/whatsapp/evolution/create-instance', async (req: Request, res: Re
             body: JSON.stringify({
                 instanceName,
                 qrcode: true,
-                integration: "WHATSAPP-BAILEYS"
+                integration: "WHATSAPP-BAILEYS",
+                webhook: webhookPayload
             })
         });
         
         const data = await response.json();
         if (response.ok) {
-            res.json({ success: true, message: 'Instância criada com sucesso!' });
+            res.json({ success: true, message: 'Instância criada com sucesso! Por favor, role para cima e clique no botão verde "Gerar QR Code para Conectar" para ler o QR Code.' });
         } else {
             res.json({ success: false, message: data.message || data.error || 'Erro ao criar instância.' });
         }
