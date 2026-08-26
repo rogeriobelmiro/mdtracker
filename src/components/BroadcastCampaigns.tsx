@@ -145,8 +145,8 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 companyId,
-                to: currentLead.phone,
-                text: formattedMsg
+                phone: currentLead.phone,
+                message: formattedMsg
               })
             });
 

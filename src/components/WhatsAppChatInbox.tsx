@@ -40,8 +40,37 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
   const [attachment, setAttachment] = useState<{file: File, base64: string, previewUrl: string, type: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mensagens carregadas do banco de dados
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
+
+  // Respostas Rápidas Customizáveis
+  const [quickReplies, setQuickReplies] = useState<{id: string, title: string, text: string}[]>(() => {
+    try {
+      const saved = localStorage.getItem('mdtracker_quick_replies');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { console.error(e); }
+    return [
+      { id: 'qr-1', title: '🔗 Link de Desconto', text: 'Olá! Segue o link com o desconto exclusivo: ' },
+      { id: 'qr-2', title: '📅 Agendar Reunião', text: 'Podemos agendar uma breve conversa por chamada telefônica ou vídeo hoje?' }
+    ];
+  });
+  const [isQuickRepliesModalOpen, setIsQuickRepliesModalOpen] = useState(false);
+  const [newQrTitle, setNewQrTitle] = useState('');
+  const [newQrText, setNewQrText] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('mdtracker_quick_replies', JSON.stringify(quickReplies));
+  }, [quickReplies]);
+
+  const handleAddQuickReply = () => {
+    if (!newQrTitle.trim() || !newQrText.trim()) return;
+    setQuickReplies([...quickReplies, { id: 'qr-' + Date.now(), title: newQrTitle, text: newQrText }]);
+    setNewQrTitle('');
+    setNewQrText('');
+  };
+
+  const handleDeleteQuickReply = (id: string) => {
+    setQuickReplies(quickReplies.filter(qr => qr.id !== id));
+  };
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || leads[0];
 
@@ -469,22 +498,18 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
             </div>
 
             {/* Quick Response Shortcuts */}
-            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px] custom-scrollbar">
               <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Respostas Rápidas:</span>
-              <button
-                type="button"
-                onClick={() => handleSendQuickReply('Olá! Segue o link com o desconto exclusivo: ')}
-                className="bg-white hover:bg-slate-200 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-medium whitespace-nowrap transition"
-              >
-                🔗 Link de Desconto
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendQuickReply('Podemos agendar uma breve conversa por chamada telefônica ou vídeo hoje?')}
-                className="bg-white hover:bg-slate-200 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-medium whitespace-nowrap transition"
-              >
-                📅 Agendar Reunião
-              </button>
+              {quickReplies.map(qr => (
+                <button
+                  key={qr.id}
+                  type="button"
+                  onClick={() => handleSendQuickReply(qr.text)}
+                  className="bg-white hover:bg-slate-200 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-medium whitespace-nowrap transition"
+                >
+                  {qr.title}
+                </button>
+              ))}
               <button
                 type="button"
                 onClick={() => generateAiSuggestion()}
@@ -492,6 +517,14 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
               >
                 <Sparkles className="w-3 h-3 text-purple-600" />
                 Sugestão IA
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsQuickRepliesModalOpen(true)}
+                className="text-slate-400 hover:text-slate-600 transition p-1"
+                title="Gerenciar Respostas Rápidas"
+              >
+                <Settings className="w-4 h-4" />
               </button>
             </div>
 
@@ -578,6 +611,71 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
         )}
 
       </div>
+
+      {/* MODAL: Gerenciar Respostas Rápidas */}
+      {isQuickRepliesModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-lg rounded-lg shadow-xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h2 className="font-bold text-slate-900">Respostas Rápidas</h2>
+              <button onClick={() => setIsQuickRepliesModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              {quickReplies.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">Nenhuma resposta rápida cadastrada.</p>
+              ) : (
+                <div className="space-y-2">
+                  {quickReplies.map(qr => (
+                    <div key={qr.id} className="p-3 bg-slate-50 border border-slate-200 rounded flex justify-between items-start gap-3">
+                      <div>
+                        <p className="font-bold text-sm text-slate-800">{qr.title}</p>
+                        <p className="text-xs text-slate-600 mt-1">{qr.text}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteQuickReply(qr.id)}
+                        className="text-slate-400 hover:text-red-500 transition p-1 shrink-0"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
+              <h3 className="text-xs font-bold text-slate-700 uppercase">Adicionar Nova</h3>
+              <div className="grid grid-cols-1 gap-2">
+                <input
+                  type="text"
+                  placeholder="Título (ex: 🔗 Link de Desconto)"
+                  value={newQrTitle}
+                  onChange={e => setNewQrTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-emerald-500 bg-white"
+                />
+                <textarea
+                  placeholder="Mensagem completa..."
+                  value={newQrText}
+                  onChange={e => setNewQrText(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-emerald-500 bg-white resize-none h-20"
+                />
+                <button
+                  onClick={handleAddQuickReply}
+                  disabled={!newQrTitle.trim() || !newQrText.trim()}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded text-sm transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Resposta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
