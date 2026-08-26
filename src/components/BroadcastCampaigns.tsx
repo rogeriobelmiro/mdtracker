@@ -131,13 +131,38 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
     let timer: any;
     if (isExecuting && activeCampaign && matchingLeads.length > 0) {
       if (currentLeadIndex < matchingLeads.length) {
-        timer = setTimeout(() => {
+        timer = setTimeout(async () => {
           const currentLead = matchingLeads[currentLeadIndex];
+          const formattedMsg = formatMessageForLead(activeCampaign.messageTemplate, currentLead, activeCampaign.trackingLinkId);
+          
+          let statusResult: 'enviado' | 'erro' = 'enviado';
+
+          try {
+            // Actually send the message via our API
+            const companyId = (currentLead as any).companyId || localStorage.getItem('mdtracker_companyId') || '1';
+            const response = await fetch('/api/whatsapp/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                companyId,
+                to: currentLead.phone,
+                text: formattedMsg
+              })
+            });
+
+            if (!response.ok) {
+              statusResult = 'erro';
+            }
+          } catch (error) {
+            statusResult = 'erro';
+            console.error('Error sending broadcast message:', error);
+          }
+
           const newLog = {
             leadName: currentLead.name || 'Lead',
             phone: currentLead.phone || '',
             time: new Date().toLocaleTimeString('pt-BR'),
-            status: 'enviado' as const
+            status: statusResult
           };
 
           setExecutionLogs(prev => [newLog, ...prev]);
@@ -170,15 +195,16 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
     setMessageTemplate(prev => prev + ' ' + variable);
   };
 
-  const formatMessageForLead = (template: string, lead: Lead) => {
+  const formatMessageForLead = (template: string, lead: Lead, linkId?: string) => {
     let msg = template
       .replace(/\{nome\}/g, lead.name || 'Cliente')
       .replace(/\{cidade\}/g, lead.location?.city || 'sua cidade')
       .replace(/\{etapa\}/g, lead.stage)
       .replace(/\{fonte\}/g, lead.utmSource || lead.source);
 
-    if (selectedLinkId) {
-      const selectedLink = links.find(l => l.id === selectedLinkId);
+    const activeLinkId = linkId || selectedLinkId;
+    if (activeLinkId) {
+      const selectedLink = links.find(l => l.id === activeLinkId);
       if (selectedLink) {
         msg += `\n\nAcesse: ${window.location.origin}/r/${selectedLink.slug}?utm_source=broadcast_${activeCampaign?.id || 'massa'}`;
       }
