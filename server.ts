@@ -6,18 +6,20 @@ import bcrypt from 'bcryptjs';
 import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage } from './src/services/whatsappService.js';
 
 // Mappers to convert between frontend camelCase and DB snake_case
-const mapCompanyToDB = (c: any) => ({
-    id: c.id,
-    name: c.name,
-    cnpj: c.cnpj,
-    plan: c.plan,
-    active: c.active,
-    logo_url: c.logoUrl,
-    responsible_name: c.responsibleName,
-    phone: c.phone,
-    address: c.address,
-    updated_at: new Date().toISOString()
-});
+const mapCompanyToDB = (c: any) => {
+    const obj: any = {};
+    if (c.id !== undefined) obj.id = c.id;
+    if (c.name !== undefined) obj.name = c.name;
+    if (c.cnpj !== undefined) obj.cnpj = c.cnpj;
+    if (c.plan !== undefined) obj.plan = c.plan;
+    if (c.active !== undefined) obj.active = c.active;
+    if (c.logoUrl !== undefined) obj.logo_url = c.logoUrl;
+    if (c.responsibleName !== undefined) obj.responsible_name = c.responsibleName;
+    if (c.phone !== undefined) obj.phone = c.phone;
+    if (c.address !== undefined) obj.address = c.address;
+    obj.updated_at = new Date().toISOString();
+    return obj;
+};
 
 const mapCompanyFromDB = (db: any) => ({
     id: db.id,

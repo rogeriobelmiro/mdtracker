@@ -70,6 +70,17 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     setIsModalOpen(true);
   };
 
+  const handleDuplicate = (link: CampaignLink) => {
+    const { id, companyId, clicksCount, leadsCount, conversionsCount, createdAt, ...rest } = link as any;
+    setEditingLink(null);
+    setFormData({
+      ...rest,
+      title: `${link.title} (Cópia)`,
+      slug: `${link.slug}-copia-${Math.random().toString(36).substring(2, 6)}`,
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingLink) {
@@ -161,6 +172,13 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleDuplicate(link)}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition"
+                    title="Duplicar Link"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleOpenEdit(link)}
                     className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition"

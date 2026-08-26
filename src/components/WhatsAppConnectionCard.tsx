@@ -68,7 +68,7 @@ export const WhatsAppConnectionCard: React.FC<WhatsAppConnectionCardProps> = ({ 
                         <Smartphone className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-900 text-sm">Conexão WhatsApp (Baileys)</h3>
+                        <h3 className="font-bold text-slate-900 text-sm">Conexão WhatsApp (Evolution API)</h3>
                         <p className="text-[11px] text-slate-500">
                             Conecte seu aparelho para enviar e receber mensagens automaticamente pelo sistema.
                         </p>

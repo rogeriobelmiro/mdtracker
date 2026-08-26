@@ -306,6 +306,17 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
             <div className="space-y-3">
               <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Nome da Instância</label>
+                <input
+                  type="text"
+                  placeholder="Ex: MudaDigital"
+                  value={formData.evolutionInstance || ''}
+                  onChange={(e) => setFormData({ ...formData, evolutionInstance: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">URL da Evolution API</label>
                 <input
                   type="url"

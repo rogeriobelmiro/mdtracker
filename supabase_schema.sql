@@ -192,10 +192,8 @@ ON CONFLICT (id) DO NOTHING;
 -- ALTER TABLE companies DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Permitir insert anonimo em companies" ON companies FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir insert anonimo em users" ON users FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir select anonimo em companies" ON companies FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir select anonimo em users" ON users FOR SELECT TO anon USING (true);
+CREATE POLICY "Permitir all anonimo em companies" ON companies FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em users" ON users FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- Políticas RLS adicionais para tabelas de aplicação
 CREATE POLICY "Permitir all anonimo em campaign_links" ON campaign_links FOR ALL TO anon USING (true) WITH CHECK (true);
