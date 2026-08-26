@@ -203,6 +203,18 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
           const createData = await createRes.json();
           setEvoTestStatus({ loading: false, message: createData.message, success: createData.success });
         }
+      } else if (data.success && data.instanceExists === true) {
+        if (window.confirm(`A instância "${formData.evolutionInstance}" já existe.\nDeseja conectar ao WhatsApp (Gerar QR Code) agora?`)) {
+          setEvoTestStatus({ loading: true, message: 'Iniciando conexão...', success: true });
+          fetch('/api/whatsapp/connect', { 
+              method: 'POST', 
+              headers: { 'Content-Type': 'application/json' }, 
+              body: JSON.stringify({ companyId: 'comp-alfa' }) 
+          });
+          setEvoTestStatus({ loading: false, message: 'Conexão iniciada! Verifique o painel do WhatsApp acima.', success: true });
+        } else {
+          setEvoTestStatus({ loading: false, message: 'Conexão bem-sucedida! Instância já existente.', success: true });
+        }
       } else {
         setEvoTestStatus({ loading: false, message: data.message, success: data.success });
       }
