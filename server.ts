@@ -448,7 +448,13 @@ app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => 
         });
         
         if (response.ok) {
-            res.json({ success: true, message: 'Conexão bem-sucedida!' });
+            const data = await response.json();
+            const { instanceName } = req.body;
+            let instanceExists = true;
+            if (instanceName && Array.isArray(data)) {
+                instanceExists = data.some((inst: any) => inst.instance?.instanceName === instanceName);
+            }
+            res.json({ success: true, message: 'Conexão bem-sucedida!', instanceExists });
         } else if (response.status === 401 || response.status === 403) {
             res.json({ success: false, message: 'Acesso Negado. Verifique a Global API Key.' });
         } else {
@@ -456,6 +462,39 @@ app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => 
         }
     } catch (err: any) {
         res.json({ success: false, message: `Erro ao conectar: ${err.message}` });
+    }
+});
+
+app.post('/api/whatsapp/evolution/create-instance', async (req: Request, res: Response) => {
+    try {
+        const { url, apiKey, instanceName } = req.body;
+        if (!url || !apiKey || !instanceName) {
+            return res.status(400).json({ success: false, message: 'URL, API Key e Nome da Instância são obrigatórios.' });
+        }
+        
+        const baseUrl = url.replace(/\/$/, '');
+        const response = await fetch(`${baseUrl}/instance/create`, {
+            method: 'POST',
+            signal: AbortSignal.timeout(15000),
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': apiKey
+            },
+            body: JSON.stringify({
+                instanceName,
+                qrcode: true,
+                integration: "WHATSAPP-BAILEYS"
+            })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            res.json({ success: true, message: 'Instância criada com sucesso!' });
+        } else {
+            res.json({ success: false, message: data.message || data.error || 'Erro ao criar instância.' });
+        }
+    } catch (err: any) {
+        res.json({ success: false, message: `Erro ao criar instância: ${err.message}` });
     }
 });
 

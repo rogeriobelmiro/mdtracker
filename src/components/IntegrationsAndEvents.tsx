@@ -179,10 +179,33 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       const res = await fetch('/api/whatsapp/evolution/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: formData.evolutionApiUrl, apiKey: formData.evolutionApiKey })
+        body: JSON.stringify({ 
+          url: formData.evolutionApiUrl, 
+          apiKey: formData.evolutionApiKey,
+          instanceName: formData.evolutionInstance 
+        })
       });
       const data = await res.json();
-      setEvoTestStatus({ loading: false, message: data.message, success: data.success });
+      
+      if (data.success && data.instanceExists === false) {
+        setEvoTestStatus({ loading: false, message: 'Conectado à API, mas a instância não existe.', success: false });
+        if (window.confirm(`A instância "${formData.evolutionInstance}" não existe na Evolution API.\nDeseja criá-la agora?`)) {
+          setEvoTestStatus({ loading: true, message: 'Criando instância...', success: false });
+          const createRes = await fetch('/api/whatsapp/evolution/create-instance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              url: formData.evolutionApiUrl, 
+              apiKey: formData.evolutionApiKey,
+              instanceName: formData.evolutionInstance 
+            })
+          });
+          const createData = await createRes.json();
+          setEvoTestStatus({ loading: false, message: createData.message, success: createData.success });
+        }
+      } else {
+        setEvoTestStatus({ loading: false, message: data.message, success: data.success });
+      }
     } catch (err) {
       setEvoTestStatus({ loading: false, message: 'Erro de conexão.', success: false });
     }
