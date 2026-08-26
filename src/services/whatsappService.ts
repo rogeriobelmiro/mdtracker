@@ -287,9 +287,7 @@ export const sendWhatsAppMessage = async (companyId: string, phone: string, text
                     delay: 1200,
                     presence: 'composing'
                 },
-                textMessage: {
-                    text: text
-                }
+                text: text
             })
         });
 

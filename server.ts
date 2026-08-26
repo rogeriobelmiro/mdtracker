@@ -341,7 +341,15 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                 let assignedCompanyId = 'comp-alfa';
                 if (instanceName) {
                     const { data: cSettings } = await supabase.from('settings').select('company_id').eq('evolution_instance', instanceName).maybeSingle();
-                    if (cSettings) assignedCompanyId = cSettings.company_id;
+                    if (cSettings) {
+                        assignedCompanyId = cSettings.company_id;
+                    } else {
+                        const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
+                        if (fallback) assignedCompanyId = fallback.id;
+                    }
+                } else {
+                    const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
+                    if (fallback) assignedCompanyId = fallback.id;
                 }
                 
                 // Deduce state from Brazilian DDD
@@ -941,16 +949,31 @@ app.get('/api/leads/export', async (req: Request, res: Response) => {
 // Settings API
 app.get('/api/settings', async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    const settings = await getSettings();
+    
+    let targetCompanyId = req.query.companyId as string;
+    if (!targetCompanyId || targetCompanyId === 'comp-alfa') {
+        const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
+        targetCompanyId = fallback ? fallback.id : 'comp-alfa';
+    }
+    
+    const settings = await getSettings(targetCompanyId);
+    if (!settings) {
+        return res.json({ companyId: targetCompanyId }); 
+    }
     res.json(settings);
 });
 
 app.post('/api/settings', async (req: Request, res: Response) => {
-    const companyId = req.body.companyId || 'comp-alfa';
-    const dbRecord = mapSettingsToDB({ ...req.body, companyId });
+    let targetCompanyId = req.body.companyId;
+    if (!targetCompanyId || targetCompanyId === 'comp-alfa') {
+        const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
+        targetCompanyId = fallback ? fallback.id : 'comp-alfa';
+    }
+    
+    const dbRecord = mapSettingsToDB({ ...req.body, companyId: targetCompanyId });
     const { error } = await supabase.from('settings').upsert(dbRecord);
     if (error) return res.status(500).json({ error: error.message });
-    res.json({ ...req.body, companyId });
+    res.json({ ...req.body, companyId: targetCompanyId });
 });
 
 // Webhook logs API
