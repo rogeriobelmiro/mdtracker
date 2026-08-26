@@ -230,9 +230,25 @@ export const getWhatsAppStatus = async (companyId: string) => {
         if (instanceState === 'open' || instanceState === 'connected') {
             state.status = 'connected';
             state.qrCodeBase64 = null;
-        } else if (instanceState === 'connecting' || instanceState === 'close') {
+        } else if (instanceState === 'close') {
             state.status = 'disconnected';
             state.qrCodeBase64 = null;
+        } else if (instanceState === 'connecting') {
+            // Do not override 'qr' or 'connecting' state to disconnected.
+            // If it's disconnected (e.g. server restart), try fetching the QR code.
+            if (state.status === 'disconnected') {
+                const cRes = await fetch(`${baseUrl}/instance/connect/${config.instance}`, {
+                    method: 'GET',
+                    headers: { 'apikey': config.apiKey }
+                });
+                const cData = await cRes.json();
+                if (cData.base64 || (cData.qrcode && cData.qrcode.base64)) {
+                    state.status = 'qr';
+                    state.qrCodeBase64 = cData.base64 || cData.qrcode.base64;
+                } else {
+                    state.status = 'connecting';
+                }
+            }
         }
         
     } catch (error) {

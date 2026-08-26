@@ -453,8 +453,24 @@ app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => 
             let instanceExists = true;
             if (instanceName && Array.isArray(data)) {
                 instanceExists = data.some((inst: any) => inst.instance?.instanceName === instanceName);
+                
+                // Se a instância já existe, garantir que o webhook está configurado corretamente
+                if (instanceExists) {
+                    const webhookPayload = {
+                        enabled: true,
+                        url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+                        byEvents: false,
+                        base64: true,
+                        events: ["MESSAGES_UPSERT", "messages.upsert"]
+                    };
+                    await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+                        body: JSON.stringify({ webhook: webhookPayload })
+                    }).catch(e => console.error('Erro ao sincronizar webhook no teste:', e));
+                }
             }
-            res.json({ success: true, message: 'Conexão bem-sucedida!', instanceExists });
+            res.json({ success: true, message: 'Conexão bem-sucedida! Webhook sincronizado.', instanceExists });
         } else if (response.status === 401 || response.status === 403) {
             res.json({ success: false, message: 'Acesso Negado. Verifique a Global API Key.' });
         } else {
