@@ -14,7 +14,14 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
   // Mock stored broadcast campaigns using localStorage for persistence
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>(() => {
     const saved = localStorage.getItem('mdtracker_campaigns');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        console.error('Error parsing campaigns from localStorage', e);
+      }
+    }
     return [
     {
       id: 'bc-1',
@@ -430,8 +437,8 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
           {matchingLeads
             .filter(l => !queueSearchQuery || 
-              (l.name?.toLowerCase().includes(queueSearchQuery.toLowerCase())) || 
-              (l.phone?.includes(queueSearchQuery))
+              (l.name && l.name.toLowerCase().includes(queueSearchQuery.toLowerCase())) || 
+              (l.phone && l.phone.includes(queueSearchQuery))
             )
             .slice(0, 10).map((lead, idx) => {
             const formattedMsg = encodeURIComponent(formatMessageForLead(messageTemplate, lead));
