@@ -95,47 +95,74 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
             });
             const connectData = await connectRes.json();
             
-            if (connectData.base64) {
+            if (connectData.instance?.state === 'open' || connectData.instance?.status === 'open' || connectData.instance?.state === 'connected' || connectData.instance?.status === 'connected') {
+                state.status = 'connected';
+                state.qrCodeBase64 = null;
+            } else if (connectData.base64) {
                 state.status = 'qr';
                 state.qrCodeBase64 = connectData.base64;
             } else if (connectData.qrcode && connectData.qrcode.base64) {
                 state.status = 'qr';
                 state.qrCodeBase64 = connectData.qrcode.base64;
             } else {
-                console.log('Instância presa ou sem QR Code. Deletando e recriando...');
-                // Deletar a instância travada
-                await fetch(`${baseUrl}/instance/delete/${config.instance}`, {
+                console.log('Instância presa ou sem QR Code. Tentando logout e nova conexão...');
+                await fetch(`${baseUrl}/instance/logout/${config.instance}`, {
                     method: 'DELETE',
-                    signal: AbortSignal.timeout(8000),
+                    headers: { 'apikey': config.apiKey }
+                }).catch(() => {});
+                
+                await new Promise(r => setTimeout(r, 1500));
+                
+                const retryConnectRes = await fetch(`${baseUrl}/instance/connect/${config.instance}`, {
+                    method: 'GET',
                     headers: { 'apikey': config.apiKey }
                 });
-
-                // Tentar criar novamente
-                const retryResponse = await fetch(`${baseUrl}/instance/create`, {
-                    method: 'POST',
-                    signal: AbortSignal.timeout(15000),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': config.apiKey
-                    },
-                    body: JSON.stringify({
-                        instanceName: config.instance,
-                        qrcode: true,
-                        integration: "WHATSAPP-BAILEYS",
-                        webhook: webhookPayload
-                    })
-                });
+                const retryConnectData = await retryConnectRes.json();
                 
-                const retryData = await retryResponse.json();
-                if (retryData.qrcode && retryData.qrcode.base64) {
+                if (retryConnectData.base64) {
                     state.status = 'qr';
-                    state.qrCodeBase64 = retryData.qrcode.base64;
-                } else if (retryData.instance?.status === 'open' || retryData.instance?.status === 'connected') {
-                    state.status = 'connected';
-                    state.qrCodeBase64 = null;
+                    state.qrCodeBase64 = retryConnectData.base64;
+                } else if (retryConnectData.qrcode && retryConnectData.qrcode.base64) {
+                    state.status = 'qr';
+                    state.qrCodeBase64 = retryConnectData.qrcode.base64;
                 } else {
-                    state.status = 'disconnected';
-                    state.qrCodeBase64 = null;
+                    console.log('Ainda sem QR Code. Forçando deleção e recriação...');
+                    // Deletar a instância travada
+                    await fetch(`${baseUrl}/instance/delete/${config.instance}`, {
+                        method: 'DELETE',
+                        signal: AbortSignal.timeout(8000),
+                        headers: { 'apikey': config.apiKey }
+                    }).catch(() => {});
+                    
+                    await new Promise(r => setTimeout(r, 2000));
+
+                    // Tentar criar novamente
+                    const retryResponse = await fetch(`${baseUrl}/instance/create`, {
+                        method: 'POST',
+                        signal: AbortSignal.timeout(15000),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': config.apiKey
+                        },
+                        body: JSON.stringify({
+                            instanceName: config.instance,
+                            qrcode: true,
+                            integration: "WHATSAPP-BAILEYS",
+                            webhook: webhookPayload
+                        })
+                    });
+                    
+                    const retryData = await retryResponse.json();
+                    if (retryData.qrcode && retryData.qrcode.base64) {
+                        state.status = 'qr';
+                        state.qrCodeBase64 = retryData.qrcode.base64;
+                    } else if (retryData.instance?.status === 'open' || retryData.instance?.status === 'connected' || retryData.instance?.state === 'open') {
+                        state.status = 'connected';
+                        state.qrCodeBase64 = null;
+                    } else {
+                        state.status = 'disconnected';
+                        state.qrCodeBase64 = null;
+                    }
                 }
             }
         } else if (response.status === 401) {
