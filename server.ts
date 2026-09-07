@@ -209,7 +209,7 @@ const mapWebhookFromDB = (db: any) => ({
 });
 
 const mapProductToDB = (p: any) => ({
-    id: p.id,
+    id: p.id || `prod-${Date.now()}-${Math.floor(Math.random()*1000)}`,
     company_id: p.companyId || 'comp-alfa',
     name: p.name,
     type: p.type,
@@ -229,7 +229,7 @@ const mapProductFromDB = (db: any) => ({
 });
 
 const mapLeadPurchaseToDB = (lp: any) => ({
-    id: lp.id,
+    id: lp.id || `lp-${Date.now()}-${Math.floor(Math.random()*1000)}`,
     company_id: lp.companyId || 'comp-alfa',
     lead_id: lp.leadId,
     product_id: lp.productId,
