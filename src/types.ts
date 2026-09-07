@@ -122,6 +122,25 @@ export interface AutoStageKeywordRule {
   enabled: boolean;
 }
 
+export interface Product {
+  id: string;
+  companyId: string;
+  name: string;
+  type: 'produto' | 'servico';
+  price: number;
+  recurrenceDays: number | null; // null if one-time
+  createdAt: string;
+}
+
+export interface LeadPurchase {
+  id: string;
+  companyId: string;
+  leadId: string;
+  productId: string;
+  amount: number; // Value paid
+  purchasedAt: string;
+}
+
 export interface IntegrationSettings {
   companyId?: string;
   globalMetaPixelId: string;

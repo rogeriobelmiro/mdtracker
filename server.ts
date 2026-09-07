@@ -208,6 +208,45 @@ const mapWebhookFromDB = (db: any) => ({
     leadName: db.lead_name
 });
 
+const mapProductToDB = (p: any) => ({
+    id: p.id,
+    company_id: p.companyId || 'comp-alfa',
+    name: p.name,
+    type: p.type,
+    price: p.price,
+    recurrence_days: p.recurrenceDays,
+    created_at: p.createdAt || new Date().toISOString()
+});
+
+const mapProductFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    name: db.name,
+    type: db.type,
+    price: db.price,
+    recurrenceDays: db.recurrence_days,
+    createdAt: db.created_at
+});
+
+const mapLeadPurchaseToDB = (lp: any) => ({
+    id: lp.id,
+    company_id: lp.companyId || 'comp-alfa',
+    lead_id: lp.leadId,
+    product_id: lp.productId,
+    amount: lp.amount,
+    purchased_at: lp.purchasedAt || new Date().toISOString()
+});
+
+const mapLeadPurchaseFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    leadId: db.lead_id,
+    productId: db.product_id,
+    amount: db.amount,
+    purchasedAt: db.purchased_at
+});
+
+
 // Fetch current settings directly from DB since it's needed for webhooks
 async function getSettings(companyId: string = 'comp-alfa'): Promise<IntegrationSettings | any> {
     const { data } = await supabase.from('settings').select('*').eq('company_id', companyId).single();
@@ -421,6 +460,87 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
     } catch (err: any) {
         console.error('Erro no webhook da Evolution API:', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Products API
+app.get('/api/products', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        const { data, error } = await supabase.from('products').select('*').eq('company_id', companyId);
+        if (error && error.code !== '42P01') throw error; // ignore missing table error gracefully if schema not fully applied
+        res.json((data || []).map(mapProductFromDB));
+    } catch (error: any) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/products', async (req: Request, res: Response) => {
+    try {
+        const { data, error } = await supabase.from('products').insert([mapProductToDB(req.body)]).select().single();
+        if (error) throw error;
+        res.json(mapProductFromDB(data));
+    } catch (error: any) {
+        console.error('Error creating product:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/api/products/:id', async (req: Request, res: Response) => {
+    try {
+        const { data, error } = await supabase.from('products').update(mapProductToDB(req.body)).eq('id', req.params.id).select().single();
+        if (error) throw error;
+        res.json(mapProductFromDB(data));
+    } catch (error: any) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/products/:id', async (req: Request, res: Response) => {
+    try {
+        const { error } = await supabase.from('products').delete().eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Error deleting product:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Lead Purchases API
+app.get('/api/lead-purchases', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        const { data, error } = await supabase.from('lead_purchases').select('*').eq('company_id', companyId);
+        if (error && error.code !== '42P01') throw error;
+        res.json((data || []).map(mapLeadPurchaseFromDB));
+    } catch (error: any) {
+        console.error('Error fetching lead purchases:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/lead-purchases', async (req: Request, res: Response) => {
+    try {
+        const { data, error } = await supabase.from('lead_purchases').insert([mapLeadPurchaseToDB(req.body)]).select().single();
+        if (error) throw error;
+        res.json(mapLeadPurchaseFromDB(data));
+    } catch (error: any) {
+        console.error('Error creating lead purchase:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/lead-purchases/:id', async (req: Request, res: Response) => {
+    try {
+        const { error } = await supabase.from('lead_purchases').delete().eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Error deleting lead purchase:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

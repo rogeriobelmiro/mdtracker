@@ -140,6 +140,53 @@ export async function deleteLead(id: string): Promise<void> {
   await fetch(`/api/leads/${id}`, { method: 'DELETE' });
 }
 
+export async function fetchProducts(companyId?: string): Promise<any[]> {
+  const query = companyId ? `?companyId=${companyId}` : '';
+  const res = await fetch(`/api/products${query}`);
+  return res.json();
+}
+
+export async function createProduct(data: any): Promise<any> {
+  const res = await fetch('/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function updateProduct(id: string, data: any): Promise<any> {
+  const res = await fetch(`/api/products/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  await fetch(`/api/products/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchLeadPurchases(companyId?: string): Promise<any[]> {
+  const query = companyId ? `?companyId=${companyId}` : '';
+  const res = await fetch(`/api/lead-purchases${query}`);
+  return res.json();
+}
+
+export async function createLeadPurchase(data: any): Promise<any> {
+  const res = await fetch('/api/lead-purchases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+export async function deleteLeadPurchase(id: string): Promise<void> {
+  await fetch(`/api/lead-purchases/${id}`, { method: 'DELETE' });
+}
+
 export async function fetchSettings(companyId?: string): Promise<IntegrationSettings> {
   const query = companyId ? `?companyId=${companyId}` : '';
   const res = await fetch(`/api/settings${query}`);

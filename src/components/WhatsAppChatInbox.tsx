@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
   Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter,
-  Smile, X, Image as ImageIcon, Video, File as FileIcon
+  Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';

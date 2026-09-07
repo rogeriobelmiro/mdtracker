@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
-import { Lead, FunnelStage } from '../types';
-import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Lead, FunnelStage, Product, LeadPurchase } from '../types';
+import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp } from 'lucide-react';
 
 interface LeadCRMProps {
   leads: Lead[];
+  products: Product[];
+  leadPurchases: LeadPurchase[];
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
   onOpenWhatsApp?: (leadId: string) => void;
+  onCreatePurchase: (data: Partial<LeadPurchase>) => Promise<void>;
 }
 
-export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteLead }) => {
+export const LeadCRM: React.FC<LeadCRMProps> = ({ 
+  leads, 
+  products, 
+  leadPurchases, 
+  onUpdateLead, 
+  onDeleteLead, 
+  onOpenWhatsApp,
+  onCreatePurchase 
+}) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
@@ -17,9 +28,11 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
   const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban'>('table');
 
   // Lead modal edit state
-  const [editValue, setEditValue] = useState<number>(0);
   const [editNotes, setEditNotes] = useState<string>('');
 
+  // Purchase state
+  const [newPurchaseProductId, setNewPurchaseProductId] = useState<string>('');
+  
   const formatDate = (isoString: string) => {
     if (!isoString) return '-';
     try {
@@ -53,6 +66,29 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
     }
   };
 
+  // Derived states for UI
+  const getLeadPurchases = (leadId: string) => leadPurchases.filter(p => p.leadId === leadId);
+  const getLeadLtv = (leadId: string) => getLeadPurchases(leadId).reduce((acc, p) => acc + p.amount, 0);
+
+  // Check if lead has pending renewal
+  const checkPendingRenewal = (leadId: string) => {
+    const purchases = getLeadPurchases(leadId);
+    if (!purchases.length) return false;
+    
+    const now = new Date();
+    for (const purchase of purchases) {
+      const product = products.find(p => p.id === purchase.productId);
+      if (product && product.recurrenceDays) {
+        const purchaseDate = new Date(purchase.purchasedAt);
+        const diffDays = Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= product.recurrenceDays) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const filteredLeads = leads.filter(lead => {
     const matchesSearch =
       (lead.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -79,14 +115,12 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
 
   const handleOpenLeadDetails = (lead: Lead) => {
     setSelectedLead(lead);
-    setEditValue(lead.value || 0);
     setEditNotes(lead.notes || '');
   };
 
   const handleSaveLeadDetails = async () => {
     if (!selectedLead) return;
     await onUpdateLead(selectedLead.id, {
-      value: editValue,
       notes: editNotes,
     });
     setSelectedLead(null);
@@ -143,10 +177,21 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
           <option value="Convertido">Convertido</option>
           <option value="Perdido">Perdido</option>
         </select>
-        <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {formatDate(lead.updatedAt).split(' ')[0]}
-        </span>
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+          <span className="font-bold text-slate-800 text-sm">
+            R$ {getLeadLtv(lead.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </span>
+          <span className="text-slate-400 text-[10px] flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {formatDate(lead.createdAt).split(' ')[0]}
+          </span>
+        </div>
+        
+        {checkPendingRenewal(lead.id) && (
+            <div className="mt-2 text-center bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-1 rounded flex justify-center items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Oferecer Novamente
+            </div>
+        )}
       </div>
     </div>
   );
@@ -266,10 +311,9 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
             <thead className="bg-slate-50 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
               <tr>
                 <th className="py-3.5 px-4">Nome do Lead</th>
-                <th className="py-3.5 px-3">Localização (Geo)</th>
                 <th className="py-3.5 px-3">Origem & UTMs</th>
                 <th className="py-3.5 px-3">Etapa do Funil</th>
-                <th className="py-3.5 px-3">Data de Criação</th>
+                <th className="py-3.5 px-3">LTV</th>
                 <th className="py-3.5 px-3">Última Atualização</th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
@@ -287,17 +331,13 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                       <div>
                         <div className="text-slate-900 font-bold">{lead.name || 'Lead Visitante'}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{lead.phone || 'Telefone indisponível'}</div>
+                        {checkPendingRenewal(lead.id) && (
+                           <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit mt-1">
+                             <RefreshCw className="w-3 h-3" /> Renovação Pendente
+                           </span>
+                        )}
                       </div>
                     </div>
-                  </td>
-
-                  {/* Location */}
-                  <td className="py-3.5 px-3">
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span>{lead.location?.city || 'Brasil'}, {lead.location?.state || 'SP'}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">IP: {lead.location?.ip || '---'}</div>
                   </td>
 
                   {/* Source & Ad Attribution */}
@@ -306,39 +346,22 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                       <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
                         {lead.utmSource || lead.source}
                       </span>
-                      {lead.utmContent && (
-                        <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200 flex items-center gap-1" title="Anúncio / Criativo">
-                          🎨 {lead.utmContent}
-                        </span>
-                      )}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono mt-1 space-y-0.5">
                       <div className="truncate max-w-[170px]">📢 {lead.utmCampaign || 'campanha_geral'}</div>
-                      {lead.utmTerm && <div className="truncate max-w-[170px] text-slate-400">🎯 {lead.utmTerm}</div>}
                     </div>
                   </td>
 
                   {/* Stage */}
                   <td className="py-3.5 px-3">
-                    <select
-                      value={lead.stage}
-                      onChange={(e) => handleStageChange(lead.id, e.target.value as FunnelStage)}
-                      className={`text-xs font-bold px-2.5 py-1 rounded border focus:outline-none cursor-pointer ${getStageBadgeClass(lead.stage)}`}
-                    >
-                      <option value="Novo Lead">Novo Lead</option>
-                      <option value="Contatado">Contatado</option>
-                      <option value="Em Negociação">Em Negociação</option>
-                      <option value="Convertido">Convertido</option>
-                      <option value="Perdido">Perdido</option>
-                    </select>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStageBadgeClass(lead.stage)}`}>
+                      {lead.stage}
+                    </span>
                   </td>
 
-                  {/* Created Date */}
-                  <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-slate-400" />
-                      {formatDate(lead.createdAt)}
-                    </div>
+                  {/* LTV */}
+                  <td className="py-3.5 px-3 font-medium text-slate-800">
+                    R$ {getLeadLtv(lead.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
 
                   {/* Last Updated */}
@@ -352,19 +375,6 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                   {/* Actions */}
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      
-                      {/* WhatsApp Button */}
-                      {lead.phone && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onOpenWhatsApp ? onOpenWhatsApp(lead.id) : window.open(`https://wa.me/${lead.phone.replace(/\D/g, '')}`, '_blank'); }}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                          title="Abrir no Inbox"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {/* Details Button */}
                       <button
                         onClick={() => handleOpenLeadDetails(lead)}
                         className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition text-xs font-semibold px-2 flex items-center gap-1 border border-slate-200"
@@ -372,15 +382,6 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                         <Edit3 className="w-3.5 h-3.5" />
                         Detalhes
                       </button>
-
-                      {/* Delete */}
-                      <button
-                        onClick={() => onDeleteLead(lead.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-
                     </div>
                   </td>
 
@@ -506,15 +507,67 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
 
             {/* Edit Value and Stage */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Valor da Negociação / Venda (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editValue}
-                  onChange={(e) => setEditValue(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-blue-700 font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-600"
-                />
+              {/* Compras e LTV */}
+              <div className="col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    Compras e LTV (R$ {getLeadLtv(selectedLead.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  </h4>
+                </div>
+                
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3">
+                  {/* Novo Cadastro de Venda */}
+                  <div className="flex gap-2">
+                    <select
+                      value={newPurchaseProductId}
+                      onChange={(e) => setNewPurchaseProductId(e.target.value)}
+                      className="flex-1 text-xs border border-slate-200 rounded p-1.5 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Registrar Nova Venda...</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} - R$ {p.price}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        if (!newPurchaseProductId) return;
+                        const p = products.find(prod => prod.id === newPurchaseProductId);
+                        if (!p) return;
+                        await onCreatePurchase({
+                          leadId: selectedLead.id,
+                          productId: p.id,
+                          amount: p.price
+                        });
+                        setNewPurchaseProductId('');
+                        alert('Venda registrada com sucesso!');
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                  
+                  {/* Lista de Compras */}
+                  {getLeadPurchases(selectedLead.id).length > 0 ? (
+                    <div className="space-y-2 mt-3">
+                      {getLeadPurchases(selectedLead.id).map(purchase => {
+                        const product = products.find(p => p.id === purchase.productId);
+                        return (
+                          <div key={purchase.id} className="flex justify-between items-center bg-white border border-slate-200 p-2 rounded text-xs">
+                            <div>
+                              <p className="font-semibold text-slate-800">{product?.name || 'Produto Excluído'}</p>
+                              <p className="text-[10px] text-slate-500">{formatDate(purchase.purchasedAt)}</p>
+                            </div>
+                            <span className="font-semibold text-green-700">R$ {purchase.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 text-center py-2">Nenhuma venda registrada.</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -577,7 +630,6 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({ leads, onUpdateLead, onDeleteL
                 type="button"
                 onClick={async () => {
                   await handleStageChange(selectedLead.id, 'Convertido');
-                  await onUpdateLead(selectedLead.id, { value: editValue || 500 });
                   setSelectedLead(null);
                 }}
                 className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 text-xs font-bold px-4 py-2 rounded transition flex items-center gap-1.5"

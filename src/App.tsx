@@ -9,6 +9,7 @@ import { WhatsAppChatInbox } from './components/WhatsAppChatInbox';
 import { UserManagement } from './components/UserManagement';
 import { CompanyProfile } from './components/CompanyProfile';
 import { LoginScreen } from './components/LoginScreen';
+import { ProductsManager } from './components/ProductsManager';
 import {
   fetchCompanies,
   fetchUsers,
@@ -28,11 +29,18 @@ import {
   updateSettings,
   fetchWebhookLogs,
   testWebhook,
+  fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  fetchLeadPurchases,
+  createLeadPurchase,
+  deleteLeadPurchase,
 } from './services/api';
-import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company } from './types';
+import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company, Product, LeadPurchase } from './types';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
 
@@ -47,6 +55,8 @@ export default function App() {
   // Application Data States
   const [links, setLinks] = useState<CampaignLink[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [leadPurchases, setLeadPurchases] = useState<LeadPurchase[]>([]);
   const [settings, setSettings] = useState<IntegrationSettings>({
     globalMetaPixelId: '',
     globalMetaToken: '',
@@ -66,19 +76,23 @@ export default function App() {
   const loadData = async (overrideCompanyId?: string) => {
     try {
       const activeCompanyId = overrideCompanyId || currentCompany?.id;
-      const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes] = await Promise.all([
+      const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes] = await Promise.all([
         fetchLinks(),
         fetchLeads(),
         fetchSettings(activeCompanyId),
         fetchWebhookLogs(),
         fetchCompanies(),
-        fetchUsers()
+        fetchUsers(),
+        fetchProducts(activeCompanyId),
+        fetchLeadPurchases(activeCompanyId)
       ]);
 
       setLinks(linksRes);
       setLeads(leadsRes);
       setSettings(settingsRes);
       setWebhookLogs(logsRes);
+      setProducts(productsRes || []);
+      setLeadPurchases(purchasesRes || []);
       
       if (companiesRes && companiesRes.length > 0) {
         setCompanies(companiesRes);
@@ -129,7 +143,9 @@ export default function App() {
     const totalLeads = companyLeads.length;
     const conversions = companyLeads.filter(l => l.stage === 'Convertido');
     const totalConversions = conversions.length;
-    const totalRevenue = conversions.reduce((acc, l) => acc + (l.value || 0), 0);
+    
+    // Revenue is now the sum of lead purchases
+    const totalRevenue = leadPurchases.reduce((acc, p) => acc + (p.amount || 0), 0);
     const conversionRate = totalLeads > 0 ? (totalConversions / totalLeads) * 100 : 0;
 
     // Find top campaign
@@ -262,6 +278,26 @@ export default function App() {
     return res;
   };
 
+  const handleCreateProduct = async (data: Partial<Product>) => {
+    await createProduct(data);
+    await loadData();
+  };
+
+  const handleUpdateProduct = async (id: string, data: Partial<Product>) => {
+    await updateProduct(id, data);
+    await loadData();
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    await deleteProduct(id);
+    await loadData();
+  };
+
+  const handleCreateLeadPurchase = async (data: Partial<LeadPurchase>) => {
+    await createLeadPurchase(data);
+    await loadData();
+  };
+
   // Render Login Screen if not authenticated
   if (!currentUser || !currentCompany) {
     return (
@@ -373,6 +409,16 @@ export default function App() {
             onAddUser={handleAddUser}
             onUpdateUser={handleUpdateUser}
             onDeleteUser={handleDeleteUser}
+          />
+        )}
+
+        {activeTab === 'products' && currentUser.role === 'admin' && (
+          <ProductsManager
+            products={products}
+            currentCompany={currentCompany}
+            onCreateProduct={handleCreateProduct}
+            onUpdateProduct={handleUpdateProduct}
+            onDeleteProduct={handleDeleteProduct}
           />
         )}
 
