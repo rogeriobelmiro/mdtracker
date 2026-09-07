@@ -63,12 +63,13 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   // Load Initial Application State
-  const loadData = async () => {
+  const loadData = async (overrideCompanyId?: string) => {
     try {
+      const activeCompanyId = overrideCompanyId || currentCompany?.id;
       const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes] = await Promise.all([
         fetchLinks(),
         fetchLeads(),
-        fetchSettings(),
+        fetchSettings(activeCompanyId),
         fetchWebhookLogs(),
         fetchCompanies(),
         fetchUsers()
@@ -164,6 +165,9 @@ export default function App() {
   const handleLoginSuccess = (user: User, company: Company) => {
     setCurrentUser(user);
     setCurrentCompany(company);
+    
+    // Fetch data specifically for this company right after login
+    loadData(company.id);
 
     // Adjust active tab based on user role
     if (user.role === 'attendant') {
@@ -317,6 +321,7 @@ export default function App() {
             onDeleteLink={handleDeleteLink}
             isModalOpen={isCreateModalOpen}
             setIsModalOpen={setIsCreateModalOpen}
+            currentCompany={currentCompany}
           />
         )}
 
@@ -338,6 +343,7 @@ export default function App() {
             onUpdateSettings={handleUpdateSettings}
             webhookLogs={companyWebhookLogs}
             onTestWebhook={handleTestWebhook}
+            currentCompany={currentCompany}
           />
         )}
 

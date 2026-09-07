@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CampaignLink } from '../types';
+import { CampaignLink, Company } from '../types';
 import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -10,6 +10,7 @@ interface LinkManagerProps {
   onDeleteLink: (id: string) => Promise<void>;
   isModalOpen: boolean;
   setIsModalOpen: (open: boolean) => void;
+  currentCompany: Company;
 }
 
 export const LinkManager: React.FC<LinkManagerProps> = ({
@@ -19,16 +20,19 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   onDeleteLink,
   isModalOpen,
   setIsModalOpen,
+  currentCompany,
 }) => {
   const [editingLink, setEditingLink] = useState<CampaignLink | null>(null);
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  const companyPhone = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
 
   // Form State
   const [formData, setFormData] = useState<Partial<CampaignLink>>({
     title: '',
-    phone: '5511999999999',
+    phone: companyPhone,
     message: 'Olá! Vi o anúncio no {utm_source} ({utm_campaign}) e quero saber mais.',
     slug: '',
     utmSource: 'meta_ads',
@@ -47,7 +51,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     setEditingLink(null);
     setFormData({
       title: '',
-      phone: '5511999999999',
+      phone: companyPhone,
       message: 'Olá! Vi o anúncio no {utm_source} ({utm_campaign}) e quero saber mais.',
       slug: `wa-${Math.random().toString(36).substring(2, 8)}`,
       utmSource: 'meta_ads',
@@ -66,7 +70,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
 
   const handleOpenEdit = (link: CampaignLink) => {
     setEditingLink(link);
-    setFormData(link);
+    setFormData({
+      ...link,
+      phone: companyPhone
+    });
     setIsModalOpen(true);
   };
 
@@ -75,6 +82,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     setEditingLink(null);
     setFormData({
       ...rest,
+      phone: companyPhone,
       title: `${link.title} (Cópia)`,
       slug: `${link.slug}-copia-${Math.random().toString(36).substring(2, 6)}`,
     });
@@ -84,9 +92,9 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingLink) {
-      await onUpdateLink(editingLink.id, formData);
+      await onUpdateLink(editingLink.id, { ...formData, phone: companyPhone });
     } else {
-      await onCreateLink(formData);
+      await onCreateLink({ ...formData, phone: companyPhone });
     }
     setIsModalOpen(false);
   };
@@ -315,11 +323,13 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                   <input
                     type="text"
                     required
+                    readOnly
+                    disabled
                     placeholder="Ex: 5511999999999"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                    value={formData.phone || ''}
+                    className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-500 cursor-not-allowed"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">Alterável apenas nas configurações da empresa.</p>
                 </div>
               </div>
 

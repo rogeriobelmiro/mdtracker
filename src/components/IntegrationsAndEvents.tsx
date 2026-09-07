@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule } from '../types';
+import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company } from '../types';
 import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
 
@@ -8,6 +8,7 @@ interface IntegrationsAndEventsProps {
   onUpdateSettings: (data: Partial<IntegrationSettings>) => Promise<void>;
   webhookLogs: WebhookLog[];
   onTestWebhook: (url: string) => Promise<{ success: boolean; message: string }>;
+  currentCompany: Company;
 }
 
 const FUNNEL_STAGES: FunnelStage[] = ['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'];
@@ -32,9 +33,12 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   onUpdateSettings,
   webhookLogs,
   onTestWebhook,
+  currentCompany,
 }) => {
+  const defaultEvolutionInstance = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
   const [formData, setFormData] = useState<IntegrationSettings>({
     ...settings,
+    evolutionInstance: settings.evolutionInstance || defaultEvolutionInstance,
     stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
     autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
   });
@@ -344,13 +348,13 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 <label className="block text-xs font-medium text-slate-700 mb-1">Nome da Instância</label>
                 <input
                   type="text"
-                  placeholder="Ex: MudaDigital"
+                  placeholder="Ex: 5511999999999"
                   value={formData.evolutionInstance || ''}
                   onChange={(e) => setFormData({ ...formData, evolutionInstance: e.target.value.replace(/\s+/g, '') })}
                   className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  O nome da instância não pode conter espaços (Ex: <code className="text-blue-600 font-mono">minha_agencia</code>).
+                  O nome da instância deve preferencialmente ser o telefone da empresa (Ex: <code className="text-blue-600 font-mono">{defaultEvolutionInstance || '5511999999999'}</code>).
                 </p>
               </div>
 

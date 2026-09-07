@@ -140,8 +140,9 @@ export async function deleteLead(id: string): Promise<void> {
   await fetch(`/api/leads/${id}`, { method: 'DELETE' });
 }
 
-export async function fetchSettings(): Promise<IntegrationSettings> {
-  const res = await fetch('/api/settings');
+export async function fetchSettings(companyId?: string): Promise<IntegrationSettings> {
+  const query = companyId ? `?companyId=${companyId}` : '';
+  const res = await fetch(`/api/settings${query}`);
   return res.json();
 }
 
