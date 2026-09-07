@@ -279,8 +279,12 @@ export default function App() {
   };
 
   const handleCreateProduct = async (data: Partial<Product>) => {
-    await createProduct(data);
-    await loadData();
+    try {
+      await createProduct(data);
+      await loadData();
+    } catch (err: any) {
+      alert('Erro ao criar produto: ' + err.message);
+    }
   };
 
   const handleUpdateProduct = async (id: string, data: Partial<Product>) => {

@@ -237,3 +237,9 @@ CREATE TABLE IF NOT EXISTS lead_purchases (
   amount NUMERIC NOT NULL,
   purchased_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Políticas RLS para products e lead_purchases (Caso o RLS esteja ativo)
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lead_purchases ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir all anonimo em products" ON products FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em lead_purchases" ON lead_purchases FOR ALL TO anon USING (true) WITH CHECK (true);

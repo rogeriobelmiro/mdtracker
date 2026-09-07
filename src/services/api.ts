@@ -160,6 +160,10 @@ export async function createProduct(data: any): Promise<any> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
   return res.json();
 }
 
@@ -169,6 +173,10 @@ export async function updateProduct(id: string, data: any): Promise<any> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro desconhecido');
+  }
   return res.json();
 }
 
