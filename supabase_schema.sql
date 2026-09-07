@@ -216,3 +216,24 @@ ALTER TABLE public.whatsapp_messages ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de acesso
 CREATE POLICY "Acesso total mensagens WhatsApp" ON public.whatsapp_messages FOR ALL USING (true);
+
+-- Tabela: products
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  price NUMERIC NOT NULL,
+  recurrence_days INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela: lead_purchases
+CREATE TABLE IF NOT EXISTS lead_purchases (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  lead_id TEXT REFERENCES leads(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+  amount NUMERIC NOT NULL,
+  purchased_at TIMESTAMPTZ DEFAULT NOW()
+);

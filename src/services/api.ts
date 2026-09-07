@@ -143,6 +143,10 @@ export async function deleteLead(id: string): Promise<void> {
 export async function fetchProducts(companyId?: string): Promise<any[]> {
   const query = companyId ? `?companyId=${companyId}` : '';
   const res = await fetch(`/api/products${query}`);
+  if (!res.ok) {
+    console.error('Failed to fetch products', await res.text());
+    return [];
+  }
   return res.json();
 }
 
@@ -171,6 +175,10 @@ export async function deleteProduct(id: string): Promise<void> {
 export async function fetchLeadPurchases(companyId?: string): Promise<any[]> {
   const query = companyId ? `?companyId=${companyId}` : '';
   const res = await fetch(`/api/lead-purchases${query}`);
+  if (!res.ok) {
+    console.error('Failed to fetch lead purchases', await res.text());
+    return [];
+  }
   return res.json();
 }
 
