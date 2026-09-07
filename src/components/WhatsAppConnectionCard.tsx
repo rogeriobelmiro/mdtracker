@@ -28,7 +28,7 @@ export const WhatsAppConnectionCard: React.FC<WhatsAppConnectionCardProps> = ({ 
         fetchStatus();
         const interval = setInterval(fetchStatus, 3000); // Poll every 3 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [companyId]);
 
     const connectWhatsApp = async () => {
         setLoading(true);

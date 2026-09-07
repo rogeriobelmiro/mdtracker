@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   BarChart3, Link as LinkIcon, Users, Zap, Plus, Radio, MessageSquare, 
-  Building2, UserCheck, LogOut, ShieldCheck, UserPlus
+  Building2, UserCheck, LogOut, ShieldCheck, UserPlus, ShoppingCart
 } from 'lucide-react';
 import { User, Company } from '../types';
 
@@ -188,6 +188,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Usuários
                 </button>
                 <button
+                  onClick={() => setActiveTab('products')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                    activeTab === 'products'
+                      ? 'bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-600'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 text-indigo-600" />
+                  Produtos
+                </button>
+                <button
                   onClick={() => setActiveTab('company')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
                     activeTab === 'company'
@@ -257,6 +268,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 Usuários
+              </button>
+              <button
+                onClick={() => setActiveTab('products')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                  activeTab === 'products' ? 'bg-indigo-50 text-indigo-700 font-bold border-l-2 border-indigo-600' : 'text-slate-600'
+                }`}
+              >
+                Produtos
               </button>
               <button
                 onClick={() => setActiveTab('company')}

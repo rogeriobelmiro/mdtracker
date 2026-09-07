@@ -38,10 +38,19 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const defaultEvolutionInstance = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
   const [formData, setFormData] = useState<IntegrationSettings>({
     ...settings,
-    evolutionInstance: settings.evolutionInstance || defaultEvolutionInstance,
+    evolutionInstance: defaultEvolutionInstance,
     stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
     autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
   });
+
+  React.useEffect(() => {
+    setFormData({
+      ...settings,
+      evolutionInstance: defaultEvolutionInstance,
+      stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
+      autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
+    });
+  }, [settings, defaultEvolutionInstance]);
   
   const [testUrl, setTestUrl] = useState<string>(settings.globalWebhookUrl || '');
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
@@ -345,16 +354,19 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Nome da Instância</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Nome da Instância (Obrigatório)</label>
                 <input
                   type="text"
                   placeholder="Ex: 5511999999999"
-                  value={formData.evolutionInstance || ''}
-                  onChange={(e) => setFormData({ ...formData, evolutionInstance: e.target.value.replace(/\s+/g, '') })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  value={formData.evolutionInstance || defaultEvolutionInstance || ''}
+                  disabled
+                  className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-500 font-mono focus:outline-none cursor-not-allowed"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  O nome da instância deve preferencialmente ser o telefone da empresa (Ex: <code className="text-blue-600 font-mono">{defaultEvolutionInstance || '5511999999999'}</code>).
+                  O nome da instância é definido automaticamente como o <strong className="text-slate-600">Telefone Comercial</strong> da sua empresa (configurado em "Minha Empresa").
+                  {(!formData.evolutionInstance && !defaultEvolutionInstance) && (
+                    <span className="text-red-500 font-medium ml-1">Configure o telefone da empresa para conectar o WhatsApp!</span>
+                  )}
                 </p>
               </div>
 
