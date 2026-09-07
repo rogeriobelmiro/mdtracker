@@ -2,6 +2,7 @@ import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, Funn
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -33,6 +34,7 @@ export async function updateCompany(id: string, data: Partial<Company>): Promise
 
 export async function fetchUsers(): Promise<User[]> {
   const res = await fetch('/api/users');
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -88,6 +90,7 @@ export async function fetchStats(): Promise<StatsSummary> {
 
 export async function fetchLinks(): Promise<CampaignLink[]> {
   const res = await fetch('/api/links');
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -115,6 +118,7 @@ export async function deleteLink(id: string): Promise<void> {
 
 export async function fetchLeads(): Promise<Lead[]> {
   const res = await fetch('/api/leads');
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -212,6 +216,7 @@ export async function updateSettings(data: Partial<IntegrationSettings>): Promis
 
 export async function fetchWebhookLogs(): Promise<WebhookLog[]> {
   const res = await fetch('/api/webhooks/logs');
+  if (!res.ok) return [];
   return res.json();
 }
 

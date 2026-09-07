@@ -364,6 +364,9 @@ export default function App() {
         {activeTab === 'leads' && (
           <LeadCRM
             leads={companyLeads}
+            products={products}
+            leadPurchases={leadPurchases}
+            onCreatePurchase={handleCreateLeadPurchase}
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
             onOpenWhatsApp={(leadId) => {
