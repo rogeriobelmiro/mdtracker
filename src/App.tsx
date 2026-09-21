@@ -43,6 +43,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
 
   // Multi-tenant & User Management States
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -348,7 +349,12 @@ export default function App() {
             stats={companyStats}
             links={companyLinks}
             leads={companyLeads}
-            onNavigateToLinks={() => setActiveTab('links')}
+            onNavigateToLinks={(linkId) => {
+              if (linkId) {
+                setEditingLinkId(linkId);
+              }
+              setActiveTab('links');
+            }}
             onNavigateToLeads={() => setActiveTab('leads')}
           />
         )}
@@ -362,6 +368,8 @@ export default function App() {
             isModalOpen={isCreateModalOpen}
             setIsModalOpen={setIsCreateModalOpen}
             currentCompany={currentCompany}
+            editingLinkId={editingLinkId}
+            onClearEditingLinkId={() => setEditingLinkId(null)}
           />
         )}
 

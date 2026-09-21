@@ -23,6 +23,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   onDeleteUser
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -44,23 +45,57 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     }
 
     // Check if email already exists in company
-    const exists = users.some(u => u.email.toLowerCase() === formData.email.trim().toLowerCase());
+    const exists = users.some(
+      u => u.email.toLowerCase() === formData.email.trim().toLowerCase() && u.id !== editingUserId
+    );
     if (exists) {
       setFormError('Este e-mail já está cadastrado no sistema.');
       return;
     }
 
-    onAddUser({
-      companyId: currentCompany.id,
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      password: formData.password || '123',
-      role: formData.role,
-      active: true
-    });
+    if (editingUserId) {
+      const updates: Partial<User> = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: formData.role,
+      };
+      if (formData.password) {
+        updates.password = formData.password;
+      }
+      onUpdateUser(editingUserId, updates);
+    } else {
+      onAddUser({
+        companyId: currentCompany.id,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password || '123',
+        role: formData.role,
+        active: true
+      });
+    }
 
     setFormData({ name: '', email: '', password: '', role: 'attendant' });
+    setEditingUserId(null);
     setIsModalOpen(false);
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUserId(user.id);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  const closeAndResetModal = () => {
+    setIsModalOpen(false);
+    setEditingUserId(null);
+    setFormData({ name: '', email: '', password: '', role: 'attendant' });
+    setFormError('');
   };
 
   const getRoleBadge = (role: UserRole) => {
@@ -121,7 +156,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
         {currentUser.role === 'admin' && (
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingUserId(null);
+              setFormData({ name: '', email: '', password: '', role: 'attendant' });
+              setFormError('');
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-xs flex items-center gap-2 shrink-0"
           >
             <UserPlus className="w-4 h-4" />
@@ -256,6 +296,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             {user.active ? 'Desativar' : 'Ativar'}
                           </button>
                           <button
+                            onClick={() => openEditModal(user)}
+                            className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                            title="Editar Usuário"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => onDeleteUser(user.id)}
                             className="p-1 text-slate-400 hover:text-red-600 rounded"
                             title="Excluir Usuário"
@@ -285,11 +332,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-                Cadastrar Colaborador na Empresa
+                {editingUserId ? <Edit3 className="w-5 h-5 text-blue-600" /> : <UserPlus className="w-5 h-5 text-blue-600" />}
+                {editingUserId ? 'Editar Colaborador' : 'Cadastrar Colaborador na Empresa'}
               </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeAndResetModal}
                 className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
@@ -335,11 +382,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Senha Inicial
+                  {editingUserId ? 'Nova Senha (opcional)' : 'Senha Inicial'}
                 </label>
                 <input
                   type="password"
-                  placeholder="Defina uma senha (Padrão: 123)"
+                  placeholder={editingUserId ? "Deixe em branco para manter a atual" : "Defina uma senha (Padrão: 123)"}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
@@ -367,7 +414,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeAndResetModal}
                   className="px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Cancelar
@@ -376,7 +423,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow-xs"
                 >
-                  Confirmar Cadastro
+                  {editingUserId ? 'Salvar Alterações' : 'Confirmar Cadastro'}
                 </button>
               </div>
 

@@ -7,7 +7,7 @@ interface DashboardOverviewProps {
   stats: StatsSummary;
   links: CampaignLink[];
   leads: Lead[];
-  onNavigateToLinks: () => void;
+  onNavigateToLinks: (linkId?: string) => void;
   onNavigateToLeads: () => void;
 }
 
@@ -322,7 +322,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {campaignStats.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition border-b border-slate-100">
+                  <tr 
+                    key={item.id} 
+                    className="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer"
+                    onClick={() => onNavigateToLinks(item.id)}
+                  >
                     <td className="py-3 px-3 font-semibold text-slate-900">
                       <div>{item.title}</div>
                       <div className="text-[10px] text-slate-400 font-mono">/r/{item.slug}</div>

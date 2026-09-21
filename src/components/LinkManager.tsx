@@ -11,6 +11,8 @@ interface LinkManagerProps {
   isModalOpen: boolean;
   setIsModalOpen: (open: boolean) => void;
   currentCompany: Company;
+  editingLinkId?: string | null;
+  onClearEditingLinkId?: () => void;
 }
 
 export const LinkManager: React.FC<LinkManagerProps> = ({
@@ -21,6 +23,8 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   isModalOpen,
   setIsModalOpen,
   currentCompany,
+  editingLinkId,
+  onClearEditingLinkId,
 }) => {
   const [editingLink, setEditingLink] = useState<CampaignLink | null>(null);
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
@@ -46,6 +50,23 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     googleAdsLabel: '',
     webhookUrl: ''
   });
+
+  React.useEffect(() => {
+    if (editingLinkId) {
+      const link = links.find(l => l.id === editingLinkId);
+      if (link) {
+        setEditingLink(link);
+        setFormData({
+          ...link,
+          phone: companyPhone
+        });
+        setIsModalOpen(true);
+      }
+      if (onClearEditingLinkId) {
+        onClearEditingLinkId();
+      }
+    }
+  }, [editingLinkId, links, companyPhone, setIsModalOpen, onClearEditingLinkId]);
 
   const handleOpenCreate = () => {
     setEditingLink(null);
