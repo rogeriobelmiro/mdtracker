@@ -4,7 +4,8 @@ import {
   Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter,
   Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus
 } from 'lucide-react';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import { useDialog } from '../contexts/DialogContext';
 import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';
 
 interface WhatsAppChatInboxProps {
@@ -20,6 +21,7 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
   onUpdateLeadStage,
   initialSelectedLeadId
 }) => {
+  const { alert } = useDialog();
   // Selected Lead for active conversation
   const [selectedLeadId, setSelectedLeadId] = useState<string>(initialSelectedLeadId || leads[0]?.id || '');
   
@@ -125,7 +127,7 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     if (!file) return;
 
     if (file.size > 16 * 1024 * 1024) {
-      alert('O arquivo é muito grande. O limite máximo recomendado é de 16MB.');
+      await alert('O arquivo é muito grande. O limite máximo recomendado é de 16MB.');
       return;
     }
 

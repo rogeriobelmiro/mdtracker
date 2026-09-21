@@ -3,7 +3,9 @@ import {
   Send, Radio, Users, CheckCircle2, Clock, Play, Pause, RefreshCw, Download, 
   ExternalLink, Plus, Filter, Sparkles, MessageSquare, Settings, AlertCircle, Trash2, Check, Copy, Search
 } from 'lucide-react';
-import { Lead, CampaignLink, BroadcastCampaign, FunnelStage } from '../types';
+import { Lead, Company, CampaignLink, BroadcastCampaign, FunnelStage } from '../types';
+import { FUNNEL_STAGES } from './FunnelBoard';
+import { useDialog } from '../contexts/DialogContext';
 
 interface BroadcastCampaignsProps {
   leads: Lead[];
@@ -11,6 +13,7 @@ interface BroadcastCampaignsProps {
 }
 
 export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, links }) => {
+  const { confirm } = useDialog();
   // Mock stored broadcast campaigns using localStorage for persistence
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>(() => {
     const saved = localStorage.getItem('mdtracker_campaigns');
@@ -413,8 +416,8 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({ leads, l
                         Disparar Lote
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm('Tem certeza que deseja apagar esta campanha do histórico?')) {
+                        onClick={async () => {
+                          if (await confirm('Tem certeza que deseja apagar esta campanha do histórico?')) {
                             setCampaigns(prev => prev.filter(c => c.id !== camp.id));
                             if (activeCampaign?.id === camp.id) {
                               setIsExecuting(false);

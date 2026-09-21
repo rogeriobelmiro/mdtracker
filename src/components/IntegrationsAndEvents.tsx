@@ -28,6 +28,8 @@ const DEFAULT_KEYWORDS: AutoStageKeywordRule[] = [
   { stage: 'Perdido', keywords: ['não quero', 'cancelar', 'muito caro', 'sem interesse', 'desistir'], enabled: true }
 ];
 
+import { useDialog } from '../contexts/DialogContext';
+
 export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   settings,
   onUpdateSettings,
@@ -35,6 +37,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   onTestWebhook,
   currentCompany,
 }) => {
+  const { confirm } = useDialog();
   const defaultEvolutionInstance = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
   const [formData, setFormData] = useState<IntegrationSettings>({
     ...settings,
@@ -202,7 +205,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       
       if (data.success && data.instanceExists === false) {
         setEvoTestStatus({ loading: false, message: 'Conectado à API, mas a instância não existe.', success: false });
-        if (window.confirm(`A instância "${formData.evolutionInstance}" não existe na Evolution API.\nDeseja criá-la agora?`)) {
+        if (await confirm(`A instância "${formData.evolutionInstance}" não existe na Evolution API.\nDeseja criá-la agora?`)) {
           setEvoTestStatus({ loading: true, message: 'Criando instância...', success: false });
           const createRes = await fetch('/api/whatsapp/evolution/create-instance', {
             method: 'POST',
@@ -217,12 +220,12 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
           setEvoTestStatus({ loading: false, message: createData.message, success: createData.success });
         }
       } else if (data.success && data.instanceExists === true) {
-        if (window.confirm(`A instância "${formData.evolutionInstance}" já existe.\nDeseja conectar ao WhatsApp (Gerar QR Code) agora?`)) {
+        if (await confirm(`A instância "${formData.evolutionInstance}" já existe.\nDeseja conectar ao WhatsApp (Gerar QR Code) agora?`)) {
           setEvoTestStatus({ loading: true, message: 'Iniciando conexão...', success: true });
           fetch('/api/whatsapp/connect', { 
               method: 'POST', 
               headers: { 'Content-Type': 'application/json' }, 
-              body: JSON.stringify({ companyId: 'comp-alfa' }) 
+              body: JSON.stringify({ companyId: currentCompany.id }) 
           });
           setEvoTestStatus({ loading: false, message: 'Conexão iniciada! Verifique o painel do WhatsApp acima.', success: true });
         } else {
@@ -286,7 +289,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       <form onSubmit={handleSave} className="space-y-6">
 
         {/* Conexão WhatsApp Card */}
-        <WhatsAppConnectionCard companyId={settings.companyId} />
+        <WhatsAppConnectionCard companyId={currentCompany.id} />
 
         {/* Global Tokens & Pixel IDs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

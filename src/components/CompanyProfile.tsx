@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Company } from '../types';
 import { Building2, Save, MapPin, Phone, Building, UserSquare2, Image as ImageIcon } from 'lucide-react';
+import { useDialog } from '../contexts/DialogContext';
 
 interface CompanyProfileProps {
   currentCompany: Company;
@@ -8,6 +9,7 @@ interface CompanyProfileProps {
 }
 
 export function CompanyProfile({ currentCompany, onUpdateCompany }: CompanyProfileProps) {
+  const { alert, success } = useDialog();
   const [formData, setFormData] = useState<Partial<Company>>({
     name: currentCompany.name || '',
     cnpj: currentCompany.cnpj || '',
@@ -24,10 +26,10 @@ export function CompanyProfile({ currentCompany, onUpdateCompany }: CompanyProfi
     setSaving(true);
     try {
       await onUpdateCompany(currentCompany.id, formData);
-      alert('Dados da empresa atualizados com sucesso!');
+      await success('Dados da empresa atualizados com sucesso!');
     } catch (error) {
       console.error(error);
-      alert('Houve um erro ao salvar os dados da empresa. Verifique sua conexão e tente novamente.');
+      await alert('Houve um erro ao salvar os dados da empresa. Verifique sua conexão e tente novamente.');
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product, Company } from '../types';
 import { Plus, Edit3, Trash2, Box, RefreshCw, X, Package } from 'lucide-react';
+import { useDialog } from '../contexts/DialogContext';
 
 interface ProductsManagerProps {
   products: Product[];
@@ -17,6 +18,7 @@ export const ProductsManager: React.FC<ProductsManagerProps> = ({
   onUpdateProduct,
   onDeleteProduct
 }) => {
+  const { confirm } = useDialog();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -123,8 +125,8 @@ export const ProductsManager: React.FC<ProductsManagerProps> = ({
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm('Excluir este item? Isso não apagará as vendas já associadas aos leads, mas ele não poderá mais ser vendido.')) {
+                          onClick={async () => {
+                            if (await confirm('Excluir este item? Isso não apagará as vendas já associadas aos leads, mas ele não poderá mais ser vendido.')) {
                               onDeleteProduct(product.id);
                             }
                           }}

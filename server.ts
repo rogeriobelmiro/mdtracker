@@ -806,6 +806,10 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
     const { data: existing, error: fetchErr } = await supabase.from('users').select('*').eq('id', id).single();
     if (fetchErr || !existing) return res.status(404).json({ error: 'Usuário não encontrado' });
     
+    if (req.body.password && !req.body.password.startsWith('$2b$')) {
+        req.body.password = await bcrypt.hash(req.body.password, 10);
+    }
+
     const updated = {
         ...mapUserFromDB(existing),
         ...req.body

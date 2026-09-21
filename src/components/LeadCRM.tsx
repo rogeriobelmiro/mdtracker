@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, FunnelStage, Product, LeadPurchase } from '../types';
+import { FUNNEL_STAGES } from './FunnelBoard';
+import { useDialog } from '../contexts/DialogContext';
 import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp } from 'lucide-react';
 
 interface LeadCRMProps {
@@ -21,6 +23,7 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   onOpenWhatsApp,
   onCreatePurchase 
 }) => {
+  const { success, alert } = useDialog();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
@@ -540,7 +543,7 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                           amount: p.price
                         });
                         setNewPurchaseProductId('');
-                        alert('Venda registrada com sucesso!');
+                        await success('Venda registrada com sucesso!');
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold"
                     >

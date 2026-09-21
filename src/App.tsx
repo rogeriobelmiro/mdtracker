@@ -38,8 +38,10 @@ import {
   deleteLeadPurchase,
 } from './services/api';
 import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company, Product, LeadPurchase } from './types';
+import { useDialog } from './contexts/DialogContext';
 
 export default function App() {
+  const { alert, confirm } = useDialog();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
@@ -205,7 +207,7 @@ export default function App() {
       await createUser({ ...newUser, id: `usr-${Date.now()}` });
       await loadData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao criar usuário');
+      await alert(err instanceof Error ? err.message : 'Erro ao criar usuário');
     }
   };
 
@@ -214,17 +216,17 @@ export default function App() {
       await updateUser(userId, updates);
       await loadData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao atualizar usuário');
+      await alert(err instanceof Error ? err.message : 'Erro ao atualizar usuário');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Tem certeza que deseja remover este colaborador?')) {
+    if (await confirm('Tem certeza que deseja remover este colaborador?')) {
       try {
         await deleteUser(userId);
         await loadData();
       } catch (err) {
-        alert(err instanceof Error ? err.message : 'Erro ao deletar usuário');
+        await alert(err instanceof Error ? err.message : 'Erro ao deletar usuário');
       }
     }
   };
@@ -245,7 +247,7 @@ export default function App() {
   };
 
   const handleDeleteLink = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este link de rastreamento?')) {
+    if (await confirm('Tem certeza que deseja excluir este link de rastreamento?')) {
       await deleteLink(id);
       await loadData();
     }
@@ -257,7 +259,7 @@ export default function App() {
   };
 
   const handleDeleteLead = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja remover este lead do histórico?')) {
+    if (await confirm('Tem certeza que deseja remover este lead do histórico?')) {
       await deleteLead(id);
       await loadData();
     }
@@ -284,7 +286,7 @@ export default function App() {
       await createProduct(data);
       await loadData();
     } catch (err: any) {
-      alert('Erro ao criar produto: ' + err.message);
+      await alert('Erro ao criar produto: ' + err.message);
     }
   };
 
