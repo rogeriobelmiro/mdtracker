@@ -1002,11 +1002,16 @@ app.get('/api/links', async (req: Request, res: Response) => {
 
     // If date filters are provided, calculate clicks from link_clicks table
     if (startDate && endDate) {
+      const startStr = startDate as string;
+      const endStr = endDate as string;
+      const startOfDay = startStr.includes('T') ? startStr : `${startStr}T00:00:00.000Z`;
+      const endOfDay = endStr.includes('T') ? endStr : `${endStr}T23:59:59.999Z`;
+
       const { data: clicksData } = await supabase
         .from('link_clicks')
         .select('link_id')
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
 
       if (clicksData) {
         const clickCounts: Record<string, number> = {};
@@ -1018,8 +1023,35 @@ app.get('/api/links', async (req: Request, res: Response) => {
           l.clicksCount = clickCounts[l.id] || 0;
         });
       } else {
-        // If query fails or no clicks, zero them out for the date range
         links.forEach(l => { l.clicksCount = 0; });
+      }
+
+      // Calculate leads and conversions from leads table
+      const { data: leadsData } = await supabase
+        .from('leads')
+        .select('link_id, stage')
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      if (leadsData) {
+        const leadCounts: Record<string, number> = {};
+        const convCounts: Record<string, number> = {};
+        
+        leadsData.forEach(l => {
+          if (l.link_id) {
+            leadCounts[l.link_id] = (leadCounts[l.link_id] || 0) + 1;
+            if (l.stage === 'Convertido') {
+              convCounts[l.link_id] = (convCounts[l.link_id] || 0) + 1;
+            }
+          }
+        });
+
+        links.forEach(l => {
+          l.leadsCount = leadCounts[l.id] || 0;
+          l.conversionsCount = convCounts[l.id] || 0;
+        });
+      } else {
+        links.forEach(l => { l.leadsCount = 0; l.conversionsCount = 0; });
       }
     }
 
