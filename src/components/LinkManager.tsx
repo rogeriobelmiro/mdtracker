@@ -32,6 +32,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
+  // Sort State
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
   const companyPhone = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
 
   // Form State
@@ -144,6 +148,34 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     l.utmCampaign.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) return <span className="ml-1 opacity-20 group-hover:opacity-50">↓</span>;
+    return <span className="ml-1 text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const sortedLinks = [...filteredLinks].sort((a, b) => {
+    let valA: any = a[sortField as keyof CampaignLink];
+    let valB: any = b[sortField as keyof CampaignLink];
+    
+    if (sortField === 'title') {
+      valA = a.title.toLowerCase();
+      valB = b.title.toLowerCase();
+    }
+    
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="space-y-6 text-slate-800">
       
@@ -203,16 +235,16 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
-                  <th className="p-4 py-3">Campanha</th>
-                  <th className="p-4 py-3">Link / Slug</th>
-                  <th className="p-4 py-3 text-right">Cliques</th>
-                  <th className="p-4 py-3 text-right">Leads</th>
-                  <th className="p-4 py-3 text-right">Conv.</th>
+                  <th className="p-4 py-3 cursor-pointer group hover:bg-slate-100" onClick={() => handleSort('title')}>Campanha <SortIcon field="title" /></th>
+                  <th className="p-4 py-3 cursor-pointer group hover:bg-slate-100" onClick={() => handleSort('slug')}>Link / Slug <SortIcon field="slug" /></th>
+                  <th className="p-4 py-3 text-right cursor-pointer group hover:bg-slate-100" onClick={() => handleSort('clicksCount')}>Cliques <SortIcon field="clicksCount" /></th>
+                  <th className="p-4 py-3 text-right cursor-pointer group hover:bg-slate-100" onClick={() => handleSort('leadsCount')}>Leads <SortIcon field="leadsCount" /></th>
+                  <th className="p-4 py-3 text-right cursor-pointer group hover:bg-slate-100" onClick={() => handleSort('conversionsCount')}>Conv. <SortIcon field="conversionsCount" /></th>
                   <th className="p-4 py-3 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-slate-100">
-                {filteredLinks.map((link) => {
+                {sortedLinks.map((link) => {
                   const fullUrl = getFullRedirectUrl(link.slug, link.utmSource, link.utmCampaign);
                   return (
                     <tr key={link.id} className="hover:bg-slate-50 transition group">
@@ -262,7 +294,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredLinks.map((link) => {
+        {sortedLinks.map((link) => {
           const fullUrl = getFullRedirectUrl(link.slug, link.utmSource, link.utmCampaign);
           return (
             <div

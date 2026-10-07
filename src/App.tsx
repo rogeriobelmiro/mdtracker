@@ -364,6 +364,10 @@ export default function App() {
         currentUser={currentUser}
         currentCompany={currentCompany}
         onLogout={handleLogout}
+        startDate={startDate}
+        setStartDate={(v) => { setStartDate(v); loadData(undefined, v, endDate); }}
+        endDate={endDate}
+        setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
       />
 
       {/* Main Content Area */}
