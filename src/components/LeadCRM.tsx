@@ -11,7 +11,10 @@ interface LeadCRMProps {
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
   onOpenWhatsApp?: (leadId: string) => void;
+  onOpenWhatsApp?: (leadId: string) => void;
   onCreatePurchase: (data: Partial<LeadPurchase>) => Promise<void>;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
 }
 
 export const LeadCRM: React.FC<LeadCRMProps> = ({ 
@@ -21,11 +24,19 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   onUpdateLead, 
   onDeleteLead, 
   onOpenWhatsApp,
-  onCreatePurchase 
+  onOpenWhatsApp,
+  onCreatePurchase,
+  searchQuery = '',
+  setSearchQuery
 }) => {
   const { success, alert } = useDialog();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Use local state if props are not provided
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const currentSearchQuery = setSearchQuery ? searchQuery : localSearchQuery;
+  const updateSearchQuery = setSearchQuery || setLocalSearchQuery;
+
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban'>('table');
@@ -93,13 +104,14 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   };
 
   const filteredLeads = leads.filter(lead => {
+    const query = currentSearchQuery.toLowerCase();
     const matchesSearch =
-      (lead.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.location?.city || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.utmCampaign || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.utmContent || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.utmTerm || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead.phone || '').includes(searchQuery);
+      (lead.name || '').toLowerCase().includes(query) ||
+      (lead.location?.city || '').toLowerCase().includes(query) ||
+      (lead.utmCampaign || '').toLowerCase().includes(query) ||
+      (lead.utmContent || '').toLowerCase().includes(query) ||
+      (lead.utmTerm || '').toLowerCase().includes(query) ||
+      (lead.phone || '').includes(query);
 
     const matchesStage = stageFilter === 'all' || lead.stage === stageFilter;
     const matchesSource = sourceFilter === 'all' || lead.utmSource === sourceFilter;
@@ -235,8 +247,8 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
           <input
             type="text"
             placeholder="Buscar por nome, cidade, telefone, UTM..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={currentSearchQuery}
+            onChange={(e) => updateSearchQuery(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 rounded pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
           />
         </div>

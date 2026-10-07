@@ -13,6 +13,7 @@ interface LinkManagerProps {
   currentCompany: Company;
   editingLinkId?: string | null;
   onClearEditingLinkId?: () => void;
+  onFilterLeadsByCampaign?: (campaign: string) => void;
 }
 
 export const LinkManager: React.FC<LinkManagerProps> = ({
@@ -25,6 +26,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   currentCompany,
   editingLinkId,
   onClearEditingLinkId,
+  onFilterLeadsByCampaign
 }) => {
   const [editingLink, setEditingLink] = useState<CampaignLink | null>(null);
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
@@ -270,7 +272,15 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                         </div>
                       </td>
                       <td className="p-4 text-right font-mono font-medium text-slate-700">{link.clicksCount}</td>
-                      <td className="p-4 text-right font-mono font-bold text-blue-600">{link.leadsCount}</td>
+                      <td className="p-4 text-right">
+                        <button 
+                          onClick={() => onFilterLeadsByCampaign?.(link.utmCampaign || link.title)}
+                          className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline transition"
+                          title="Ver leads desta campanha"
+                        >
+                          {link.leadsCount}
+                        </button>
+                      </td>
                       <td className="p-4 text-right font-mono font-bold text-green-600">{link.conversionsCount}</td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -405,7 +415,15 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <div className="flex items-center gap-4 font-medium">
                   <span>Cliques: <strong className="text-slate-900 font-mono">{link.clicksCount}</strong></span>
-                  <span>Leads: <strong className="text-blue-600 font-mono">{link.leadsCount}</strong></span>
+                  <span className="flex items-center gap-1">
+                    Leads: 
+                    <button 
+                      onClick={() => onFilterLeadsByCampaign?.(link.utmCampaign || link.title)}
+                      className="text-blue-600 font-mono font-bold hover:text-blue-800 hover:underline transition"
+                    >
+                      {link.leadsCount}
+                    </button>
+                  </span>
                   <span>Conversões: <strong className="text-green-600 font-mono">{link.conversionsCount}</strong></span>
                 </div>
                 <span className="text-[10px] text-slate-400">

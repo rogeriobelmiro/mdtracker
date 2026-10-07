@@ -46,6 +46,7 @@ export default function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [leadSearchQuery, setLeadSearchQuery] = useState<string>('');
 
   // Multi-tenant & User Management States
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -399,6 +400,10 @@ export default function App() {
             currentCompany={currentCompany}
             editingLinkId={editingLinkId}
             onClearEditingLinkId={() => setEditingLinkId(null)}
+            onFilterLeadsByCampaign={(campaign) => {
+              setLeadSearchQuery(campaign);
+              setActiveTab('leads');
+            }}
           />
         )}
 
@@ -410,6 +415,8 @@ export default function App() {
             onCreatePurchase={handleCreateLeadPurchase}
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
+            searchQuery={leadSearchQuery}
+            setSearchQuery={setLeadSearchQuery}
             onOpenWhatsApp={(leadId) => {
               setChatSelectedLeadId(leadId);
               setActiveTab('chat');
