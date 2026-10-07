@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink } from '../types';
 import { FUNNEL_STAGES } from './FunnelBoard';
 import { useDialog } from '../contexts/DialogContext';
-import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X } from 'lucide-react';
+import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X, Filter as FunnelIcon } from 'lucide-react';
+import { FunnelView } from './FunnelView';
 
 interface LeadCRMProps {
   leads: Lead[];
@@ -43,7 +44,7 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'card' | 'kanban' | 'funnel'>('table');
 
   // Lead modal edit state
   const [editNotes, setEditNotes] = useState<string>('');
@@ -295,6 +296,13 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
             >
               <Columns className="w-4 h-4" />
             </button>
+            <button
+              onClick={() => setViewMode('funnel')}
+              className={`p-1.5 rounded transition ${viewMode === 'funnel' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Visão de Funil"
+            >
+              <FunnelIcon className="w-4 h-4" />
+            </button>
           </div>
           
           <div className="w-px h-6 bg-slate-200 hidden sm:block shrink-0"></div>
@@ -455,6 +463,9 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
             );
           })}
         </div>
+      )}
+      {viewMode === 'funnel' && (
+        <FunnelView leads={filteredLeads} />
       )}
 
       {/* LEAD DETAILS & EVENTS MODAL */}
