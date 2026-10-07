@@ -389,9 +389,9 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
 
       {/* CREATE / EDIT LINK MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-lg p-6 shadow-xl space-y-5 relative my-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-lg shadow-xl flex flex-col max-h-full overflow-hidden relative">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6 pb-4 shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
                   {editingLink ? 'Editar Link de Campanha' : 'Criar Novo Link de Campanha'}
@@ -406,7 +406,8 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               
               {/* Campaign Title & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -610,8 +611,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 </div>
               </div>
 
+              </div>
+              
               {/* Form Actions */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

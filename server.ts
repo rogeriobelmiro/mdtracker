@@ -341,6 +341,7 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
     try {
         const payload = req.body;
         console.log('Recebido webhook Evolution API:', JSON.stringify(payload).substring(0, 300));
+        require('fs').appendFileSync('webhook_debug.jsonl', JSON.stringify(payload) + '\n');
 
         const eventType = (payload.event || '').toLowerCase();
 

@@ -430,10 +430,10 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
       {/* LEAD DETAILS & EVENTS MODAL */}
       {selectedLead && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 w-full max-w-xl rounded-lg p-6 shadow-xl space-y-5 relative my-8 text-slate-800">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white border border-slate-200 w-full max-w-xl rounded-lg shadow-xl flex flex-col max-h-full overflow-hidden relative text-slate-800">
             
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                   Perfil do Lead: {selectedLead.name}
@@ -447,6 +447,8 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                 ✕
               </button>
             </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
 
             {/* General Lead Grid */}
             <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded border border-slate-200">
@@ -627,8 +629,10 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
               </div>
             </div>
 
+            </div>
+
             {/* Footer Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={async () => {
