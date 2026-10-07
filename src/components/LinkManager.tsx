@@ -209,7 +209,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               placeholder="Buscar por nome, slug, UTM..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
+              className="w-72 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
             />
             
             {(setStartDate && setEndDate) && (
