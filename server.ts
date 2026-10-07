@@ -1340,7 +1340,7 @@ app.post('/api/meta/test', async (req: Request, res: Response) => {
         const payload = {
             data: [
                 {
-                    event_name: 'TestEvent',
+                    event_name: 'Lead',
                     event_time: Math.floor(Date.now() / 1000),
                     action_source: 'system_generated',
                     user_data: {

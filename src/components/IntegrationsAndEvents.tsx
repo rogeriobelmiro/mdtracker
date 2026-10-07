@@ -47,13 +47,14 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   });
 
   React.useEffect(() => {
-    setFormData({
+    setFormData(prev => ({
       ...settings,
       evolutionInstance: defaultEvolutionInstance,
       stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
       autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
-    });
-  }, [settings, defaultEvolutionInstance]);
+    }));
+    // Removemos 'settings' das dependências para evitar que o polling do App.tsx resete o formulário do usuário enquanto ele digita.
+  }, [currentCompany.id, defaultEvolutionInstance]);
   
   const [testUrl, setTestUrl] = useState<string>(settings.globalWebhookUrl || '');
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
