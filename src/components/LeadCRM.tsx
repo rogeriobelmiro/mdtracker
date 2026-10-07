@@ -613,12 +613,22 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
               <div className="space-y-2 max-h-36 overflow-y-auto">
                 {selectedLead.conversionEvents && selectedLead.conversionEvents.length > 0 ? (
                   selectedLead.conversionEvents.map((evt) => (
-                    <div key={evt.id} className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-green-700 uppercase">{evt.type}</span> - <span className="text-slate-900 font-semibold">{evt.eventName}</span>
-                        <p className="text-slate-500 text-[10px]">{evt.details}</p>
+                    <div key={evt.id} className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-green-700 uppercase">{evt.type}</span> - <span className="text-slate-900 font-semibold">{evt.eventName}</span>
+                        </div>
+                        <span className="text-slate-400 font-mono text-[10px]">{formatDate(evt.timestamp)}</span>
                       </div>
-                      <span className="text-slate-400 font-mono text-[10px]">{formatDate(evt.timestamp)}</span>
+                      <p className="text-slate-500 text-[10px]">{evt.details}</p>
+                      {(evt.utmSource || evt.utmCampaign) && (
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {evt.utmCampaign && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Campanha">C: {evt.utmCampaign}</span>}
+                          {evt.utmTerm && <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Conjunto (Term)">T: {evt.utmTerm}</span>}
+                          {evt.utmContent && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Anúncio (Content)">A: {evt.utmContent}</span>}
+                          {evt.utmSource && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] font-medium uppercase tracking-wider" title="Origem (Source)">O: {evt.utmSource}</span>}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (

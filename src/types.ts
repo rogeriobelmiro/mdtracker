@@ -66,11 +66,16 @@ export interface LeadLocation {
 
 export interface ConversionEventLog {
   id: string;
-  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook';
+  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook' | 'organic';
   eventName: string;
   status: 'sucesso' | 'simulado' | 'falha';
   timestamp: string;
   details: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
 }
 
 export interface Lead {

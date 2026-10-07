@@ -489,7 +489,12 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                             eventName: 'Lead',
                             status: 'sucesso',
                             timestamp: new Date().toISOString(),
-                            details: `Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`
+                            details: `Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`,
+                            utmSource: matchedLink.utm_source,
+                            utmMedium: matchedLink.utm_medium,
+                            utmCampaign: matchedLink.utm_campaign,
+                            utmContent: matchedLink.utm_content,
+                            utmTerm: matchedLink.utm_term
                         }
                     ] : [
                         {
@@ -498,7 +503,10 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                             eventName: 'Contato Inicial Direto',
                             status: 'sucesso',
                             timestamp: new Date().toISOString(),
-                            details: 'Contato via WhatsApp Direto (Sem Link de Rastreamento)'
+                            details: 'Contato via WhatsApp Direto (Sem Link de Rastreamento)',
+                            utmSource: 'whatsapp_direto',
+                            utmMedium: 'organico',
+                            utmCampaign: 'whatsapp'
                         }
                     ],
                     created_at: new Date().toISOString(),
@@ -515,7 +523,12 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                         eventName: 'Lead',
                         status: 'sucesso',
                         timestamp: new Date().toISOString(),
-                        details: `Novo Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`
+                        details: `Novo Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`,
+                        utmSource: matchedLink.utm_source,
+                        utmMedium: matchedLink.utm_medium,
+                        utmCampaign: matchedLink.utm_campaign,
+                        utmContent: matchedLink.utm_content,
+                        utmTerm: matchedLink.utm_term
                     };
                     const updatedEvents = [...(fullLead.conversion_events || []), newEvent];
                     
@@ -1030,7 +1043,12 @@ app.post('/api/leads', async (req: Request, res: Response) => {
         eventName: 'Lead',
         status: 'sucesso',
         timestamp: new Date().toISOString(),
-        details: `Acesso via: ${body.utmCampaign || 'campanha_geral'} (${body.utmSource || 'meta_ads'})`
+        details: `Acesso via: ${body.utmCampaign || 'campanha_geral'} (${body.utmSource || 'meta_ads'})`,
+        utmSource: body.utmSource,
+        utmMedium: body.utmMedium,
+        utmCampaign: body.utmCampaign,
+        utmContent: body.utmContent,
+        utmTerm: body.utmTerm
     };
 
     if (existingLead) {
