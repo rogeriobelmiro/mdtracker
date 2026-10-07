@@ -248,6 +248,63 @@ const mapLeadPurchaseFromDB = (db: any) => ({
     purchasedAt: db.purchased_at
 });
 
+import crypto from 'crypto';
+
+async function sendMetaCAPIEvent(eventName: string, leadData: any, settings: any, reqIp?: string, reqUserAgent?: string) {
+    if (!settings.globalMetaPixelId || !settings.globalMetaToken) return;
+
+    let hashedPhone;
+    if (leadData.phone) {
+      let ph = leadData.phone.replace(/\D/g, '');
+      if (ph.startsWith('55') && ph.length === 12) {
+         // Optionally handle 9 digit insert, but CAPI matches roughly on what user provides
+      }
+      hashedPhone = crypto.createHash('sha256').update(ph).digest('hex');
+    }
+    const hashedEmail = leadData.email ? crypto.createHash('sha256').update(leadData.email.trim().toLowerCase()).digest('hex') : undefined;
+    const hashedCity = leadData.location?.city ? crypto.createHash('sha256').update(leadData.location.city.trim().toLowerCase()).digest('hex') : undefined;
+    const hashedState = leadData.location?.state ? crypto.createHash('sha256').update(leadData.location.state.trim().toLowerCase()).digest('hex') : undefined;
+
+    const payload: any = {
+        data: [
+            {
+                event_name: eventName,
+                event_time: Math.floor(Date.now() / 1000),
+                action_source: 'system_generated',
+                user_data: {
+                    client_ip_address: reqIp || '192.168.0.1',
+                    client_user_agent: reqUserAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    em: hashedEmail ? [hashedEmail] : undefined,
+                    ph: hashedPhone ? [hashedPhone] : undefined,
+                    ct: hashedCity ? [hashedCity] : undefined,
+                    st: hashedState ? [hashedState] : undefined,
+                    country: ['0b5e52643a6358dbb3a4a2b254a6db241cdbb5574c8c7d6baaa65ea285fbf80e'] // 'br'
+                },
+                custom_data: {
+                   value: leadData.value || undefined,
+                   currency: leadData.value ? 'BRL' : undefined
+                }
+            }
+        ]
+    };
+
+    // Clean up undefined
+    Object.keys(payload.data[0].user_data).forEach(key => payload.data[0].user_data[key] === undefined && delete payload.data[0].user_data[key]);
+    if (!payload.data[0].custom_data.value) delete payload.data[0].custom_data;
+
+    try {
+        const resp = await fetch(`https://graph.facebook.com/v19.0/${settings.globalMetaPixelId}/events?access_token=${settings.globalMetaToken}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const respData = await resp.json();
+        console.log("CAPI Event Sent:", eventName, respData);
+    } catch(e) {
+        console.error("Meta CAPI Error:", e);
+    }
+}
+
 
 // Fetch current settings directly from DB since it's needed for webhooks
 async function getSettings(companyId: string = 'comp-alfa'): Promise<IntegrationSettings | any> {
@@ -509,6 +566,11 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                     updated_at: new Date().toISOString()
                 };
                 await supabase.from('leads').insert(newLead);
+                // Send Lead event to Meta CAPI
+                try {
+                  const compSettings = await getSettings(assignedCompanyId);
+                  await sendMetaCAPIEvent('Lead', newLead, compSettings, req.ip, req.headers['user-agent']);
+                } catch(e) {}
             } else if (existingLead && matchedLink && !isFromMe) {
                 // The lead exists and they triggered a NEW tracked campaign link via WhatsApp
                 const { data: fullLead } = await supabase.from('leads').select('*').eq('id', existingLead.id).single();
@@ -1194,6 +1256,9 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
             timestamp: new Date().toISOString(),
             details: `Evento Meta Ads CAPI [${stageMapping.metaEvent}] disparado automaticamente para a etapa '${newStage}'`
           });
+          try {
+            await sendMetaCAPIEvent(stageMapping.metaEvent, updated, settings, req.ip, req.headers['user-agent']);
+          } catch(e){}
         }
 
         // Google Ads Conversion Tag
@@ -1217,6 +1282,9 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
           timestamp: new Date().toISOString(),
           details: `Conversão no valor de R$ ${(updated.value || 0).toFixed(2)}`
         });
+        try {
+          await sendMetaCAPIEvent('Purchase', updated, settings, req.ip, req.headers['user-agent']);
+        } catch(e){}
       }
 
       // Trigger Webhook on stage update
@@ -1559,10 +1627,12 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${metaPixel}');
           fbq('track', 'PageView');
+          ${settings.autoFireMetaOnLead ? `
           fbq('${fbqMethod}', '${metaEventName}', {
             content_name: '${linkObj.title.replace(/'/g, "\\'")}',
             campaign: '${utmCampaign}'
           });
+          ` : ''}
         </script>
         ` : ''}
 

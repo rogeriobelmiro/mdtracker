@@ -382,7 +382,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 </label>
                 
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento a ser disparado (Padrão: Lead)</label>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento no Clique do Link (Ex: ViewAds)</label>
+                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">O evento <strong>Lead</strong> agora é disparado via CAPI somente quando a pessoa enviar mensagem. Escolha aqui o evento topo de funil para o clique no link (Client-side).</p>
                   <select
                     value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') ? (formData.metaLeadEventName || 'Lead') : 'Custom'}
                     onChange={(e) => {
