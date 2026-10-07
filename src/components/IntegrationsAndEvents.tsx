@@ -57,6 +57,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   }, [currentCompany.id, defaultEvolutionInstance]);
   
   const [testUrl, setTestUrl] = useState<string>(settings.globalWebhookUrl || '');
+  const [testEventCode, setTestEventCode] = useState<string>('');
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [evoTestStatus, setEvoTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
@@ -207,7 +208,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
         body: JSON.stringify({
           pixelId: formData.globalMetaPixelId,
           token: formData.globalMetaToken,
-          eventName: formData.metaLeadEventName || 'Lead'
+          eventName: formData.metaLeadEventName || 'Lead',
+          testEventCode
         })
       });
       const data = await res.json();
@@ -379,79 +381,91 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                   />
                 </label>
                 
-                {formData.autoFireMetaOnLead && (
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento a ser disparado (Padrão: Lead)</label>
-                    <select
-                      value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') ? (formData.metaLeadEventName || 'Lead') : 'Custom'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'Custom') {
-                          setFormData({ ...formData, metaLeadEventName: '' });
-                        } else {
-                          setFormData({ ...formData, metaLeadEventName: val });
-                        }
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
-                    >
-                      <option value="Lead">Lead</option>
-                      <option value="Contact">Contact</option>
-                      <option value="ViewContent">ViewContent</option>
-                      <option value="SubmitApplication">SubmitApplication</option>
-                      <option value="CompleteRegistration">CompleteRegistration</option>
-                      <option value="Schedule">Schedule</option>
-                      <option value="Custom">Personalizado (Digitar nome)</option>
-                    </select>
-
-                    {!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') && (
-                      <input
-                        type="text"
-                        placeholder="Nome do evento personalizado"
-                        value={formData.metaLeadEventName || ''}
-                        onChange={(e) => setFormData({ ...formData, metaLeadEventName: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 flex items-center justify-between gap-3 border-t border-slate-100">
-                <div className="flex-1">
-                  <button
-                    type="button"
-                    onClick={handleTestMeta}
-                    disabled={metaTestStatus.loading || !formData.globalMetaPixelId || !formData.globalMetaToken}
-                    className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento a ser disparado (Padrão: Lead)</label>
+                  <select
+                    value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') ? (formData.metaLeadEventName || 'Lead') : 'Custom'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'Custom') {
+                        setFormData({ ...formData, metaLeadEventName: '' });
+                      } else {
+                        setFormData({ ...formData, metaLeadEventName: val });
+                      }
+                    }}
+                    className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
                   >
-                    {metaTestStatus.loading ? (
-                      <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
-                    ) : (
-                      <Zap className="w-4 h-4 text-slate-500" />
-                    )}
-                    Testar Pixel / Token
-                  </button>
-                  {metaTestStatus.message && (
-                    <div className={`mt-2 p-2 rounded text-[10px] font-semibold text-center ${
-                      metaTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      {metaTestStatus.message}
-                    </div>
+                    <option value="Lead">Lead</option>
+                    <option value="Contact">Contact</option>
+                    <option value="ViewContent">ViewContent</option>
+                    <option value="SubmitApplication">SubmitApplication</option>
+                    <option value="CompleteRegistration">CompleteRegistration</option>
+                    <option value="Schedule">Schedule</option>
+                    <option value="Custom">Personalizado (Digitar nome)</option>
+                  </select>
+
+                  {!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') && (
+                    <input
+                      type="text"
+                      placeholder="Nome do evento personalizado"
+                      value={formData.metaLeadEventName || ''}
+                      onChange={(e) => setFormData({ ...formData, metaLeadEventName: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
+                    />
                   )}
                 </div>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-6 rounded text-xs transition flex items-center gap-2 shadow-xs whitespace-nowrap"
-                >
-                  {isSaving ? (
-                    <>
-                      <RefreshCw className="w-3 h-3 animate-spin" /> Salvando...
-                    </>
-                  ) : (
-                    'Salvar'
-                  )}
-                </button>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <div className="mb-3">
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Código de Evento de Teste (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: TEST12345"
+                    value={testEventCode}
+                    onChange={(e) => setTestEventCode(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Preencha com o código da aba "Testar eventos do servidor" no Facebook para o evento aparecer lá na hora.</p>
+                </div>
+                
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <button
+                      type="button"
+                      onClick={handleTestMeta}
+                      disabled={metaTestStatus.loading || !formData.globalMetaPixelId || !formData.globalMetaToken}
+                      className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
+                    >
+                      {metaTestStatus.loading ? (
+                        <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4 text-slate-500" />
+                      )}
+                      Testar Pixel / Token
+                    </button>
+                    {metaTestStatus.message && (
+                      <div className={`mt-2 p-2 rounded text-[10px] font-semibold text-center ${
+                        metaTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        {metaTestStatus.message}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-6 rounded text-xs transition flex items-center gap-2 shadow-xs whitespace-nowrap"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3 h-3 animate-spin" /> Salvando...
+                      </>
+                    ) : (
+                      'Salvar'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
