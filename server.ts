@@ -1330,6 +1330,45 @@ app.post('/api/webhooks/test', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Webhook enviado para ' + url });
 });
 
+app.post('/api/meta/test', async (req: Request, res: Response) => {
+    const { pixelId, token } = req.body;
+    if (!pixelId || !token) {
+        return res.status(400).json({ success: false, message: 'Pixel ID e Token são obrigatórios.' });
+    }
+
+    try {
+        const payload = {
+            data: [
+                {
+                    event_name: 'TestEvent',
+                    event_time: Math.floor(Date.now() / 1000),
+                    action_source: 'system_generated',
+                    user_data: {
+                        client_ip_address: req.ip,
+                        client_user_agent: req.headers['user-agent'] || 'test-agent'
+                    }
+                }
+            ]
+        };
+
+        const response = await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${token}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            res.json({ success: true, message: 'Conexão com a Meta CAPI realizada com sucesso!' });
+        } else {
+            res.json({ success: false, message: `Erro da Meta: ${data.error?.message || 'Falha desconhecida'}` });
+        }
+    } catch (error: any) {
+        res.json({ success: false, message: `Erro interno: ${error.message}` });
+    }
+});
+
 // Dashboard Aggregations API
 app.get('/api/stats', async (req: Request, res: Response) => {
     const [{ data: linksData }, { data: leadsData }] = await Promise.all([
@@ -1444,8 +1483,6 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const utmTerm = query.utm_term || linkObj.utmTerm || '';
 
     // Auto capture or lead registration
-    const userIp = (req.headers['x-forwarded-for'] as string || req.ip || '177.100.20.10').split(',')[0].trim();
-    const userAgent = req.headers['user-agent'] || 'Mobile Browser';
     const isMobile = /mobile/i.test(userAgent);
     const deviceType = isMobile ? 'Dispositivo Móvel' : 'Desktop / Computador';
     

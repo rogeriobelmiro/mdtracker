@@ -58,6 +58,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const [testUrl, setTestUrl] = useState<string>(settings.globalWebhookUrl || '');
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [evoTestStatus, setEvoTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
+  const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [newKeywordInputs, setNewKeywordInputs] = useState<Record<string, string>>({});
@@ -185,6 +186,25 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       setTestStatus({ loading: false, message: res.message, success: res.success });
     } catch (err) {
       setTestStatus({ loading: false, message: 'Erro ao disparar webhook de teste.', success: false });
+    }
+  };
+
+  const handleTestMeta = async () => {
+    if (!formData.globalMetaPixelId || !formData.globalMetaToken) return;
+    setMetaTestStatus({ loading: true });
+    try {
+      const res = await fetch('/api/meta/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: formData.globalMetaPixelId,
+          token: formData.globalMetaToken
+        })
+      });
+      const data = await res.json();
+      setMetaTestStatus({ loading: false, message: data.message, success: data.success });
+    } catch (err) {
+      setMetaTestStatus({ loading: false, message: 'Erro ao conectar com Meta Ads.', success: false });
     }
   };
 
@@ -339,6 +359,37 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     className="w-4 h-4 accent-blue-600 rounded"
                   />
                 </label>
+              </div>
+
+              <div className="pt-4 flex items-center justify-between gap-3 border-t border-slate-100">
+                <div className="flex-1">
+                  <button
+                    type="button"
+                    onClick={handleTestMeta}
+                    disabled={metaTestStatus.loading || !formData.globalMetaPixelId || !formData.globalMetaToken}
+                    className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
+                  >
+                    {metaTestStatus.loading ? (
+                      <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                    ) : (
+                      <Zap className="w-4 h-4 text-slate-500" />
+                    )}
+                    Testar Pixel / Token
+                  </button>
+                  {metaTestStatus.message && (
+                    <div className={`mt-2 p-2 rounded text-[10px] font-semibold text-center ${
+                      metaTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}>
+                      {metaTestStatus.message}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-xs transition shadow-xs whitespace-nowrap"
+                >
+                  Salvar
+                </button>
               </div>
             </div>
           </div>
