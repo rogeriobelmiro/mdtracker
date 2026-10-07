@@ -173,6 +173,7 @@ const mapSettingsToDB = (s: any) => ({
     auto_fire_google_on_conversion: s.autoFireGoogleOnConversion,
     auto_fire_webhook_on_lead: s.autoFireWebhookOnLead,
     auto_fire_webhook_on_stage_change: s.autoFireWebhookOnStageChange,
+    meta_lead_event_name: s.metaLeadEventName,
     stage_event_mappings: s.stageEventMappings,
     auto_stage_keywords: s.autoStageKeywords,
     updated_at: new Date().toISOString()
@@ -193,6 +194,7 @@ const mapSettingsFromDB = (db: any) => ({
     autoFireGoogleOnConversion: db.auto_fire_google_on_conversion || false,
     autoFireWebhookOnLead: db.auto_fire_webhook_on_lead || false,
     autoFireWebhookOnStageChange: db.auto_fire_webhook_on_stage_change || false,
+    metaLeadEventName: db.meta_lead_event_name || '',
     stageEventMappings: db.stage_event_mappings || {},
     autoStageKeywords: db.auto_stage_keywords || []
 });
@@ -1331,7 +1333,7 @@ app.post('/api/webhooks/test', async (req: Request, res: Response) => {
 });
 
 app.post('/api/meta/test', async (req: Request, res: Response) => {
-    const { pixelId, token } = req.body;
+    const { pixelId, token, eventName } = req.body;
     if (!pixelId || !token) {
         return res.status(400).json({ success: false, message: 'Pixel ID e Token são obrigatórios.' });
     }
@@ -1340,7 +1342,7 @@ app.post('/api/meta/test', async (req: Request, res: Response) => {
         const payload = {
             data: [
                 {
-                    event_name: 'Lead',
+                    event_name: eventName || 'Lead',
                     event_time: Math.floor(Date.now() / 1000),
                     action_source: 'system_generated',
                     user_data: {
@@ -1524,6 +1526,11 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const googleAdsId = linkObj.googleAdsConversionId || settings.globalGoogleAdsId;
     const googleAdsLabel = linkObj.googleAdsLabel || settings.globalGoogleAdsLabel;
 
+    // Event Name & fbq method
+    const metaEventName = settings.metaLeadEventName || 'Lead';
+    const standardEvents = ['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule', 'Purchase', 'InitiateCheckout', 'AddToCart'];
+    const fbqMethod = standardEvents.includes(metaEventName) ? 'track' : 'trackCustom';
+
     // Render client redirect & tracking landing page
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`
@@ -1548,7 +1555,7 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${metaPixel}');
           fbq('track', 'PageView');
-          fbq('track', 'Lead', {
+          fbq('${fbqMethod}', '${metaEventName}', {
             content_name: '${linkObj.title.replace(/'/g, "\\'")}',
             campaign: '${utmCampaign}'
           });

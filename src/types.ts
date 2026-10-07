@@ -161,6 +161,7 @@ export interface IntegrationSettings {
   autoFireGoogleOnConversion: boolean;
   autoFireWebhookOnLead: boolean;
   autoFireWebhookOnStageChange: boolean;
+  metaLeadEventName?: string;
   stageEventMappings?: Record<FunnelStage, StageEventConfig>;
   autoStageKeywords?: AutoStageKeywordRule[];
 }

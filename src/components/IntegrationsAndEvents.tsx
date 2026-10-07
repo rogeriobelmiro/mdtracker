@@ -206,7 +206,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pixelId: formData.globalMetaPixelId,
-          token: formData.globalMetaToken
+          token: formData.globalMetaToken,
+          eventName: formData.metaLeadEventName || 'Lead'
         })
       });
       const data = await res.json();
@@ -369,7 +370,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
               <div className="space-y-2 pt-2">
                 <label className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-200 text-xs cursor-pointer">
-                  <span className="text-slate-700 font-medium">Disparar 'Lead' ao clicar no link WhatsApp</span>
+                  <span className="text-slate-700 font-medium">Disparar evento ao clicar no link WhatsApp</span>
                   <input
                     type="checkbox"
                     checked={formData.autoFireMetaOnLead}
@@ -377,6 +378,42 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     className="w-4 h-4 accent-blue-600 rounded"
                   />
                 </label>
+                
+                {formData.autoFireMetaOnLead && (
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento a ser disparado (Padrão: Lead)</label>
+                    <select
+                      value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') ? (formData.metaLeadEventName || 'Lead') : 'Custom'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'Custom') {
+                          setFormData({ ...formData, metaLeadEventName: '' });
+                        } else {
+                          setFormData({ ...formData, metaLeadEventName: val });
+                        }
+                      }}
+                      className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="Lead">Lead</option>
+                      <option value="Contact">Contact</option>
+                      <option value="ViewContent">ViewContent</option>
+                      <option value="SubmitApplication">SubmitApplication</option>
+                      <option value="CompleteRegistration">CompleteRegistration</option>
+                      <option value="Schedule">Schedule</option>
+                      <option value="Custom">Personalizado (Digitar nome)</option>
+                    </select>
+
+                    {!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') && (
+                      <input
+                        type="text"
+                        placeholder="Nome do evento personalizado"
+                        value={formData.metaLeadEventName || ''}
+                        onChange={(e) => setFormData({ ...formData, metaLeadEventName: e.target.value })}
+                        className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 flex items-center justify-between gap-3 border-t border-slate-100">
