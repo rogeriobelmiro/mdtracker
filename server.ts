@@ -368,26 +368,6 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
 
             if (!textContent && !isFromMe) return res.status(200).json({ received: true });
 
-            // Check if lead exists (Try exact match, then without '55')
-            let existingLead = null;
-            const { data: exactMatch } = await supabase
-                .from('leads')
-                .select('id')
-                .eq('phone', phone)
-                .maybeSingle();
-            
-            if (exactMatch) {
-                existingLead = exactMatch;
-            } else if (phone.startsWith('55')) {
-                const phoneWithout55 = phone.substring(2);
-                const { data: partialMatch } = await supabase
-                    .from('leads')
-                    .select('id')
-                    .eq('phone', phoneWithout55)
-                    .maybeSingle();
-                if (partialMatch) existingLead = partialMatch;
-            }
-
             // Tenta achar a empresa usando a instancia
             const instanceName = payload.instance;
             let assignedCompanyId = 'comp-alfa';
@@ -402,6 +382,20 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
             } else {
                 const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
                 if (fallback) assignedCompanyId = fallback.id;
+            }
+
+            // Check if active lead exists
+            let existingLead = null;
+            const phoneOptions = [phone, phone.startsWith('55') ? phone.substring(2) : '55' + phone];
+            const { data: matches } = await supabase
+                .from('leads')
+                .select('*')
+                .eq('company_id', assignedCompanyId)
+                .in('phone', phoneOptions)
+                .order('created_at', { ascending: false });
+            
+            if (matches && matches.length > 0) {
+                existingLead = matches.find(l => l.stage !== 'Convertido' && l.stage !== 'Perdido');
             }
             
             // Deduzir campanha pelo texto da mensagem (Atribuição)
@@ -1025,16 +1019,17 @@ app.post('/api/leads', async (req: Request, res: Response) => {
     let existingLead: any = null;
 
     if (sanitizedPhone) {
-        let { data: match } = await supabase.from('leads').select('*').eq('phone', sanitizedPhone).eq('company_id', companyId).maybeSingle();
-        if (!match && sanitizedPhone.startsWith('55')) {
-            const res = await supabase.from('leads').select('*').eq('phone', sanitizedPhone.substring(2)).eq('company_id', companyId).maybeSingle();
-            match = res.data;
+        const phoneOptions = [sanitizedPhone, sanitizedPhone.startsWith('55') ? sanitizedPhone.substring(2) : '55' + sanitizedPhone];
+        const { data: matches } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('company_id', companyId)
+            .in('phone', phoneOptions)
+            .order('created_at', { ascending: false });
+            
+        if (matches && matches.length > 0) {
+            existingLead = matches.find(l => l.stage !== 'Convertido' && l.stage !== 'Perdido');
         }
-        if (!match && !sanitizedPhone.startsWith('55')) {
-            const res = await supabase.from('leads').select('*').eq('phone', '55' + sanitizedPhone).eq('company_id', companyId).maybeSingle();
-            match = res.data;
-        }
-        if (match) existingLead = match;
     }
 
     const newEvent = {
