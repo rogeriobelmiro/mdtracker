@@ -214,6 +214,40 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
             
             {(setStartDate && setEndDate) && (
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2 py-1">
+                <div className="flex items-center gap-1 mr-1 border-r border-slate-200 pr-2">
+                  <button 
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      setStartDate(today); setEndDate(today);
+                    }}
+                    className="text-[10px] text-slate-600 hover:text-blue-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-200 transition"
+                  >
+                    Hoje
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const yesterday = new Date();
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      const dateStr = yesterday.toISOString().split('T')[0];
+                      setStartDate(dateStr); setEndDate(dateStr);
+                    }}
+                    className="text-[10px] text-slate-600 hover:text-blue-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-200 transition"
+                  >
+                    Ontem
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const today = new Date();
+                      const last7 = new Date(today);
+                      last7.setDate(last7.getDate() - 7);
+                      setStartDate(last7.toISOString().split('T')[0]);
+                      setEndDate(today.toISOString().split('T')[0]);
+                    }}
+                    className="text-[10px] text-slate-600 hover:text-blue-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-200 transition"
+                  >
+                    7D
+                  </button>
+                </div>
                 <input 
                   type="date" 
                   value={startDate || ''}

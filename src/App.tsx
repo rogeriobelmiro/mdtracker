@@ -77,16 +77,21 @@ export default function App() {
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Global Date Filter
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  // Refs for state values to prevent stale closures in setInterval
+  const stateRef = React.useRef({ startDate, endDate, currentCompany });
+  useEffect(() => {
+    stateRef.current = { startDate, endDate, currentCompany };
+  }, [startDate, endDate, currentCompany]);
 
   // Load Initial Application State
   const loadData = async (overrideCompanyId?: string, overrideStart?: string, overrideEnd?: string) => {
     try {
-      const activeCompanyId = overrideCompanyId || currentCompany?.id;
-      const start = overrideStart !== undefined ? overrideStart : startDate;
-      const end = overrideEnd !== undefined ? overrideEnd : endDate;
+      const activeCompanyId = overrideCompanyId || stateRef.current.currentCompany?.id;
+      const start = overrideStart !== undefined ? overrideStart : stateRef.current.startDate;
+      const end = overrideEnd !== undefined ? overrideEnd : stateRef.current.endDate;
 
       const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes] = await Promise.all([
         fetchLinks(start, end),
@@ -108,9 +113,9 @@ export default function App() {
       
       if (companiesRes && companiesRes.length > 0) {
         setCompanies(companiesRes);
-        if (currentCompany) {
+        if (stateRef.current.currentCompany) {
           // Atualiza os dados da empresa atual caso tenham mudado (ex: logomarca, cnpj)
-          setCurrentCompany(companiesRes.find(c => c.id === currentCompany.id) || currentCompany);
+          setCurrentCompany(companiesRes.find(c => c.id === stateRef.current.currentCompany?.id) || stateRef.current.currentCompany);
         }
       }
       if (usersRes && usersRes.length > 0) {
@@ -129,7 +134,9 @@ export default function App() {
   useEffect(() => {
     loadData();
     // Refresh stats every 10 seconds for real-time tracking
-    const interval = setInterval(loadData, 10000);
+    const interval = setInterval(() => {
+      loadData();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
