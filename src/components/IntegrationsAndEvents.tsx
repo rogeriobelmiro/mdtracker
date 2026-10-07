@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company } from '../types';
-import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
 
 interface IntegrationsAndEventsProps {
@@ -61,7 +61,10 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [newKeywordInputs, setNewKeywordInputs] = useState<Record<string, string>>({});
+
+  const { success } = useDialog();
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +100,12 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       setNewKeywordInputs({}); // Clear inputs
     }
 
+    setIsSaving(true);
     await onUpdateSettings(updatedData);
+    setIsSaving(false);
+    
     setSavedSuccess(true);
+    success('Configurações salvas com sucesso!', 'As integrações e eventos foram atualizados.');
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
@@ -339,7 +346,17 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">CAPI Access Token (Servidor Meta)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-slate-700">CAPI Access Token (Servidor Meta)</label>
+                  <a 
+                    href="https://business.facebook.com/settings/events_manager" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-[10px] text-blue-600 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    Pegar Token <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
                 <input
                   type="password"
                   placeholder="EAAG..."
@@ -386,9 +403,16 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 </div>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-xs transition shadow-xs whitespace-nowrap"
+                  disabled={isSaving}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-6 rounded text-xs transition flex items-center gap-2 shadow-xs whitespace-nowrap"
                 >
-                  Salvar
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Salvando...
+                    </>
+                  ) : (
+                    'Salvar'
+                  )}
                 </button>
               </div>
             </div>
