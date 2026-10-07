@@ -367,12 +367,25 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
 
             if (!textContent && !isFromMe) return res.status(200).json({ received: true });
 
-            // Check if lead exists
-            const { data: existingLead } = await supabase
+            // Check if lead exists (Try exact match, then without '55')
+            let existingLead = null;
+            const { data: exactMatch } = await supabase
                 .from('leads')
                 .select('id')
                 .eq('phone', phone)
                 .maybeSingle();
+            
+            if (exactMatch) {
+                existingLead = exactMatch;
+            } else if (phone.startsWith('55')) {
+                const phoneWithout55 = phone.substring(2);
+                const { data: partialMatch } = await supabase
+                    .from('leads')
+                    .select('id')
+                    .eq('phone', phoneWithout55)
+                    .maybeSingle();
+                if (partialMatch) existingLead = partialMatch;
+            }
 
             if (!existingLead && !isFromMe) {
                 // Tenta achar a empresa usando a instancia
@@ -391,6 +404,29 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                     if (fallback) assignedCompanyId = fallback.id;
                 }
                 
+                // Deduzir campanha pelo texto da mensagem (Atribuição)
+                let matchedLink = null;
+                if (textContent) {
+                    const { data: links } = await supabase.from('campaign_links').select('*').eq('company_id', assignedCompanyId);
+                    if (links && links.length > 0) {
+                        for (const link of links) {
+                            if (link.message) {
+                                const parts = link.message.split(/\{[^}]+\}/).map((p: string) => p.trim()).filter((p: string) => p.length > 3);
+                                if (parts.length > 0) {
+                                    const isMatch = parts.every((part: string) => textContent.includes(part));
+                                    if (isMatch) {
+                                        matchedLink = link;
+                                        break;
+                                    }
+                                } else if (textContent.includes(link.message.trim())) {
+                                    matchedLink = link;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Deduce state from Brazilian DDD
                 let state = '';
                 let city = 'Desconhecida';
@@ -422,19 +458,26 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                     }
                 }
 
+                // If matched, increment the link's lead count
+                if (matchedLink) {
+                    await supabase.from('campaign_links')
+                        .update({ leads_count: (matchedLink.leads_count || 0) + 1 })
+                        .eq('id', matchedLink.id);
+                }
+
                 // Create new lead automatically so they show up in the Chat Inbox
                 const newLead = {
                     id: `lead-${Date.now()}`,
                     company_id: assignedCompanyId,
                     name: messageObj.pushName || 'Novo Contato WhatsApp',
                     phone: phone,
-                    source: 'whatsapp_direto',
-                    utm_source: 'whatsapp_direto',
-                    utm_medium: 'organico',
-                    utm_campaign: 'whatsapp',
+                    source: matchedLink ? matchedLink.utm_source : 'whatsapp_direto',
+                    utm_source: matchedLink ? matchedLink.utm_source : 'whatsapp_direto',
+                    utm_medium: matchedLink ? matchedLink.utm_medium : 'organico',
+                    utm_campaign: matchedLink ? matchedLink.utm_campaign : 'whatsapp',
                     stage: 'Novo Lead',
-                    link_id: null,
-                    link_title: '',
+                    link_id: matchedLink ? matchedLink.id : null,
+                    link_title: matchedLink ? matchedLink.title : '',
                     device: 'WhatsApp',
                     browser: 'WhatsApp',
                     location: { city: city, state: state, country: 'BR' },

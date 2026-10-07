@@ -146,9 +146,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Card 1: Total Clicks */}
-        <div className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-slate-300 transition shadow-xs">
+        <div 
+          onClick={() => onNavigateToLinks()}
+          className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-blue-300 hover:shadow-md cursor-pointer transition shadow-xs"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Cliques no Link</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors">Total de Cliques no Link</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded">
               <MousePointerClick className="w-5 h-5" />
             </div>
@@ -161,9 +164,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Card 2: Total Leads */}
-        <div className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-slate-300 transition shadow-xs">
+        <div 
+          onClick={() => onNavigateToLeads()}
+          className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-blue-300 hover:shadow-md cursor-pointer transition shadow-xs"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Leads Capturados</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors">Leads Capturados</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded">
               <Users className="w-5 h-5" />
             </div>
@@ -178,24 +184,30 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Card 3: Conversions */}
-        <div className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-slate-300 transition shadow-xs">
+        <div 
+          onClick={() => onNavigateToLeads()}
+          className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-green-300 hover:shadow-md cursor-pointer transition shadow-xs"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversões / Vendas</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-green-500 transition-colors">Conversões / Vendas</span>
             <div className="p-2 bg-green-50 text-green-600 rounded">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.totalConversions}</span>
-            <span className="text-xs font-semibold text-green-600">{stats.conversionRate}% taxa</span>
+            <span className="text-xs font-semibold text-green-600">{Number(stats.conversionRate).toFixed(2)}% taxa</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">Leads na etapa 'Convertido'</p>
         </div>
 
         {/* Card 4: Total Revenue */}
-        <div className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-slate-300 transition shadow-xs">
+        <div 
+          onClick={() => onNavigateToLeads()}
+          className="bg-white border border-slate-200 p-5 rounded-lg relative overflow-hidden group hover:border-blue-300 hover:shadow-md cursor-pointer transition shadow-xs"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faturamento Gerado</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors">Faturamento Gerado</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded">
               <DollarSign className="w-5 h-5" />
             </div>
@@ -253,7 +265,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Total de Leads no Funil: <strong className="text-slate-900">{filteredLeads.length}</strong></span>
-            <span>Taxa Global de Conv.: <strong className="text-green-600">{stats.conversionRate}%</strong></span>
+            <span>Taxa Global de Conv.: <strong className="text-green-600">{Number(stats.conversionRate).toFixed(2)}%</strong></span>
           </div>
         </div>
 
@@ -426,17 +438,57 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           </div>
 
-          {/* Callout Dark Alert Card */}
+          {/* Top 5 Campaigns Card */}
           <div className="bg-slate-900 rounded-lg p-5 text-white shadow-md">
-            <h2 className="text-[10px] font-bold uppercase text-slate-400 mb-2">Alerta de Campanha Ativa</h2>
-            <p className="text-xs leading-relaxed text-slate-300">
-              A campanha 'Black Friday' atingiu a meta de conversão. Latência da Meta API: 45ms.
-            </p>
-            <div className="mt-4 flex items-center justify-between">
-              <button onClick={onNavigateToLinks} className="text-xs text-blue-400 font-bold hover:underline">
-                Ver Relatório Completo
+            <h2 className="text-[10px] font-bold uppercase text-slate-400 mb-4 flex items-center justify-between">
+              <span>Top 5 Campanhas</span>
+              <Award className="w-3.5 h-3.5 text-blue-400" />
+            </h2>
+            <div className="space-y-3">
+              {(() => {
+                if (!links || links.length === 0) {
+                  return <p className="text-xs text-slate-400">Nenhuma campanha ativa no momento.</p>;
+                }
+                const top5 = [...links]
+                  .sort((a, b) => {
+                    if (b.leadsCount !== a.leadsCount) return (b.leadsCount || 0) - (a.leadsCount || 0);
+                    return (b.clicksCount || 0) - (a.clicksCount || 0);
+                  })
+                  .slice(0, 5);
+
+                return top5.map((link, idx) => (
+                  <div key={link.id} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold flex items-center justify-center shrink-0 border border-slate-700">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p 
+                          className="text-xs font-semibold text-slate-200 truncate group-hover:text-blue-400 transition-colors cursor-pointer"
+                          onClick={() => onNavigateToLinks()}
+                          title={link.title}
+                        >
+                          {link.title}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {link.clicksCount || 0} cliques
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-mono font-extrabold text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-800/50">
+                        {link.leadsCount || 0} leads
+                      </span>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            
+            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
+              <button onClick={() => onNavigateToLinks()} className="text-xs text-blue-400 font-bold hover:underline">
+                Gerenciar Campanhas →
               </button>
-              <div className="w-5 h-5 border-2 border-slate-700 rounded-full border-t-blue-500 animate-spin"></div>
             </div>
           </div>
 

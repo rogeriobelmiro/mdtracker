@@ -127,17 +127,24 @@ export default function App() {
   // Filter isolated data for the active company
   const companyLinks = useMemo(() => {
     if (!currentCompany) return [];
-    return links.filter(l => !l.companyId || l.companyId === currentCompany.id);
+    return links.filter(l => l.companyId ? l.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
   }, [links, currentCompany]);
 
   const companyLeads = useMemo(() => {
     if (!currentCompany) return [];
-    return leads.filter(l => !l.companyId || l.companyId === currentCompany.id);
-  }, [leads, currentCompany]);
+    return leads.filter(l => {
+      if (l.companyId) return l.companyId === currentCompany.id;
+      
+      const link = links.find(lnk => lnk.id === l.linkId);
+      if (link && link.companyId) return link.companyId === currentCompany.id;
+      
+      return currentCompany.id === 'comp-alfa';
+    });
+  }, [leads, currentCompany, links]);
 
   const companyWebhookLogs = useMemo(() => {
     if (!currentCompany) return [];
-    return webhookLogs.filter(w => !w.companyId || w.companyId === currentCompany.id);
+    return webhookLogs.filter(w => w.companyId ? w.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
   }, [webhookLogs, currentCompany]);
 
   // Dynamically calculate isolated stats per company
@@ -266,7 +273,8 @@ export default function App() {
   };
 
   const handleUpdateSettings = async (data: Partial<IntegrationSettings>) => {
-    await updateSettings(data);
+    const payload = currentCompany ? { ...data, companyId: currentCompany.id } : data;
+    await updateSettings(payload);
     await loadData();
   };
 

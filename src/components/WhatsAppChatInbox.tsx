@@ -127,7 +127,7 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     if (!file) return;
 
     if (file.size > 16 * 1024 * 1024) {
-      await alert('O arquivo é muito grande. O limite máximo recomendado é de 16MB.');
+      alert('O arquivo é muito grande. O limite máximo recomendado é de 16MB.');
       return;
     }
 

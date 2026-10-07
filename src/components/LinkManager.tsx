@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CampaignLink, Company } from '../types';
-import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2 } from 'lucide-react';
+import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface LinkManagerProps {
@@ -30,6 +30,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   const companyPhone = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
 
@@ -166,6 +167,23 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
             />
+            
+            <div className="flex bg-slate-100 rounded p-1 border border-slate-200">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded transition ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Visão em Grade"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded transition ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Visão em Lista"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
 
             <button
               onClick={handleOpenCreate}
@@ -178,8 +196,72 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
         </div>
       </div>
 
-      {/* Links Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Links Display */}
+      {viewMode === 'list' ? (
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                  <th className="p-4 py-3">Campanha</th>
+                  <th className="p-4 py-3">Link / Slug</th>
+                  <th className="p-4 py-3 text-right">Cliques</th>
+                  <th className="p-4 py-3 text-right">Leads</th>
+                  <th className="p-4 py-3 text-right">Conv.</th>
+                  <th className="p-4 py-3 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="text-xs divide-y divide-slate-100">
+                {filteredLinks.map((link) => {
+                  const fullUrl = getFullRedirectUrl(link.slug, link.utmSource, link.utmCampaign);
+                  return (
+                    <tr key={link.id} className="hover:bg-slate-50 transition group">
+                      <td className="p-4">
+                        <div className="font-semibold text-slate-900 mb-1">{link.title}</div>
+                        <div className="text-[10px] text-slate-500 font-mono space-x-2 flex flex-col gap-0.5">
+                          <span>src: {link.utmSource}</span>
+                          <span>cmp: {link.utmCampaign}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-blue-600 hover:underline max-w-[150px] truncate block" title={fullUrl}>
+                            {fullUrl}
+                          </a>
+                          <button
+                            onClick={() => copyToClipboard(fullUrl, link.id)}
+                            className="p-1 text-blue-400 hover:text-blue-700 hover:bg-blue-50 rounded transition"
+                            title="Copiar Link"
+                          >
+                            {copiedId === link.id ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right font-mono font-medium text-slate-700">{link.clicksCount}</td>
+                      <td className="p-4 text-right font-mono font-bold text-blue-600">{link.leadsCount}</td>
+                      <td className="p-4 text-right font-mono font-bold text-green-600">{link.conversionsCount}</td>
+                      <td className="p-4">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setQrModalLink(link)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition" title="QR Code"><QrCode className="w-4 h-4" /></button>
+                          <button onClick={() => handleDuplicate(link)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded transition" title="Duplicar"><Copy className="w-4 h-4" /></button>
+                          <button onClick={() => handleOpenEdit(link)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition" title="Editar"><Edit3 className="w-4 h-4" /></button>
+                          <button onClick={() => onDeleteLink(link.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded transition" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredLinks.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-slate-500">Nenhum link encontrado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredLinks.map((link) => {
           const fullUrl = getFullRedirectUrl(link.slug, link.utmSource, link.utmCampaign);
           return (
@@ -303,6 +385,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
           );
         })}
       </div>
+      )}
 
       {/* CREATE / EDIT LINK MODAL */}
       {isModalOpen && (
