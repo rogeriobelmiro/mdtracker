@@ -14,6 +14,10 @@ interface LinkManagerProps {
   editingLinkId?: string | null;
   onClearEditingLinkId?: () => void;
   onFilterLeadsByLink?: (linkId: string) => void;
+  startDate?: string;
+  endDate?: string;
+  setStartDate?: (date: string) => void;
+  setEndDate?: (date: string) => void;
 }
 
 export const LinkManager: React.FC<LinkManagerProps> = ({
@@ -26,7 +30,11 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   currentCompany,
   editingLinkId,
   onClearEditingLinkId,
-  onFilterLeadsByLink
+  onFilterLeadsByLink,
+  startDate,
+  endDate,
+  setStartDate,
+  setEndDate
 }) => {
   const [editingLink, setEditingLink] = useState<CampaignLink | null>(null);
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
@@ -183,7 +191,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
       
       {/* Top Header & Link Builder Banner */}
       <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
           <div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               Gerador de Links WhatsApp e Parâmetros UTM
@@ -192,8 +200,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               Crie links de redirecionamento otimizados para WhatsApp com parâmetros UTM para Meta Ads, Google Search e TikTok.
             </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
               placeholder="Buscar por nome, slug, UTM..."
@@ -202,6 +212,37 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
             />
             
+            {(setStartDate && setEndDate) && (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2 py-1">
+                <input 
+                  type="date" 
+                  value={startDate || ''}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent text-[10px] text-slate-700 outline-none cursor-pointer"
+                  title="Data Inicial"
+                />
+                <span className="text-slate-400 text-[10px]">até</span>
+                <input 
+                  type="date" 
+                  value={endDate || ''}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent text-[10px] text-slate-700 outline-none cursor-pointer"
+                  title="Data Final"
+                />
+                {(startDate || endDate) && (
+                  <button 
+                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                    className="text-[10px] text-red-500 hover:text-red-700 font-bold ml-1 px-1"
+                    title="Limpar Filtro"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
             <div className="flex bg-slate-100 rounded p-1 border border-slate-200">
               <button
                 onClick={() => setViewMode('grid')}

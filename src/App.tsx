@@ -401,6 +401,10 @@ export default function App() {
             currentCompany={currentCompany}
             editingLinkId={editingLinkId}
             onClearEditingLinkId={() => setEditingLinkId(null)}
+            startDate={startDate}
+            endDate={endDate}
+            setStartDate={setStartDate}
+            setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
             onFilterLeadsByLink={(linkId) => {
               setLeadLinkIdFilter(linkId);
               setActiveTab('leads');
