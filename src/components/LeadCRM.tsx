@@ -11,7 +11,6 @@ interface LeadCRMProps {
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
   onOpenWhatsApp?: (leadId: string) => void;
-  onOpenWhatsApp?: (leadId: string) => void;
   onCreatePurchase: (data: Partial<LeadPurchase>) => Promise<void>;
   searchQuery?: string;
   setSearchQuery?: (q: string) => void;
@@ -26,7 +25,6 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   links = [], 
   onUpdateLead, 
   onDeleteLead, 
-  onOpenWhatsApp,
   onOpenWhatsApp,
   onCreatePurchase,
   searchQuery = '',
