@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from 'react';
 import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink } from '../types';
 import { FUNNEL_STAGES } from './FunnelBoard';
 import { useDialog } from '../contexts/DialogContext';
