@@ -385,7 +385,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento no Clique do Link (Ex: ViewAds)</label>
                   <p className="text-[10px] text-slate-500 mb-2 leading-tight">O evento <strong>Lead</strong> agora é disparado via CAPI somente quando a pessoa enviar mensagem. Escolha aqui o evento topo de funil para o clique no link (Client-side).</p>
                   <select
-                    value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') ? (formData.metaLeadEventName || 'Lead') : 'Custom'}
+                    value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'Lead') && (formData.metaLeadEventName !== '') ? (formData.metaLeadEventName ?? 'Lead') : 'Custom'}
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === 'Custom') {
@@ -405,7 +405,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     <option value="Custom">Personalizado (Digitar nome)</option>
                   </select>
 
-                  {!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName || 'Lead') && (
+                  {(!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'Lead') || formData.metaLeadEventName === '') && (
                     <input
                       type="text"
                       placeholder="Nome do evento personalizado"
