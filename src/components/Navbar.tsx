@@ -12,6 +12,10 @@ interface NavbarProps {
   currentUser: User;
   currentCompany: Company;
   onLogout: () => void;
+  startDate?: string;
+  setStartDate?: (date: string) => void;
+  endDate?: string;
+  setEndDate?: (date: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -20,7 +24,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreateModal,
   currentUser,
   currentCompany,
-  onLogout
+  onLogout,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate
 }) => {
   const getRoleBadge = () => {
     switch (currentUser.role) {
@@ -214,8 +222,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           </nav>
 
-          {/* Quick Action Button */}
+          {/* Quick Action Button & Date Filter */}
           <div className="flex items-center space-x-3">
+            {/* Date Filters */}
+            {(setStartDate && setEndDate) && (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2 py-1">
+                <input 
+                  type="date" 
+                  value={startDate || ''}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent text-[10px] text-slate-700 outline-none cursor-pointer"
+                  title="Data Inicial"
+                />
+                <span className="text-slate-400 text-[10px]">até</span>
+                <input 
+                  type="date" 
+                  value={endDate || ''}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent text-[10px] text-slate-700 outline-none cursor-pointer"
+                  title="Data Final"
+                />
+                {(startDate || endDate) && (
+                  <button 
+                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                    className="text-[10px] text-red-500 hover:text-red-700 font-bold ml-1 px-1"
+                    title="Limpar Filtro"
+                  >
+                    X
+                  </button>
+                )}
+              </div>
+            )}
+
             {currentUser.role !== 'attendant' && (
               <button
                 onClick={onOpenCreateModal}

@@ -75,12 +75,19 @@ export default function App() {
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Global Date Filter
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
   // Load Initial Application State
-  const loadData = async (overrideCompanyId?: string) => {
+  const loadData = async (overrideCompanyId?: string, overrideStart?: string, overrideEnd?: string) => {
     try {
       const activeCompanyId = overrideCompanyId || currentCompany?.id;
+      const start = overrideStart !== undefined ? overrideStart : startDate;
+      const end = overrideEnd !== undefined ? overrideEnd : endDate;
+
       const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes] = await Promise.all([
-        fetchLinks(),
+        fetchLinks(start, end),
         fetchLeads(),
         fetchSettings(activeCompanyId),
         fetchWebhookLogs(),
@@ -132,7 +139,7 @@ export default function App() {
 
   const companyLeads = useMemo(() => {
     if (!currentCompany) return [];
-    return leads.filter(l => {
+    let filtered = leads.filter(l => {
       if (l.companyId) return l.companyId === currentCompany.id;
       
       const link = links.find(lnk => lnk.id === l.linkId);
@@ -140,7 +147,15 @@ export default function App() {
       
       return currentCompany.id === 'comp-alfa';
     });
-  }, [leads, currentCompany, links]);
+
+    if (startDate && endDate) {
+      filtered = filtered.filter(l => {
+        const d = l.createdAt.split('T')[0];
+        return d >= startDate && d <= endDate;
+      });
+    }
+    return filtered;
+  }, [leads, currentCompany, links, startDate, endDate]);
 
   const companyWebhookLogs = useMemo(() => {
     if (!currentCompany) return [];

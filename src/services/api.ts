@@ -88,8 +88,13 @@ export async function fetchStats(): Promise<StatsSummary> {
   return res.json();
 }
 
-export async function fetchLinks(): Promise<CampaignLink[]> {
-  const res = await fetch('/api/links');
+export async function fetchLinks(startDate?: string, endDate?: string): Promise<CampaignLink[]> {
+  const queryParams = new URLSearchParams();
+  if (startDate) queryParams.append('startDate', startDate);
+  if (endDate) queryParams.append('endDate', endDate);
+  
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  const res = await fetch(`/api/links${queryString}`);
   if (!res.ok) return [];
   return res.json();
 }

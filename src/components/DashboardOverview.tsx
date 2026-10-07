@@ -19,6 +19,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onNavigateToLeads,
 }) => {
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
+  const [sortField, setSortField] = useState<string>('clicks');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
 
   // Filtered leads based on campaign selector
   const filteredLeads = selectedCampaign === 'all'
@@ -54,6 +65,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       convRate: Number(convRate),
       revenue,
     };
+  });
+
+  const sortedCampaignStats = [...campaignStats].sort((a, b) => {
+    const modifier = sortDirection === 'asc' ? 1 : -1;
+    // @ts-ignore
+    const valA = a[sortField];
+    // @ts-ignore
+    const valB = b[sortField];
+    
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      return valA.localeCompare(valB) * modifier;
+    }
+    
+    if (valA < valB) return -1 * modifier;
+    if (valA > valB) return 1 * modifier;
+    return 0;
   });
 
   // Source chart data
@@ -323,17 +350,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <table className="w-full text-left text-xs text-slate-700">
               <thead className="bg-slate-50 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-3">Nome da Campanha</th>
-                  <th className="py-3 px-2">UTM Source / Campaign</th>
-                  <th className="py-3 px-2 text-center">Cliques</th>
-                  <th className="py-3 px-2 text-center">Leads</th>
-                  <th className="py-3 px-2 text-center">Vendas</th>
-                  <th className="py-3 px-2 text-center">Conv %</th>
-                  <th className="py-3 px-3 text-right">Faturamento</th>
+                  <th className="py-3 px-3 cursor-pointer hover:text-slate-600" onClick={() => handleSort('title')}>Nome da Campanha {sortField === 'title' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-2 cursor-pointer hover:text-slate-600" onClick={() => handleSort('utmSource')}>UTM Source / Campaign {sortField === 'utmSource' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-2 text-center cursor-pointer hover:text-slate-600" onClick={() => handleSort('clicks')}>Cliques {sortField === 'clicks' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-2 text-center cursor-pointer hover:text-slate-600" onClick={() => handleSort('leads')}>Leads {sortField === 'leads' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-2 text-center cursor-pointer hover:text-slate-600" onClick={() => handleSort('conversions')}>Vendas {sortField === 'conversions' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-2 text-center cursor-pointer hover:text-slate-600" onClick={() => handleSort('convRate')}>Conv % {sortField === 'convRate' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="py-3 px-3 text-right cursor-pointer hover:text-slate-600" onClick={() => handleSort('revenue')}>Faturamento {sortField === 'revenue' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {campaignStats.map((item) => (
+                {sortedCampaignStats.map((item) => (
                   <tr 
                     key={item.id} 
                     className="hover:bg-slate-50 transition border-b border-slate-100 cursor-pointer"

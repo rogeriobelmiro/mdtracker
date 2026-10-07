@@ -930,9 +930,36 @@ app.delete('/api/users/:id', async (req: Request, res: Response) => {
 
 // API Routes
 app.get('/api/links', async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.query;
     const { data, error } = await supabase.from('campaign_links').select('*').order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
-    res.json(data.map(mapLinkFromDB));
+    
+    const links = data.map(mapLinkFromDB);
+
+    // If date filters are provided, calculate clicks from link_clicks table
+    if (startDate && endDate) {
+      const { data: clicksData } = await supabase
+        .from('link_clicks')
+        .select('link_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (clicksData) {
+        const clickCounts: Record<string, number> = {};
+        clicksData.forEach(c => {
+          clickCounts[c.link_id] = (clickCounts[c.link_id] || 0) + 1;
+        });
+
+        links.forEach(l => {
+          l.clicksCount = clickCounts[l.id] || 0;
+        });
+      } else {
+        // If query fails or no clicks, zero them out for the date range
+        links.forEach(l => { l.clicksCount = 0; });
+      }
+    }
+
+    res.json(links);
 });
 
 app.post('/api/links', async (req: Request, res: Response) => {
@@ -1389,13 +1416,24 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
 
     const linkObj = mapLinkFromDB(dbLink);
 
-    // Increment click count
+    // Increment click count (Legacy support)
     await supabase.from('campaign_links')
       .update({ 
         clicks_count: (dbLink.clicks_count || 0) + 1, 
         updated_at: new Date().toISOString() 
       })
       .eq('id', dbLink.id);
+
+    const userIp = (req.headers['x-forwarded-for'] as string || req.ip || '177.100.20.10').split(',')[0].trim();
+    const userAgent = req.headers['user-agent'] || 'Mobile Browser';
+
+    // Insert detailed click record
+    await supabase.from('link_clicks').insert({
+      link_id: dbLink.id,
+      company_id: dbLink.company_id,
+      ip_address: userIp,
+      user_agent: userAgent
+    });
 
     // Extract query parameters or defaults
     const query = req.query as Record<string, string>;
