@@ -1351,7 +1351,8 @@ app.post('/api/meta/test', async (req: Request, res: Response) => {
                         external_id: 'test_user_12345',
                         em: '7b3ed0ce9b075fa592b21ee4c81abf59c12df8b1a415ff678330fc4b306b98ea', // test@example.com (SHA-256)
                         ph: '88656667b4eb2b069d2eb05b7dc1f27dc1c4bc27ffbb12c8e376ee226f3af2c5'  // 5511999999999 (SHA-256)
-                    }
+                    },
+                    ...(req.body.testEventCode ? { test_event_code: req.body.testEventCode } : {})
                 }
             ]
         };
