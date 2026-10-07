@@ -388,46 +388,46 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                 if (partialMatch) existingLead = partialMatch;
             }
 
-            if (!existingLead && !isFromMe) {
-                // Tenta achar a empresa usando a instancia
-                const instanceName = payload.instance;
-                let assignedCompanyId = 'comp-alfa';
-                if (instanceName) {
-                    const { data: cSettings } = await supabase.from('settings').select('company_id').eq('evolution_instance', instanceName).maybeSingle();
-                    if (cSettings) {
-                        assignedCompanyId = cSettings.company_id;
-                    } else {
-                        const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
-                        if (fallback) assignedCompanyId = fallback.id;
-                    }
+            // Tenta achar a empresa usando a instancia
+            const instanceName = payload.instance;
+            let assignedCompanyId = 'comp-alfa';
+            if (instanceName) {
+                const { data: cSettings } = await supabase.from('settings').select('company_id').eq('evolution_instance', instanceName).maybeSingle();
+                if (cSettings) {
+                    assignedCompanyId = cSettings.company_id;
                 } else {
                     const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
                     if (fallback) assignedCompanyId = fallback.id;
                 }
-                
-                // Deduzir campanha pelo texto da mensagem (Atribuição)
-                let matchedLink = null;
-                if (textContent) {
-                    const { data: links } = await supabase.from('campaign_links').select('*').eq('company_id', assignedCompanyId);
-                    if (links && links.length > 0) {
-                        for (const link of links) {
-                            if (link.message) {
-                                const parts = link.message.split(/\{[^}]+\}/).map((p: string) => p.trim()).filter((p: string) => p.length > 3);
-                                if (parts.length > 0) {
-                                    const isMatch = parts.every((part: string) => textContent.includes(part));
-                                    if (isMatch) {
-                                        matchedLink = link;
-                                        break;
-                                    }
-                                } else if (textContent.includes(link.message.trim())) {
+            } else {
+                const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
+                if (fallback) assignedCompanyId = fallback.id;
+            }
+            
+            // Deduzir campanha pelo texto da mensagem (Atribuição)
+            let matchedLink = null;
+            if (textContent && !isFromMe) {
+                const { data: links } = await supabase.from('campaign_links').select('*').eq('company_id', assignedCompanyId);
+                if (links && links.length > 0) {
+                    for (const link of links) {
+                        if (link.message) {
+                            const parts = link.message.split(/\{[^}]+\}/).map((p: string) => p.trim()).filter((p: string) => p.length > 3);
+                            if (parts.length > 0) {
+                                const isMatch = parts.every((part: string) => textContent.includes(part));
+                                if (isMatch) {
                                     matchedLink = link;
                                     break;
                                 }
+                            } else if (textContent.includes(link.message.trim())) {
+                                matchedLink = link;
+                                break;
                             }
                         }
                     }
                 }
+            }
 
+            if (!existingLead && !isFromMe) {
                 // Deduce state from Brazilian DDD
                 let state = '';
                 let city = 'Desconhecida';
@@ -482,11 +482,60 @@ app.post('/api/whatsapp/evolution/webhook', async (req: Request, res: Response) 
                     device: 'WhatsApp',
                     browser: 'WhatsApp',
                     location: { city: city, state: state, country: 'BR' },
-                    conversion_events: [],
+                    conversion_events: matchedLink ? [
+                        {
+                            id: `evt-${Date.now()}`,
+                            type: 'meta_pixel',
+                            eventName: 'Lead',
+                            status: 'sucesso',
+                            timestamp: new Date().toISOString(),
+                            details: `Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`
+                        }
+                    ] : [
+                        {
+                            id: `evt-${Date.now()}`,
+                            type: 'organic',
+                            eventName: 'Contato Inicial Direto',
+                            status: 'sucesso',
+                            timestamp: new Date().toISOString(),
+                            details: 'Contato via WhatsApp Direto (Sem Link de Rastreamento)'
+                        }
+                    ],
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
                 await supabase.from('leads').insert(newLead);
+            } else if (existingLead && matchedLink && !isFromMe) {
+                // The lead exists and they triggered a NEW tracked campaign link via WhatsApp
+                const { data: fullLead } = await supabase.from('leads').select('*').eq('id', existingLead.id).single();
+                if (fullLead) {
+                    const newEvent = {
+                        id: `evt-${Date.now()}`,
+                        type: 'meta_pixel',
+                        eventName: 'Lead',
+                        status: 'sucesso',
+                        timestamp: new Date().toISOString(),
+                        details: `Novo Acesso via: ${matchedLink.utm_campaign} (${matchedLink.utm_source})`
+                    };
+                    const updatedEvents = [...(fullLead.conversion_events || []), newEvent];
+                    
+                    await supabase.from('leads').update({
+                        conversion_events: updatedEvents,
+                        updated_at: new Date().toISOString(),
+                        utm_source: matchedLink.utm_source || fullLead.utm_source,
+                        utm_medium: matchedLink.utm_medium || fullLead.utm_medium,
+                        utm_campaign: matchedLink.utm_campaign || fullLead.utm_campaign,
+                        utm_content: matchedLink.utm_content || fullLead.utm_content,
+                        utm_term: matchedLink.utm_term || fullLead.utm_term,
+                        link_id: matchedLink.id || fullLead.link_id,
+                        link_title: matchedLink.title || fullLead.link_title
+                    }).eq('id', fullLead.id);
+
+                    // Increment the link's lead count
+                    await supabase.from('campaign_links')
+                        .update({ leads_count: (matchedLink.leads_count || 0) + 1 })
+                        .eq('id', matchedLink.id);
+                }
             }
 
             // Save to DB
@@ -958,9 +1007,61 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       ip: userIp
     } : mockGeoFromIp(userIp);
 
+    const companyId = body.companyId || 'comp-alfa';
+    const sanitizedPhone = (body.phone || '').replace(/\D/g, '');
+    let existingLead: any = null;
+
+    if (sanitizedPhone) {
+        let { data: match } = await supabase.from('leads').select('*').eq('phone', sanitizedPhone).eq('company_id', companyId).maybeSingle();
+        if (!match && sanitizedPhone.startsWith('55')) {
+            const res = await supabase.from('leads').select('*').eq('phone', sanitizedPhone.substring(2)).eq('company_id', companyId).maybeSingle();
+            match = res.data;
+        }
+        if (!match && !sanitizedPhone.startsWith('55')) {
+            const res = await supabase.from('leads').select('*').eq('phone', '55' + sanitizedPhone).eq('company_id', companyId).maybeSingle();
+            match = res.data;
+        }
+        if (match) existingLead = match;
+    }
+
+    const newEvent = {
+        id: `evt-${Date.now()}`,
+        type: 'meta_pixel',
+        eventName: 'Lead',
+        status: 'sucesso',
+        timestamp: new Date().toISOString(),
+        details: `Acesso via: ${body.utmCampaign || 'campanha_geral'} (${body.utmSource || 'meta_ads'})`
+    };
+
+    if (existingLead) {
+        const updatedEvents = [...(existingLead.conversion_events || []), newEvent];
+        const { error } = await supabase.from('leads').update({
+            conversion_events: updatedEvents,
+            updated_at: new Date().toISOString(),
+            utm_source: body.utmSource || existingLead.utm_source,
+            utm_medium: body.utmMedium || existingLead.utm_medium,
+            utm_campaign: body.utmCampaign || existingLead.utm_campaign,
+            utm_content: body.utmContent || existingLead.utm_content,
+            utm_term: body.utmTerm || existingLead.utm_term,
+            link_id: body.linkId || existingLead.link_id,
+            link_title: body.linkTitle || existingLead.link_title
+        }).eq('id', existingLead.id);
+        
+        if (error) return res.status(500).json({ error: error.message });
+        
+        if (body.linkId) {
+            const { data: link } = await supabase.from('campaign_links').select('leads_count').eq('id', body.linkId).single();
+            if (link) {
+                await supabase.from('campaign_links').update({ leads_count: (link.leads_count || 0) + 1 }).eq('id', body.linkId);
+            }
+        }
+        
+        return res.json({ success: true, lead: mapLeadFromDB(existingLead) });
+    }
+
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
-      companyId: body.companyId || 'comp-alfa',
+      companyId: companyId,
       name: body.name || 'Lead Anônimo',
       phone: body.phone || '',
       email: body.email || '',
@@ -980,16 +1081,7 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       notes: body.notes || 'Lead registrado via link de rastreamento WhatsApp',
-      conversionEvents: [
-        {
-          id: `evt-${Date.now()}`,
-          type: 'meta_pixel',
-          eventName: 'Lead',
-          status: 'sucesso',
-          timestamp: new Date().toISOString(),
-          details: 'Evento Lead registrado com sucesso'
-        }
-      ]
+      conversionEvents: [newEvent]
     };
 
     const { error } = await supabase.from('leads').insert(mapLeadToDB(newLead));
