@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { Lead, FunnelStage, Product, LeadPurchase } from '../types';
+import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink } from '../types';
 import { FUNNEL_STAGES } from './FunnelBoard';
 import { useDialog } from '../contexts/DialogContext';
-import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X } from 'lucide-react';
 
 interface LeadCRMProps {
   leads: Lead[];
   products: Product[];
   leadPurchases: LeadPurchase[];
+  links?: CampaignLink[];
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
   onOpenWhatsApp?: (leadId: string) => void;
@@ -15,19 +15,24 @@ interface LeadCRMProps {
   onCreatePurchase: (data: Partial<LeadPurchase>) => Promise<void>;
   searchQuery?: string;
   setSearchQuery?: (q: string) => void;
+  linkIdFilter?: string | null;
+  setLinkIdFilter?: (id: string | null) => void;
 }
 
 export const LeadCRM: React.FC<LeadCRMProps> = ({ 
   leads, 
   products, 
-  leadPurchases, 
+  leadPurchases,
+  links = [], 
   onUpdateLead, 
   onDeleteLead, 
   onOpenWhatsApp,
   onOpenWhatsApp,
   onCreatePurchase,
   searchQuery = '',
-  setSearchQuery
+  setSearchQuery,
+  linkIdFilter = null,
+  setLinkIdFilter
 }) => {
   const { success, alert } = useDialog();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -115,8 +120,9 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
     const matchesStage = stageFilter === 'all' || lead.stage === stageFilter;
     const matchesSource = sourceFilter === 'all' || lead.utmSource === sourceFilter;
+    const matchesLink = !linkIdFilter || lead.linkId === linkIdFilter;
 
-    return matchesSearch && matchesStage && matchesSource;
+    return matchesSearch && matchesStage && matchesSource && matchesLink;
   });
 
   const handleStageChange = async (leadId: string, newStage: FunnelStage) => {
@@ -242,15 +248,27 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
       <div className="bg-white border border-slate-200 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
         
         {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar por nome, cidade, telefone, UTM..."
-            value={currentSearchQuery}
-            onChange={(e) => updateSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
-          />
+        <div className="relative w-full md:w-80 flex flex-col gap-2">
+          {linkIdFilter && (
+            <div className="flex items-center gap-1.5 bg-blue-100 text-blue-800 px-2 py-1 rounded text-[10px] font-bold w-max mb-1 border border-blue-200">
+              <span className="truncate max-w-[300px]">
+                Filtrando por Link: {links.find(l => l.id === linkIdFilter)?.title || 'Link Excluído'}
+              </span>
+              <button onClick={() => setLinkIdFilter?.(null)} className="hover:text-red-600 transition" title="Remover filtro">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar por nome, cidade, telefone, UTM..."
+              value={currentSearchQuery}
+              onChange={(e) => updateSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600"
+            />
+          </div>
         </div>
 
         {/* Dropdown Filters & View Toggles */}

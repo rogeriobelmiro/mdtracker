@@ -13,7 +13,7 @@ interface LinkManagerProps {
   currentCompany: Company;
   editingLinkId?: string | null;
   onClearEditingLinkId?: () => void;
-  onFilterLeadsByCampaign?: (campaign: string) => void;
+  onFilterLeadsByLink?: (linkId: string) => void;
 }
 
 export const LinkManager: React.FC<LinkManagerProps> = ({
@@ -26,7 +26,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   currentCompany,
   editingLinkId,
   onClearEditingLinkId,
-  onFilterLeadsByCampaign
+  onFilterLeadsByLink
 }) => {
   const [editingLink, setEditingLink] = useState<CampaignLink | null>(null);
   const [qrModalLink, setQrModalLink] = useState<CampaignLink | null>(null);
@@ -274,9 +274,9 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                       <td className="p-4 text-right font-mono font-medium text-slate-700">{link.clicksCount}</td>
                       <td className="p-4 text-right">
                         <button 
-                          onClick={() => onFilterLeadsByCampaign?.(link.utmCampaign || link.title)}
+                          onClick={() => onFilterLeadsByLink?.(link.id)}
                           className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline transition"
-                          title="Ver leads desta campanha"
+                          title="Ver leads deste link"
                         >
                           {link.leadsCount}
                         </button>
@@ -418,7 +418,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                   <span className="flex items-center gap-1">
                     Leads: 
                     <button 
-                      onClick={() => onFilterLeadsByCampaign?.(link.utmCampaign || link.title)}
+                      onClick={() => onFilterLeadsByLink?.(link.id)}
                       className="text-blue-600 font-mono font-bold hover:text-blue-800 hover:underline transition"
                     >
                       {link.leadsCount}
