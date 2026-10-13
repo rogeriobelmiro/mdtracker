@@ -1,5 +1,7 @@
 export type FunnelStage = 'Novo Lead' | 'Contatado' | 'Em Negociação' | 'Convertido' | 'Perdido';
 
+export const FUNNEL_STAGES: FunnelStage[] = ['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'];
+
 export type UserRole = 'admin' | 'manager' | 'attendant';
 
 export interface Company {

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink } from '../types';
-import { FUNNEL_STAGES } from './FunnelBoard';
+import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink, FUNNEL_STAGES } from '../types';
 import { useDialog } from '../contexts/DialogContext';
 import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X, Filter as FunnelIcon } from 'lucide-react';
 import { FunnelView } from './FunnelView';

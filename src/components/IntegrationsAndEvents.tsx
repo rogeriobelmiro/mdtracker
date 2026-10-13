@@ -383,9 +383,9 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento no Clique do Link (Ex: ViewAds)</label>
-                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">O evento <strong>Lead</strong> agora é disparado via CAPI somente quando a pessoa enviar mensagem. Escolha aqui o evento topo de funil para o clique no link (Client-side).</p>
+                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">Disparado via <strong>API de Conversões (CAPI)</strong> e <strong>Meta Pixel</strong> no momento exato em que a pessoa clica no anúncio. Permite criar Públicos de Remarketing com quem clicou no anúncio sem precisar abrir o WhatsApp.</p>
                   <select
-                    value={['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'Lead') && (formData.metaLeadEventName !== '') ? (formData.metaLeadEventName ?? 'Lead') : 'Custom'}
+                    value={['ViewAds', 'ViewContent', 'Lead', 'Contact', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'ViewAds') && (formData.metaLeadEventName !== '') ? (formData.metaLeadEventName ?? 'ViewAds') : 'Custom'}
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val === 'Custom') {
@@ -396,16 +396,17 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     }}
                     className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600"
                   >
+                    <option value="ViewAds">ViewAds (Recomendado para Remarketing de Cliques)</option>
+                    <option value="ViewContent">ViewContent</option>
                     <option value="Lead">Lead</option>
                     <option value="Contact">Contact</option>
-                    <option value="ViewContent">ViewContent</option>
                     <option value="SubmitApplication">SubmitApplication</option>
                     <option value="CompleteRegistration">CompleteRegistration</option>
                     <option value="Schedule">Schedule</option>
                     <option value="Custom">Personalizado (Digitar nome)</option>
                   </select>
 
-                  {(!['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'Lead') || formData.metaLeadEventName === '') && (
+                  {(!['ViewAds', 'ViewContent', 'Lead', 'Contact', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'ViewAds') || formData.metaLeadEventName === '') && (
                     <input
                       type="text"
                       placeholder="Nome do evento personalizado"

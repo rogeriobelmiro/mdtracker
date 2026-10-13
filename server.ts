@@ -250,6 +250,85 @@ const mapLeadPurchaseFromDB = (db: any) => ({
 
 import crypto from 'crypto';
 
+interface MetaClickEventParams {
+  pixelId: string;
+  token: string;
+  eventName: string;
+  eventId: string;
+  eventSourceUrl: string;
+  userIp: string;
+  userAgent: string;
+  fbc?: string;
+  fbp?: string;
+  location?: { city?: string; state?: string; country?: string };
+  linkTitle: string;
+  linkSlug: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+}
+
+// Send Click / ViewAds Event via Meta Conversions API (CAPI) on link click
+async function sendMetaCAPIClickEvent(params: MetaClickEventParams) {
+  if (!params.pixelId || !params.token) return;
+
+  const userData: any = {
+    client_ip_address: params.userIp || '177.100.20.10',
+    client_user_agent: params.userAgent || 'Mozilla/5.0 (Mobile)',
+    country: ['0b5e52643a6358dbb3a4a2b254a6db241cdbb5574c8c7d6baaa65ea285fbf80e'] // 'br' SHA-256
+  };
+
+  if (params.fbc) userData.fbc = params.fbc;
+  if (params.fbp) userData.fbp = params.fbp;
+
+  if (params.location?.city) {
+    const normCity = params.location.city.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    userData.ct = [crypto.createHash('sha256').update(normCity).digest('hex')];
+  }
+  if (params.location?.state) {
+    const normState = params.location.state.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    userData.st = [crypto.createHash('sha256').update(normState).digest('hex')];
+  }
+
+  const payload = {
+    data: [
+      {
+        event_name: params.eventName || 'ViewAds',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: params.eventId,
+        action_source: 'website',
+        event_source_url: params.eventSourceUrl,
+        user_data: userData,
+        custom_data: {
+          content_name: params.linkTitle,
+          content_category: 'Link WhatsApp',
+          campaign: params.utmCampaign || '',
+          source: params.utmSource || '',
+          medium: params.utmMedium || '',
+          content: params.utmContent || '',
+          term: params.utmTerm || '',
+          link_slug: params.linkSlug
+        }
+      }
+    ]
+  };
+
+  try {
+    const resp = await fetch(`https://graph.facebook.com/v19.0/${params.pixelId}/events?access_token=${params.token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const respData = await resp.json();
+    console.log(`[Meta CAPI Click] Evento "${params.eventName}" enviado à Meta:`, respData);
+    return respData;
+  } catch (err) {
+    console.error(`[Meta CAPI Click Error] Falha ao enviar evento "${params.eventName}":`, err);
+  }
+}
+
 async function sendMetaCAPIEvent(eventName: string, leadData: any, settings: any, reqIp?: string, reqUserAgent?: string) {
     if (!settings.globalMetaPixelId || !settings.globalMetaToken) return;
 
@@ -270,7 +349,7 @@ async function sendMetaCAPIEvent(eventName: string, leadData: any, settings: any
             {
                 event_name: eventName,
                 event_time: Math.floor(Date.now() / 1000),
-                action_source: 'system_generated',
+                action_source: 'website',
                 user_data: {
                     client_ip_address: reqIp || '192.168.0.1',
                     client_user_agent: reqUserAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -306,10 +385,26 @@ async function sendMetaCAPIEvent(eventName: string, leadData: any, settings: any
 }
 
 
-// Fetch current settings directly from DB since it's needed for webhooks
-async function getSettings(companyId: string = 'comp-alfa'): Promise<IntegrationSettings | any> {
-    const { data } = await supabase.from('settings').select('*').eq('company_id', companyId).single();
-    if (data) return mapSettingsFromDB(data);
+// Fetch current settings directly from DB with smart fallback
+async function getSettings(companyId?: string): Promise<IntegrationSettings | any> {
+    if (companyId && companyId !== 'comp-alfa') {
+      const { data } = await supabase.from('settings').select('*').eq('company_id', companyId).maybeSingle();
+      if (data) return mapSettingsFromDB(data);
+    }
+    // Fallback: buscar settings com Pixel ID e Token configurados
+    const { data: configured } = await supabase
+      .from('settings')
+      .select('*')
+      .not('global_meta_pixel_id', 'is', null)
+      .neq('global_meta_pixel_id', '')
+      .limit(1)
+      .maybeSingle();
+    if (configured) return mapSettingsFromDB(configured);
+
+    // Fallback final: qualquer linha na tabela settings
+    const { data: fallback } = await supabase.from('settings').select('*').limit(1).maybeSingle();
+    if (fallback) return mapSettingsFromDB(fallback);
+
     return {} as any;
 }
 
@@ -1157,9 +1252,9 @@ app.post('/api/leads', async (req: Request, res: Response) => {
 
     const newEvent = {
         id: `evt-${Date.now()}`,
-        type: 'meta_pixel',
+        type: 'meta_pixel' as const,
         eventName: 'Lead',
-        status: 'sucesso',
+        status: 'sucesso' as const,
         timestamp: new Date().toISOString(),
         details: `Acesso via: ${body.utmCampaign || 'campanha_geral'} (${body.utmSource || 'meta_ads'})`,
         utmSource: body.utmSource,
@@ -1569,8 +1664,14 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       })
       .eq('id', dbLink.id);
 
-    const userIp = (req.headers['x-forwarded-for'] as string || req.ip || '177.100.20.10').split(',')[0].trim();
-    const userAgent = req.headers['user-agent'] || 'Mobile Browser';
+    const userIp = (
+      req.headers['x-forwarded-for'] as string ||
+      req.headers['x-real-ip'] as string ||
+      req.socket.remoteAddress ||
+      req.ip ||
+      '177.100.20.10'
+    ).split(',')[0].trim();
+    const userAgent = (req.headers['user-agent'] as string) || 'Mobile Browser';
 
     // Insert detailed click record
     await supabase.from('link_clicks').insert({
@@ -1580,6 +1681,9 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       user_agent: userAgent
     });
 
+    // Detect bots/crawlers (Facebook scrapers, Google, etc) to avoid firing CAPI on preview bots
+    const isBot = /facebookexternalhit|facebot|googlebot|bingbot|twitterbot|slackbot|whatsapp|telegrambot|bytespider/i.test(userAgent);
+
     // Extract query parameters or defaults
     const query = req.query as Record<string, string>;
     const utmSource = query.utm_source || linkObj.utmSource || 'meta_ads';
@@ -1587,6 +1691,18 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const utmCampaign = query.utm_campaign || linkObj.utmCampaign || 'campanha_whatsapp';
     const utmContent = query.utm_content || linkObj.utmContent || '';
     const utmTerm = query.utm_term || linkObj.utmTerm || '';
+
+    // Extract fbclid and cookies for Meta attribution
+    const fbclid = (query.fbclid as string) || '';
+    const cookieHeader = req.headers.cookie || '';
+    const getCookie = (name: string) => {
+      const match = cookieHeader.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : undefined;
+    };
+    const fbcCookie = getCookie('_fbc');
+    const fbpCookie = getCookie('_fbp');
+    const finalFbc = fbcCookie || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined);
+    const finalFbp = fbpCookie;
 
     // Auto capture or lead registration
     const isMobile = /mobile/i.test(userAgent);
@@ -1603,7 +1719,6 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       country: vercelCountry || '',
       ip: userIp
     } : mockGeoFromIp(userIp);
-
 
     // Build params for message formatting
     const msgParams: Record<string, string> = {
@@ -1623,17 +1738,48 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     // Build target wa.me URL
     const targetWaUrl = buildWhatsAppUrl(linkObj.phone, linkObj.message, msgParams);
 
-    const settings = await getSettings();
+    // Fetch settings explicitly using link's company_id
+    const settings = await getSettings(dbLink.company_id);
 
     // Meta Pixel ID & Google Ads IDs to embed in redirect client code
     const metaPixel = linkObj.metaPixelId || settings.globalMetaPixelId;
+    const metaToken = settings.globalMetaToken;
     const googleAdsId = linkObj.googleAdsConversionId || settings.globalGoogleAdsId;
     const googleAdsLabel = linkObj.googleAdsLabel || settings.globalGoogleAdsLabel;
 
     // Event Name & fbq method
-    const metaEventName = settings.metaLeadEventName || 'Lead';
+    const metaEventName = settings.metaLeadEventName || 'ViewAds';
     const standardEvents = ['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule', 'Purchase', 'InitiateCheckout', 'AddToCart'];
     const fbqMethod = standardEvents.includes(metaEventName) ? 'track' : 'trackCustom';
+
+    // Unique Event ID for deduplication between CAPI and Meta Pixel
+    const eventId = `evt_click_${dbLink.id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'rastreiowhatsapp.com';
+    const eventSourceUrl = `${proto}://${host}${req.originalUrl}`;
+
+    // FIRE META CAPI EVENT IMMEDIATELY ON LINK CLICK (SERVER-SIDE)
+    if (settings.autoFireMetaOnLead && metaPixel && metaToken && !isBot) {
+      sendMetaCAPIClickEvent({
+        pixelId: metaPixel,
+        token: metaToken,
+        eventName: metaEventName,
+        eventId: eventId,
+        eventSourceUrl,
+        userIp: userIp,
+        userAgent,
+        fbc: finalFbc,
+        fbp: finalFbp,
+        location,
+        linkTitle: linkObj.title,
+        linkSlug: slug,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        utmContent,
+        utmTerm
+      }).catch(err => console.error('[Meta CAPI Async Error]:', err));
+    }
 
     // Render client redirect & tracking landing page
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1658,12 +1804,13 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${metaPixel}');
-          fbq('track', 'PageView');
+          fbq('track', 'PageView', {}, { eventID: '${eventId}_pv' });
           ${settings.autoFireMetaOnLead ? `
           fbq('${fbqMethod}', '${metaEventName}', {
             content_name: '${linkObj.title.replace(/'/g, "\\'")}',
-            campaign: '${utmCampaign}'
-          });
+            campaign: '${utmCampaign}',
+            source: '${utmSource}'
+          }, { eventID: '${eventId}' });
           ` : ''}
         </script>
         ` : ''}
@@ -1801,9 +1948,16 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
             }, 300);
           }
 
-          // Auto pre-fill phone from URL params if passed (e.g. ?phone=11999999999)
+          // Auto pre-fill phone from URL params if passed (e.g. ?phone=11999999999) and persist _fbc
           window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
+            const fbclidParam = urlParams.get('fbclid');
+            if (fbclidParam && !document.cookie.includes('_fbc=')) {
+              try {
+                document.cookie = '_fbc=fb.1.' + Date.now() + '.' + fbclidParam + '; path=/; max-age=' + (90 * 86400);
+              } catch(e) {}
+            }
+
             const paramPhone = urlParams.get('phone') || urlParams.get('whatsapp') || urlParams.get('wa');
             const paramName = urlParams.get('nome') || urlParams.get('name');
 

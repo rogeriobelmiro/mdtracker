@@ -3,8 +3,7 @@ import {
   Send, Radio, Users, CheckCircle2, Clock, Play, Pause, RefreshCw, Download, 
   ExternalLink, Plus, Filter, Sparkles, MessageSquare, Settings, AlertCircle, Trash2, Check, Copy, Search
 } from 'lucide-react';
-import { Lead, Company, CampaignLink, BroadcastCampaign, FunnelStage } from '../types';
-import { FUNNEL_STAGES } from './FunnelBoard';
+import { Lead, Company, CampaignLink, BroadcastCampaign, FunnelStage, FUNNEL_STAGES } from '../types';
 import { useDialog } from '../contexts/DialogContext';
 
 interface BroadcastCampaignsProps {
