@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CampaignLink, Company } from '../types';
-import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List, Zap } from 'lucide-react';
+import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List, Zap, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface LinkManagerProps {
@@ -86,8 +86,36 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     }
   }, [editingLinkId, links, companyPhone, setIsModalOpen, onClearEditingLinkId]);
 
+  // Meta Event Test State
+  const [metaTestCode, setMetaTestCode] = useState<string>('');
+  const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean } | null>(null);
+
+  const handleTestCampaignEvent = async () => {
+    if (!formData.metaEventName?.trim()) return;
+
+    setMetaTestStatus({ loading: true, message: undefined });
+    try {
+      const res = await fetch('/api/meta/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: formData.metaPixelId?.trim() || undefined,
+          eventName: formData.metaEventName.trim(),
+          companyId: currentCompany?.id,
+          testEventCode: metaTestCode?.trim() || undefined
+        })
+      });
+      const data = await res.json();
+      setMetaTestStatus({ loading: false, message: data.message, success: data.success });
+    } catch (err: any) {
+      setMetaTestStatus({ loading: false, message: 'Erro ao conectar com servidor.', success: false });
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingLink(null);
+    setMetaTestStatus(null);
+    setMetaTestCode('');
     setFormData({
       title: '',
       phone: companyPhone,
@@ -110,6 +138,8 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
 
   const handleOpenEdit = (link: CampaignLink) => {
     setEditingLink(link);
+    setMetaTestStatus(null);
+    setMetaTestCode('');
     setFormData({
       ...link,
       phone: companyPhone,
@@ -122,6 +152,8 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   const handleDuplicate = (link: CampaignLink) => {
     const { id, companyId, clicksCount, leadsCount, conversionsCount, createdAt, ...rest } = link as any;
     setEditingLink(null);
+    setMetaTestStatus(null);
+    setMetaTestCode('');
     setFormData({
       ...rest,
       phone: companyPhone,
@@ -736,6 +768,62 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* Seção Interativa para Testar Evento */}
+                <div className="pt-2.5 border-t border-blue-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="text"
+                      placeholder="Cód. Teste (Ex: TEST12345 - Opcional)"
+                      value={metaTestCode}
+                      onChange={(e) => setMetaTestCode(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-mono focus:border-blue-600 focus:outline-none w-full sm:max-w-[210px]"
+                      title="Código da aba 'Testar eventos do servidor' no Gerenciador de Eventos da Meta"
+                    />
+                    <span className="text-[10px] text-slate-400 hidden sm:inline leading-tight">
+                      Código da aba "Testar eventos" na Meta
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleTestCampaignEvent}
+                    disabled={metaTestStatus?.loading || !formData.metaEventName?.trim()}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shrink-0 shadow-2xs ${
+                      !formData.metaEventName?.trim()
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                        : metaTestStatus?.loading
+                        ? 'bg-blue-100 text-blue-700 cursor-wait border border-blue-200'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {metaTestStatus?.loading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Disparando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 text-white" />
+                        <span>Testar Evento no Meta</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Mensagem de Feedback do Teste */}
+                {metaTestStatus && metaTestStatus.message && (
+                  <div className={`text-xs p-2.5 rounded-lg flex items-start gap-2 ${
+                    metaTestStatus.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {metaTestStatus.success ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <span className="text-red-500 font-bold shrink-0 mt-0.5">⚠️</span>
+                    )}
+                    <span className="leading-tight">{metaTestStatus.message}</span>
+                  </div>
+                )}
               </div>
 
               {/* Modo de Captura e Redirecionamento (Popup vs Rastreamento Direto) */}

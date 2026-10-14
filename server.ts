@@ -1534,16 +1534,23 @@ app.post('/api/webhooks/test', async (req: Request, res: Response) => {
 });
 
 app.post('/api/meta/test', async (req: Request, res: Response) => {
-    const { pixelId, token, eventName } = req.body;
+    let { pixelId, token, eventName, companyId, testEventCode } = req.body;
+
+    if ((!pixelId || !token) && companyId) {
+        const compSettings = await getSettings(companyId);
+        if (!pixelId) pixelId = compSettings.globalMetaPixelId;
+        if (!token) token = compSettings.globalMetaToken;
+    }
+
     if (!pixelId || !token) {
-        return res.status(400).json({ success: false, message: 'Pixel ID e Token são obrigatórios.' });
+        return res.status(400).json({ success: false, message: 'Pixel ID e Token são obrigatórios. Configure-os em Integrações ou informe o Pixel neste link.' });
     }
 
     try {
         const payload = {
             data: [
                 {
-                    event_name: eventName || 'Lead',
+                    event_name: eventName || 'ViewAds',
                     event_time: Math.floor(Date.now() / 1000),
                     action_source: 'system_generated',
                     user_data: {
@@ -1553,7 +1560,7 @@ app.post('/api/meta/test', async (req: Request, res: Response) => {
                         em: '7b3ed0ce9b075fa592b21ee4c81abf59c12df8b1a415ff678330fc4b306b98ea', // test@example.com (SHA-256)
                         ph: '88656667b4eb2b069d2eb05b7dc1f27dc1c4bc27ffbb12c8e376ee226f3af2c5'  // 5511999999999 (SHA-256)
                     },
-                    ...(req.body.testEventCode ? { test_event_code: req.body.testEventCode } : {})
+                    ...(testEventCode ? { test_event_code: testEventCode } : {})
                 }
             ]
         };
@@ -1567,7 +1574,7 @@ app.post('/api/meta/test', async (req: Request, res: Response) => {
         const data = await response.json();
         
         if (response.ok) {
-            res.json({ success: true, message: 'Conexão com a Meta CAPI realizada com sucesso!' });
+            res.json({ success: true, message: `Evento "${eventName || 'ViewAds'}" enviado com sucesso à Meta via CAPI! (Pixel: ${pixelId})` });
         } else {
             res.json({ success: false, message: `Erro da Meta: ${data.error?.message || 'Falha desconhecida'}` });
         }
