@@ -439,8 +439,10 @@ CREATE POLICY "Permitir all anonimo em smart_lists" ON public.smart_lists FOR AL
 
 CREATE INDEX IF NOT EXISTS idx_smart_lists_company_id ON public.smart_lists(company_id);
 
--- Configuração Global de Lead Scoring
+-- Configurações Globais Adicionais (Settings)
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS lead_scoring_config JSONB;
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS chatbot_config JSONB;
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS virtual_phone_settings JSONB;
 
 -- ==============================================================================
 -- INSTAGRAM AUTO-DM & COMMENT GROWTH TOOL (MANYCHAT STYLE)
