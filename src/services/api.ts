@@ -149,6 +149,14 @@ export async function deleteLead(id: string): Promise<void> {
   await fetch(`/api/leads/${id}`, { method: 'DELETE' });
 }
 
+export async function deleteLeadsBatch(ids: string[]): Promise<void> {
+  await fetch('/api/leads/batch-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+}
+
 export async function fetchProducts(companyId?: string): Promise<any[]> {
   const query = companyId ? `?companyId=${companyId}` : '';
   const res = await fetch(`/api/products${query}`);

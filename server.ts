@@ -1449,6 +1449,16 @@ app.delete('/api/leads/:id', async (req: Request, res: Response) => {
     res.json({ success: true, id });
 });
 
+app.post('/api/leads/batch-delete', async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'Nenhum lead especificado para exclusão.' });
+    }
+    const { error } = await supabase.from('leads').delete().in('id', ids);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, count: ids.length });
+});
+
 // Export CSV
 app.get('/api/leads/export', async (req: Request, res: Response) => {
     const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false });

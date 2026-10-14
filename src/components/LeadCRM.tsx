@@ -11,6 +11,7 @@ interface LeadCRMProps {
   links?: CampaignLink[];
   onUpdateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   onDeleteLead: (id: string) => Promise<void>;
+  onDeleteLeadsBatch?: (ids: string[]) => Promise<void>;
   onOpenWhatsApp?: (leadId: string) => void;
   onCreatePurchase: (data: Partial<LeadPurchase>) => Promise<void>;
   searchQuery?: string;
@@ -26,6 +27,7 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   links = [], 
   onUpdateLead, 
   onDeleteLead, 
+  onDeleteLeadsBatch,
   onOpenWhatsApp,
   onCreatePurchase,
   searchQuery = '',
@@ -33,9 +35,16 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
   linkIdFilter = null,
   setLinkIdFilter
 }) => {
-  const { success, alert } = useDialog();
+  const { success, alert, confirm } = useDialog();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   
+  // Selection State for Bulk Actions
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+
+  // Sorting State
+  const [sortField, setSortField] = useState<'name' | 'source' | 'stage' | 'ltv' | 'updatedAt'>('updatedAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   // Use local state if props are not provided
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const currentSearchQuery = setSearchQuery ? searchQuery : localSearchQuery;
@@ -124,6 +133,105 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
     return matchesSearch && matchesStage && matchesSource && matchesLink;
   });
 
+  // Sorted Leads based on active sortField and sortDirection
+  const sortedLeads = useMemo(() => {
+    return [...filteredLeads].sort((a, b) => {
+      let valA: any = '';
+      let valB: any = '';
+
+      switch (sortField) {
+        case 'name':
+          valA = (a.name || '').toLowerCase();
+          valB = (b.name || '').toLowerCase();
+          break;
+        case 'source':
+          valA = ((a.utmSource || a.source || '') + ' ' + (a.utmCampaign || '')).toLowerCase();
+          valB = ((b.utmSource || b.source || '') + ' ' + (b.utmCampaign || '')).toLowerCase();
+          break;
+        case 'stage': {
+          const stageOrder = ['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'];
+          valA = stageOrder.indexOf(a.stage);
+          valB = stageOrder.indexOf(b.stage);
+          break;
+        }
+        case 'ltv':
+          valA = getLeadLtv(a.id);
+          valB = getLeadLtv(b.id);
+          break;
+        case 'updatedAt':
+        default:
+          valA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          valB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          break;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredLeads, sortField, sortDirection, leadPurchases]);
+
+  // Bulk Selection Helpers
+  const allVisibleSelected = sortedLeads.length > 0 && sortedLeads.every(l => selectedLeadIds.includes(l.id));
+  const someVisibleSelected = sortedLeads.some(l => selectedLeadIds.includes(l.id)) && !allVisibleSelected;
+
+  const handleToggleSelectAll = () => {
+    if (allVisibleSelected) {
+      const visibleIds = new Set(sortedLeads.map(l => l.id));
+      setSelectedLeadIds(prev => prev.filter(id => !visibleIds.has(id)));
+    } else {
+      const visibleIds = sortedLeads.map(l => l.id);
+      setSelectedLeadIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleToggleSelectOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedLeadIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteBatch = async () => {
+    if (selectedLeadIds.length === 0) return;
+    if (await confirm(`Tem certeza que deseja excluir ${selectedLeadIds.length} leads selecionados do histórico?`)) {
+      if (onDeleteLeadsBatch) {
+        await onDeleteLeadsBatch(selectedLeadIds);
+      } else {
+        for (const id of selectedLeadIds) {
+          await onDeleteLead(id);
+        }
+      }
+      setSelectedLeadIds([]);
+    }
+  };
+
+  const handleDeleteSingle = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await onDeleteLead(id);
+    setSelectedLeadIds(prev => prev.filter(item => item !== id));
+  };
+
+  const handleSort = (field: 'name' | 'source' | 'stage' | 'ltv' | 'updatedAt') => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortIcon = (field: 'name' | 'source' | 'stage' | 'ltv' | 'updatedAt') => {
+    if (sortField !== field) {
+      return <span className="opacity-20 group-hover:opacity-60 ml-1 text-[11px] font-mono">↕</span>;
+    }
+    return (
+      <span className="text-blue-600 ml-1 font-bold text-[11px]">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
   const handleStageChange = async (leadId: string, newStage: FunnelStage) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
@@ -170,6 +278,13 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
           )}
           <button onClick={() => handleOpenLeadDetails(lead)} className="text-slate-400 hover:text-blue-600 hover:bg-slate-50 p-1 rounded transition" title="Detalhes">
             <Edit3 className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={(e) => handleDeleteSingle(lead.id, e)} 
+            className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition" 
+            title="Excluir Lead"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -342,6 +457,39 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
       </div>
 
+      {/* Barra de Ações em Massa (Bulk Selection Bar) */}
+      {selectedLeadIds.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+              {selectedLeadIds.length}
+            </span>
+            <span className="text-xs font-bold text-slate-800">
+              {selectedLeadIds.length === 1 ? '1 lead selecionado' : `${selectedLeadIds.length} leads selecionados`}
+            </span>
+            <span className="text-slate-300 text-xs hidden sm:inline">|</span>
+            <button
+              type="button"
+              onClick={() => setSelectedLeadIds([])}
+              className="text-xs text-blue-700 hover:text-blue-900 hover:underline font-medium"
+            >
+              Desmarcar todos
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={handleDeleteBatch}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold px-3.5 py-1.5 rounded-md transition text-xs flex items-center gap-1.5 shadow-xs"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Excluir Selecionados ({selectedLeadIds.length})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Leads Views */}
       {viewMode === 'table' && (
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
@@ -349,18 +497,90 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3.5 px-4">Nome do Lead</th>
-                <th className="py-3.5 px-3">Origem & UTMs</th>
-                <th className="py-3.5 px-3">Etapa do Funil</th>
-                <th className="py-3.5 px-3">LTV</th>
-                <th className="py-3.5 px-3">Última Atualização</th>
+                <th className="py-3.5 px-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    ref={input => {
+                      if (input) input.indeterminate = someVisibleSelected;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                    title="Selecionar todos os leads visíveis"
+                  />
+                </th>
+                <th 
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 transition select-none group"
+                  onClick={() => handleSort('name')}
+                  title="Clique para ordenar por Nome"
+                >
+                  <div className="flex items-center gap-1 text-slate-700 group-hover:text-blue-600">
+                    <span>Nome do Lead</span>
+                    {renderSortIcon('name')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3.5 px-3 cursor-pointer hover:bg-slate-100 transition select-none group"
+                  onClick={() => handleSort('source')}
+                  title="Clique para ordenar por Origem & UTMs"
+                >
+                  <div className="flex items-center gap-1 text-slate-700 group-hover:text-blue-600">
+                    <span>Origem & UTMs</span>
+                    {renderSortIcon('source')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3.5 px-3 cursor-pointer hover:bg-slate-100 transition select-none group"
+                  onClick={() => handleSort('stage')}
+                  title="Clique para ordenar por Etapa do Funil"
+                >
+                  <div className="flex items-center gap-1 text-slate-700 group-hover:text-blue-600">
+                    <span>Etapa do Funil</span>
+                    {renderSortIcon('stage')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3.5 px-3 cursor-pointer hover:bg-slate-100 transition select-none group"
+                  onClick={() => handleSort('ltv')}
+                  title="Clique para ordenar por LTV"
+                >
+                  <div className="flex items-center gap-1 text-slate-700 group-hover:text-blue-600">
+                    <span>LTV</span>
+                    {renderSortIcon('ltv')}
+                  </div>
+                </th>
+                <th 
+                  className="py-3.5 px-3 cursor-pointer hover:bg-slate-100 transition select-none group"
+                  onClick={() => handleSort('updatedAt')}
+                  title="Clique para ordenar por Data de Atualização"
+                >
+                  <div className="flex items-center gap-1 text-slate-700 group-hover:text-blue-600">
+                    <span>Última Atualização</span>
+                    {renderSortIcon('updatedAt')}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50 transition border-b border-slate-100">
-                  
+              {sortedLeads.map((lead) => (
+                <tr 
+                  key={lead.id} 
+                  className={`transition border-b border-slate-100 ${
+                    selectedLeadIds.includes(lead.id) ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50'
+                  }`}
+                >
+                  {/* Selection Checkbox */}
+                  <td className="py-3.5 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeadIds.includes(lead.id)}
+                      onChange={(e) => handleToggleSelectOne(lead.id, e as any)}
+                      className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                      title="Selecionar este lead"
+                    />
+                  </td>
+
                   {/* Name */}
                   <td className="py-3.5 px-4 font-semibold text-slate-900">
                     <div className="flex items-center gap-2.5">
@@ -417,15 +637,31 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                       <button
                         onClick={() => handleOpenLeadDetails(lead)}
                         className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition text-xs font-semibold px-2 flex items-center gap-1 border border-slate-200"
+                        title="Ver detalhes do lead"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         Detalhes
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteSingle(lead.id, e)}
+                        className="p-1.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded transition text-xs border border-slate-200 hover:border-red-200"
+                        title="Excluir Lead"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>
 
                 </tr>
               ))}
+
+              {sortedLeads.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    Nenhum lead encontrado com os filtros atuais.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -434,14 +670,14 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
       {viewMode === 'card' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredLeads.map(lead => renderLeadCard(lead))}
+          {sortedLeads.map(lead => renderLeadCard(lead))}
         </div>
       )}
 
       {viewMode === 'kanban' && (
         <div className="flex gap-4 overflow-x-auto pb-4 items-start h-[calc(100vh-220px)] min-h-[500px]">
           {['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'].map(stage => {
-            const stageLeads = filteredLeads.filter(l => l.stage === stage);
+            const stageLeads = sortedLeads.filter(l => l.stage === stage);
             return (
               <div key={stage} className="flex-shrink-0 w-80 bg-slate-50/50 rounded-lg flex flex-col h-full border border-slate-200">
                 <div className="p-3 border-b border-slate-200 bg-white rounded-t-lg shadow-sm">

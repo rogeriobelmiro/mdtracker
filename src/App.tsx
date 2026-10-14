@@ -25,6 +25,7 @@ import {
   fetchLeads,
   updateLead,
   deleteLead,
+  deleteLeadsBatch,
   fetchSettings,
   updateSettings,
   fetchWebhookLogs,
@@ -296,6 +297,13 @@ export default function App() {
     }
   };
 
+  const handleDeleteLeadsBatch = async (ids: string[]) => {
+    if (await confirm(`Tem certeza que deseja remover ${ids.length} leads selecionados do histórico?`)) {
+      await deleteLeadsBatch(ids);
+      await loadData();
+    }
+  };
+
   const handleUpdateSettings = async (data: Partial<IntegrationSettings>) => {
     const payload = currentCompany ? { ...data, companyId: currentCompany.id } : data;
     await updateSettings(payload);
@@ -427,6 +435,7 @@ export default function App() {
             onCreatePurchase={handleCreateLeadPurchase}
             onUpdateLead={handleUpdateLead}
             onDeleteLead={handleDeleteLead}
+            onDeleteLeadsBatch={handleDeleteLeadsBatch}
             searchQuery={leadSearchQuery}
             setSearchQuery={setLeadSearchQuery}
             linkIdFilter={leadLinkIdFilter}
