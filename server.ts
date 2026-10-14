@@ -76,6 +76,7 @@ const mapLinkToDB = (link: any) => ({
     },
     capture_lead_form: link.captureLeadForm,
     meta_pixel_id: link.metaPixelId,
+    meta_event_name: link.metaEventName || null,
     google_ads_conversion_id: link.googleAdsConversionId,
     google_ads_label: link.googleAdsLabel,
     webhook_url: link.webhookUrl,
