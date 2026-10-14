@@ -116,28 +116,28 @@ const mapLinkFromDB = (db: any) => ({
 
 const mapLeadToDB = (lead: any) => ({
     id: lead.id,
-    company_id: lead.companyId || 'comp-alfa',
+    company_id: lead.companyId || lead.company_id || 'comp-alfa',
     name: lead.name,
     phone: lead.phone,
     email: lead.email,
-    location: lead.location,
+    location: lead.location || {},
     source: lead.source,
-    utm_source: lead.utmSource,
-    utm_medium: lead.utmMedium,
-    utm_campaign: lead.utmCampaign,
-    utm_content: lead.utmContent,
-    utm_term: lead.utmTerm,
-    link_id: (lead.linkId && lead.linkId.trim() !== '') ? lead.linkId : null,
-    link_title: lead.linkTitle,
+    utm_source: lead.utmSource || lead.utm_source,
+    utm_medium: lead.utmMedium || lead.utm_medium,
+    utm_campaign: lead.utmCampaign || lead.utm_campaign,
+    utm_content: lead.utmContent || lead.utm_content,
+    utm_term: lead.utmTerm || lead.utm_term,
+    link_id: (lead.linkId && lead.linkId.trim() !== '') ? lead.linkId : (lead.link_id || null),
+    link_title: lead.linkTitle || lead.link_title,
     stage: lead.stage,
-    value: lead.value,
+    value: lead.value || 0,
     device: lead.device,
     browser: lead.browser,
     notes: lead.notes,
-    conversion_events: lead.conversionEvents,
+    conversion_events: lead.conversionEvents || lead.conversion_events || [],
     bot_active: lead.botActive !== undefined ? lead.botActive : true,
-    created_at: lead.createdAt || new Date().toISOString(),
-    updated_at: lead.updatedAt || new Date().toISOString()
+    created_at: lead.createdAt || lead.created_at || new Date().toISOString(),
+    updated_at: lead.updatedAt || lead.updated_at || new Date().toISOString()
 });
 
 async function safeInsertLead(dbRow: any) {
@@ -3245,7 +3245,7 @@ async function triggerWorkflows(
 
         if (workflows.length === 0) {
             workflows = inMemoryWorkflows.filter(
-                w => w.company_id === companyId && w.active && w.trigger_type === event
+                w => (w.company_id === companyId || w.company_id === 'comp-alfa') && w.active && w.trigger_type === event
             ).map(mapWorkflowFromDB);
         }
 
@@ -3385,7 +3385,13 @@ app.get('/api/workflows', async (req: Request, res: Response) => {
             }
         } catch {}
 
-        const list = inMemoryWorkflows.filter(w => w.company_id === companyId).map(mapWorkflowFromDB);
+        let list = inMemoryWorkflows.filter(w => w.company_id === companyId).map(mapWorkflowFromDB);
+        if (list.length === 0) {
+            list = inMemoryWorkflows.filter(w => w.company_id === 'comp-alfa').map(w => ({
+                ...mapWorkflowFromDB(w),
+                companyId
+            }));
+        }
         res.json(list);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -3929,10 +3935,17 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
             bot_active: true,
             conversion_events: [
                 {
-                    eventName: 'Lead',
-                    source: 'LandingPage',
+                    id: `evt-lp-${Date.now()}`,
+                    type: 'landing_page',
+                    eventName: 'Lead Capturado (Landing Page)',
+                    status: 'sucesso',
                     timestamp: new Date().toISOString(),
-                    value: 0
+                    details: `Formulário preenchido com sucesso na Landing Page: "${lp.title}"`,
+                    utmSource,
+                    utmMedium,
+                    utmCampaign,
+                    utmContent,
+                    utmTerm
                 }
             ],
             created_at: new Date().toISOString(),
@@ -4059,10 +4072,17 @@ app.post('/api/forms/submit', async (req: Request, res: Response) => {
             bot_active: true,
             conversion_events: [
                 {
-                    eventName: 'FormSubmit',
-                    source: formSource,
+                    id: `evt-form-${Date.now()}`,
+                    type: formSource === 'elementor' ? 'webhook' : 'landing_page',
+                    eventName: 'Lead Capturado (Formulário Externo)',
+                    status: 'sucesso',
                     timestamp: new Date().toISOString(),
-                    value: 0
+                    details: `Preenchimento realizado via ${formName} (${formSource})`,
+                    utmSource,
+                    utmMedium,
+                    utmCampaign,
+                    utmContent,
+                    utmTerm
                 }
             ],
             created_at: new Date().toISOString(),

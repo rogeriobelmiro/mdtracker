@@ -61,6 +61,39 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
   // Purchase state
   const [newPurchaseProductId, setNewPurchaseProductId] = useState<string>('');
+
+  const leadTimelineEvents = useMemo(() => {
+    if (!selectedLead) return [];
+    const list: any[] = [...(selectedLead.conversionEvents || [])];
+
+    // Always synthesize capture/entry event if missing
+    const hasEntry = list.some(e => 
+      e.type === 'landing_page' || 
+      e.type === 'form_submitted' ||
+      e.eventName?.toLowerCase().includes('captura') || 
+      e.eventName?.toLowerCase().includes('cadastro') ||
+      e.eventName?.toLowerCase().includes('lead')
+    );
+
+    if (!hasEntry) {
+      const isLp = selectedLead.source?.toLowerCase().includes('landing page');
+      list.unshift({
+        id: `evt-entry-${selectedLead.id}`,
+        type: isLp ? 'landing_page' : 'lead_cadastrado',
+        eventName: isLp ? 'Lead Capturado (Landing Page)' : 'Cadastro do Lead no Sistema',
+        status: 'sucesso',
+        timestamp: selectedLead.createdAt,
+        details: selectedLead.notes || `Lead registrado através de: ${selectedLead.source || 'Formulário'}`,
+        utmSource: selectedLead.utmSource,
+        utmMedium: selectedLead.utmMedium,
+        utmCampaign: selectedLead.utmCampaign,
+        utmContent: selectedLead.utmContent,
+        utmTerm: selectedLead.utmTerm
+      });
+    }
+
+    return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [selectedLead]);
   
   const formatDate = (isoString: string) => {
     if (!isoString) return '-';
@@ -1031,37 +1064,55 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
               />
             </div>
 
-            {/* Conversion Events History */}
+            {/* Timeline / Conversion & Journey Events History */}
             <div className="space-y-2">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Activity className="w-3.5 h-3.5 text-blue-600" />
-                Histórico de Eventos de Conversão (Pixels / CAPI)
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-blue-600" />
+                  Histórico da Jornada & Eventos ({leadTimelineEvents.length})
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Rastreamento em tempo real
+                </span>
+              </div>
 
-              <div className="space-y-2 max-h-36 overflow-y-auto">
-                {selectedLead.conversionEvents && selectedLead.conversionEvents.length > 0 ? (
-                  selectedLead.conversionEvents.map((evt) => (
-                    <div key={evt.id} className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] flex flex-col gap-1.5">
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                {leadTimelineEvents.length > 0 ? (
+                  leadTimelineEvents.map((evt) => (
+                    <div key={evt.id} className="bg-slate-50 hover:bg-slate-100/70 p-3 rounded-xl border border-slate-200 text-[11px] flex flex-col gap-1.5 transition">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-bold text-green-700 uppercase">{evt.type}</span> - <span className="text-slate-900 font-semibold">{evt.eventName}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-black uppercase text-[9px] px-2 py-0.5 rounded-full ${
+                            evt.type === 'landing_page' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            evt.type === 'webhook' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                            evt.type === 'meta_capi' || evt.type === 'meta_pixel' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                            evt.type === 'google_ads' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            'bg-slate-200 text-slate-800'
+                          }`}>
+                            {evt.type?.replace('_', ' ')}
+                          </span>
+                          <span className="text-slate-900 font-bold">{evt.eventName}</span>
                         </div>
                         <span className="text-slate-400 font-mono text-[10px]">{formatDate(evt.timestamp)}</span>
                       </div>
-                      <p className="text-slate-500 text-[10px]">{evt.details}</p>
-                      {(evt.utmSource || evt.utmCampaign) && (
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {evt.utmCampaign && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Campanha">C: {evt.utmCampaign}</span>}
-                          {evt.utmTerm && <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Conjunto (Term)">T: {evt.utmTerm}</span>}
-                          {evt.utmContent && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded text-[9px] font-medium uppercase tracking-wider" title="Anúncio (Content)">A: {evt.utmContent}</span>}
-                          {evt.utmSource && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] font-medium uppercase tracking-wider" title="Origem (Source)">O: {evt.utmSource}</span>}
+                      
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        {evt.details}
+                      </p>
+
+                      {(evt.utmSource || evt.utmCampaign || evt.utmContent || evt.utmTerm) && (
+                        <div className="flex flex-wrap gap-1 mt-1 pt-1.5 border-t border-slate-200/60">
+                          {evt.utmCampaign && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[9px] font-medium" title="Campanha">Campanha: {evt.utmCampaign}</span>}
+                          {evt.utmTerm && <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 border border-orange-100 rounded text-[9px] font-medium" title="Conjunto (Term)">Conjunto: {evt.utmTerm}</span>}
+                          {evt.utmContent && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded text-[9px] font-medium" title="Anúncio (Content)">Criativo: {evt.utmContent}</span>}
+                          {evt.utmSource && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] font-medium" title="Origem (Source)">Origem: {evt.utmSource}</span>}
                         </div>
                       )}
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded border border-slate-200">
-                    Nenhum evento de conversão disparado ainda.
+                  <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+                    Nenhum evento registrado ainda.
                   </p>
                 )}
               </div>
