@@ -324,7 +324,8 @@ export type WorkflowTriggerType =
   | 'stage_changed' 
   | 'product_purchased' 
   | 'popup_submitted' 
-  | 'tag_added';
+  | 'tag_added'
+  | 'form_submitted';
 
 export type WorkflowActionType = 
   | 'wait_delay' 
@@ -363,6 +364,8 @@ export interface MarketingWorkflow {
     productId?: string;
     popupId?: string;
     tag?: string;
+    landingPageId?: string;
+    formSource?: 'any' | 'landing_page' | 'embed_external' | 'elementor_wordpress';
   };
   steps: WorkflowStep[];
   enrolledCount: number;

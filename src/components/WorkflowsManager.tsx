@@ -26,7 +26,10 @@ import {
   ShieldAlert,
   Send,
   HelpCircle,
-  X
+  X,
+  Globe,
+  Code,
+  Check
 } from 'lucide-react';
 import { 
   MarketingWorkflow, 
@@ -37,7 +40,8 @@ import {
   FunnelStage, 
   FUNNEL_STAGES,
   Lead, 
-  Company 
+  Company,
+  LandingPage
 } from '../types';
 import { 
   fetchWorkflows, 
@@ -46,7 +50,8 @@ import {
   deleteWorkflow, 
   toggleWorkflow, 
   testRunWorkflow, 
-  fetchWorkflowLogs 
+  fetchWorkflowLogs,
+  fetchLandingPages
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -64,6 +69,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const { alert, confirm } = useDialog();
   const [workflows, setWorkflows] = useState<MarketingWorkflow[]>([]);
   const [logs, setLogs] = useState<WorkflowExecutionLog[]>([]);
+  const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'workflows' | 'templates' | 'logs'>('workflows');
 
@@ -72,21 +78,37 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<MarketingWorkflow> | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Embed & Webhooks Guide Modal
+  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [selectedLpForEmbed, setSelectedLpForEmbed] = useState<string>('');
+
   // Test Run Simulation Modal
   const [testModalWorkflow, setTestModalWorkflow] = useState<MarketingWorkflow | null>(null);
   const [testSelectedLeadId, setTestSelectedLeadId] = useState<string>('');
   const [testRunning, setTestRunning] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
+  const handleCopyText = (text: string, sectionKey: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(sectionKey);
+    setTimeout(() => setCopiedSection(null), 2500);
+  };
+
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [wfs, lgs] = await Promise.all([
+      const [wfs, lgs, lps] = await Promise.all([
         fetchWorkflows(currentCompany.id),
-        fetchWorkflowLogs(currentCompany.id)
+        fetchWorkflowLogs(currentCompany.id),
+        fetchLandingPages(currentCompany.id)
       ]);
       setWorkflows(wfs);
       setLogs(lgs);
+      setLandingPages(lps || []);
+      if (lps && lps.length > 0 && !selectedLpForEmbed) {
+        setSelectedLpForEmbed(lps[0].slug);
+      }
     } catch (err: any) {
       console.error('Erro ao carregar dados de automação:', err);
     } finally {
@@ -106,6 +128,45 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
 
   // Ready-to-use Templates
   const workflowTemplates = [
+    {
+      title: '📋 Nutrição de Leads de Formulário (Landing Page & Elementor)',
+      subtitle: 'Dispara imediatamente quando o visitante preenche formulários na landing page ou no site externo.',
+      triggerType: 'form_submitted' as WorkflowTriggerType,
+      triggerConfig: { formSource: 'any' },
+      steps: [
+        {
+          id: 'step-1',
+          type: 'send_whatsapp' as WorkflowActionType,
+          title: 'WhatsApp Imediato: Confirmação & Conteúdo Prometido',
+          messageTemplate: 'Olá, {nome}! Tudo bem? Acabamos de receber sua mensagem em nosso formulário da {empresa}. Conforme prometido, aqui está o seu material: {link_checkout} 🚀 Ficou com alguma dúvida inicial?'
+        },
+        {
+          id: 'step-2',
+          type: 'add_tag' as WorkflowActionType,
+          title: 'Adicionar Tag "lead_formulario"',
+          tag: 'lead_formulario'
+        },
+        {
+          id: 'step-3',
+          type: 'wait_delay' as WorkflowActionType,
+          title: 'Aguardar 1 Hora',
+          delayMinutes: 60
+        },
+        {
+          id: 'step-4',
+          type: 'send_email' as WorkflowActionType,
+          title: 'E-mail com Detalhes da Apresentação',
+          emailSubject: 'Seu material exclusivo chegou!',
+          emailBody: 'Olá {nome}, confirmamos o recebimento dos seus dados. Nosso consultor entrará em contato para tirar quaisquer dúvidas e apresentar a melhor solução.'
+        },
+        {
+          id: 'step-5',
+          type: 'notify_user' as WorkflowActionType,
+          title: 'Notificar Equipe de SDR / Vendas',
+          notifyMessage: 'Novo lead quente de formulário: {nome} ({telefone}) cadastrado via formulário!'
+        }
+      ]
+    },
     {
       title: '🚀 Boas-Vindas & Nutrição Imediata',
       subtitle: 'Ideal para novos leads vindos de anúncios ou pop-ups.',
@@ -407,6 +468,17 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
 
   const getTriggerLabel = (type: WorkflowTriggerType, config?: any) => {
     switch (type) {
+      case 'form_submitted': {
+        const source = config?.formSource || 'any';
+        if (source === 'landing_page') {
+          const lp = landingPages.find(p => p.id === config?.landingPageId);
+          return `Formulário enviado: LP "${lp?.title || config?.landingPageId || 'Específica'}"`;
+        }
+        if (source === 'elementor_wordpress') {
+          return 'Formulário Externo (Elementor / WordPress)';
+        }
+        return 'Envio de Formulário (Qualquer Origem)';
+      }
       case 'lead_created':
         return 'Novo Lead Cadastrado';
       case 'stage_changed':
@@ -465,6 +537,15 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsEmbedModalOpen(true)}
+              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5 border border-emerald-500/30"
+              title="Obter código de integração para Elementor, WordPress e formulários HTML"
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Conectar Elementor / Embed</span>
+            </button>
+
             <button
               onClick={() => setActiveView('templates')}
               className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5 border border-white/15"
@@ -903,13 +984,33 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingWorkflow({ 
+                      ...editingWorkflow, 
+                      triggerType: 'form_submitted', 
+                      triggerConfig: { formSource: 'any' } 
+                    })}
+                    className={`p-3 rounded-lg border text-left transition ${
+                      editingWorkflow.triggerType === 'form_submitted'
+                        ? 'bg-white border-blue-600 shadow-xs ring-1 ring-blue-600/30'
+                        : 'bg-white/60 border-slate-200 hover:bg-white'
+                    }`}
+                  >
+                    <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      Envio de Formulário
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Landing Pages internas, Elementor ou WordPress.</p>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setEditingWorkflow({ ...editingWorkflow, triggerType: 'lead_created', triggerConfig: {} })}
                     className={`p-3 rounded-lg border text-left transition ${
                       editingWorkflow.triggerType === 'lead_created'
-                        ? 'bg-white border-blue-600 shadow-xs'
+                        ? 'bg-white border-blue-600 shadow-xs ring-1 ring-blue-600/30'
                         : 'bg-white/60 border-slate-200 hover:bg-white'
                     }`}
                   >
@@ -917,7 +1018,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                       <Users className="w-3.5 h-3.5 text-blue-600" />
                       Novo Lead Cadastrado
                     </p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Dispara assim que o contato entra via link ou pop-up.</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Dispara assim que o contato entra via link ou CRM.</p>
                   </button>
 
                   <button
@@ -929,17 +1030,123 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                     })}
                     className={`p-3 rounded-lg border text-left transition ${
                       editingWorkflow.triggerType === 'stage_changed'
-                        ? 'bg-white border-blue-600 shadow-xs'
+                        ? 'bg-white border-blue-600 shadow-xs ring-1 ring-blue-600/30'
                         : 'bg-white/60 border-slate-200 hover:bg-white'
                     }`}
                   >
                     <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                       <Sliders className="w-3.5 h-3.5 text-purple-600" />
-                      Mudança de Estágio no Funil
+                      Mudança de Estágio
                     </p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Dispara quando o lead avança para uma etapa específica.</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Dispara quando o lead avança no funil de vendas.</p>
                   </button>
                 </div>
+
+                {editingWorkflow.triggerType === 'form_submitted' && (
+                  <div className="pt-2 bg-white/80 p-3 rounded-xl border border-blue-200 space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-blue-950 mb-1.5">
+                        Qual origem de formulário deve acionar este fluxo?
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingWorkflow({
+                            ...editingWorkflow,
+                            triggerConfig: { ...editingWorkflow.triggerConfig, formSource: 'any', landingPageId: undefined }
+                          })}
+                          className={`p-2 rounded-lg text-left border text-xs font-medium transition ${
+                            (!editingWorkflow.triggerConfig?.formSource || editingWorkflow.triggerConfig?.formSource === 'any')
+                              ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          🌐 Qualquer Formulário
+                          <span className="block text-[10px] text-slate-500 font-normal">Interno ou externo</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingWorkflow({
+                            ...editingWorkflow,
+                            triggerConfig: { 
+                              ...editingWorkflow.triggerConfig, 
+                              formSource: 'landing_page', 
+                              landingPageId: editingWorkflow.triggerConfig?.landingPageId || landingPages[0]?.id || '' 
+                            }
+                          })}
+                          className={`p-2 rounded-lg text-left border text-xs font-medium transition ${
+                            editingWorkflow.triggerConfig?.formSource === 'landing_page'
+                              ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          📄 Landing Page Interna
+                          <span className="block text-[10px] text-slate-500 font-normal">Criada no MDTracker</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingWorkflow({
+                            ...editingWorkflow,
+                            triggerConfig: { ...editingWorkflow.triggerConfig, formSource: 'elementor_wordpress', landingPageId: undefined }
+                          })}
+                          className={`p-2 rounded-lg text-left border text-xs font-medium transition ${
+                            editingWorkflow.triggerConfig?.formSource === 'elementor_wordpress'
+                              ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          🔌 Elementor / WordPress
+                          <span className="block text-[10px] text-slate-500 font-normal">Webhook ou Embed HTML</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {editingWorkflow.triggerConfig?.formSource === 'landing_page' && (
+                      <div className="pt-1">
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Selecione a Landing Page do Sistema:
+                        </label>
+                        {landingPages.length > 0 ? (
+                          <select
+                            value={editingWorkflow.triggerConfig?.landingPageId || ''}
+                            onChange={(e) => setEditingWorkflow({
+                              ...editingWorkflow,
+                              triggerConfig: { ...editingWorkflow.triggerConfig, landingPageId: e.target.value }
+                            })}
+                            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-500"
+                          >
+                            <option value="">Todas as Landing Pages Internas</option>
+                            {landingPages.map(lp => (
+                              <option key={lp.id} value={lp.id}>
+                                {lp.title} (/lp/{lp.slug})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                            ⚠️ Nenhuma landing page cadastrada nesta empresa ainda. Crie uma na aba <strong>Landing Pages</strong> ou use "Qualquer Formulário".
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t border-blue-100 gap-2 text-[11px]">
+                      <span className="text-slate-600">
+                        Quer capturar leads do seu site <strong>WordPress, Elementor ou Webflow</strong>?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEmbedModalOpen(true)}
+                        className="text-blue-700 hover:text-blue-900 font-bold underline flex items-center gap-1 shrink-0"
+                      >
+                        <Globe className="w-3.5 h-3.5 text-blue-600" />
+                        Ver Código Embed & Webhook Elementor
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {editingWorkflow.triggerType === 'stage_changed' && (
                   <div className="pt-2">
@@ -1256,6 +1463,303 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>{testRunning ? 'Executando...' : 'Disparar Teste'}</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 6. Embed & Webhooks Guide Modal (Elementor, WordPress, HTML) */}
+      {isEmbedModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  <Globe className="w-5 h-5 text-emerald-400" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    Integração de Formulários: Elementor, WordPress & Webhooks
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Capture leads de qualquer site ou página e dispare fluxos de nutrição instantaneamente.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsEmbedModalOpen(false)} 
+                className="text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-700">
+
+              {/* Card 1: Elementor Pro Webhook */}
+              <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-600 text-white uppercase tracking-wider">
+                      Recomendado
+                    </span>
+                    <h4 className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                      1. Elementor Pro (Via Webhook Nativo)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-emerald-700 font-medium">Sem plugins extras necessários</span>
+                </div>
+
+                <p className="text-xs text-slate-600">
+                  Envie os dados de qualquer formulário feito no <strong>Elementor</strong> diretamente para o MDTracker. Ao enviar, o lead é cadastrado no CRM e o fluxo de nutrição é acionado.
+                </p>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700">
+                    URL do Webhook (Cole no Elementor):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/api/forms/submit?companyId=${currentCompany.id}&formSource=elementor`}
+                      className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono text-emerald-900 select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(
+                        `${window.location.origin}/api/forms/submit?companyId=${currentCompany.id}&formSource=elementor`,
+                        'elementor_webhook'
+                      )}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shrink-0 transition"
+                    >
+                      {copiedSection === 'elementor_webhook' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copiar URL</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 border border-emerald-200/80 rounded-lg p-3 space-y-1.5 text-[11px] text-slate-600">
+                  <p className="font-bold text-slate-800">Passo a passo no Elementor:</p>
+                  <ol className="list-decimal list-inside space-y-1 pl-1">
+                    <li>Selecione o widget de <strong>Formulário</strong> na sua página do Elementor.</li>
+                    <li>No menu esquerdo, abra a aba <strong>Actions After Submit (Ações após o envio)</strong>.</li>
+                    <li>Clique no botão <strong>+</strong> e selecione a opção <strong>Webhook</strong>.</li>
+                    <li>Uma nova aba <strong>Webhook</strong> aparecerá abaixo. Cole a URL acima no campo <strong>Webhook URL</strong>.</li>
+                    <li>Nos campos do form (Aba Conteúdo), utilize nos IDs dos campos: <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700 font-mono">nome</code>, <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700 font-mono">whatsapp</code> e <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700 font-mono">email</code>.</li>
+                    <li>Clique em <strong>Atualizar</strong> ou <strong>Publicar</strong>. Pronto!</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Card 2: HTML Form Embed (WordPress / Gutenberg / Custom HTML) */}
+              <div className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-blue-950 flex items-center gap-1.5">
+                    <Code className="w-4 h-4 text-blue-600" />
+                    2. Código HTML Embed (WordPress, Gutenberg, Webflow, Divi)
+                  </h4>
+                  <span className="text-[11px] text-blue-700 font-medium">Bloco "HTML Personalizado"</span>
+                </div>
+
+                <p className="text-xs text-slate-600">
+                  Copie e cole este bloco de formulário pronto em qualquer página externa. Ele já inclui campos formatados de Nome, WhatsApp e E-mail, além de proteção CORS.
+                </p>
+
+                <div className="relative">
+                  <pre className="bg-slate-900 text-slate-100 p-3.5 rounded-lg text-[10.5px] font-mono overflow-x-auto max-h-48">
+{`<form action="${window.location.origin}/api/forms/submit" method="POST" style="max-width:440px;margin:0 auto;padding:20px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;font-family:sans-serif;">
+  <input type="hidden" name="companyId" value="${currentCompany.id}">
+  <input type="hidden" name="formSource" value="wordpress_embed">
+  <!-- Opcional: url de redirecionamento apos envio -->
+  <!-- <input type="hidden" name="redirectUrl" value="${window.location.origin}/obrigado"> -->
+
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">Nome Completo</label>
+    <input type="text" name="nome" required placeholder="Seu nome" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">WhatsApp / Telefone</label>
+    <input type="tel" name="whatsapp" required placeholder="(11) 99999-9999" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">E-mail</label>
+    <input type="email" name="email" required placeholder="seu@email.com" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <button type="submit" style="width:100%;background:#2563eb;color:#ffffff;font-weight:bold;padding:12px;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
+    Enviar Informações
+  </button>
+</form>`}
+                  </pre>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(
+`<form action="${window.location.origin}/api/forms/submit" method="POST" style="max-width:440px;margin:0 auto;padding:20px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;font-family:sans-serif;">
+  <input type="hidden" name="companyId" value="${currentCompany.id}">
+  <input type="hidden" name="formSource" value="wordpress_embed">
+
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">Nome Completo</label>
+    <input type="text" name="nome" required placeholder="Seu nome" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">WhatsApp / Telefone</label>
+    <input type="tel" name="whatsapp" required placeholder="(11) 99999-9999" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block;font-size:12px;font-weight:bold;margin-bottom:4px;color:#334155;">E-mail</label>
+    <input type="email" name="email" required placeholder="seu@email.com" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;">
+  </div>
+
+  <button type="submit" style="width:100%;background:#2563eb;color:#ffffff;font-weight:bold;padding:12px;border:none;border-radius:8px;font-size:14px;cursor:pointer;">
+    Enviar Informações
+  </button>
+</form>`,
+                      'html_embed'
+                    )}
+                    className="absolute top-3 right-3 bg-white/20 hover:bg-white/30 text-white font-semibold text-[11px] px-2.5 py-1.5 rounded-md flex items-center gap-1 transition"
+                  >
+                    {copiedSection === 'html_embed' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar Código HTML</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: Iframe de Landing Page Interna */}
+              <div className="border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-purple-950 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-purple-600" />
+                    3. Iframe de Landing Page Criada no MDTracker
+                  </h4>
+                  <span className="text-[11px] text-purple-700 font-medium">Embed completo</span>
+                </div>
+
+                <p className="text-xs text-slate-600">
+                  Deseja exibir a Landing Page inteira do sistema dentro de uma página do seu WordPress ou portal? Use a tag iframe abaixo:
+                </p>
+
+                {landingPages.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[11px] font-bold text-slate-700 shrink-0">
+                        Escolha a Landing Page:
+                      </label>
+                      <select
+                        value={selectedLpForEmbed || landingPages[0]?.slug}
+                        onChange={(e) => setSelectedLpForEmbed(e.target.value)}
+                        className="bg-white border border-purple-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold outline-none"
+                      >
+                        {landingPages.map(lp => (
+                          <option key={lp.id} value={lp.slug}>
+                            {lp.title} ({lp.slug})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`<iframe src="${window.location.origin}/lp/${selectedLpForEmbed || landingPages[0]?.slug}" width="100%" height="800" style="border:none;border-radius:12px;width:100%;min-height:800px;" title="Landing Page"></iframe>`}
+                        className="w-full bg-white border border-purple-300 rounded-lg px-3 py-2 text-xs font-mono text-purple-900 select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(
+                          `<iframe src="${window.location.origin}/lp/${selectedLpForEmbed || landingPages[0]?.slug}" width="100%" height="800" style="border:none;border-radius:12px;width:100%;min-height:800px;" title="Landing Page"></iframe>`,
+                          'iframe_embed'
+                        )}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shrink-0 transition"
+                      >
+                        {copiedSection === 'iframe_embed' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copiar Iframe</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                    Nenhuma landing page criada ainda no MDTracker. Você pode criar uma na aba <strong>Landing Pages</strong>.
+                  </p>
+                )}
+              </div>
+
+              {/* Card 4: AJAX Fetch / Programadores */}
+              <div className="border border-slate-200 bg-slate-50/70 rounded-xl p-4 space-y-2">
+                <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-600" />
+                  4. Envio via JavaScript / AJAX (CORS Habilitado)
+                </h4>
+                <p className="text-[11px] text-slate-600">
+                  O endpoint aceita requisições JSON de qualquer domínio originário com suporte nativo a CORS:
+                </p>
+                <pre className="bg-slate-900 text-slate-100 p-3 rounded-lg text-[10.5px] font-mono overflow-x-auto">
+{`await fetch('${window.location.origin}/api/forms/submit', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    companyId: '${currentCompany.id}',
+    name: 'Nome do Cliente',
+    phone: '11999998888',
+    email: 'cliente@gmail.com',
+    formSource: 'elementor_ou_site'
+  })
+});`}
+                </pre>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+              <span className="text-[11px] text-slate-500">
+                Os leads cadastrados aparecem automaticamente na aba <strong>Leads</strong> e iniciam os fluxos correspondentes.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEmbedModalOpen(false)}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
+              >
+                Concluir
               </button>
             </div>
 

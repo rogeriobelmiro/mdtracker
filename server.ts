@@ -3219,7 +3219,7 @@ function formatWorkflowText(template: string, lead: any, companyName: string): s
 }
 
 async function triggerWorkflows(
-    event: 'lead_created' | 'stage_changed' | 'product_purchased' | 'popup_submitted' | 'tag_added',
+    event: 'lead_created' | 'stage_changed' | 'product_purchased' | 'popup_submitted' | 'tag_added' | 'form_submitted',
     payload: {
         companyId: string;
         lead: any;
@@ -3265,6 +3265,15 @@ async function triggerWorkflows(
 
             if (event === 'product_purchased' && wf.triggerConfig?.productId) {
                 if (context?.productId && context.productId !== wf.triggerConfig.productId) continue;
+            }
+
+            if (event === 'form_submitted') {
+                if (wf.triggerConfig?.landingPageId && wf.triggerConfig.landingPageId !== 'all') {
+                    if (context?.landingPageId && context.landingPageId !== wf.triggerConfig.landingPageId) continue;
+                }
+                if (wf.triggerConfig?.formSource && wf.triggerConfig.formSource !== 'any') {
+                    if (context?.formSource && context.formSource !== wf.triggerConfig.formSource) continue;
+                }
             }
 
             wf.enrolledCount = (wf.enrolledCount || 0) + 1;
@@ -3934,6 +3943,16 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
         await safeInsertLead(mapLeadToDB(newLead));
 
         // 5. Trigger automated marketing workflows
+        await triggerWorkflows('form_submitted', {
+            lead: newLead,
+            companyId: lp.companyId,
+            context: {
+                landingPageId: lp.id,
+                slug: lp.slug,
+                formSource: 'landing_page',
+                formName: lp.title
+            }
+        });
         await triggerWorkflows('lead_created', {
             lead: newLead,
             companyId: lp.companyId
@@ -3962,6 +3981,126 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
         });
     } catch (err: any) {
         console.error('Erro ao submeter formulário de Landing Page:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// UNIVERSAL FORM SUBMISSION (Elementor, WordPress, Embeds & Webhooks)
+// ==========================================
+
+// Enable CORS for external form embeds / Elementor Ajax
+app.options('/api/forms/submit', (req: Request, res: Response) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.sendStatus(200);
+});
+
+app.post('/api/forms/submit', async (req: Request, res: Response) => {
+    // Enable CORS header for the response
+    res.header('Access-Control-Allow-Origin', '*');
+
+    try {
+        const body = req.body || {};
+        const query = req.query as Record<string, string>;
+
+        const companyId = body.companyId || body.company_id || query.companyId || 'comp-alfa';
+        const formSource = body.formSource || body.source || query.formSource || 'elementor_wordpress';
+        const formName = body.formName || body.form_name || query.formName || 'Formulário Externo';
+        const landingPageId = body.landingPageId || body.lp_id || query.landingPageId;
+
+        // Extract lead data with flexible key matching
+        const leadName = (body.name || body.nome || body.fullname || body['Nome'] || body['nome'] || 'Lead ' + formName).trim();
+        const rawPhone = (body.phone || body.whatsapp || body.telefone || body.celular || body.tel || body['WhatsApp'] || body['telefone'] || '').trim();
+        const leadPhone = rawPhone.replace(/\D/g, '');
+        const leadEmail = (body.email || body.mail || body['E-mail'] || body['email'] || '').trim();
+
+        // Extract UTMs
+        const utmSource = body.utm_source || query.utm_source || 'embed_form';
+        const utmMedium = body.utm_medium || query.utm_medium || 'website';
+        const utmCampaign = body.utm_campaign || query.utm_campaign || formName;
+        const utmContent = body.utm_content || query.utm_content || '';
+        const utmTerm = body.utm_term || query.utm_term || '';
+
+        // Extract custom fields for notes
+        const ignoreKeys = ['name', 'nome', 'fullname', 'phone', 'whatsapp', 'telefone', 'celular', 'email', 'mail', 'companyid', 'company_id', 'formsource', 'formname', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'redirecturl', 'redirect_url'];
+        const extraDetails = Object.entries(body)
+            .filter(([k]) => !ignoreKeys.includes(k.toLowerCase()))
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(' | ');
+
+        const newLeadId = `lead-form-${Date.now()}`;
+        const newLead: any = {
+            id: newLeadId,
+            company_id: companyId,
+            name: leadName,
+            phone: leadPhone,
+            email: leadEmail,
+            source: `Formulário: ${formName} (${formSource})`,
+            utm_source: utmSource,
+            utm_medium: utmMedium,
+            utm_campaign: utmCampaign,
+            utm_content: utmContent,
+            utm_term: utmTerm,
+            stage: 'Novo Lead',
+            value: 0,
+            notes: extraDetails ? `Campos preenchidos: ${extraDetails}` : `Cadastrado via formulário ${formName}`,
+            custom_tags: {
+                tags: ['formulario-externo', formSource, utmSource]
+            },
+            score: 45,
+            qualification_level: 'MQL',
+            fit_grade: 'A',
+            score_breakdown: [
+                { reason: 'Preenchimento de Formulário (WordPress/Elementor)', points: 25 },
+                { reason: 'Telefone e Contato Informado', points: 20 }
+            ],
+            bot_active: true,
+            conversion_events: [
+                {
+                    eventName: 'FormSubmit',
+                    source: formSource,
+                    timestamp: new Date().toISOString(),
+                    value: 0
+                }
+            ],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        // Save lead
+        await safeInsertLead(mapLeadToDB(newLead));
+
+        // Trigger Workflows
+        await triggerWorkflows('form_submitted', {
+            lead: newLead,
+            companyId,
+            context: {
+                landingPageId,
+                formSource,
+                formName
+            }
+        });
+
+        await triggerWorkflows('lead_created', {
+            lead: newLead,
+            companyId
+        });
+
+        const redirectUrl = body.redirectUrl || body.redirect_url || query.redirectUrl;
+        if (redirectUrl && (req.headers.accept?.includes('text/html') || !req.xhr)) {
+            return res.redirect(redirectUrl);
+        }
+
+        res.json({
+            success: true,
+            message: 'Formulário recebido e automação iniciada com sucesso!',
+            leadId: newLeadId,
+            lead: newLead
+        });
+    } catch (err: any) {
+        console.error('Erro ao processar envio de formulário universal:', err);
         res.status(500).json({ error: err.message });
     }
 });
