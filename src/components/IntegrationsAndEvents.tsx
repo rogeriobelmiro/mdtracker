@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company } from '../types';
-import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company, ChatbotConfig } from '../types';
+import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink, Bot, Sparkles, AlertTriangle } from 'lucide-react';
 import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
+import { simulateChatbot } from '../services/api';
 
 interface IntegrationsAndEventsProps {
   settings: IntegrationSettings;
@@ -28,6 +29,16 @@ const DEFAULT_KEYWORDS: AutoStageKeywordRule[] = [
   { stage: 'Perdido', keywords: ['não quero', 'cancelar', 'muito caro', 'sem interesse', 'desistir'], enabled: true }
 ];
 
+const DEFAULT_CHATBOT_CONFIG: ChatbotConfig = {
+  enabled: false,
+  botName: 'Sofia - Assistente Virtual',
+  personaPrompt: 'Você é Sofia, consultora virtual especialista em vendas e atendimento ao cliente. Seu objetivo é atender com simpatia, tirar dúvidas sobre produtos e conduzir o cliente com cordialidade para o fechamento.',
+  autoReplyDelaySeconds: 2,
+  enableHumanHandover: true,
+  handoverKeywords: ['atendente', 'humano', 'pessoa', 'atendimento', 'suporte', 'especialista', 'falar com alguém'],
+  includeProductsKnowledge: true
+};
+
 import { useDialog } from '../contexts/DialogContext';
 
 export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
@@ -43,7 +54,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
     ...settings,
     evolutionInstance: defaultEvolutionInstance,
     stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
-    autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
+    autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS,
+    chatbotConfig: settings.chatbotConfig || DEFAULT_CHATBOT_CONFIG
   });
 
   React.useEffect(() => {
@@ -51,7 +63,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       ...settings,
       evolutionInstance: defaultEvolutionInstance,
       stageEventMappings: settings.stageEventMappings || DEFAULT_MAPPINGS,
-      autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS
+      autoStageKeywords: settings.autoStageKeywords || DEFAULT_KEYWORDS,
+      chatbotConfig: settings.chatbotConfig || DEFAULT_CHATBOT_CONFIG
     }));
     // Removemos 'settings' das dependências para evitar que o polling do App.tsx resete o formulário do usuário enquanto ele digita.
   }, [currentCompany.id, defaultEvolutionInstance]);
@@ -65,6 +78,10 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newKeywordInputs, setNewKeywordInputs] = useState<Record<string, string>>({});
+  const [newHandoverKeywordInput, setNewHandoverKeywordInput] = useState('');
+  const [testBotInput, setTestBotInput] = useState('');
+  const [testBotOutput, setTestBotOutput] = useState('');
+  const [testBotLoading, setTestBotLoading] = useState(false);
 
   const { success } = useDialog();
 
@@ -321,6 +338,375 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
         {/* Conexão WhatsApp Card */}
         <WhatsAppConnectionCard companyId={currentCompany.id} />
+
+        {/* Card: Chatbot Inteligente com IA (WhatsApp & Direct) */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center font-bold shadow-2xs">
+                <Bot className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  Chatbot Inteligente com IA (WhatsApp & Direct)
+                  <span className="bg-gradient-to-r from-purple-100 to-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-indigo-500" />
+                    Google Gemini 2.5
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Responda clientes 24/7 no WhatsApp e Instagram Direct com respostas humanizadas, consulta ao catálogo de produtos e transbordo para atendentes.
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs hover:bg-slate-100 transition self-start sm:self-auto">
+              <input
+                type="checkbox"
+                checked={Boolean(formData.chatbotConfig?.enabled)}
+                onChange={(e) => {
+                  const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                  setFormData({
+                    ...formData,
+                    chatbotConfig: { ...currentCfg, enabled: e.target.checked }
+                  });
+                }}
+                className="w-4 h-4 accent-indigo-600 rounded"
+              />
+              <span className="font-bold text-slate-800">
+                {formData.chatbotConfig?.enabled ? '🤖 Chatbot Ativo' : '⚪ Chatbot Desativado'}
+              </span>
+            </label>
+          </div>
+
+          {formData.chatbotConfig?.enabled && (
+            <div className="space-y-4 pt-1 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Nome do Robô / Assistente</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Sofia - Consultora Virtual"
+                    value={formData.chatbotConfig?.botName || ''}
+                    onChange={(e) => {
+                      const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                      setFormData({
+                        ...formData,
+                        chatbotConfig: { ...currentCfg, botName: e.target.value }
+                      });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Como o assistente se apresentará nas conversas.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Delay de Digitação Humana</label>
+                  <select
+                    value={formData.chatbotConfig?.autoReplyDelaySeconds || 2}
+                    onChange={(e) => {
+                      const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                      setFormData({
+                        ...formData,
+                        chatbotConfig: { ...currentCfg, autoReplyDelaySeconds: Number(e.target.value) }
+                      });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600"
+                  >
+                    <option value={1}>1 segundo (Ultra rápido)</option>
+                    <option value={2}>2 segundos (Recomendado - Simula presença "Digitando...")</option>
+                    <option value={3}>3 segundos (Natural)</option>
+                    <option value={4}>4 segundos (Ritmo pausado)</option>
+                    <option value={5}>5 segundos (Atendimento calmo)</option>
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">Tempo simulando 'composing' antes de enviar a resposta.</p>
+                </div>
+              </div>
+
+              {/* Persona e Instruções */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Persona e Regras de Atendimento da IA
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span className="text-slate-400 font-medium">Modelos prontos:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                        setFormData({
+                          ...formData,
+                          chatbotConfig: {
+                            ...currentCfg,
+                            personaPrompt: 'Você é um consultor comercial especialista em fechamento de vendas. Seja simpático, descubra a necessidade do cliente, apresente os produtos do catálogo com entusiasmo e envie o link de compra com gentileza.'
+                          }
+                        });
+                      }}
+                      className="text-indigo-600 hover:underline font-bold"
+                    >
+                      Vendas
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                        setFormData({
+                          ...formData,
+                          chatbotConfig: {
+                            ...currentCfg,
+                            personaPrompt: 'Você é um assistente técnico prestativo e paciente. Seu foco é esclarecer dúvidas de funcionamento, prazos de entrega e orientar o cliente passo a passo.'
+                          }
+                        });
+                      }}
+                      className="text-indigo-600 hover:underline font-bold"
+                    >
+                      Suporte
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                        setFormData({
+                          ...formData,
+                          chatbotConfig: {
+                            ...currentCfg,
+                            personaPrompt: 'Você é um qualificador de leads (SDR). Faça perguntas amigáveis sobre o perfil do cliente, empresa, orçamento e proponha agendar uma demonstração rápida por vídeo ou ligação.'
+                          }
+                        });
+                      }}
+                      className="text-indigo-600 hover:underline font-bold"
+                    >
+                      Agendamento / SDR
+                    </button>
+                  </div>
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={formData.chatbotConfig?.personaPrompt || ''}
+                  onChange={(e) => {
+                    const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                    setFormData({
+                      ...formData,
+                      chatbotConfig: { ...currentCfg, personaPrompt: e.target.value }
+                    });
+                  }}
+                  placeholder="Instruções de como a IA deve responder, tom de voz, regras, etc..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded p-2.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 leading-relaxed font-sans resize-y"
+                />
+              </div>
+
+              {/* Toggles de Recursos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs cursor-pointer hover:bg-slate-100/70 transition">
+                  <div className="pr-2">
+                    <span className="font-semibold text-slate-800 block">Conhecimento de Produtos</span>
+                    <span className="text-[10px] text-slate-500 block">Injeta o catálogo de produtos e preços automaticamente no prompt da IA.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.chatbotConfig?.includeProductsKnowledge !== false}
+                    onChange={(e) => {
+                      const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                      setFormData({
+                        ...formData,
+                        chatbotConfig: { ...currentCfg, includeProductsKnowledge: e.target.checked }
+                      });
+                    }}
+                    className="w-4 h-4 accent-indigo-600 rounded shrink-0"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs cursor-pointer hover:bg-slate-100/70 transition">
+                  <div className="pr-2">
+                    <span className="font-semibold text-slate-800 block">Transbordo para Atendente Humano</span>
+                    <span className="text-[10px] text-slate-500 block">Pausa a IA e avisa a equipe se o cliente pedir para falar com uma pessoa.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.chatbotConfig?.enableHumanHandover !== false}
+                    onChange={(e) => {
+                      const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                      setFormData({
+                        ...formData,
+                        chatbotConfig: { ...currentCfg, enableHumanHandover: e.target.checked }
+                      });
+                    }}
+                    className="w-4 h-4 accent-indigo-600 rounded shrink-0"
+                  />
+                </label>
+              </div>
+
+              {/* Palavras-chave de Transbordo Humano */}
+              {formData.chatbotConfig?.enableHumanHandover !== false && (
+                <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      Palavras-chave que Acionam o Transbordo Humano
+                    </span>
+                    <span className="text-[10px] text-amber-700">Quando digitadas pelo lead, o robô pausa e transfere</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 bg-white rounded border border-amber-200">
+                    {((formData.chatbotConfig?.handoverKeywords && formData.chatbotConfig.handoverKeywords.length > 0)
+                      ? formData.chatbotConfig.handoverKeywords
+                      : DEFAULT_CHATBOT_CONFIG.handoverKeywords
+                    ).map(kw => (
+                      <span
+                        key={kw}
+                        className="bg-amber-100 text-amber-900 text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-300"
+                      >
+                        {kw}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                            const currentKws = currentCfg.handoverKeywords || DEFAULT_CHATBOT_CONFIG.handoverKeywords;
+                            setFormData({
+                              ...formData,
+                              chatbotConfig: {
+                                ...currentCfg,
+                                handoverKeywords: currentKws.filter(k => k !== kw)
+                              }
+                            });
+                          }}
+                          className="text-amber-600 hover:text-red-600 ml-0.5 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nova palavra-chave de transbordo (ex: suporte, falar com atendente)..."
+                      value={newHandoverKeywordInput}
+                      onChange={(e) => setNewHandoverKeywordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = newHandoverKeywordInput.trim().toLowerCase();
+                          if (!val) return;
+                          const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                          const currentKws = currentCfg.handoverKeywords || DEFAULT_CHATBOT_CONFIG.handoverKeywords;
+                          if (!currentKws.includes(val)) {
+                            setFormData({
+                              ...formData,
+                              chatbotConfig: { ...currentCfg, handoverKeywords: [...currentKws, val] }
+                            });
+                          }
+                          setNewHandoverKeywordInput('');
+                        }
+                      }}
+                      className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = newHandoverKeywordInput.trim().toLowerCase();
+                        if (!val) return;
+                        const currentCfg = formData.chatbotConfig || DEFAULT_CHATBOT_CONFIG;
+                        const currentKws = currentCfg.handoverKeywords || DEFAULT_CHATBOT_CONFIG.handoverKeywords;
+                        if (!currentKws.includes(val)) {
+                          setFormData({
+                            ...formData,
+                            chatbotConfig: { ...currentCfg, handoverKeywords: [...currentKws, val] }
+                          });
+                        }
+                        setNewHandoverKeywordInput('');
+                      }}
+                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1 rounded transition flex items-center gap-1 shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mini Simulador de Teste Embutido */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                    Teste Rápido da sua Configuração de IA
+                  </span>
+                  <span className="text-[10px] text-slate-400">Sem precisar mandar mensagem real pelo celular</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Digite uma pergunta teste (ex: Quais produtos vocês têm? ou Como pago?)..."
+                    value={testBotInput}
+                    onChange={(e) => setTestBotInput(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!testBotInput.trim() || testBotLoading) return;
+                        setTestBotLoading(true);
+                        try {
+                          const res = await simulateChatbot({
+                            companyId: currentCompany.id,
+                            message: testBotInput.trim(),
+                            configOverride: formData.chatbotConfig
+                          });
+                          setTestBotOutput(res.reply);
+                        } catch (err: any) {
+                          setTestBotOutput('Erro no teste: ' + err.message);
+                        } finally {
+                          setTestBotLoading(false);
+                        }
+                      }
+                    }}
+                    className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
+                  />
+                  <button
+                    type="button"
+                    disabled={!testBotInput.trim() || testBotLoading}
+                    onClick={async () => {
+                      if (!testBotInput.trim() || testBotLoading) return;
+                      setTestBotLoading(true);
+                      try {
+                        const res = await simulateChatbot({
+                          companyId: currentCompany.id,
+                          message: testBotInput.trim(),
+                          configOverride: formData.chatbotConfig
+                        });
+                        setTestBotOutput(res.reply);
+                      } catch (err: any) {
+                        setTestBotOutput('Erro no teste: ' + err.message);
+                      } finally {
+                        setTestBotLoading(false);
+                      }
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-2xs shrink-0"
+                  >
+                    {testBotLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Testar</span>
+                  </button>
+                </div>
+
+                {testBotOutput && (
+                  <div className="bg-indigo-950 text-indigo-50 border border-indigo-800 p-2.5 rounded text-xs space-y-1 animate-fade-in font-sans">
+                    <span className="text-[10px] text-indigo-300 font-bold block flex items-center gap-1">
+                      <Bot className="w-3 h-3 text-indigo-400" />
+                      Resposta Simulada do Chatbot ({formData.chatbotConfig?.botName || 'Sofia'}):
+                    </span>
+                    <p className="leading-relaxed whitespace-pre-line">{testBotOutput}</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
 
         {/* Global Tokens & Pixel IDs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

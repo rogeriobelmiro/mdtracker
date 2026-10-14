@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -249,3 +249,378 @@ export async function testWebhook(url: string): Promise<{ success: boolean; mess
   });
   return res.json();
 }
+
+// Smart Popups & Capture Forms API
+export async function fetchPopups(companyId?: string): Promise<SmartPopup[]> {
+  const query = companyId ? `?companyId=${companyId}` : '';
+  const res = await fetch(`/api/popups${query}`);
+  if (!res.ok) {
+    console.error('Failed to fetch popups', await res.text());
+    return [];
+  }
+  return res.json();
+}
+
+export async function createPopup(data: Partial<SmartPopup>): Promise<SmartPopup> {
+  const res = await fetch('/api/popups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar pop-up');
+  }
+  return res.json();
+}
+
+export async function updatePopup(id: string, data: Partial<SmartPopup>): Promise<SmartPopup> {
+  const res = await fetch(`/api/popups/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar pop-up');
+  }
+  return res.json();
+}
+
+export async function deletePopup(id: string): Promise<void> {
+  const res = await fetch(`/api/popups/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    throw new Error('Erro ao excluir pop-up');
+  }
+}
+
+export async function submitPopupLead(id: string, payload: any): Promise<any> {
+  const res = await fetch(`/api/popups/${id}/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+// AI Copywriter & Marketing Assistant API
+export async function generateAICopy(req: AIGenerateRequest): Promise<AIGeneratedContent> {
+  const res = await fetch('/api/ai/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro na geração de copy com IA');
+  }
+  return res.json();
+}
+
+// Chatbot com IA API (WhatsApp & Direct)
+export async function toggleLeadBotStatus(leadId: string, botActive: boolean): Promise<{ success: boolean; leadId: string; botActive: boolean }> {
+  const res = await fetch(`/api/leads/${leadId}/bot-status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ botActive })
+  });
+  if (!res.ok) throw new Error('Erro ao alterar status do bot para o lead');
+  return res.json();
+}
+
+export async function simulateChatbot(payload: { companyId?: string; message: string; configOverride?: any; lead?: any }): Promise<{ reply: string; isHandover: boolean; botName: string; timestamp: string }> {
+  const res = await fetch('/api/chatbot/simulate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro na simulação do chatbot');
+  }
+  return res.json();
+}
+
+export async function suggestReplyWithAI(payload: { companyId?: string; phone?: string; leadId?: string }): Promise<{ suggestion: string }> {
+  const res = await fetch('/api/chatbot/suggest-reply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao gerar sugestão de resposta');
+  }
+  return res.json();
+}
+
+export async function sendDirectMessage(payload: { companyId?: string; leadName?: string; message: string; directChannel?: string }): Promise<{ reply: string; botName: string; isHandover: boolean; channel: string; timestamp: string }> {
+  const res = await fetch('/api/direct/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao processar mensagem Direct');
+  }
+  return res.json();
+}
+
+// Marketing Automation & Workflows API (RD Station style)
+export async function fetchWorkflows(companyId?: string): Promise<MarketingWorkflow[]> {
+  const url = companyId ? `/api/workflows?companyId=${encodeURIComponent(companyId)}` : '/api/workflows';
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createWorkflow(workflow: Partial<MarketingWorkflow>): Promise<MarketingWorkflow> {
+  const res = await fetch('/api/workflows', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(workflow)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar fluxo de automação');
+  }
+  return res.json();
+}
+
+export async function updateWorkflow(id: string, workflow: Partial<MarketingWorkflow>): Promise<MarketingWorkflow> {
+  const res = await fetch(`/api/workflows/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(workflow)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar fluxo de automação');
+  }
+  return res.json();
+}
+
+export async function deleteWorkflow(id: string): Promise<void> {
+  const res = await fetch(`/api/workflows/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir fluxo');
+}
+
+export async function toggleWorkflow(id: string, active: boolean): Promise<MarketingWorkflow> {
+  const res = await fetch(`/api/workflows/${id}/toggle`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active })
+  });
+  if (!res.ok) throw new Error('Erro ao alterar status do fluxo');
+  return res.json();
+}
+
+export async function testRunWorkflow(id: string, payload?: { leadId?: string; companyId?: string }): Promise<any> {
+  const res = await fetch(`/api/workflows/${id}/test-run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao testar fluxo');
+  }
+  return res.json();
+}
+
+export async function fetchWorkflowLogs(companyId?: string): Promise<WorkflowExecutionLog[]> {
+  const url = companyId ? `/api/workflows/logs?companyId=${encodeURIComponent(companyId)}` : '/api/workflows/logs';
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// ==========================================
+// Landing Pages API (RD Station Style)
+// ==========================================
+
+export async function fetchLandingPages(companyId?: string): Promise<LandingPage[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/landing-pages${query}`);
+  if (!res.ok) {
+    console.error('Falha ao buscar landing pages', await res.text());
+    return [];
+  }
+  return res.json();
+}
+
+export async function fetchLandingPageById(id: string): Promise<LandingPage> {
+  const res = await fetch(`/api/landing-pages/${id}`);
+  if (!res.ok) throw new Error('Landing page não encontrada');
+  return res.json();
+}
+
+export async function createLandingPage(page: Partial<LandingPage>): Promise<LandingPage> {
+  const res = await fetch('/api/landing-pages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(page)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar Landing Page');
+  }
+  return res.json();
+}
+
+export async function updateLandingPage(id: string, page: Partial<LandingPage>): Promise<LandingPage> {
+  const res = await fetch(`/api/landing-pages/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(page)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar Landing Page');
+  }
+  return res.json();
+}
+
+export async function deleteLandingPage(id: string): Promise<void> {
+  const res = await fetch(`/api/landing-pages/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir Landing Page');
+}
+
+export async function toggleLandingPage(id: string, status: 'published' | 'draft'): Promise<LandingPage> {
+  const res = await fetch(`/api/landing-pages/${id}/toggle`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!res.ok) throw new Error('Erro ao alterar status da Landing Page');
+  return res.json();
+}
+
+export async function generateLandingPageAI(payload: { 
+  prompt?: string; 
+  niche?: string; 
+  productName?: string; 
+  targetAudience?: string;
+  tone?: string;
+  companyId?: string; 
+}): Promise<any> {
+  const res = await fetch('/api/landing-pages/generate-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao gerar conteúdo com IA');
+  }
+  return res.json();
+}
+
+export async function submitLandingPageLead(slug: string, payload: any): Promise<any> {
+  const res = await fetch(`/api/landing-pages/${slug}/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao submeter formulário');
+  }
+  return res.json();
+}
+
+// ==========================================
+// Multi-Channel Broadcast API (Email, SMS & WhatsApp)
+// ==========================================
+
+export async function fetchBroadcastCampaigns(companyId?: string, channel?: string): Promise<BroadcastCampaign[]> {
+  const params = new URLSearchParams();
+  if (companyId) params.append('companyId', companyId);
+  if (channel && channel !== 'all') params.append('channel', channel);
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`/api/broadcast-campaigns${query}`);
+  if (!res.ok) {
+    console.error('Falha ao buscar campanhas de broadcast', await res.text());
+    return [];
+  }
+  return res.json();
+}
+
+export async function createBroadcastCampaign(data: Partial<BroadcastCampaign>): Promise<BroadcastCampaign> {
+  const res = await fetch('/api/broadcast-campaigns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar campanha');
+  }
+  return res.json();
+}
+
+export async function updateBroadcastCampaign(id: string, data: Partial<BroadcastCampaign>): Promise<BroadcastCampaign> {
+  const res = await fetch(`/api/broadcast-campaigns/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar campanha');
+  }
+  return res.json();
+}
+
+export async function deleteBroadcastCampaign(id: string): Promise<void> {
+  const res = await fetch(`/api/broadcast-campaigns/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir campanha');
+}
+
+export async function sendTestBroadcast(id: string, payload: { targetEmail?: string; targetPhone?: string; channel: string }): Promise<any> {
+  const res = await fetch(`/api/broadcast-campaigns/${id}/send-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao enviar teste');
+  }
+  return res.json();
+}
+
+export async function launchBroadcastCampaign(id: string): Promise<any> {
+  const res = await fetch(`/api/broadcast-campaigns/${id}/launch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao disparar campanha');
+  }
+  return res.json();
+}
+
+export async function generateBroadcastAI(payload: {
+  channel: 'email' | 'sms' | 'whatsapp';
+  goal?: string;
+  productName?: string;
+  tone?: string;
+  companyId?: string;
+}): Promise<any> {
+  const res = await fetch('/api/broadcast-campaigns/generate-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao gerar copy com IA');
+  }
+  return res.json();
+}
+
+

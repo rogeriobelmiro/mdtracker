@@ -1,13 +1,13 @@
 import React from 'react';
 import { 
   BarChart3, Link as LinkIcon, Users, Zap, Plus, Radio, MessageSquare, 
-  Building2, UserCheck, LogOut, ShieldCheck, UserPlus, ShoppingCart
+  Building2, UserCheck, LogOut, ShieldCheck, UserPlus, ShoppingCart, Sliders, Sparkles
 } from 'lucide-react';
 import { User, Company } from '../types';
 
 interface NavbarProps {
-  activeTab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company';
-  setActiveTab: (tab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company') => void;
+  activeTab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products' | 'popups' | 'ai' | 'chatbot' | 'workflows';
+  setActiveTab: (tab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products' | 'popups' | 'ai' | 'chatbot' | 'workflows') => void;
   onOpenCreateModal: () => void;
   currentUser: User;
   currentCompany: Company;
@@ -163,6 +163,36 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Radio className="w-3.5 h-3.5" />
                 Disparos
+              </button>
+            )}
+
+            {/* Smart Popups allowed for admin & manager */}
+            {currentUser.role !== 'attendant' && (
+              <button
+                onClick={() => setActiveTab('popups')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  activeTab === 'popups'
+                    ? 'bg-blue-50 text-blue-700 font-bold border-l-4 border-blue-600'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                Pop-ups & Captura
+              </button>
+            )}
+
+            {/* AI Copywriter allowed for admin & manager */}
+            {currentUser.role !== 'attendant' && (
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  activeTab === 'ai'
+                    ? 'bg-amber-50 text-amber-800 font-bold border-l-4 border-amber-500'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                Assistente IA
               </button>
             )}
 
@@ -330,6 +360,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             Chat
           </button>
+
+          {currentUser.role !== 'attendant' && (
+            <button
+              onClick={() => setActiveTab('popups')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                activeTab === 'popups' ? 'bg-blue-50 text-blue-700 font-bold border-l-2 border-blue-600' : 'text-slate-600'
+              }`}
+            >
+              Pop-ups
+            </button>
+          )}
+
+          {currentUser.role !== 'attendant' && (
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
+                activeTab === 'ai' ? 'bg-amber-50 text-amber-800 font-bold border-l-2 border-amber-500' : 'text-slate-600'
+              }`}
+            >
+              ✨ IA Copy
+            </button>
+          )}
 
           {currentUser.role === 'admin' && (
             <>

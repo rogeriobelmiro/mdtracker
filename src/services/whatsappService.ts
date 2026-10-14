@@ -261,7 +261,7 @@ export const getWhatsAppStatus = async (companyId: string) => {
     };
 };
 
-export const sendWhatsAppMessage = async (companyId: string, phone: string, text: string): Promise<boolean> => {
+export const sendWhatsAppMessage = async (companyId: string, phone: string, text: string, sender: 'attendant' | 'bot' = 'attendant'): Promise<boolean> => {
     let cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
         cleanPhone = '55' + cleanPhone;
@@ -301,7 +301,7 @@ export const sendWhatsAppMessage = async (companyId: string, phone: string, text
         await supabase.from('whatsapp_messages').insert({
             id: result?.key?.id || `msg-out-${Date.now()}`,
             lead_phone: cleanPhone,
-            sender: 'attendant',
+            sender: sender,
             text: text,
             status: 'entregue',
             timestamp: new Date().toISOString()

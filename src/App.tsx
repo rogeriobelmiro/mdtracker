@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { Topbar } from './components/Topbar';
 import { DashboardOverview } from './components/DashboardOverview';
 import { LinkManager } from './components/LinkManager';
 import { LeadCRM } from './components/LeadCRM';
@@ -10,6 +11,11 @@ import { UserManagement } from './components/UserManagement';
 import { CompanyProfile } from './components/CompanyProfile';
 import { LoginScreen } from './components/LoginScreen';
 import { ProductsManager } from './components/ProductsManager';
+import { SmartPopupsManager } from './components/SmartPopupsManager';
+import { AICopywriterManager } from './components/AICopywriterManager';
+import { ChatbotManager } from './components/ChatbotManager';
+import { WorkflowsManager } from './components/WorkflowsManager';
+import { LandingPagesManager } from './components/LandingPagesManager';
 import {
   fetchCompanies,
   fetchUsers,
@@ -37,14 +43,19 @@ import {
   fetchLeadPurchases,
   createLeadPurchase,
   deleteLeadPurchase,
+  fetchPopups,
+  createPopup,
+  updatePopup,
+  deletePopup,
 } from './services/api';
-import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company, Product, LeadPurchase } from './types';
+import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company, Product, LeadPurchase, SmartPopup } from './types';
 import { useDialog } from './contexts/DialogContext';
 
 export default function App() {
   const { alert, confirm } = useDialog();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products' | 'popups' | 'ai' | 'chatbot' | 'workflows'>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [leadSearchQuery, setLeadSearchQuery] = useState<string>('');
@@ -63,6 +74,7 @@ export default function App() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [leadPurchases, setLeadPurchases] = useState<LeadPurchase[]>([]);
+  const [popups, setPopups] = useState<SmartPopup[]>([]);
   const [settings, setSettings] = useState<IntegrationSettings>({
     globalMetaPixelId: '',
     globalMetaToken: '',
@@ -94,7 +106,7 @@ export default function App() {
       const start = overrideStart !== undefined ? overrideStart : stateRef.current.startDate;
       const end = overrideEnd !== undefined ? overrideEnd : stateRef.current.endDate;
 
-      const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes] = await Promise.all([
+      const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes, popupsRes] = await Promise.all([
         fetchLinks(start, end),
         fetchLeads(),
         fetchSettings(activeCompanyId),
@@ -102,7 +114,8 @@ export default function App() {
         fetchCompanies(),
         fetchUsers(),
         fetchProducts(activeCompanyId),
-        fetchLeadPurchases(activeCompanyId)
+        fetchLeadPurchases(activeCompanyId),
+        fetchPopups(activeCompanyId)
       ]);
 
       setLinks(linksRes);
@@ -111,6 +124,7 @@ export default function App() {
       setWebhookLogs(logsRes);
       setProducts(productsRes || []);
       setLeadPurchases(purchasesRes || []);
+      setPopups(popupsRes || []);
       
       if (companiesRes && companiesRes.length > 0) {
         setCompanies(companiesRes);
@@ -171,6 +185,11 @@ export default function App() {
     if (!currentCompany) return [];
     return webhookLogs.filter(w => w.companyId ? w.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
   }, [webhookLogs, currentCompany]);
+
+  const companyPopups = useMemo(() => {
+    if (!currentCompany) return [];
+    return popups.filter(p => p.companyId ? p.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
+  }, [popups, currentCompany]);
 
   // Dynamically calculate isolated stats per company
   const companyStats: StatsSummary = useMemo(() => {
@@ -345,6 +364,33 @@ export default function App() {
     await loadData();
   };
 
+  const handleCreatePopup = async (data: Partial<SmartPopup>) => {
+    try {
+      await createPopup(data);
+      await loadData();
+    } catch (err: any) {
+      await alert('Erro ao criar pop-up: ' + err.message);
+    }
+  };
+
+  const handleUpdatePopup = async (id: string, data: Partial<SmartPopup>) => {
+    try {
+      await updatePopup(id, data);
+      await loadData();
+    } catch (err: any) {
+      await alert('Erro ao atualizar pop-up: ' + err.message);
+    }
+  };
+
+  const handleDeletePopup = async (id: string) => {
+    try {
+      await deletePopup(id);
+      await loadData();
+    } catch (err: any) {
+      await alert('Erro ao excluir pop-up: ' + err.message);
+    }
+  };
+
   // Render Login Screen if not authenticated
   if (!currentUser || !currentCompany) {
     return (
@@ -368,10 +414,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-slate-800 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="flex h-screen bg-[#F1F5F9] text-slate-800 font-sans overflow-hidden selection:bg-blue-600 selection:text-white">
       
-      {/* Top Navbar with Multiempresa Switcher & User Profile */}
-      <Navbar
+      {/* Modern Left Sidebar Navigation */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenCreateModal={() => {
@@ -381,147 +427,213 @@ export default function App() {
         currentUser={currentUser}
         currentCompany={currentCompany}
         onLogout={handleLogout}
-        startDate={startDate}
-        setStartDate={(v) => { setStartDate(v); loadData(undefined, v, endDate); }}
-        endDate={endDate}
-        setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
+        isMobileOpen={isMobileMenuOpen}
+        setIsMobileOpen={setIsMobileMenuOpen}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content Area: Topbar + Scrollable Viewport + Footer */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
-        {activeTab === 'dashboard' && currentUser.role !== 'attendant' && (
-          <DashboardOverview
-            stats={companyStats}
-            links={companyLinks}
-            leads={companyLeads}
-            onNavigateToLinks={(linkId) => {
-              if (linkId) {
-                setEditingLinkId(linkId);
-              }
-              setActiveTab('links');
-            }}
-            onNavigateToLeads={() => setActiveTab('leads')}
-          />
-        )}
+        {/* Topbar */}
+        <Topbar
+          activeTab={activeTab}
+          currentUser={currentUser}
+          currentCompany={currentCompany}
+          startDate={startDate}
+          setStartDate={(v) => { setStartDate(v); loadData(undefined, v, endDate); }}
+          endDate={endDate}
+          setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
+          onOpenCreateModal={() => {
+            setActiveTab('links');
+            setIsCreateModalOpen(true);
+          }}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        />
 
-        {activeTab === 'links' && currentUser.role !== 'attendant' && (
-          <LinkManager
-            links={companyLinks}
-            onCreateLink={handleCreateLink}
-            onUpdateLink={handleUpdateLink}
-            onDeleteLink={handleDeleteLink}
-            isModalOpen={isCreateModalOpen}
-            setIsModalOpen={setIsCreateModalOpen}
-            currentCompany={currentCompany}
-            editingLinkId={editingLinkId}
-            onClearEditingLinkId={() => setEditingLinkId(null)}
-            startDate={startDate}
-            endDate={endDate}
-            setStartDate={setStartDate}
-            setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
-            onFilterLeadsByLink={(linkId) => {
-              setLeadLinkIdFilter(linkId);
-              setActiveTab('leads');
-            }}
-          />
-        )}
+        {/* Scrollable Viewport */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto w-full">
+            {activeTab === 'dashboard' && currentUser.role !== 'attendant' && (
+              <DashboardOverview
+                stats={companyStats}
+                links={companyLinks}
+                leads={companyLeads}
+                onNavigateToLinks={(linkId) => {
+                  if (linkId) {
+                    setEditingLinkId(linkId);
+                  }
+                  setActiveTab('links');
+                }}
+                onNavigateToLeads={() => setActiveTab('leads')}
+              />
+            )}
 
-        {activeTab === 'leads' && (
-          <LeadCRM
-            leads={companyLeads}
-            products={products}
-            leadPurchases={leadPurchases}
-            onCreatePurchase={handleCreateLeadPurchase}
-            onUpdateLead={handleUpdateLead}
-            onDeleteLead={handleDeleteLead}
-            onDeleteLeadsBatch={handleDeleteLeadsBatch}
-            searchQuery={leadSearchQuery}
-            setSearchQuery={setLeadSearchQuery}
-            linkIdFilter={leadLinkIdFilter}
-            setLinkIdFilter={setLeadLinkIdFilter}
-            links={companyLinks}
-            onOpenWhatsApp={(leadId) => {
-              setChatSelectedLeadId(leadId);
-              setActiveTab('chat');
-            }}
-          />
-        )}
+            {activeTab === 'links' && currentUser.role !== 'attendant' && (
+              <LinkManager
+                links={companyLinks}
+                onCreateLink={handleCreateLink}
+                onUpdateLink={handleUpdateLink}
+                onDeleteLink={handleDeleteLink}
+                isModalOpen={isCreateModalOpen}
+                setIsModalOpen={setIsCreateModalOpen}
+                currentCompany={currentCompany}
+                editingLinkId={editingLinkId}
+                onClearEditingLinkId={() => setEditingLinkId(null)}
+                startDate={startDate}
+                endDate={endDate}
+                setStartDate={setStartDate}
+                setEndDate={(v) => { setEndDate(v); loadData(undefined, startDate, v); }}
+                onFilterLeadsByLink={(linkId) => {
+                  setLeadLinkIdFilter(linkId);
+                  setActiveTab('leads');
+                }}
+              />
+            )}
 
-        {activeTab === 'events' && currentUser.role !== 'attendant' && (
-          <IntegrationsAndEvents
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            webhookLogs={companyWebhookLogs}
-            onTestWebhook={handleTestWebhook}
-            currentCompany={currentCompany}
-          />
-        )}
+            {activeTab === 'leads' && (
+              <LeadCRM
+                leads={companyLeads}
+                products={products}
+                leadPurchases={leadPurchases}
+                onCreatePurchase={handleCreateLeadPurchase}
+                onUpdateLead={handleUpdateLead}
+                onDeleteLead={handleDeleteLead}
+                onDeleteLeadsBatch={handleDeleteLeadsBatch}
+                searchQuery={leadSearchQuery}
+                setSearchQuery={setLeadSearchQuery}
+                linkIdFilter={leadLinkIdFilter}
+                setLinkIdFilter={setLeadLinkIdFilter}
+                links={companyLinks}
+                onOpenWhatsApp={(leadId) => {
+                  setChatSelectedLeadId(leadId);
+                  setActiveTab('chat');
+                }}
+              />
+            )}
 
-        {activeTab === 'broadcast' && currentUser.role !== 'attendant' && (
-          <BroadcastCampaigns
-            leads={companyLeads}
-            links={companyLinks}
-          />
-        )}
+            {activeTab === 'events' && currentUser.role !== 'attendant' && (
+              <IntegrationsAndEvents
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
+                webhookLogs={companyWebhookLogs}
+                onTestWebhook={handleTestWebhook}
+                currentCompany={currentCompany}
+              />
+            )}
 
-        {activeTab === 'chat' && (
-          <WhatsAppChatInbox
-            leads={companyLeads}
-            links={companyLinks}
-            initialSelectedLeadId={chatSelectedLeadId}
-            onUpdateLeadStage={(leadId, newStage) => {
-              handleUpdateLead(leadId, { stage: newStage });
-            }}
-          />
-        )}
+            {activeTab === 'broadcast' && currentUser.role !== 'attendant' && (
+              <BroadcastCampaigns
+                leads={companyLeads}
+                links={companyLinks}
+                currentCompany={currentCompany}
+                products={products}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-        {activeTab === 'users' && currentUser.role === 'admin' && (
-          <UserManagement
-            currentCompany={currentCompany}
-            currentUser={currentUser}
-            users={users}
-            onAddUser={handleAddUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
-          />
-        )}
+            {activeTab === 'landing_pages' && currentUser.role !== 'attendant' && (
+              <LandingPagesManager
+                currentCompany={currentCompany}
+                products={products}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-        {activeTab === 'products' && currentUser.role === 'admin' && (
-          <ProductsManager
-            products={products}
-            currentCompany={currentCompany}
-            onCreateProduct={handleCreateProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-          />
-        )}
+            {activeTab === 'popups' && currentUser.role !== 'attendant' && (
+              <SmartPopupsManager
+                popups={companyPopups}
+                currentCompany={currentCompany}
+                onCreatePopup={handleCreatePopup}
+                onUpdatePopup={handleUpdatePopup}
+                onDeletePopup={handleDeletePopup}
+              />
+            )}
 
-        {activeTab === 'company' && currentUser.role === 'admin' && (
-          <CompanyProfile
-            currentCompany={currentCompany}
-            onUpdateCompany={handleUpdateCompany}
-          />
-        )}
+            {activeTab === 'workflows' && currentUser.role !== 'attendant' && (
+              <WorkflowsManager
+                currentCompany={currentCompany}
+                leads={companyLeads}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-      </main>
+            {activeTab === 'chatbot' && currentUser.role !== 'attendant' && (
+              <ChatbotManager
+                settings={settings}
+                products={products}
+                currentCompany={currentCompany}
+                onUpdateSettings={handleUpdateSettings}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 py-4 mt-auto text-center">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>
-            MDTracker &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
-          </p>
-          <div className="flex items-center gap-3 text-[11px] text-slate-500">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Isolamento Multi-tenant Ativo
-            </span>
-            <span>Atribuição UTM</span>
-            <span>Acesso: {currentUser.role.toUpperCase()}</span>
+            {activeTab === 'chat' && (
+              <WhatsAppChatInbox
+                leads={companyLeads}
+                links={companyLinks}
+                initialSelectedLeadId={chatSelectedLeadId}
+                onUpdateLeadStage={(leadId, newStage) => {
+                  handleUpdateLead(leadId, { stage: newStage });
+                }}
+              />
+            )}
+
+            {activeTab === 'users' && currentUser.role === 'admin' && (
+              <UserManagement
+                currentCompany={currentCompany}
+                currentUser={currentUser}
+                users={users}
+                onAddUser={handleAddUser}
+                onUpdateUser={handleUpdateUser}
+                onDeleteUser={handleDeleteUser}
+              />
+            )}
+
+            {activeTab === 'products' && currentUser.role === 'admin' && (
+              <ProductsManager
+                products={products}
+                currentCompany={currentCompany}
+                onCreateProduct={handleCreateProduct}
+                onUpdateProduct={handleUpdateProduct}
+                onDeleteProduct={handleDeleteProduct}
+              />
+            )}
+
+            {activeTab === 'ai' && currentUser.role !== 'attendant' && (
+              <AICopywriterManager
+                products={products}
+                currentCompany={currentCompany}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'company' && currentUser.role === 'admin' && (
+              <CompanyProfile
+                currentCompany={currentCompany}
+                onUpdateCompany={handleUpdateCompany}
+              />
+            )}
           </div>
-        </div>
-      </footer>
+        </main>
+
+        {/* Slim Footer */}
+        <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 py-3 shrink-0 text-center">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>
+              MDTracker &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
+            </p>
+            <div className="flex items-center gap-3 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                Isolamento Multi-tenant Ativo
+              </span>
+              <span>Atribuição UTM</span>
+              <span>Acesso: {currentUser.role.toUpperCase()}</span>
+            </div>
+          </div>
+        </footer>
+
+      </div>
 
     </div>
   );

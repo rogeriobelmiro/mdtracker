@@ -244,3 +244,140 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lead_purchases ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir all anonimo em products" ON products FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir all anonimo em lead_purchases" ON lead_purchases FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Tabela: popups (Formulários & Pop-ups Inteligentes estilo RD Station)
+CREATE TABLE IF NOT EXISTS popups (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  active BOOLEAN DEFAULT TRUE,
+  trigger_type TEXT DEFAULT 'exit_intent', -- 'exit_intent', 'scroll', 'timed_delay', 'floating_button'
+  trigger_value INTEGER DEFAULT 0,
+  show_once_per_user BOOLEAN DEFAULT TRUE,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  badge_text TEXT,
+  cta_text TEXT DEFAULT 'Quero Aproveitar',
+  fields JSONB DEFAULT '[]'::jsonb,
+  theme_color TEXT DEFAULT '#2563eb',
+  background_color TEXT DEFAULT 'light',
+  button_color TEXT DEFAULT '#2563eb',
+  button_text_color TEXT DEFAULT '#ffffff',
+  border_radius TEXT DEFAULT 'md',
+  action_type TEXT DEFAULT 'whatsapp_redirect', -- 'whatsapp_redirect', 'thank_you_message', 'custom_url'
+  whatsapp_phone TEXT,
+  whatsapp_message TEXT,
+  redirect_url TEXT,
+  success_message TEXT DEFAULT 'Obrigado! Recebemos suas informações.',
+  target_stage TEXT DEFAULT 'Novo Lead',
+  tags JSONB DEFAULT '[]'::jsonb,
+  link_id TEXT REFERENCES campaign_links(id) ON DELETE SET NULL,
+  impressions_count INTEGER DEFAULT 0,
+  leads_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE popups ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir all anonimo em popups" ON popups FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Suporte ao Chatbot com IA (WhatsApp e Direct)
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS chatbot_config JSONB;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS bot_active BOOLEAN DEFAULT TRUE;
+
+-- Tabela: marketing_workflows (Automação de Marketing & Nutrição estilo RD Station)
+CREATE TABLE IF NOT EXISTS marketing_workflows (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  trigger_type TEXT DEFAULT 'lead_created', -- 'lead_created', 'stage_changed', 'product_purchased', 'popup_submitted', 'tag_added'
+  trigger_config JSONB DEFAULT '{}'::jsonb,
+  steps JSONB DEFAULT '[]'::jsonb,
+  enrolled_count INTEGER DEFAULT 0,
+  executed_count INTEGER DEFAULT 0,
+  conversions_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela: workflow_logs (Auditoria de execuções de fluxos de automação)
+CREATE TABLE IF NOT EXISTS workflow_logs (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  workflow_id TEXT REFERENCES marketing_workflows(id) ON DELETE CASCADE,
+  workflow_name TEXT NOT NULL,
+  lead_id TEXT,
+  lead_name TEXT,
+  lead_phone TEXT,
+  action_type TEXT NOT NULL,
+  status TEXT DEFAULT 'success', -- 'success', 'failed', 'scheduled'
+  detail TEXT,
+  executed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE marketing_workflows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflow_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir all anonimo em marketing_workflows" ON marketing_workflows FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir all anonimo em workflow_logs" ON workflow_logs FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Tabela: landing_pages (Criador de Landing Pages estilo RD Station)
+CREATE TABLE IF NOT EXISTS landing_pages (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'published', -- 'published', 'draft', 'archived'
+  category TEXT DEFAULT 'lead_magnet', -- 'lead_magnet', 'product_launch', 'service_consulting', 'event_webinar'
+  theme JSONB DEFAULT '{}'::jsonb,
+  hero JSONB DEFAULT '{}'::jsonb,
+  features JSONB DEFAULT '[]'::jsonb,
+  social_proof JSONB DEFAULT '{}'::jsonb,
+  countdown JSONB DEFAULT '{}'::jsonb,
+  form JSONB DEFAULT '{}'::jsonb,
+  faq JSONB DEFAULT '{}'::jsonb,
+  footer JSONB DEFAULT '{}'::jsonb,
+  views_count INTEGER DEFAULT 0,
+  conversions_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE landing_pages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir all anonimo em landing_pages" ON landing_pages FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Tabela: broadcast_campaigns (Disparos em massa Multicanal: E-mail, SMS e WhatsApp)
+CREATE TABLE IF NOT EXISTS broadcast_campaigns (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  channel TEXT DEFAULT 'email', -- 'email', 'sms', 'whatsapp'
+  target_stage TEXT DEFAULT 'Todos',
+  target_source TEXT DEFAULT 'Todas',
+  target_tag TEXT DEFAULT 'Todas',
+  message_template TEXT,
+  email_subject TEXT,
+  email_preheader TEXT,
+  email_sender_name TEXT,
+  email_sender_email TEXT,
+  email_body_html TEXT,
+  sms_text TEXT,
+  tracking_link_id TEXT,
+  status TEXT DEFAULT 'rascunho', -- 'rascunho', 'agendado', 'em_andamento', 'concluido'
+  total_leads INTEGER DEFAULT 0,
+  sent_count INTEGER DEFAULT 0,
+  delivered_count INTEGER DEFAULT 0,
+  opened_count INTEGER DEFAULT 0,
+  clicked_count INTEGER DEFAULT 0,
+  provider TEXT DEFAULT 'simulado',
+  delay_seconds INTEGER DEFAULT 5,
+  scheduled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE broadcast_campaigns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir all anonimo em broadcast_campaigns" ON broadcast_campaigns FOR ALL TO anon USING (true) WITH CHECK (true);
+

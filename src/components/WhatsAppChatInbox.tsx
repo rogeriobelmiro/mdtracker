@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
   Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter,
-  Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus
+  Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus, AlertTriangle
 } from 'lucide-react';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useDialog } from '../contexts/DialogContext';
 import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';
+import { toggleLeadBotStatus, suggestReplyWithAI, simulateChatbot } from '../services/api';
 
 interface WhatsAppChatInboxProps {
   leads: Lead[];
@@ -43,6 +44,20 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
+
+  // Chatbot IA Controls & Simulator State
+  const [localBotActiveMap, setLocalBotActiveMap] = useState<Record<string, boolean>>({});
+  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+  const [isSimulatorModalOpen, setIsSimulatorModalOpen] = useState(false);
+  const [simulatorMessages, setSimulatorMessages] = useState<{ sender: 'user' | 'bot' | 'system'; text: string; timestamp: string; isHandover?: boolean }[]>([
+    {
+      sender: 'bot',
+      text: 'Olá! Sou a Sofia, assistente virtual inteligente da empresa. Como posso te ajudar hoje?',
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [simulatorInput, setSimulatorInput] = useState('');
+  const [simulatorLoading, setSimulatorLoading] = useState(false);
 
   // Respostas Rápidas Customizáveis
   const [quickReplies, setQuickReplies] = useState<{id: string, title: string, text: string}[]>(() => {
@@ -236,15 +251,85 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
     setMessageInput(text);
   };
 
-  const generateAiSuggestion = () => {
+  const isSelectedLeadBotActive = selectedLead 
+    ? (localBotActiveMap[selectedLead.id] !== undefined 
+        ? localBotActiveMap[selectedLead.id] 
+        : (selectedLead.botActive !== false))
+    : true;
+
+  const handleToggleBotStatus = async () => {
     if (!selectedLead) return;
-    const suggestions = [
-      `Olá ${selectedLead.name}! Vi que você chegou pela nossa campanha no ${selectedLead.utmSource || 'Meta Ads'}. Posso te mandar o link exclusivo agora?`,
-      `Oi ${selectedLead.name}! Qualquer dúvida que tiver em ${selectedLead.location?.city || 'sua cidade'}, estou à disposição por aqui. Quer agendar uma demonstração?`,
-      `Olá! Tenho uma condição especial de fechamento para hoje. Conseguimos dar continuidade no seu pedido?`
-    ];
-    const picked = suggestions[Math.floor(Math.random() * suggestions.length)];
-    setMessageInput(picked);
+    const nextStatus = !isSelectedLeadBotActive;
+    setLocalBotActiveMap(prev => ({ ...prev, [selectedLead.id]: nextStatus }));
+    try {
+      await toggleLeadBotStatus(selectedLead.id, nextStatus);
+    } catch (err: any) {
+      console.error('Erro ao atualizar status do bot:', err);
+    }
+  };
+
+  const generateAiSuggestion = async () => {
+    if (!selectedLead) return;
+    setAiSuggestLoading(true);
+    try {
+      const res = await suggestReplyWithAI({
+        companyId: selectedLead.companyId || 'comp-alfa',
+        phone: selectedLead.phone,
+        leadId: selectedLead.id
+      });
+      if (res && res.suggestion) {
+        setMessageInput(res.suggestion);
+      }
+    } catch (err) {
+      console.warn('Erro ao chamar IA, usando fallback inteligente:', err);
+      const suggestions = [
+        `Olá ${selectedLead.name}! Vi que você chegou pela nossa campanha no ${selectedLead.utmSource || 'WhatsApp'}. Como posso te ajudar hoje?`,
+        `Oi ${selectedLead.name}! Qualquer dúvida que tiver em ${selectedLead.location?.city || 'sua região'}, temos condições especiais hoje. Gostaria de dar uma olhada?`,
+        `Olá! Tenho uma condição exclusiva para fechamento hoje. Quer que eu te envie o link direto com desconto especial?`
+      ];
+      setMessageInput(suggestions[Math.floor(Math.random() * suggestions.length)]);
+    } finally {
+      setAiSuggestLoading(false);
+    }
+  };
+
+  const handleSendSimulatorMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!simulatorInput.trim() || simulatorLoading) return;
+
+    const userText = simulatorInput.trim();
+    setSimulatorInput('');
+    const timeNow = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    setSimulatorMessages(prev => [...prev, {
+      sender: 'user',
+      text: userText,
+      timestamp: timeNow
+    }]);
+
+    setSimulatorLoading(true);
+    try {
+      const res = await simulateChatbot({
+        companyId: selectedLead?.companyId || 'comp-alfa',
+        message: userText,
+        lead: selectedLead || { name: 'Cliente Teste', location: { city: 'São Paulo', state: 'SP' }, utmCampaign: 'Teste Simulador' }
+      });
+
+      setSimulatorMessages(prev => [...prev, {
+        sender: 'bot',
+        text: res.reply,
+        timestamp: res.timestamp || timeNow,
+        isHandover: res.isHandover
+      }]);
+    } catch (err: any) {
+      setSimulatorMessages(prev => [...prev, {
+        sender: 'system',
+        text: 'Erro ao conectar ao motor do Chatbot com IA: ' + err.message,
+        timestamp: timeNow
+      }]);
+    } finally {
+      setSimulatorLoading(false);
+    }
   };
 
   // Filtered leads list
@@ -276,12 +361,22 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
               Central de Atendimento WhatsApp (Chat em Tempo Real)
             </h2>
             <p className="text-xs text-slate-400">
-              Conexão com API / Evolution / WhatsApp Web ativa. Gerencie conversas e feche vendas diretamente nesta tela.
+              Conexão com API / Evolution / WhatsApp Web ativa. Gerencie conversas, feche vendas e controle o Chatbot com IA.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsSimulatorModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500 text-[11px] font-bold px-3 py-1 rounded flex items-center gap-1.5 shadow-xs transition"
+            title="Abrir Simulador Interativo do Chatbot com IA"
+          >
+            <Bot className="w-3.5 h-3.5" />
+            Simulador Chatbot IA
+          </button>
+
           <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-800 text-[11px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5" />
             Sessão Conectada
@@ -410,7 +505,7 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                 </div>
               </div>
 
-              {/* Stage Quick Switcher */}
+              {/* Stage Quick Switcher & Bot Controls */}
               <div className="flex items-center gap-2">
                 <div className="text-right hidden sm:block">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Etapa do Funil:</span>
@@ -425,6 +520,43 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                     <option value="Convertido">Convertido</option>
                     <option value="Perdido">Perdido</option>
                   </select>
+                </div>
+
+                {/* Bot Status & Handover Toggle */}
+                <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+                  {isSelectedLeadBotActive ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="hidden xl:inline-flex bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-1 rounded items-center gap-1">
+                        <Bot className="w-3 h-3 text-indigo-600 animate-pulse" />
+                        Chatbot IA Ativo
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleToggleBotStatus}
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-1 rounded transition flex items-center gap-1 shadow-2xs"
+                        title="Pausar o Chatbot IA para você assumir o atendimento deste cliente"
+                      >
+                        <UserCheck className="w-3 h-3 text-amber-700" />
+                        <span>Pausar IA</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="hidden xl:inline-flex bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-1 rounded items-center gap-1">
+                        <UserCheck className="w-3 h-3 text-amber-600" />
+                        Humano
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleToggleBotStatus}
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-1 rounded transition flex items-center gap-1 shadow-2xs"
+                        title="Reativar o Chatbot IA para responder automaticamente este lead"
+                      >
+                        <Bot className="w-3 h-3 text-indigo-600" />
+                        <span>Reativar IA</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <a
@@ -472,6 +604,30 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                 }
 
                 const isAttendant = msg.sender === 'attendant';
+                const isBot = msg.sender === 'bot';
+
+                if (isBot) {
+                  return (
+                    <div key={msg.id} className="flex justify-end">
+                      <div className="max-w-[80%] sm:max-w-[70%] p-3 rounded-lg text-xs shadow-2xs bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-br-none border border-indigo-500/40">
+                        <div className="flex items-center justify-between gap-2 mb-1.5 pb-1 border-b border-indigo-500/30 text-[10px]">
+                          <span className="flex items-center gap-1 font-bold text-indigo-300">
+                            <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                            Chatbot com IA
+                          </span>
+                          <span className="bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded text-[9px] font-semibold">
+                            Automático
+                          </span>
+                        </div>
+                        <p className="whitespace-pre-line leading-relaxed text-indigo-50">{msg.text}</p>
+                        <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-indigo-300">
+                          <span>{msg.timestamp}</span>
+                          <CheckCheck className="w-3 h-3 text-indigo-300" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
                 return (
                   <div
@@ -514,11 +670,17 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
               ))}
               <button
                 type="button"
-                onClick={() => generateAiSuggestion()}
-                className="bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold border border-purple-200 rounded px-2.5 py-1 flex items-center gap-1 whitespace-nowrap transition"
+                disabled={aiSuggestLoading}
+                onClick={generateAiSuggestion}
+                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 rounded px-2.5 py-1 flex items-center gap-1 whitespace-nowrap transition disabled:opacity-50"
+                title="Gerar sugestão inteligente com IA copiloto baseada no histórico e produtos"
               >
-                <Sparkles className="w-3 h-3 text-purple-600" />
-                Sugestão IA
+                {aiSuggestLoading ? (
+                  <RefreshCw className="w-3 h-3 text-indigo-600 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3 text-indigo-600" />
+                )}
+                {aiSuggestLoading ? 'Gerando com IA...' : 'Sugerir com IA'}
               </button>
               <button
                 type="button"
@@ -675,6 +837,143 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Simulador Interativo do Chatbot com IA */}
+      {isSimulatorModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-slate-200 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col h-[620px]">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-indigo-900">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-indigo-600/50 border border-indigo-400 flex items-center justify-center text-white">
+                  <Bot className="w-5 h-5 text-indigo-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    Simulador do Chatbot IA
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                      Modo Teste ao Vivo
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Teste perguntas, dúvidas sobre produtos e gatilhos de transbordo humano em tempo real.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSimulatorModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Test Prompt Chips */}
+            <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Testes Rápidos:</span>
+              {[
+                'Oi, como funciona?',
+                'Quais produtos vocês têm e os preços?',
+                'Como faço para comprar via Pix?',
+                'Quero falar com um atendente humano'
+              ].map(testText => (
+                <button
+                  key={testText}
+                  type="button"
+                  onClick={() => setSimulatorInput(testText)}
+                  className="bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-medium px-2 py-0.5 rounded whitespace-nowrap transition"
+                >
+                  {testText}
+                </button>
+              ))}
+            </div>
+
+            {/* Simulator Chat Thread */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#efeae2]/30">
+              {simulatorMessages.map((msg, idx) => {
+                if (msg.sender === 'system') {
+                  return (
+                    <div key={idx} className="text-center my-1.5">
+                      <span className="bg-red-100 text-red-700 text-[10px] font-semibold px-3 py-1 rounded-full border border-red-200">
+                        {msg.text}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const isUser = msg.sender === 'user';
+
+                return (
+                  <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] p-3 rounded-lg text-xs shadow-2xs ${
+                      isUser
+                        ? 'bg-emerald-700 text-white rounded-br-none'
+                        : 'bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-bl-none border border-indigo-500/40'
+                    }`}>
+                      {!isUser && (
+                        <div className="flex items-center justify-between gap-2 mb-1 pb-1 border-b border-indigo-500/30 text-[10px]">
+                          <span className="flex items-center gap-1 font-bold text-indigo-300">
+                            <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                            Sofia (Chatbot IA)
+                          </span>
+                          {msg.isHandover && (
+                            <span className="bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded text-[9px] font-bold border border-amber-400/40 flex items-center gap-1">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Transbordo Humano
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+
+                      <div className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
+                        isUser ? 'text-emerald-200' : 'text-indigo-300'
+                      }`}>
+                        <span>{msg.timestamp}</span>
+                        {isUser && <CheckCheck className="w-3 h-3 text-emerald-200" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {simulatorLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-900 text-white p-3 rounded-lg text-xs shadow-2xs rounded-bl-none flex items-center gap-2 border border-indigo-500/30">
+                    <Bot className="w-4 h-4 text-indigo-400 animate-pulse" />
+                    <span className="text-slate-300 font-medium">Sofia está digitando...</span>
+                    <span className="flex gap-1 ml-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.2s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.4s]" />
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input Bar */}
+            <form onSubmit={handleSendSimulatorMessage} className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Digite uma mensagem como se fosse o cliente..."
+                value={simulatorInput}
+                onChange={e => setSimulatorInput(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600"
+              />
+              <button
+                type="submit"
+                disabled={!simulatorInput.trim() || simulatorLoading}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs shrink-0"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Enviar</span>
+              </button>
+            </form>
           </div>
         </div>
       )}
