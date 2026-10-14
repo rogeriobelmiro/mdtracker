@@ -49,6 +49,7 @@ export interface CampaignLink {
   customTags?: Record<string, string>;
   captureLeadForm: boolean;
   metaPixelId?: string;
+  metaEventName?: string;
   googleAdsConversionId?: string;
   googleAdsLabel?: string;
   webhookUrl?: string;

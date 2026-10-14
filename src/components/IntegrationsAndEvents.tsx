@@ -382,8 +382,12 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 </label>
                 
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded space-y-2">
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento no Clique do Link (Ex: ViewAds)</label>
-                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">Disparado via <strong>API de Conversões (CAPI)</strong> e <strong>Meta Pixel</strong> no momento exato em que a pessoa clica no anúncio. Permite criar Públicos de Remarketing com quem clicou no anúncio sem precisar abrir o WhatsApp.</p>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Evento no Clique do Link (Padrão Global)</label>
+                  <p className="text-[10px] text-slate-500 mb-2 leading-tight">
+                    Disparado via <strong>API de Conversões (CAPI)</strong> e <strong>Meta Pixel</strong> no momento exato em que a pessoa clica no anúncio. Permite criar Públicos de Remarketing com quem clicou no anúncio sem precisar abrir o WhatsApp.
+                    <br />
+                    <span className="text-blue-700 font-medium">💡 <strong>Novidade:</strong> Você também pode definir um evento específico para cada campanha diretamente ao criar/editar o link no Gerenciador de Links. O sistema disparará ambos simultaneamente!</span>
+                  </p>
                   <select
                     value={['ViewAds', 'ViewContent', 'Lead', 'Contact', 'SubmitApplication', 'CompleteRegistration', 'Schedule'].includes(formData.metaLeadEventName ?? 'ViewAds') && (formData.metaLeadEventName !== '') ? (formData.metaLeadEventName ?? 'ViewAds') : 'Custom'}
                     onChange={(e) => {

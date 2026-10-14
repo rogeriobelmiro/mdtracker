@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CampaignLink, Company } from '../types';
-import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List } from 'lucide-react';
+import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface LinkManagerProps {
@@ -61,6 +61,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     utmTerm: '',
     captureLeadForm: false,
     metaPixelId: '',
+    metaEventName: '',
     googleAdsConversionId: '',
     googleAdsLabel: '',
     webhookUrl: ''
@@ -73,7 +74,9 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
         setEditingLink(link);
         setFormData({
           ...link,
-          phone: companyPhone
+          phone: companyPhone,
+          metaEventName: link.metaEventName || '',
+          metaPixelId: link.metaPixelId || ''
         });
         setIsModalOpen(true);
       }
@@ -97,6 +100,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
       utmTerm: '',
       captureLeadForm: false,
       metaPixelId: '',
+      metaEventName: '',
       googleAdsConversionId: '',
       googleAdsLabel: '',
       webhookUrl: ''
@@ -108,7 +112,9 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     setEditingLink(link);
     setFormData({
       ...link,
-      phone: companyPhone
+      phone: companyPhone,
+      metaEventName: link.metaEventName || '',
+      metaPixelId: link.metaPixelId || ''
     });
     setIsModalOpen(true);
   };
@@ -121,6 +127,8 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
       phone: companyPhone,
       title: `${link.title} (Cópia)`,
       slug: `${link.slug}-copia-${Math.random().toString(36).substring(2, 6)}`,
+      metaEventName: link.metaEventName || '',
+      metaPixelId: link.metaPixelId || ''
     });
     setIsModalOpen(true);
   };
@@ -327,9 +335,14 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                     <tr key={link.id} className="hover:bg-slate-50 transition group">
                       <td className="p-4">
                         <div className="font-semibold text-slate-900 mb-1">{link.title}</div>
-                        <div className="text-[10px] text-slate-500 font-mono space-x-2 flex flex-col gap-0.5">
+                        <div className="text-[10px] text-slate-500 font-mono flex flex-wrap items-center gap-1.5">
                           <span>src: {link.utmSource}</span>
                           <span>cmp: {link.utmCampaign}</span>
+                          {link.metaEventName && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200" title="Evento Meta específico desta campanha">
+                              <Zap className="w-2.5 h-2.5 text-blue-600" /> {link.metaEventName}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="p-4">
@@ -424,7 +437,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 </div>
               </div>
 
-              {/* UTM Tags */}
+              {/* UTM Tags & Meta Event Badge */}
               <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-200">
                   utm_source: {link.utmSource}
@@ -435,6 +448,11 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 {link.utmContent && (
                   <span className="bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-200">
                     utm_content: {link.utmContent}
+                  </span>
+                )}
+                {link.metaEventName && (
+                  <span className="bg-blue-50 text-blue-700 font-mono px-2 py-0.5 rounded border border-blue-200 flex items-center gap-1 font-semibold" title="Evento Meta específico desta campanha">
+                    <Zap className="w-3 h-3 text-blue-600" /> {link.metaEventName}
                   </span>
                 )}
               </div>
@@ -660,6 +678,62 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                       className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:border-blue-600"
                     />
                     <span className="text-[10px] text-slate-400">Público-alvo / Grupo de Anúncios (AdSet)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Ads Tracking (Pixel & Conversions API - Dual Dispatch) */}
+              <div className="bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 p-4 rounded-xl border border-blue-200/80 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                      <Zap className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 block">
+                        Meta Ads - Evento Específico desta Campanha
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        Disparo duplo: alimenta o evento global e este evento específico simultaneamente
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full border border-blue-200">
+                    Opcional
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Nome do Evento desta Campanha
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Clique_KitHidraulico, Oferta_Zap"
+                      value={formData.metaEventName || ''}
+                      onChange={(e) => setFormData({ ...formData, metaEventName: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-mono focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Disparado via <strong>Pixel</strong> e <strong>CAPI</strong> junto com o evento padrão global.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Meta Pixel ID Específico (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Deixe em branco para usar o Pixel Global"
+                      value={formData.metaPixelId || ''}
+                      onChange={(e) => setFormData({ ...formData, metaPixelId: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-mono focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Substitui o pixel global se esta campanha usar um Pixel dedicado.
+                    </span>
                   </div>
                 </div>
               </div>

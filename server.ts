@@ -70,7 +70,10 @@ const mapLinkToDB = (link: any) => ({
     utm_campaign: link.utmCampaign,
     utm_content: link.utmContent,
     utm_term: link.utmTerm,
-    custom_tags: link.customTags,
+    custom_tags: {
+        ...(link.customTags || {}),
+        ...(link.metaEventName !== undefined ? { metaEventName: link.metaEventName } : {})
+    },
     capture_lead_form: link.captureLeadForm,
     meta_pixel_id: link.metaPixelId,
     google_ads_conversion_id: link.googleAdsConversionId,
@@ -98,6 +101,7 @@ const mapLinkFromDB = (db: any) => ({
     customTags: db.custom_tags || {},
     captureLeadForm: db.capture_lead_form,
     metaPixelId: db.meta_pixel_id,
+    metaEventName: db.meta_event_name || db.custom_tags?.metaEventName || '',
     googleAdsConversionId: db.google_ads_conversion_id,
     googleAdsLabel: db.google_ads_label,
     webhookUrl: db.webhook_url,
@@ -1170,6 +1174,7 @@ app.post('/api/links', async (req: Request, res: Response) => {
       customTags: body.customTags || {},
       captureLeadForm: Boolean(body.captureLeadForm),
       metaPixelId: body.metaPixelId || '',
+      metaEventName: body.metaEventName || '',
       googleAdsConversionId: body.googleAdsConversionId || '',
       googleAdsLabel: body.googleAdsLabel || '',
       webhookUrl: body.webhookUrl || '',
@@ -1747,19 +1752,27 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const googleAdsId = linkObj.googleAdsConversionId || settings.globalGoogleAdsId;
     const googleAdsLabel = linkObj.googleAdsLabel || settings.globalGoogleAdsLabel;
 
-    // Event Name & fbq method
+    // Event Names & fbq methods:
+    // 1. Global Standard Event (ex: ViewAds)
     const metaEventName = settings.metaLeadEventName || 'ViewAds';
     const standardEvents = ['Lead', 'Contact', 'ViewContent', 'SubmitApplication', 'CompleteRegistration', 'Schedule', 'Purchase', 'InitiateCheckout', 'AddToCart'];
     const fbqMethod = standardEvents.includes(metaEventName) ? 'track' : 'trackCustom';
 
-    // Unique Event ID for deduplication between CAPI and Meta Pixel
+    // 2. Campaign Specific Event (se configurado no link)
+    const campaignEventName = (linkObj.metaEventName || '').trim();
+    const hasCampaignEvent = Boolean(campaignEventName && campaignEventName !== metaEventName);
+    const campaignFbqMethod = standardEvents.includes(campaignEventName) ? 'track' : 'trackCustom';
+
+    // Unique Event IDs for deduplication between CAPI and Meta Pixel
     const eventId = `evt_click_${dbLink.id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const campaignEventId = `evt_click_cmp_${dbLink.id}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.headers['x-forwarded-host'] || req.get('host') || 'rastreiowhatsapp.com';
     const eventSourceUrl = `${proto}://${host}${req.originalUrl}`;
 
     // FIRE META CAPI EVENT IMMEDIATELY ON LINK CLICK (SERVER-SIDE)
     if (settings.autoFireMetaOnLead && metaPixel && metaToken && !isBot) {
+      // 1. Dispara Evento Padrão Global (ex: ViewAds)
       sendMetaCAPIClickEvent({
         pixelId: metaPixel,
         token: metaToken,
@@ -1778,7 +1791,30 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
         utmCampaign,
         utmContent,
         utmTerm
-      }).catch(err => console.error('[Meta CAPI Async Error]:', err));
+      }).catch(err => console.error('[Meta CAPI Async Error - Global]:', err));
+
+      // 2. Dispara Evento Específico da Campanha (se configurado)
+      if (hasCampaignEvent) {
+        sendMetaCAPIClickEvent({
+          pixelId: metaPixel,
+          token: metaToken,
+          eventName: campaignEventName,
+          eventId: campaignEventId,
+          eventSourceUrl,
+          userIp: userIp,
+          userAgent,
+          fbc: finalFbc,
+          fbp: finalFbp,
+          location,
+          linkTitle: linkObj.title,
+          linkSlug: slug,
+          utmSource,
+          utmMedium,
+          utmCampaign,
+          utmContent,
+          utmTerm
+        }).catch(err => console.error('[Meta CAPI Async Error - Campanha]:', err));
+      }
     }
 
     // Render client redirect & tracking landing page
@@ -1806,11 +1842,20 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
           fbq('init', '${metaPixel}');
           fbq('track', 'PageView', {}, { eventID: '${eventId}_pv' });
           ${settings.autoFireMetaOnLead ? `
+          // 1. Disparo do Evento Padrão Global
           fbq('${fbqMethod}', '${metaEventName}', {
             content_name: '${linkObj.title.replace(/'/g, "\\'")}',
             campaign: '${utmCampaign}',
             source: '${utmSource}'
           }, { eventID: '${eventId}' });
+          ${hasCampaignEvent ? `
+          // 2. Disparo do Evento Específico da Campanha
+          fbq('${campaignFbqMethod}', '${campaignEventName}', {
+            content_name: '${linkObj.title.replace(/'/g, "\\'")}',
+            campaign: '${utmCampaign}',
+            source: '${utmSource}'
+          }, { eventID: '${campaignEventId}' });
+          ` : ''}
           ` : ''}
         </script>
         ` : ''}

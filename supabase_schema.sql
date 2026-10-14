@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS campaign_links (
   custom_tags JSONB,
   capture_lead_form BOOLEAN DEFAULT FALSE,
   meta_pixel_id TEXT,
+  meta_event_name TEXT,
   google_ads_conversion_id TEXT,
   google_ads_label TEXT,
   webhook_url TEXT,
