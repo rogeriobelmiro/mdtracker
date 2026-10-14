@@ -184,6 +184,14 @@ const mapSettingsToDB = (s: any) => ({
     updated_at: new Date().toISOString()
 });
 
+const DEFAULT_STAGE_MAPPINGS: Record<string, { stage: string; metaEvent: string; googleLabel: string; enabled: boolean }> = {
+  'Novo Lead': { stage: 'Novo Lead', metaEvent: 'Lead', googleLabel: 'lead_conversion', enabled: true },
+  'Contatado': { stage: 'Contatado', metaEvent: 'Contact', googleLabel: 'contact_conversion', enabled: true },
+  'Em Negociação': { stage: 'Em Negociação', metaEvent: 'InitiateCheckout', googleLabel: 'checkout_conversion', enabled: true },
+  'Convertido': { stage: 'Convertido', metaEvent: 'Purchase', googleLabel: 'purchase_conversion', enabled: true },
+  'Perdido': { stage: 'Perdido', metaEvent: 'LeadLost', googleLabel: 'loss_conversion', enabled: false }
+};
+
 const mapSettingsFromDB = (db: any) => ({
     companyId: db.company_id,
     globalMetaPixelId: db.global_meta_pixel_id || '',
@@ -200,7 +208,9 @@ const mapSettingsFromDB = (db: any) => ({
     autoFireWebhookOnLead: db.auto_fire_webhook_on_lead || false,
     autoFireWebhookOnStageChange: db.auto_fire_webhook_on_stage_change || false,
     metaLeadEventName: db.meta_lead_event_name || '',
-    stageEventMappings: db.stage_event_mappings || {},
+    stageEventMappings: (db.stage_event_mappings && Object.keys(db.stage_event_mappings).length > 0)
+      ? db.stage_event_mappings
+      : DEFAULT_STAGE_MAPPINGS,
     autoStageKeywords: db.auto_stage_keywords || []
 });
 
@@ -1377,7 +1387,7 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
       }
 
       // Check configured stage event mapping
-      const stageMapping = settings.stageEventMappings ? settings.stageEventMappings[newStage] : null;
+      const stageMapping = (settings.stageEventMappings && settings.stageEventMappings[newStage]) || DEFAULT_STAGE_MAPPINGS[newStage];
       if (stageMapping && stageMapping.enabled) {
         // Meta Ads CAPI Event
         if (stageMapping.metaEvent) {
