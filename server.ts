@@ -4857,6 +4857,616 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
     }
 });
 
+// ==============================================================================
+// INSTAGRAM AUTO-DM & COMMENT GROWTH TOOL (MANYCHAT STYLE)
+// ==============================================================================
+
+let inMemoryInstagramAutomations: any[] = [
+    {
+        id: 'insta-rule-1',
+        companyId: 'comp-alfa',
+        name: '📚 Post E-book Grátis: Tráfego e WhatsApp',
+        status: 'active',
+        postType: 'any_post',
+        triggerType: 'keywords',
+        keywords: ['ebook', 'quero', 'eu quero', 'livro', 'material', 'acesso'],
+        excludedKeywords: ['ruim', 'golpe', 'cancelar'],
+        autoLikeComment: true,
+        publicReplies: [
+            'Acabei de te enviar o e-book no seu Direct! 📥🚀 Dá uma olhada lá.',
+            'Prontinho! Link enviado na sua caixa de mensagens do Direct ✨',
+            'Confira seu Direct! Mandei o acesso gratuito com todos os detalhes 🎁',
+            'Mandei lá no seu direct, aproveite a leitura! 🚀'
+        ],
+        directMessage: 'Olá {{username}}! 🎉 Conforme você pediu no nosso post, aqui está o seu acesso exclusivo ao E-book "Guia Prático de Vendas e Tráfego no WhatsApp". Clique no botão abaixo para baixar gratuitamente:',
+        ctaButton: {
+            text: 'Baixar E-book Gratuito 📥',
+            url: 'https://mdtracker.app/r/ebook-gratis'
+        },
+        createLeadInCrm: true,
+        stats: {
+            commentsProcessed: 142,
+            dmsSent: 139,
+            leadsCaptured: 87
+        },
+        createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+        updatedAt: new Date().toISOString()
+    },
+    {
+        id: 'insta-rule-2',
+        companyId: 'comp-alfa',
+        name: '🏷️ Reels Promoção: Cupom de 30% OFF',
+        status: 'active',
+        postType: 'specific_post',
+        postUrl: 'https://www.instagram.com/reel/C8xyz123456/',
+        postId: 'reel-c8xyz123456',
+        postCaptionSnippet: '🔥 Liberamos 30% de desconto em todos os planos somente para quem comentar CUPOM aqui embaixo!',
+        postThumbnail: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&q=80',
+        triggerType: 'keywords',
+        keywords: ['cupom', 'desconto', 'preco', 'valor', 'comprar', 'promo'],
+        excludedKeywords: [],
+        autoLikeComment: true,
+        publicReplies: [
+            'Mandei seu cupom VIP no direct! Dá uma olhadinha 🏷️',
+            'Código liberado no seu direct! Aproveite que é por tempo limitado ⚡',
+            'Seu desconto exclusivo já está na sua caixa de mensagens! ✨'
+        ],
+        directMessage: 'Oi {{username}}! 🏷️ Seu cupom de 30% OFF é *VIP30*. Ele é válido apenas para as próximas 24 horas em qualquer plano da nossa plataforma. Acesse pelo link abaixo para aplicar o desconto automaticamente:',
+        ctaButton: {
+            text: 'Garantir 30% de Desconto ⚡',
+            url: 'https://mdtracker.app/r/cupom-vip30'
+        },
+        createLeadInCrm: true,
+        stats: {
+            commentsProcessed: 98,
+            dmsSent: 96,
+            leadsCaptured: 64
+        },
+        createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+        updatedAt: new Date().toISOString()
+    },
+    {
+        id: 'insta-rule-3',
+        companyId: 'comp-alfa',
+        name: '💬 Atendimento Consultor Especialista',
+        status: 'active',
+        postType: 'any_post',
+        triggerType: 'keywords',
+        keywords: ['atendente', 'consultoria', 'ajuda', 'suporte', 'duvida', 'humano'],
+        excludedKeywords: [],
+        autoLikeComment: true,
+        publicReplies: [
+            'Te mandei uma mensagem no direct para te ajudar! 💬',
+            'Nosso time já te enviou os detalhes no direct 🤝',
+            'Olá! Acabei de te mandar uma mensagem privada no Direct ✨'
+        ],
+        directMessage: 'Olá {{username}}! Vi seu comentário no post e vim te atender pessoalmente. Como podemos te ajudar hoje? Se preferir falar diretamente no WhatsApp oficial com nosso consultor, clique abaixo:',
+        ctaButton: {
+            text: 'Conversar no WhatsApp 💬',
+            url: 'https://wa.me/5511988887777?text=Oi!%20Vim%20pelo%20Instagram'
+        },
+        createLeadInCrm: true,
+        stats: {
+            commentsProcessed: 53,
+            dmsSent: 53,
+            leadsCaptured: 41
+        },
+        createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+        updatedAt: new Date().toISOString()
+    }
+];
+
+let inMemoryInstagramCommentLogs: any[] = [
+    {
+        id: 'log-inst-1',
+        companyId: 'comp-alfa',
+        ruleId: 'insta-rule-1',
+        ruleName: '📚 Post E-book Grátis: Tráfego e WhatsApp',
+        instagramUsername: '@lucas_dev_mkt',
+        commentText: 'Eu quero muito o ebook!',
+        postSnippet: 'Post sobre estratégias de tráfego orgânico e WhatsApp',
+        publicReplyGiven: 'Acabei de te enviar o e-book no seu Direct! 📥🚀 Dá uma olhada lá.',
+        dmSentText: 'Olá @lucas_dev_mkt! 🎉 Conforme você pediu no nosso post, aqui está o seu acesso exclusivo ao E-book "Guia Prático de Vendas e Tráfego no WhatsApp". Clique no botão abaixo para baixar gratuitamente:',
+        status: 'delivered',
+        timestamp: new Date(Date.now() - 18 * 60000).toISOString()
+    },
+    {
+        id: 'log-inst-2',
+        companyId: 'comp-alfa',
+        ruleId: 'insta-rule-2',
+        ruleName: '🏷️ Reels Promoção: Cupom de 30% OFF',
+        instagramUsername: '@mariana.estetica',
+        commentText: 'Quero o cupom de desconto por favor',
+        postSnippet: 'Reels da campanha de 30% OFF',
+        publicReplyGiven: 'Mandei seu cupom VIP no direct! Dá uma olhadinha 🏷️',
+        dmSentText: 'Oi @mariana.estetica! 🏷️ Seu cupom de 30% OFF é *VIP30*. Ele é válido apenas para as próximas 24 horas em qualquer plano da nossa plataforma. Acesse pelo link abaixo para aplicar o desconto automaticamente:',
+        status: 'delivered',
+        timestamp: new Date(Date.now() - 42 * 60000).toISOString()
+    },
+    {
+        id: 'log-inst-3',
+        companyId: 'comp-alfa',
+        ruleId: 'insta-rule-1',
+        ruleName: '📚 Post E-book Grátis: Tráfego e WhatsApp',
+        instagramUsername: '@fernando.growth',
+        commentText: 'QUERO O MATERIAL',
+        postSnippet: 'Post sobre estratégias de tráfego orgânico e WhatsApp',
+        publicReplyGiven: 'Prontinho! Link enviado na sua caixa de mensagens do Direct ✨',
+        dmSentText: 'Olá @fernando.growth! 🎉 Conforme você pediu no nosso post, aqui está o seu acesso exclusivo ao E-book "Guia Prático de Vendas e Tráfego no WhatsApp". Clique no botão abaixo para baixar gratuitamente:',
+        status: 'delivered',
+        timestamp: new Date(Date.now() - 110 * 60000).toISOString()
+    }
+];
+
+// Helper to map DB row to InstagramCommentAutomation
+function mapInstagramAutomationFromDB(row: any): any {
+    return {
+        id: row.id,
+        companyId: row.company_id,
+        name: row.name,
+        status: row.status || 'active',
+        postType: row.post_type || 'any_post',
+        postUrl: row.post_url,
+        postId: row.post_id,
+        postThumbnail: row.post_thumbnail,
+        postCaptionSnippet: row.post_caption_snippet,
+        triggerType: row.trigger_type || 'keywords',
+        keywords: Array.isArray(row.keywords) ? row.keywords : [],
+        excludedKeywords: Array.isArray(row.excluded_keywords) ? row.excluded_keywords : [],
+        autoLikeComment: row.auto_like_comment !== false,
+        publicReplies: Array.isArray(row.public_replies) ? row.public_replies : [],
+        directMessage: row.direct_message || '',
+        ctaButton: row.cta_button,
+        createLeadInCrm: row.create_lead_in_crm !== false,
+        stats: row.stats || { commentsProcessed: 0, dmsSent: 0, leadsCaptured: 0 },
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    };
+}
+
+// GET all automations for company
+app.get('/api/instagram/automations', async (req: Request, res: Response) => {
+    try {
+        const companyId = (req.query.companyId as string) || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('instagram_comment_automations')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map(mapInstagramAutomationFromDB));
+            }
+        } catch {}
+
+        const filtered = inMemoryInstagramAutomations.filter(a => a.companyId === companyId);
+        res.json(filtered);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST create automation
+app.post('/api/instagram/automations', async (req: Request, res: Response) => {
+    try {
+        const {
+            companyId = 'comp-alfa',
+            name,
+            status = 'active',
+            postType = 'any_post',
+            postUrl,
+            postId,
+            postThumbnail,
+            postCaptionSnippet,
+            triggerType = 'keywords',
+            keywords = [],
+            excludedKeywords = [],
+            autoLikeComment = true,
+            publicReplies = [],
+            directMessage,
+            ctaButton,
+            createLeadInCrm = true
+        } = req.body;
+
+        if (!name || !directMessage) {
+            return res.status(400).json({ error: 'Nome e Mensagem no Direct são obrigatórios' });
+        }
+
+        const newId = `insta-rule-${Date.now()}`;
+        const newRule = {
+            id: newId,
+            companyId,
+            name,
+            status,
+            postType,
+            postUrl,
+            postId,
+            postThumbnail,
+            postCaptionSnippet,
+            triggerType,
+            keywords: keywords.map((k: string) => k.trim().toLowerCase()).filter(Boolean),
+            excludedKeywords: excludedKeywords.map((k: string) => k.trim().toLowerCase()).filter(Boolean),
+            autoLikeComment,
+            publicReplies: publicReplies.filter((r: string) => r && r.trim()),
+            directMessage,
+            ctaButton,
+            createLeadInCrm,
+            stats: { commentsProcessed: 0, dmsSent: 0, leadsCaptured: 0 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        try {
+            await supabase.from('instagram_comment_automations').insert([{
+                id: newRule.id,
+                company_id: newRule.companyId,
+                name: newRule.name,
+                status: newRule.status,
+                post_type: newRule.postType,
+                post_url: newRule.postUrl,
+                post_id: newRule.postId,
+                post_thumbnail: newRule.postThumbnail,
+                post_caption_snippet: newRule.postCaptionSnippet,
+                trigger_type: newRule.triggerType,
+                keywords: newRule.keywords,
+                excluded_keywords: newRule.excludedKeywords,
+                auto_like_comment: newRule.autoLikeComment,
+                public_replies: newRule.publicReplies,
+                direct_message: newRule.directMessage,
+                cta_button: newRule.ctaButton,
+                create_lead_in_crm: newRule.createLeadInCrm,
+                stats: newRule.stats,
+                created_at: newRule.createdAt,
+                updated_at: newRule.updatedAt
+            }]);
+        } catch {}
+
+        inMemoryInstagramAutomations.unshift(newRule);
+        res.status(201).json(newRule);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT update automation
+app.put('/api/instagram/automations/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+
+        const idx = inMemoryInstagramAutomations.findIndex(a => a.id === id);
+        if (idx !== -1) {
+            inMemoryInstagramAutomations[idx] = {
+                ...inMemoryInstagramAutomations[idx],
+                ...updates,
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        try {
+            const dbPayload: any = { updated_at: new Date().toISOString() };
+            if (updates.name !== undefined) dbPayload.name = updates.name;
+            if (updates.status !== undefined) dbPayload.status = updates.status;
+            if (updates.postType !== undefined) dbPayload.post_type = updates.postType;
+            if (updates.postUrl !== undefined) dbPayload.post_url = updates.postUrl;
+            if (updates.triggerType !== undefined) dbPayload.trigger_type = updates.triggerType;
+            if (updates.keywords !== undefined) dbPayload.keywords = updates.keywords;
+            if (updates.excludedKeywords !== undefined) dbPayload.excluded_keywords = updates.excludedKeywords;
+            if (updates.autoLikeComment !== undefined) dbPayload.auto_like_comment = updates.autoLikeComment;
+            if (updates.publicReplies !== undefined) dbPayload.public_replies = updates.publicReplies;
+            if (updates.directMessage !== undefined) dbPayload.direct_message = updates.directMessage;
+            if (updates.ctaButton !== undefined) dbPayload.cta_button = updates.ctaButton;
+            if (updates.createLeadInCrm !== undefined) dbPayload.create_lead_in_crm = updates.createLeadInCrm;
+
+            await supabase.from('instagram_comment_automations').update(dbPayload).eq('id', id);
+        } catch {}
+
+        const updated = inMemoryInstagramAutomations.find(a => a.id === id) || { id, ...updates };
+        res.json(updated);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE automation
+app.delete('/api/instagram/automations/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        inMemoryInstagramAutomations = inMemoryInstagramAutomations.filter(a => a.id !== id);
+        try {
+            await supabase.from('instagram_comment_automations').delete().eq('id', id);
+        } catch {}
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET execution logs
+app.get('/api/instagram/automations/logs', async (req: Request, res: Response) => {
+    try {
+        const companyId = (req.query.companyId as string) || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('instagram_comment_logs')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('timestamp', { ascending: false })
+                .limit(50);
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map((row: any) => ({
+                    id: row.id,
+                    companyId: row.company_id,
+                    ruleId: row.rule_id,
+                    ruleName: row.rule_name,
+                    instagramUsername: row.instagram_username,
+                    commentText: row.comment_text,
+                    postId: row.post_id,
+                    postSnippet: row.post_snippet,
+                    publicReplyGiven: row.public_reply_given,
+                    dmSentText: row.dm_sent_text,
+                    leadId: row.lead_id,
+                    status: row.status,
+                    timestamp: row.timestamp
+                })));
+            }
+        } catch {}
+
+        const logs = inMemoryInstagramCommentLogs.filter(l => l.companyId === companyId);
+        res.json(logs);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// SIMULATE / EXECUTE Instagram Comment Action (Interactive ManyChat Simulator)
+app.post('/api/instagram/automations/simulate', async (req: Request, res: Response) => {
+    try {
+        const {
+            companyId = 'comp-alfa',
+            ruleId,
+            instagramUsername = '@usuario_teste',
+            commentText = '',
+            postTitle = 'Publicação no Feed'
+        } = req.body;
+
+        if (!commentText.trim()) {
+            return res.status(400).json({ error: 'Texto do comentário é obrigatório' });
+        }
+
+        const normalizedUsername = instagramUsername.startsWith('@') ? instagramUsername : `@${instagramUsername}`;
+        const cleanComment = commentText.trim().toLowerCase();
+
+        // Find candidate rules
+        const rules = inMemoryInstagramAutomations.filter(r => r.companyId === companyId && r.status === 'active');
+        let matchedRule = ruleId ? rules.find(r => r.id === ruleId) : null;
+
+        if (!matchedRule) {
+            // Find first matching rule by keywords
+            for (const rule of rules) {
+                // Check exclusions
+                const hasExcluded = (rule.excludedKeywords || []).some((ex: string) => cleanComment.includes(ex.toLowerCase()));
+                if (hasExcluded) continue;
+
+                if (rule.triggerType === 'all_comments') {
+                    matchedRule = rule;
+                    break;
+                }
+
+                const hasKeyword = (rule.keywords || []).some((kw: string) => cleanComment.includes(kw.toLowerCase()));
+                if (hasKeyword) {
+                    matchedRule = rule;
+                    break;
+                }
+            }
+        }
+
+        if (!matchedRule) {
+            return res.json({
+                success: false,
+                matched: false,
+                reason: 'Nenhuma automação ativa correspondeu às palavras-chave do comentário.',
+                instagramUsername: normalizedUsername,
+                commentText
+            });
+        }
+
+        // Pick random public reply
+        const publicReplies = matchedRule.publicReplies && matchedRule.publicReplies.length > 0
+            ? matchedRule.publicReplies
+            : ['Te respondi no direct! Dá uma olhada lá 🚀'];
+        const publicReply = publicReplies[Math.floor(Math.random() * publicReplies.length)];
+
+        // Format direct message
+        const formattedDM = matchedRule.directMessage
+            .replace(/\{\{username\}\}/gi, normalizedUsername)
+            .replace(/\{username\}/gi, normalizedUsername)
+            .replace(/\{\{nome\}\}/gi, normalizedUsername)
+            .replace(/\{nome\}/gi, normalizedUsername);
+
+        // Update stats
+        matchedRule.stats.commentsProcessed = (matchedRule.stats.commentsProcessed || 0) + 1;
+        matchedRule.stats.dmsSent = (matchedRule.stats.dmsSent || 0) + 1;
+
+        let createdLead: any = null;
+        if (matchedRule.createLeadInCrm) {
+            matchedRule.stats.leadsCaptured = (matchedRule.stats.leadsCaptured || 0) + 1;
+
+            const leadName = normalizedUsername.replace('@', '');
+            const leadPayload = {
+                id: `lead-insta-${Date.now()}`,
+                companyId,
+                name: `${leadName} (Instagram)`,
+                phone: '',
+                email: '',
+                source: 'Instagram Feed (ManyChat)',
+                utmSource: 'instagram',
+                utmMedium: 'comment_growth_tool',
+                utmCampaign: matchedRule.name,
+                utmContent: commentText,
+                stage: 'Novo Lead',
+                notes: `Comentou "${commentText}" no post do Instagram. Regra disparada: ${matchedRule.name}. Resposta e Direct entregues automaticamente.`,
+                score: 55,
+                qualificationLevel: 'MQL',
+                fitGrade: 'A',
+                scoreBreakdown: [
+                    { reason: 'Comentário em Post do Instagram', points: 25 },
+                    { reason: 'Auto-DM ManyChat Disparado', points: 20 },
+                    { reason: 'Interesse Manifesto em Campanha', points: 10 }
+                ],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                await supabase.from('leads').insert([{
+                    id: leadPayload.id,
+                    company_id: leadPayload.companyId,
+                    name: leadPayload.name,
+                    source: leadPayload.source,
+                    utm_source: leadPayload.utmSource,
+                    utm_medium: leadPayload.utmMedium,
+                    utm_campaign: leadPayload.utmCampaign,
+                    utm_content: leadPayload.utmContent,
+                    stage: leadPayload.stage,
+                    notes: leadPayload.notes,
+                    score: leadPayload.score,
+                    qualification_level: leadPayload.qualificationLevel,
+                    fit_grade: leadPayload.fitGrade,
+                    score_breakdown: leadPayload.scoreBreakdown,
+                    created_at: leadPayload.createdAt,
+                    updated_at: leadPayload.updatedAt
+                }]);
+            } catch {}
+
+            createdLead = leadPayload;
+        }
+
+        // Create Log
+        const logEntry = {
+            id: `log-inst-${Date.now()}`,
+            companyId,
+            ruleId: matchedRule.id,
+            ruleName: matchedRule.name,
+            instagramUsername: normalizedUsername,
+            commentText,
+            postSnippet: postTitle,
+            publicReplyGiven: publicReply,
+            dmSentText: formattedDM,
+            leadId: createdLead ? createdLead.id : undefined,
+            status: 'delivered' as const,
+            timestamp: new Date().toISOString()
+        };
+
+        inMemoryInstagramCommentLogs.unshift(logEntry);
+        try {
+            await supabase.from('instagram_comment_logs').insert([{
+                id: logEntry.id,
+                company_id: logEntry.companyId,
+                rule_id: logEntry.ruleId,
+                rule_name: logEntry.ruleName,
+                instagram_username: logEntry.instagramUsername,
+                comment_text: logEntry.commentText,
+                post_snippet: logEntry.postSnippet,
+                public_reply_given: logEntry.publicReplyGiven,
+                dm_sent_text: logEntry.dmSentText,
+                lead_id: logEntry.leadId,
+                status: logEntry.status,
+                timestamp: logEntry.timestamp
+            }]);
+        } catch {}
+
+        res.json({
+            success: true,
+            matched: true,
+            ruleName: matchedRule.name,
+            instagramUsername: normalizedUsername,
+            commentText,
+            publicReplyGiven: publicReply,
+            autoLiked: matchedRule.autoLikeComment,
+            dmSentText: formattedDM,
+            ctaButton: matchedRule.ctaButton,
+            lead: createdLead,
+            log: logEntry
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// META / INSTAGRAM GRAPH API WEBHOOKS
+app.get('/api/webhooks/instagram', (req: Request, res: Response) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    // Verify token can match custom or default token
+    const VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN || 'mdtracker_instagram_token';
+
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+        console.log('[Instagram Webhook] Token de verificação validado com sucesso!');
+        return res.status(200).send(challenge);
+    } else {
+        return res.sendStatus(403);
+    }
+});
+
+app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        console.log('[Instagram Webhook] Evento recebido:', JSON.stringify(body).slice(0, 300));
+
+        if (body.object === 'instagram' && Array.isArray(body.entry)) {
+            for (const entry of body.entry) {
+                if (Array.isArray(entry.changes)) {
+                    for (const change of entry.changes) {
+                        if (change.field === 'comments' && change.value) {
+                            const val = change.value;
+                            const commentText = val.text || '';
+                            const username = val.from?.username ? `@${val.from.username}` : '@usuario_instagram';
+
+                            // Execute matching rule in background
+                            const cleanComment = commentText.trim().toLowerCase();
+                            const matched = inMemoryInstagramAutomations.find(r => 
+                                r.status === 'active' && 
+                                (r.triggerType === 'all_comments' || (r.keywords || []).some((kw: string) => cleanComment.includes(kw.toLowerCase())))
+                            );
+
+                            if (matched) {
+                                matched.stats.commentsProcessed = (matched.stats.commentsProcessed || 0) + 1;
+                                matched.stats.dmsSent = (matched.stats.dmsSent || 0) + 1;
+                                const replies = matched.publicReplies || ['Enviado no direct! 🚀'];
+                                const reply = replies[Math.floor(Math.random() * replies.length)];
+                                const dm = matched.directMessage.replace(/\{\{username\}\}/gi, username);
+
+                                inMemoryInstagramCommentLogs.unshift({
+                                    id: `log-inst-${Date.now()}`,
+                                    companyId: matched.companyId,
+                                    ruleId: matched.id,
+                                    ruleName: matched.name,
+                                    instagramUsername: username,
+                                    commentText,
+                                    publicReplyGiven: reply,
+                                    dmSentText: dm,
+                                    status: 'delivered',
+                                    timestamp: new Date().toISOString()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        res.status(200).json({ status: 'EVENT_RECEIVED' });
+    } catch (err: any) {
+        console.error('[Instagram Webhook] Erro:', err.message);
+        res.status(200).json({ status: 'ERROR_HANDLED' });
+    }
+});
+
 // WhatsApp API
 app.get('/api/whatsapp/status', async (req: Request, res: Response) => {
     const companyId = req.query.companyId as string || 'comp-alfa';

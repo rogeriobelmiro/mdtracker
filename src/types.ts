@@ -583,5 +583,70 @@ export interface LeadScoringConfig {
   };
 }
 
+// ==============================================================================
+// INSTAGRAM AUTO-DM & COMMENT GROWTH TOOL (MANYCHAT STYLE)
+// ==============================================================================
+
+export interface InstagramCommentAutomation {
+  id: string;
+  companyId: string;
+  name: string;
+  status: 'active' | 'paused';
+  postType: 'any_post' | 'specific_post';
+  postUrl?: string;
+  postId?: string;
+  postThumbnail?: string;
+  postCaptionSnippet?: string;
+  triggerType: 'keywords' | 'all_comments';
+  keywords: string[];
+  excludedKeywords?: string[];
+  autoLikeComment: boolean;
+  publicReplies: string[];
+  directMessage: string;
+  ctaButton?: {
+    text: string;
+    url: string;
+  };
+  createLeadInCrm: boolean;
+  stats: {
+    commentsProcessed: number;
+    dmsSent: number;
+    leadsCaptured: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InstagramCommentLog {
+  id: string;
+  companyId: string;
+  ruleId: string;
+  ruleName: string;
+  instagramUsername: string;
+  commentText: string;
+  postId?: string;
+  postSnippet?: string;
+  publicReplyGiven: string;
+  dmSentText: string;
+  leadId?: string;
+  status: 'delivered' | 'failed' | 'ignored_keyword';
+  timestamp: string;
+}
+
+export interface InstagramSimulateResult {
+  success: boolean;
+  matched: boolean;
+  reason?: string;
+  ruleName?: string;
+  instagramUsername: string;
+  commentText: string;
+  publicReplyGiven?: string;
+  autoLiked?: boolean;
+  dmSentText?: string;
+  ctaButton?: { text: string; url: string };
+  lead?: Partial<Lead>;
+  log?: InstagramCommentLog;
+}
+
 
 

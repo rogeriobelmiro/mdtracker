@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -810,6 +810,70 @@ export async function analyzeLeadScoreAI(leadId: string, companyId?: string): Pr
   return res.json();
 }
 
+// ==============================================================================
+// INSTAGRAM AUTO-DM & COMMENT GROWTH TOOL (MANYCHAT STYLE)
+// ==============================================================================
 
+export async function fetchInstagramAutomations(companyId?: string): Promise<InstagramCommentAutomation[]> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/instagram/automations${params}`);
+  if (!res.ok) return [];
+  return res.json();
+}
 
+export async function createInstagramAutomation(data: Partial<InstagramCommentAutomation>): Promise<InstagramCommentAutomation> {
+  const res = await fetch('/api/instagram/automations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar automação de comentários');
+  }
+  return res.json();
+}
 
+export async function updateInstagramAutomation(id: string, data: Partial<InstagramCommentAutomation>): Promise<InstagramCommentAutomation> {
+  const res = await fetch(`/api/instagram/automations/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar automação de comentários');
+  }
+  return res.json();
+}
+
+export async function deleteInstagramAutomation(id: string): Promise<void> {
+  const res = await fetch(`/api/instagram/automations/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir automação de comentários');
+}
+
+export async function fetchInstagramCommentLogs(companyId?: string): Promise<InstagramCommentLog[]> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/instagram/automations/logs${params}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function simulateInstagramComment(payload: {
+  companyId: string;
+  ruleId?: string;
+  instagramUsername: string;
+  commentText: string;
+  postTitle?: string;
+}): Promise<InstagramSimulateResult> {
+  const res = await fetch('/api/instagram/automations/simulate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao simular comentário no Instagram');
+  }
+  return res.json();
+}

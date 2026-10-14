@@ -21,11 +21,12 @@ import {
   Layout,
   Send,
   PhoneCall,
-  Target
+  Target,
+  Instagram
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'chatbot' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
+export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -144,6 +145,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Chatbot com IA',
           icon: Bot,
           badge: { text: 'WhatsApp & Direct', variant: 'purple' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'instagram_auto_dm',
+          label: 'Auto-DM Instagram',
+          icon: Instagram,
+          badge: { text: 'ManyChat', variant: 'purple' },
           allowedRoles: ['admin', 'manager']
         },
         {

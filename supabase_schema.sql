@@ -442,5 +442,60 @@ CREATE INDEX IF NOT EXISTS idx_smart_lists_company_id ON public.smart_lists(comp
 -- Configuração Global de Lead Scoring
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS lead_scoring_config JSONB;
 
+-- ==============================================================================
+-- INSTAGRAM AUTO-DM & COMMENT GROWTH TOOL (MANYCHAT STYLE)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS public.instagram_comment_automations (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  status TEXT DEFAULT 'active', -- 'active', 'paused'
+  post_type TEXT DEFAULT 'any_post', -- 'any_post', 'specific_post'
+  post_url TEXT,
+  post_id TEXT,
+  post_thumbnail TEXT,
+  post_caption_snippet TEXT,
+  trigger_type TEXT DEFAULT 'keywords', -- 'keywords', 'all_comments'
+  keywords JSONB DEFAULT '[]'::jsonb,
+  excluded_keywords JSONB DEFAULT '[]'::jsonb,
+  auto_like_comment BOOLEAN DEFAULT TRUE,
+  public_replies JSONB DEFAULT '[]'::jsonb,
+  direct_message TEXT NOT NULL,
+  cta_button JSONB,
+  create_lead_in_crm BOOLEAN DEFAULT TRUE,
+  stats JSONB DEFAULT '{"commentsProcessed":0,"dmsSent":0,"leadsCaptured":0}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.instagram_comment_automations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir all anonimo em instagram_comment_automations" ON public.instagram_comment_automations;
+CREATE POLICY "Permitir all anonimo em instagram_comment_automations" ON public.instagram_comment_automations FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_insta_automations_company_id ON public.instagram_comment_automations(company_id);
+
+CREATE TABLE IF NOT EXISTS public.instagram_comment_logs (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  rule_id TEXT REFERENCES public.instagram_comment_automations(id) ON DELETE SET NULL,
+  rule_name TEXT,
+  instagram_username TEXT NOT NULL,
+  comment_text TEXT NOT NULL,
+  post_id TEXT,
+  post_snippet TEXT,
+  public_reply_given TEXT,
+  dm_sent_text TEXT,
+  lead_id TEXT REFERENCES public.leads(id) ON DELETE SET NULL,
+  status TEXT DEFAULT 'delivered',
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.instagram_comment_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir all anonimo em instagram_comment_logs" ON public.instagram_comment_logs;
+CREATE POLICY "Permitir all anonimo em instagram_comment_logs" ON public.instagram_comment_logs FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_insta_logs_company_id ON public.instagram_comment_logs(company_id);
+
 
 

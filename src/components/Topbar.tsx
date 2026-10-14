@@ -19,7 +19,8 @@ import {
   Layout,
   Send,
   PhoneCall,
-  Target
+  Target,
+  Instagram
 } from 'lucide-react';
 import { User, Company } from '../types';
 import { NavTabId } from './Sidebar';
@@ -109,6 +110,12 @@ export const Topbar: React.FC<TopbarProps> = ({
           section: 'Vendas & Atendimento',
           title: 'Chatbot com IA (WhatsApp & Direct)',
           icon: Bot
+        };
+      case 'instagram_auto_dm':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Auto-DM Instagram & Resposta de Comentários (Estilo ManyChat)',
+          icon: Instagram
         };
       case 'chat':
         return {

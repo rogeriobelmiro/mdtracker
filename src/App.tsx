@@ -19,6 +19,7 @@ import { LandingPagesManager } from './components/LandingPagesManager';
 import { VirtualDialer } from './components/VirtualDialer';
 import { VirtualPhoneManager } from './components/VirtualPhoneManager';
 import { LeadScoringAndLists } from './components/LeadScoringAndLists';
+import { InstagramAutoDM } from './components/InstagramAutoDM';
 import {
   fetchCompanies,
   fetchUsers,
@@ -616,6 +617,14 @@ export default function App() {
                 currentCompany={currentCompany}
                 onUpdateSettings={handleUpdateSettings}
                 onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'instagram_auto_dm' && currentUser.role !== 'attendant' && (
+              <InstagramAutoDM
+                currentCompany={currentCompany}
+                currentUser={currentUser}
+                onNavigateToTab={(tab) => setActiveTab(tab as any)}
               />
             )}
 

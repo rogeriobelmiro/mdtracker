@@ -367,6 +367,34 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
         </div>
       </div>
 
+      {/* ManyChat Instagram Comment Growth Tool Callout */}
+      <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-amber-50 border border-purple-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <Instagram className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-black text-slate-900">Auto-DM por Comentários no Feed & Reels (Estilo ManyChat)</h4>
+              <span className="bg-purple-600 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full">Growth Tool</span>
+            </div>
+            <p className="text-[11px] text-slate-600">
+              Responda seguidores que comentam "QUERO", "PREÇO" ou "LINK" nos seus posts e Reels com respostas públicas rotativas e Direct instantâneo.
+            </p>
+          </div>
+        </div>
+
+        {onNavigateToTab && (
+          <button
+            onClick={() => onNavigateToTab('instagram_auto_dm' as any)}
+            className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-sm active:scale-95"
+          >
+            <span>Configurar Auto-DM Instagram</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* 2. Main Work Area: Left Configs + Right Live Simulator */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
