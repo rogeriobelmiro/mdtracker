@@ -162,31 +162,38 @@ async function safeUpdateLead(id: string, dbRow: any) {
     return { error };
 }
 
-const mapLeadFromDB = (db: any) => ({
-    id: db.id,
-    companyId: db.company_id,
-    name: db.name,
-    phone: db.phone,
-    email: db.email,
-    location: db.location || {},
-    source: db.source,
-    utmSource: db.utm_source,
-    utmMedium: db.utm_medium,
-    utmCampaign: db.utm_campaign,
-    utmContent: db.utm_content,
-    utmTerm: db.utm_term,
-    linkId: db.link_id,
-    linkTitle: db.link_title,
-    stage: db.stage,
-    value: db.value || 0,
-    device: db.device,
-    browser: db.browser,
-    notes: db.notes,
-    conversionEvents: db.conversion_events || [],
-    botActive: db.bot_active !== undefined ? db.bot_active : true,
-    createdAt: db.created_at,
-    updatedAt: db.updated_at
-});
+const mapLeadFromDB = (db: any) => {
+    const computed = computeLeadScore(db);
+    return {
+        id: db.id,
+        companyId: db.company_id,
+        name: db.name,
+        phone: db.phone,
+        email: db.email,
+        location: db.location || {},
+        source: db.source,
+        utmSource: db.utm_source,
+        utmMedium: db.utm_medium,
+        utmCampaign: db.utm_campaign,
+        utmContent: db.utm_content,
+        utmTerm: db.utm_term,
+        linkId: db.link_id,
+        linkTitle: db.link_title,
+        stage: db.stage,
+        value: db.value || 0,
+        device: db.device,
+        browser: db.browser,
+        notes: db.notes,
+        conversionEvents: db.conversion_events || [],
+        botActive: db.bot_active !== undefined ? db.bot_active : true,
+        score: db.score !== undefined ? db.score : computed.score,
+        qualificationLevel: db.qualification_level || computed.qualificationLevel,
+        fitGrade: db.fit_grade || computed.fitGrade,
+        scoreBreakdown: db.score_breakdown || computed.scoreBreakdown,
+        createdAt: db.created_at,
+        updatedAt: db.updated_at
+    };
+};
 
 const mapSettingsToDB = (s: any) => ({
     company_id: s.companyId || 'comp-alfa',
@@ -1052,6 +1059,292 @@ let inMemoryBroadcastCampaigns: any[] = [
     updated_at: new Date().toISOString()
   }
 ];
+
+const mapLeadCallFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id || db.companyId,
+    leadId: db.lead_id || db.leadId,
+    leadName: db.lead_name || db.leadName,
+    leadPhone: db.lead_phone || db.leadPhone,
+    userId: db.user_id || db.userId,
+    userName: db.user_name || db.userName,
+    durationSeconds: db.duration_seconds !== undefined ? db.duration_seconds : (db.durationSeconds || 0),
+    outcome: db.outcome || 'atendeu_positivo',
+    notes: db.notes || '',
+    recordingUrl: db.recording_url || db.recordingUrl || '',
+    transcriptSummary: db.transcript_summary || db.transcriptSummary || '',
+    sentiment: db.sentiment || 'neutro',
+    nextSteps: db.next_steps || db.nextSteps || '',
+    callerId: db.caller_id || db.callerId || '',
+    createdAt: db.created_at || db.createdAt || new Date().toISOString()
+});
+
+const mapLeadCallToDB = (item: any) => ({
+    id: item.id,
+    company_id: item.companyId,
+    lead_id: item.leadId,
+    lead_name: item.leadName,
+    lead_phone: item.leadPhone,
+    user_id: item.userId,
+    user_name: item.userName,
+    duration_seconds: item.durationSeconds || 0,
+    outcome: item.outcome,
+    notes: item.notes,
+    recording_url: item.recordingUrl,
+    transcript_summary: item.transcriptSummary,
+    sentiment: item.sentiment,
+    next_steps: item.nextSteps,
+    caller_id: item.callerId,
+    created_at: item.createdAt || new Date().toISOString()
+});
+
+let inMemoryLeadCalls: any[] = [
+  {
+    id: 'call-101',
+    company_id: 'comp-alfa',
+    lead_id: 'lead-101',
+    lead_name: 'Carlos Eduardo Silva',
+    lead_phone: '5511991234567',
+    user_id: 'usr-2',
+    user_name: 'Rodrigo Gerente (Gerente de Vendas)',
+    duration_seconds: 165,
+    outcome: 'atendeu_positivo',
+    notes: 'Carlos atendeu com ótimo interesse. Demonstrei o dashboard de CAPI e o funil de WhatsApp. Ele aprovou o fechamento da licença anual corporativa.',
+    recording_url: 'https://actions.google.com/sounds/v1/office/office_ambient.ogg',
+    transcript_summary: 'Demonstração de valor do software realizada. Cliente tirou dúvidas sobre emissão de NF no CNPJ e confirmou fechamento imediato.',
+    sentiment: 'positivo',
+    next_steps: 'Enviar proposta comercial em PDF e chave PIX para faturamento.',
+    caller_id: '(11) 4003-8920',
+    created_at: new Date(Date.now() - 3600000 * 3).toISOString()
+  },
+  {
+    id: 'call-102',
+    company_id: 'comp-alfa',
+    lead_id: 'lead-102',
+    lead_name: 'Mariana Fontes',
+    lead_phone: '5521988776655',
+    user_id: 'usr-3',
+    user_name: 'Lucas Atendente (Atendimento Comercial)',
+    duration_seconds: 252,
+    outcome: 'atendeu_objecao',
+    notes: 'Mariana gostou muito do sistema mas precisa apresentar o custo-benefício para o diretor financeiro na quinta-feira.',
+    recording_url: 'https://actions.google.com/sounds/v1/office/office_ambient.ogg',
+    transcript_summary: 'Discussão sobre retorno sobre investimento (ROI) de anúncios Meta/Google. Cliente solicitou material institucional em slides.',
+    sentiment: 'neutro',
+    next_steps: 'Retornar ligação na quinta-feira às 15h para acompanhar a decisão da diretoria.',
+    caller_id: '(11) 4003-8920',
+    created_at: new Date(Date.now() - 3600000 * 7).toISOString()
+  },
+  {
+    id: 'call-103',
+    company_id: 'comp-alfa',
+    lead_id: 'lead-103',
+    lead_name: 'Rodrigo Alcantara',
+    lead_phone: '5531976543210',
+    user_id: 'usr-3',
+    user_name: 'Lucas Atendente (Atendimento Comercial)',
+    duration_seconds: 75,
+    outcome: 'retornar_depois',
+    notes: 'Estava dirigindo no momento da ligação. Foi super receptivo e pediu para ligarmos amanhã à tarde.',
+    recording_url: '',
+    transcript_summary: 'Contato inicial rápido. Lead confirmou interesse mas solicitou reagendamento por estar indisponível.',
+    sentiment: 'neutro',
+    next_steps: 'Reagendar ligação para amanhã às 14:00.',
+    caller_id: '(11) 4003-8920',
+    created_at: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'call-104',
+    company_id: 'comp-alfa',
+    lead_id: 'lead-106',
+    lead_name: 'Juliana Mendes',
+    lead_phone: '5581987112233',
+    user_id: 'usr-3',
+    user_name: 'Lucas Atendente (Atendimento Comercial)',
+    duration_seconds: 0,
+    outcome: 'nao_atendeu',
+    notes: 'Chamou até cair na caixa postal.',
+    recording_url: '',
+    transcript_summary: 'Chamada não atendida.',
+    sentiment: 'neutro',
+    next_steps: 'Disparar mensagem no WhatsApp de acompanhamento via automação.',
+    caller_id: '(11) 4003-8920',
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+  }
+];
+
+let inMemoryVirtualPhoneSettings: Record<string, any> = {
+  'comp-alfa': {
+    provider: 'webrtc_native',
+    callerIdNumber: '(11) 4003-8920',
+    callerIdName: 'Alfa Marketing - Discador WebRTC',
+    recordCalls: true,
+    autoTranscribeAI: true,
+    agentExtension: '104'
+  }
+};
+
+const mapSmartListFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id || db.companyId,
+    name: db.name,
+    description: db.description || '',
+    color: db.color || '#2563eb',
+    conditions: db.conditions || [],
+    matchType: db.match_type || db.matchType || 'all',
+    leadsCount: db.leads_count !== undefined ? db.leads_count : (db.leadsCount || 0),
+    createdAt: db.created_at || db.createdAt || new Date().toISOString(),
+    updatedAt: db.updated_at || db.updatedAt || new Date().toISOString()
+});
+
+const mapSmartListToDB = (item: any) => ({
+    id: item.id,
+    company_id: item.companyId,
+    name: item.name,
+    description: item.description,
+    color: item.color,
+    conditions: item.conditions,
+    match_type: item.matchType,
+    leads_count: item.leadsCount || 0,
+    created_at: item.createdAt || new Date().toISOString(),
+    updated_at: item.updatedAt || new Date().toISOString()
+});
+
+let inMemorySmartLists: any[] = [
+  {
+    id: 'list-sql-hot',
+    company_id: 'comp-alfa',
+    name: '🔥 Leads Quentes (SQL - Score ≥ 70)',
+    description: 'Leads de alta probabilidade de fechamento imediato com ligações ou compras registradas.',
+    color: '#ef4444',
+    conditions: [
+      { field: 'score', operator: 'greater_than', value: 69 },
+      { field: 'hasPhone', operator: 'is_true', value: true }
+    ],
+    match_type: 'all',
+    leads_count: 2,
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'list-meta-ads',
+    company_id: 'comp-alfa',
+    name: '🎯 Oportunidades Meta Ads (Instagram/FB)',
+    description: 'Leads originados de anúncios pagos com telefone cadastrado.',
+    color: '#8b5cf6',
+    conditions: [
+      { field: 'utmSource', operator: 'contains', value: 'meta' }
+    ],
+    match_type: 'all',
+    leads_count: 3,
+    created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'list-calls-answered',
+    company_id: 'comp-alfa',
+    name: '📞 Leads com Ligação Atendida',
+    description: 'Contatos que atenderam chamada telefônica do vendedor.',
+    color: '#10b981',
+    conditions: [
+      { field: 'hasCalls', operator: 'is_true', value: true }
+    ],
+    match_type: 'all',
+    leads_count: 3,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'list-buyers-vip',
+    company_id: 'comp-alfa',
+    name: '🛒 Clientes VIP (LTV > R$ 1.000)',
+    description: 'Clientes convertidos com alto valor de compra.',
+    color: '#f59e0b',
+    conditions: [
+      { field: 'stage', operator: 'equals', value: 'Convertido' },
+      { field: 'minLtv', operator: 'greater_than', value: 999 }
+    ],
+    match_type: 'all',
+    leads_count: 2,
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+let inMemoryLeadScoringConfigs: Record<string, any> = {
+  'comp-alfa': {
+    mqlThreshold: 40,
+    sqlThreshold: 70,
+    pointsPerAction: {
+      popupConversion: 15,
+      landingPageConversion: 20,
+      emailOpen: 10,
+      smsClick: 15,
+      chatbotInteraction: 25,
+      callAnswered: 30,
+      productPurchase: 50,
+      inactivityDecay: -15
+    }
+  }
+};
+
+function computeLeadScore(lead: any) {
+    let score = 20; // Base score for lead conversion
+    const breakdown: Array<{ reason: string; points: number }> = [
+        { reason: 'Cadastro Inicial do Lead', points: 20 }
+    ];
+
+    if (lead.phone && String(lead.phone).replace(/\D/g, '').length >= 10) {
+        score += 15;
+        breakdown.push({ reason: 'Telefone Válido Informado', points: 15 });
+    }
+    if (lead.email && String(lead.email).includes('@')) {
+        score += 10;
+        breakdown.push({ reason: 'E-mail Comercial Informado', points: 10 });
+    }
+    if (lead.utm_content || lead.utmContent) {
+        score += 10;
+        breakdown.push({ reason: 'Engajamento com Criativo / Anúncio Específico', points: 10 });
+    }
+
+    const stage = lead.stage;
+    if (stage === 'Convertido') {
+        score += 40;
+        breakdown.push({ reason: 'Cliente Convertido (Compra Realizada)', points: 40 });
+    } else if (stage === 'Em Negociação') {
+        score += 25;
+        breakdown.push({ reason: 'Negociação Comercial em Andamento', points: 25 });
+    } else if (stage === 'Contatado') {
+        score += 15;
+        breakdown.push({ reason: 'Contato Efetivo Estabelecido', points: 15 });
+    } else if (stage === 'Perdido') {
+        score -= 20;
+        breakdown.push({ reason: 'Lead Perdido / Sem Interesse', points: -20 });
+    }
+
+    if (lead.value && Number(lead.value) > 0) {
+        const valPoints = Math.min(30, Math.floor(Number(lead.value) / 50));
+        score += valPoints;
+        breakdown.push({ reason: `Valor Potencial / LTV (R$ ${lead.value})`, points: valPoints });
+    }
+
+    // Has calls recorded
+    const calls = inMemoryLeadCalls.filter(c => c.lead_id === lead.id || c.leadId === lead.id);
+    if (calls.length > 0) {
+        const answered = calls.some(c => c.outcome === 'atendeu_positivo' || c.outcome === 'atendeu_objecao');
+        if (answered) {
+            score += 25;
+            breakdown.push({ reason: 'Chamada Telefônica VoIP Atendida', points: 25 });
+        }
+    }
+
+    score = Math.max(5, Math.min(100, score));
+
+    const qualificationLevel = score >= 70 ? 'SQL' : (score >= 40 ? 'MQL' : 'Lead');
+    const fitGrade = (lead.value && Number(lead.value) >= 1000) || (lead.phone && lead.email) ? 'A' : (lead.phone ? 'B' : 'C');
+
+    return { score, qualificationLevel, fitGrade, scoreBreakdown: breakdown };
+};
 
 import crypto from 'crypto';
 
@@ -3968,6 +4261,597 @@ Retorne ESTRITAMENTE um JSON no formato:
                 messageTemplate: `Olá, {{nome}}! Tudo bem? Preparamos uma condição exclusiva sobre ${subject} para você hoje. Gostaria de dar uma olhada rápida?`
             });
         }
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// PASSO 4: ENDPOINTS DE TELEFONIA VIRTUAL & DISCADOR WEBRTC
+// ==============================================================================
+
+// List Lead Calls
+app.get('/api/lead-calls', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        const leadId = req.query.leadId as string | undefined;
+
+        try {
+            let query = supabase.from('lead_calls').select('*').eq('company_id', companyId);
+            if (leadId) query = query.eq('lead_id', leadId);
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (!error && data && data.length > 0) {
+                return res.json(data.map(mapLeadCallFromDB));
+            }
+        } catch {}
+
+        let list = inMemoryLeadCalls.filter(c => c.company_id === companyId);
+        if (leadId) list = list.filter(c => c.lead_id === leadId);
+        list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        res.json(list.map(mapLeadCallFromDB));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create Lead Call
+app.post('/api/lead-calls', async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        const newCall = {
+            id: 'call-' + Date.now(),
+            company_id: body.companyId || 'comp-alfa',
+            lead_id: body.leadId,
+            lead_name: body.leadName || 'Lead',
+            lead_phone: body.leadPhone || '',
+            user_id: body.userId || 'usr-3',
+            user_name: body.userName || 'Lucas Atendente',
+            duration_seconds: Number(body.durationSeconds || 0),
+            outcome: body.outcome || 'atendeu_positivo',
+            notes: body.notes || '',
+            recording_url: body.recordingUrl || (body.durationSeconds > 10 ? 'https://actions.google.com/sounds/v1/office/office_ambient.ogg' : ''),
+            transcript_summary: body.transcriptSummary || '',
+            sentiment: body.sentiment || 'neutro',
+            next_steps: body.nextSteps || '',
+            caller_id: body.callerId || '(11) 4003-8920',
+            created_at: new Date().toISOString()
+        };
+
+        // If outcome requires stage update or updateLeadStage was passed
+        if (body.updateLeadStage && body.leadId) {
+            try {
+                await supabase.from('leads').update({
+                    stage: body.updateLeadStage,
+                    updated_at: new Date().toISOString()
+                }).eq('id', body.leadId);
+            } catch {}
+        }
+
+        try {
+            const { data, error } = await supabase.from('lead_calls').insert(newCall).select().single();
+            if (!error && data) {
+                inMemoryLeadCalls.unshift(data);
+                return res.status(201).json(mapLeadCallFromDB(data));
+            }
+        } catch {}
+
+        inMemoryLeadCalls.unshift(newCall);
+        res.status(201).json(mapLeadCallFromDB(newCall));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Lead Call
+app.delete('/api/lead-calls/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('lead_calls').delete().eq('id', id);
+        } catch {}
+        inMemoryLeadCalls = inMemoryLeadCalls.filter(c => c.id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Transcribe & Analyze Call with AI (Gemini 2.5 Flash)
+app.post('/api/lead-calls/:id/transcribe-ai', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const { notes, duration, leadName } = req.body;
+
+        const targetCall = inMemoryLeadCalls.find(c => c.id === id);
+        const resolvedName = leadName || targetCall?.lead_name || 'Cliente';
+        const resolvedNotes = notes || targetCall?.notes || 'Conversa sobre alinhamento de proposta e detalhes do serviço.';
+        const resolvedDuration = duration !== undefined ? duration : (targetCall?.duration_seconds || 120);
+
+        let aiResult = null;
+        const apiKey = process.env.GEMINI_API_KEY;
+
+        if (apiKey) {
+            try {
+                const ai = new GoogleGenAI({ apiKey });
+                const prompt = `Você é um analista sênior de inteligência comercial e qualidade em vendas (RevOps).
+Analise os dados desta chamada telefônica comercial realizada com um lead:
+- Nome do Lead: "${resolvedName}"
+- Duração da Chamada: ${resolvedDuration} segundos
+- Anotações / Relato do Vendedor: "${resolvedNotes}"
+
+Retorne ESTRITAMENTE um JSON no seguinte formato:
+{
+  "summary": "Resumo executivo da ligação em 2 a 3 frases claras e objetivas destacando o que foi falado.",
+  "sentiment": "positivo", // "positivo", "neutro" ou "negativo"
+  "detectedObjections": ["objeção 1 identificada", "objeção 2 identificada"],
+  "nextSteps": "Recomendação prática e tática para o vendedor fechar a venda no próximo contato."
+}`;
+
+                const geminiRes = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: prompt
+                });
+
+                let text = (geminiRes.text || '').trim();
+                text = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+                aiResult = JSON.parse(text);
+            } catch (err) {
+                console.warn('Erro ao chamar Gemini para análise de chamada, usando heurística:', err);
+            }
+        }
+
+        // Heuristic fallback if AI is not available
+        if (!aiResult) {
+            const isLong = resolvedDuration > 90;
+            const hasObjection = /preço|caro|diretoria|pensar|depois|dúvida|custo/i.test(resolvedNotes);
+            const sentiment = hasObjection ? 'neutro' : (isLong ? 'positivo' : 'neutro');
+
+            aiResult = {
+                summary: `Ligação com ${resolvedName} (${resolvedDuration}s). O vendedor apresentou os diferenciais e alinhou as expectativas comerciais. ${resolvedNotes}`,
+                sentiment: sentiment as any,
+                detectedObjections: hasObjection ? ['Validação orçamentária ou aprovação interna necessária'] : ['Desejo de avaliar proposta antes de assinar'],
+                nextSteps: isLong 
+                    ? 'Enviar mensagem no WhatsApp com resumo dos pontos combinados e agendar follow-up em 48h.'
+                    : 'Enviar material complementar por e-mail e realizar novo contato telefônico.'
+            };
+        }
+
+        // Save analysis to memory and DB
+        if (targetCall) {
+            targetCall.transcript_summary = aiResult.summary;
+            targetCall.sentiment = aiResult.sentiment;
+            targetCall.next_steps = aiResult.nextSteps;
+        }
+
+        try {
+            await supabase.from('lead_calls').update({
+                transcript_summary: aiResult.summary,
+                sentiment: aiResult.sentiment,
+                next_steps: aiResult.nextSteps
+            }).eq('id', id);
+        } catch {}
+
+        res.json({
+            success: true,
+            summary: aiResult.summary,
+            sentiment: aiResult.sentiment,
+            detectedObjections: aiResult.detectedObjections || [],
+            nextSteps: aiResult.nextSteps
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Virtual Phone Settings
+app.get('/api/virtual-phone/settings', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data } = await supabase.from('settings').select('virtual_phone_settings').eq('company_id', companyId).single();
+            if (data?.virtual_phone_settings) {
+                return res.json(data.virtual_phone_settings);
+            }
+        } catch {}
+
+        const s = inMemoryVirtualPhoneSettings[companyId] || {
+            provider: 'webrtc_native',
+            callerIdNumber: '(11) 4003-8920',
+            callerIdName: 'Alfa Marketing - Discador WebRTC',
+            recordCalls: true,
+            autoTranscribeAI: true,
+            agentExtension: '104'
+        };
+        res.json(s);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/virtual-phone/settings', async (req: Request, res: Response) => {
+    try {
+        const { companyId, settings } = req.body;
+        const targetComp = companyId || 'comp-alfa';
+
+        inMemoryVirtualPhoneSettings[targetComp] = {
+            ...(inMemoryVirtualPhoneSettings[targetComp] || {}),
+            ...settings
+        };
+
+        try {
+            await supabase.from('settings').update({
+                virtual_phone_settings: inMemoryVirtualPhoneSettings[targetComp],
+                updated_at: new Date().toISOString()
+            }).eq('company_id', targetComp);
+        } catch {}
+
+        res.json(inMemoryVirtualPhoneSettings[targetComp]);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// PASSO 5: ENDPOINTS DE LISTAS INTELIGENTES & LEAD SCORING COM IA
+// ==============================================================================
+
+// Helper to filter leads by smart list conditions
+function filterLeadsBySmartList(leadsList: any[], list: any) {
+    if (!list.conditions || list.conditions.length === 0) return leadsList;
+    const isAnd = (list.match_type || list.matchType || 'all') === 'all';
+
+    return leadsList.filter(lead => {
+        const results = list.conditions.map((cond: any) => {
+            const field = cond.field;
+            const op = cond.operator;
+            const val = cond.value;
+
+            switch (field) {
+                case 'score': {
+                    const leadScore = lead.score !== undefined ? lead.score : 20;
+                    if (op === 'greater_than') return leadScore >= Number(val);
+                    if (op === 'less_than') return leadScore <= Number(val);
+                    return leadScore === Number(val);
+                }
+                case 'qualificationLevel': {
+                    return String(lead.qualificationLevel || lead.qualification_level || 'Lead').toLowerCase() === String(val).toLowerCase();
+                }
+                case 'stage': {
+                    return String(lead.stage || '').toLowerCase() === String(val).toLowerCase();
+                }
+                case 'utmSource': {
+                    const src = (lead.utmSource || lead.utm_source || lead.source || '').toLowerCase();
+                    return src.includes(String(val).toLowerCase());
+                }
+                case 'hasPhone': {
+                    const phone = String(lead.phone || '').replace(/\D/g, '');
+                    return val ? phone.length >= 8 : phone.length < 8;
+                }
+                case 'hasEmail': {
+                    const email = String(lead.email || '');
+                    return val ? email.includes('@') : !email.includes('@');
+                }
+                case 'minLtv': {
+                    const ltv = Number(lead.value || 0);
+                    return ltv >= Number(val);
+                }
+                case 'hasCalls': {
+                    const calls = inMemoryLeadCalls.filter(c => c.lead_id === lead.id || c.leadId === lead.id);
+                    return val ? calls.length > 0 : calls.length === 0;
+                }
+                default:
+                    return true;
+            }
+        });
+
+        return isAnd ? results.every(Boolean) : results.some(Boolean);
+    });
+}
+
+// List Smart Lists
+app.get('/api/smart-lists', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+
+        let lists = inMemorySmartLists.filter(l => l.company_id === companyId);
+        try {
+            const { data } = await supabase.from('smart_lists').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
+            if (data && data.length > 0) {
+                lists = data;
+            }
+        } catch {}
+
+        // Fetch company leads to compute live counts
+        let leadsList: any[] = [];
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('company_id', companyId);
+            if (data) leadsList = data.map(mapLeadFromDB);
+        } catch {}
+
+        const mapped = lists.map(l => {
+            const item = mapSmartListFromDB(l);
+            if (leadsList.length > 0) {
+                item.leadsCount = filterLeadsBySmartList(leadsList, l).length;
+            }
+            return item;
+        });
+
+        res.json(mapped);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create Smart List
+app.post('/api/smart-lists', async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        const newList = {
+            id: 'list-' + Date.now(),
+            company_id: body.companyId || 'comp-alfa',
+            name: body.name || 'Nova Lista Inteligente',
+            description: body.description || '',
+            color: body.color || '#2563eb',
+            conditions: body.conditions || [],
+            match_type: body.matchType || 'all',
+            leads_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        try {
+            const { data, error } = await supabase.from('smart_lists').insert(newList).select().single();
+            if (!error && data) {
+                inMemorySmartLists.unshift(data);
+                return res.status(201).json(mapSmartListFromDB(data));
+            }
+        } catch {}
+
+        inMemorySmartLists.unshift(newList);
+        res.status(201).json(mapSmartListFromDB(newList));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Smart List
+app.put('/api/smart-lists/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const body = req.body;
+        const dbPayload: any = {
+            updated_at: new Date().toISOString()
+        };
+        if (body.name !== undefined) dbPayload.name = body.name;
+        if (body.description !== undefined) dbPayload.description = body.description;
+        if (body.color !== undefined) dbPayload.color = body.color;
+        if (body.conditions !== undefined) dbPayload.conditions = body.conditions;
+        if (body.matchType !== undefined) dbPayload.match_type = body.matchType;
+
+        try {
+            await supabase.from('smart_lists').update(dbPayload).eq('id', id);
+        } catch {}
+
+        const idx = inMemorySmartLists.findIndex(l => l.id === id);
+        if (idx !== -1) {
+            inMemorySmartLists[idx] = { ...inMemorySmartLists[idx], ...dbPayload };
+            return res.json(mapSmartListFromDB(inMemorySmartLists[idx]));
+        }
+
+        res.json({ id, ...body });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Smart List
+app.delete('/api/smart-lists/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('smart_lists').delete().eq('id', id);
+        } catch {}
+        inMemorySmartLists = inMemorySmartLists.filter(l => l.id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Lead Scoring Config
+app.get('/api/lead-scoring/config', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data } = await supabase.from('settings').select('lead_scoring_config').eq('company_id', companyId).single();
+            if (data?.lead_scoring_config) {
+                return res.json(data.lead_scoring_config);
+            }
+        } catch {}
+
+        const cfg = inMemoryLeadScoringConfigs[companyId] || {
+            mqlThreshold: 40,
+            sqlThreshold: 70,
+            pointsPerAction: {
+                popupConversion: 15,
+                landingPageConversion: 20,
+                emailOpen: 10,
+                smsClick: 15,
+                chatbotInteraction: 25,
+                callAnswered: 30,
+                productPurchase: 50,
+                inactivityDecay: -15
+            }
+        };
+        res.json(cfg);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Lead Scoring Config
+app.put('/api/lead-scoring/config', async (req: Request, res: Response) => {
+    try {
+        const { companyId, config } = req.body;
+        const targetComp = companyId || 'comp-alfa';
+
+        inMemoryLeadScoringConfigs[targetComp] = {
+            ...(inMemoryLeadScoringConfigs[targetComp] || {}),
+            ...config
+        };
+
+        try {
+            await supabase.from('settings').update({
+                lead_scoring_config: inMemoryLeadScoringConfigs[targetComp],
+                updated_at: new Date().toISOString()
+            }).eq('company_id', targetComp);
+        } catch {}
+
+        res.json(inMemoryLeadScoringConfigs[targetComp]);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Recalculate All Scores
+app.post('/api/lead-scoring/recalculate-all', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.body.companyId || 'comp-alfa';
+        let leads: any[] = [];
+
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('company_id', companyId);
+            if (data) leads = data;
+        } catch {}
+
+        const updatedLeads: any[] = [];
+        for (const rawLead of leads) {
+            const computed = computeLeadScore(rawLead);
+            try {
+                await supabase.from('leads').update({
+                    score: computed.score,
+                    qualification_level: computed.qualificationLevel,
+                    fit_grade: computed.fitGrade,
+                    score_breakdown: computed.scoreBreakdown,
+                    updated_at: new Date().toISOString()
+                }).eq('id', rawLead.id);
+            } catch {}
+
+            updatedLeads.push({
+                ...mapLeadFromDB(rawLead),
+                score: computed.score,
+                qualificationLevel: computed.qualificationLevel,
+                fitGrade: computed.fitGrade,
+                scoreBreakdown: computed.scoreBreakdown
+            });
+        }
+
+        res.json({
+            success: true,
+            updatedCount: updatedLeads.length,
+            leads: updatedLeads
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Analyze Lead Score with AI (Gemini 2.5 Flash)
+app.post('/api/lead-scoring/analyze-ai', async (req: Request, res: Response) => {
+    try {
+        const { leadId, companyId } = req.body;
+        let lead: any = null;
+
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('id', leadId).single();
+            if (data) lead = mapLeadFromDB(data);
+        } catch {}
+
+        if (!lead) {
+            lead = {
+                name: 'Lead em Qualificação',
+                stage: 'Contatado',
+                phone: '5511999999999',
+                utmSource: 'meta_ads',
+                value: 490
+            };
+        }
+
+        let aiResult = null;
+        const apiKey = process.env.GEMINI_API_KEY;
+
+        if (apiKey) {
+            try {
+                const ai = new GoogleGenAI({ apiKey });
+                const prompt = `Você é um analista sênior de inteligência comercial (RevOps) e qualificação de leads estilo RD Station.
+Analise os dados deste lead e determine o Lead Score (0 a 100), estágio (Lead, MQL ou SQL) e perfil de Fit (A, B, C ou D):
+- Nome: "${lead.name}"
+- Etapa no Funil: "${lead.stage}"
+- Telefone: "${lead.phone || 'Não informado'}"
+- E-mail: "${lead.email || 'Não informado'}"
+- Origem do Tráfego: "${lead.utmSource || lead.source || 'Direto'}"
+- Anúncio Criativo: "${lead.utmContent || 'Geral'}"
+- Valor de Compras / LTV: R$ ${lead.value || 0}
+- Anotações Comerciais: "${lead.notes || 'Sem anotações'}"
+
+Retorne ESTRITAMENTE um JSON no seguinte formato:
+{
+  "score": 85,
+  "qualificationLevel": "SQL",
+  "fitGrade": "A",
+  "explanation": "Explicação em 2 frases sobre a maturidade e probabilidade de compra do lead.",
+  "breakdown": [
+    { "reason": "Motivo 1", "points": 30 },
+    { "reason": "Motivo 2", "points": 25 },
+    { "reason": "Motivo 3", "points": 30 }
+  ]
+}`;
+
+                const geminiRes = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: prompt
+                });
+
+                let text = (geminiRes.text || '').trim();
+                text = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+                aiResult = JSON.parse(text);
+            } catch (err) {
+                console.warn('Erro ao chamar Gemini em Lead Scoring AI:', err);
+            }
+        }
+
+        if (!aiResult) {
+            const computed = computeLeadScore(lead);
+            aiResult = {
+                score: computed.score,
+                qualificationLevel: computed.qualificationLevel,
+                fitGrade: computed.fitGrade,
+                explanation: `Lead qualificado com Score ${computed.score} baseado na etapa (${lead.stage}), contato telefônico ativo e engajamento com campanhas.`,
+                breakdown: computed.scoreBreakdown
+            };
+        }
+
+        // Update database with AI result if lead exists
+        if (lead.id) {
+            try {
+                await supabase.from('leads').update({
+                    score: aiResult.score,
+                    qualification_level: aiResult.qualificationLevel,
+                    fit_grade: aiResult.fitGrade,
+                    score_breakdown: aiResult.breakdown,
+                    updated_at: new Date().toISOString()
+                }).eq('id', lead.id);
+            } catch {}
+        }
+
+        res.json({
+            success: true,
+            score: aiResult.score,
+            qualificationLevel: aiResult.qualificationLevel,
+            fitGrade: aiResult.fitGrade,
+            explanation: aiResult.explanation,
+            breakdown: aiResult.breakdown
+        });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

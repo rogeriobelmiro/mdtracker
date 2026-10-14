@@ -105,6 +105,10 @@ export interface Lead {
   notes?: string;
   conversionEvents: ConversionEventLog[];
   botActive?: boolean;
+  score?: number;
+  qualificationLevel?: 'Lead' | 'MQL' | 'SQL';
+  fitGrade?: 'A' | 'B' | 'C' | 'D';
+  scoreBreakdown?: Array<{ reason: string; points: number }>;
 }
 
 export interface WebhookLog {
@@ -496,4 +500,88 @@ export interface LandingPage {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==============================================================================
+// PASSO 4: TELEFONIA VIRTUAL & DISCADOR WEBRTC (VoIP no CRM)
+// ==============================================================================
+
+export type CallOutcome = 
+  | 'atendeu_positivo' 
+  | 'atendeu_objecao' 
+  | 'retornar_depois' 
+  | 'nao_atendeu' 
+  | 'ocupado' 
+  | 'caixa_postal' 
+  | 'invalido';
+
+export interface LeadCall {
+  id: string;
+  companyId: string;
+  leadId: string;
+  leadName: string;
+  leadPhone: string;
+  userId?: string;
+  userName: string;
+  durationSeconds: number;
+  outcome: CallOutcome;
+  notes?: string;
+  recordingUrl?: string;
+  transcriptSummary?: string;
+  sentiment?: 'positivo' | 'neutro' | 'negativo';
+  nextSteps?: string;
+  callerId?: string;
+  createdAt: string;
+}
+
+export interface VirtualPhoneSettings {
+  provider: 'webrtc_native' | 'twilio' | 'zenvia' | 'totalvoice';
+  callerIdNumber: string;
+  callerIdName: string;
+  recordCalls: boolean;
+  autoTranscribeAI: boolean;
+  agentExtension: string;
+}
+
+// ==============================================================================
+// PASSO 5: LISTAS INTELIGENTES & LEAD SCORING COM IA (ESTILO RD STATION)
+// ==============================================================================
+
+export type QualificationLevel = 'Lead' | 'MQL' | 'SQL';
+export type FitGrade = 'A' | 'B' | 'C' | 'D';
+
+export interface SmartListCondition {
+  field: 'score' | 'qualificationLevel' | 'stage' | 'utmSource' | 'hasPhone' | 'hasEmail' | 'minLtv' | 'hasCalls';
+  operator: 'equals' | 'greater_than' | 'less_than' | 'contains' | 'is_true';
+  value: string | number | boolean;
+}
+
+export interface SmartList {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  conditions: SmartListCondition[];
+  matchType: 'all' | 'any'; // AND vs OR
+  leadsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadScoringConfig {
+  mqlThreshold: number; // default 40
+  sqlThreshold: number; // default 70
+  pointsPerAction: {
+    popupConversion: number; // 15
+    landingPageConversion: number; // 20
+    emailOpen: number; // 10
+    smsClick: number; // 15
+    chatbotInteraction: number; // 25
+    callAnswered: number; // 30
+    productPurchase: number; // 50
+    inactivityDecay: number; // -15
+  };
+}
+
+
 

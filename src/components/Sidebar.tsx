@@ -19,11 +19,13 @@ import {
   Bot,
   GitBranch,
   Layout,
-  Send
+  Send,
+  PhoneCall,
+  Target
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'popups' | 'workflows' | 'ai' | 'leads' | 'chatbot' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
+export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'chatbot' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -121,6 +123,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'leads',
           label: 'Gestão de Leads',
           icon: Users,
+          allowedRoles: ['admin', 'manager', 'attendant']
+        },
+        {
+          id: 'smart_lists',
+          label: 'Listas & Lead Scoring',
+          icon: Target,
+          badge: { text: 'IA Scoring', variant: 'purple' },
+          allowedRoles: ['admin', 'manager', 'attendant']
+        },
+        {
+          id: 'virtual_phone',
+          label: 'Telefone Virtual & VoIP',
+          icon: PhoneCall,
+          badge: { text: 'WebRTC', variant: 'emerald' },
           allowedRoles: ['admin', 'manager', 'attendant']
         },
         {

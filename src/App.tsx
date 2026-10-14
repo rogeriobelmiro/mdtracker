@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, NavTabId } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { DashboardOverview } from './components/DashboardOverview';
 import { LinkManager } from './components/LinkManager';
@@ -16,6 +16,9 @@ import { AICopywriterManager } from './components/AICopywriterManager';
 import { ChatbotManager } from './components/ChatbotManager';
 import { WorkflowsManager } from './components/WorkflowsManager';
 import { LandingPagesManager } from './components/LandingPagesManager';
+import { VirtualDialer } from './components/VirtualDialer';
+import { VirtualPhoneManager } from './components/VirtualPhoneManager';
+import { LeadScoringAndLists } from './components/LeadScoringAndLists';
 import {
   fetchCompanies,
   fetchUsers,
@@ -53,10 +56,11 @@ import { useDialog } from './contexts/DialogContext';
 
 export default function App() {
   const { alert, confirm } = useDialog();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products' | 'popups' | 'ai' | 'chatbot' | 'workflows'>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTabId>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
+  const [activeCallTarget, setActiveCallTarget] = useState<{ leadId: string; leadName: string; leadPhone: string } | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [leadSearchQuery, setLeadSearchQuery] = useState<string>('');
   const [leadLinkIdFilter, setLeadLinkIdFilter] = useState<string | null>(null);
@@ -508,6 +512,54 @@ export default function App() {
                   setChatSelectedLeadId(leadId);
                   setActiveTab('chat');
                 }}
+                onInitiateCall={(lead) => {
+                  setActiveCallTarget({
+                    leadId: lead.id,
+                    leadName: lead.name,
+                    leadPhone: lead.phone || ''
+                  });
+                }}
+              />
+            )}
+
+            {activeTab === 'smart_lists' && (
+              <LeadScoringAndLists
+                leads={companyLeads}
+                currentCompany={currentCompany}
+                currentUser={currentUser}
+                onInitiateCall={(target) => {
+                  setActiveCallTarget({
+                    leadId: target.id,
+                    leadName: target.name,
+                    leadPhone: target.phone
+                  });
+                }}
+                onOpenWhatsApp={(leadId) => {
+                  setChatSelectedLeadId(leadId);
+                  setActiveTab('chat');
+                }}
+                onNavigateToTab={(tab) => setActiveTab(tab as any)}
+                onRefreshLeads={loadData}
+              />
+            )}
+
+            {activeTab === 'virtual_phone' && (
+              <VirtualPhoneManager
+                leads={companyLeads}
+                currentCompany={currentCompany}
+                currentUser={currentUser}
+                onInitiateCall={(target) => {
+                  setActiveCallTarget({
+                    leadId: target.id,
+                    leadName: target.name,
+                    leadPhone: target.phone
+                  });
+                }}
+                onOpenWhatsApp={(leadId) => {
+                  setChatSelectedLeadId(leadId);
+                  setActiveTab('chat');
+                }}
+                onNavigateToTab={(tab) => setActiveTab(tab as any)}
               />
             )}
 
@@ -634,6 +686,21 @@ export default function App() {
         </footer>
 
       </div>
+
+      {/* Global WebRTC Softphone & Virtual Dialer */}
+      <VirtualDialer
+        leads={companyLeads}
+        currentCompany={currentCompany}
+        currentUser={currentUser}
+        activeCallTarget={activeCallTarget}
+        onClearCallTarget={() => setActiveCallTarget(null)}
+        onCallCreated={(_newCall) => {
+          // Sync any state
+        }}
+        onLeadStageUpdated={(leadId, newStage) => {
+          handleUpdateLead(leadId, { stage: newStage });
+        }}
+      />
 
     </div>
   );

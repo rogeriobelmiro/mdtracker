@@ -381,3 +381,66 @@ CREATE TABLE IF NOT EXISTS broadcast_campaigns (
 ALTER TABLE broadcast_campaigns ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir all anonimo em broadcast_campaigns" ON broadcast_campaigns FOR ALL TO anon USING (true) WITH CHECK (true);
 
+-- Tabela: lead_calls (Telefonia Virtual & VoIP no CRM)
+CREATE TABLE IF NOT EXISTS public.lead_calls (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  lead_id TEXT REFERENCES public.leads(id) ON DELETE CASCADE,
+  lead_name TEXT NOT NULL,
+  lead_phone TEXT NOT NULL,
+  user_id TEXT,
+  user_name TEXT NOT NULL,
+  duration_seconds INTEGER DEFAULT 0,
+  outcome TEXT DEFAULT 'atendeu_positivo', -- 'atendeu_positivo', 'atendeu_objecao', 'retornar_depois', 'nao_atendeu', 'ocupado', 'caixa_postal', 'invalido'
+  notes TEXT,
+  recording_url TEXT,
+  transcript_summary TEXT,
+  sentiment TEXT DEFAULT 'neutro', -- 'positivo', 'neutro', 'negativo'
+  next_steps TEXT,
+  caller_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.lead_calls ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir all anonimo em lead_calls" ON public.lead_calls;
+CREATE POLICY "Permitir all anonimo em lead_calls" ON public.lead_calls FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_lead_calls_lead_id ON public.lead_calls(lead_id);
+CREATE INDEX IF NOT EXISTS idx_lead_calls_company_id ON public.lead_calls(company_id);
+
+-- ==============================================================================
+-- PASSO 5: LISTAS INTELIGENTES & LEAD SCORING COM IA (ESTILO RD STATION)
+-- ==============================================================================
+
+-- Colunas de Pontuação na tabela leads
+ALTER TABLE public.leads 
+  ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 20,
+  ADD COLUMN IF NOT EXISTS qualification_level TEXT DEFAULT 'Lead',
+  ADD COLUMN IF NOT EXISTS fit_grade TEXT DEFAULT 'B',
+  ADD COLUMN IF NOT EXISTS score_breakdown JSONB DEFAULT '[]'::jsonb;
+
+-- Tabela: smart_lists (Listas Inteligentes de Segmentação estilo RD Station)
+CREATE TABLE IF NOT EXISTS public.smart_lists (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT '#2563eb',
+  conditions JSONB DEFAULT '[]'::jsonb,
+  match_type TEXT DEFAULT 'all', -- 'all', 'any'
+  leads_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.smart_lists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir all anonimo em smart_lists" ON public.smart_lists;
+CREATE POLICY "Permitir all anonimo em smart_lists" ON public.smart_lists FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_smart_lists_company_id ON public.smart_lists(company_id);
+
+-- Configuração Global de Lead Scoring
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS lead_scoring_config JSONB;
+
+
+

@@ -17,7 +17,9 @@ import {
   Bot,
   GitBranch,
   Layout,
-  Send
+  Send,
+  PhoneCall,
+  Target
 } from 'lucide-react';
 import { User, Company } from '../types';
 import { NavTabId } from './Sidebar';
@@ -89,6 +91,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           section: 'Vendas & Atendimento',
           title: 'Gestão de Leads & CRM',
           icon: Users
+        };
+      case 'smart_lists':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Listas Inteligentes & Lead Scoring com IA',
+          icon: Target
+        };
+      case 'virtual_phone':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Telefone Virtual, Discador WebRTC & Gravação VoIP',
+          icon: PhoneCall
         };
       case 'chatbot':
         return {

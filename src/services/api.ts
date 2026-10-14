@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -622,5 +622,194 @@ export async function generateBroadcastAI(payload: {
   }
   return res.json();
 }
+
+// ==============================================================================
+// PASSO 4: API METHODS - TELEFONIA VIRTUAL & DISCADOR WEBRTC
+// ==============================================================================
+
+export async function fetchLeadCalls(companyId?: string, leadId?: string): Promise<LeadCall[]> {
+  const params = new URLSearchParams();
+  if (companyId) params.append('companyId', companyId);
+  if (leadId) params.append('leadId', leadId);
+  const res = await fetch(`/api/lead-calls?${params.toString()}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createLeadCall(callData: Partial<LeadCall> & { updateLeadStage?: FunnelStage }): Promise<LeadCall> {
+  const res = await fetch('/api/lead-calls', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(callData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao registrar chamada');
+  }
+  return res.json();
+}
+
+export async function deleteLeadCall(id: string): Promise<void> {
+  const res = await fetch(`/api/lead-calls/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir histórico de chamada');
+}
+
+export async function transcribeLeadCallAI(callId: string, payload?: { notes?: string; duration?: number; leadName?: string }): Promise<{
+  summary: string;
+  sentiment: 'positivo' | 'neutro' | 'negativo';
+  detectedObjections: string[];
+  nextSteps: string;
+}> {
+  const res = await fetch(`/api/lead-calls/${callId}/transcribe-ai`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao transcrever chamada com IA');
+  }
+  return res.json();
+}
+
+export async function fetchVirtualPhoneSettings(companyId?: string): Promise<VirtualPhoneSettings> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/virtual-phone/settings${params}`);
+  if (!res.ok) {
+    return {
+      provider: 'webrtc_native',
+      callerIdNumber: '(11) 4003-8920',
+      callerIdName: 'Atendimento Comercial VIP',
+      recordCalls: true,
+      autoTranscribeAI: true,
+      agentExtension: '104'
+    };
+  }
+  return res.json();
+}
+
+export async function updateVirtualPhoneSettings(companyId: string, settings: Partial<VirtualPhoneSettings>): Promise<VirtualPhoneSettings> {
+  const res = await fetch('/api/virtual-phone/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId, settings })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao salvar configurações do telefone virtual');
+  }
+  return res.json();
+}
+
+// ==============================================================================
+// PASSO 5: API METHODS - LISTAS INTELIGENTES & LEAD SCORING COM IA
+// ==============================================================================
+
+export async function fetchSmartLists(companyId?: string): Promise<SmartList[]> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/smart-lists${params}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createSmartList(listData: Partial<SmartList>): Promise<SmartList> {
+  const res = await fetch('/api/smart-lists', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(listData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar lista inteligente');
+  }
+  return res.json();
+}
+
+export async function updateSmartList(id: string, listData: Partial<SmartList>): Promise<SmartList> {
+  const res = await fetch(`/api/smart-lists/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(listData)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar lista inteligente');
+  }
+  return res.json();
+}
+
+export async function deleteSmartList(id: string): Promise<void> {
+  const res = await fetch(`/api/smart-lists/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir lista');
+}
+
+export async function fetchLeadScoringConfig(companyId?: string): Promise<LeadScoringConfig> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/lead-scoring/config${params}`);
+  if (!res.ok) {
+    return {
+      mqlThreshold: 40,
+      sqlThreshold: 70,
+      pointsPerAction: {
+        popupConversion: 15,
+        landingPageConversion: 20,
+        emailOpen: 10,
+        smsClick: 15,
+        chatbotInteraction: 25,
+        callAnswered: 30,
+        productPurchase: 50,
+        inactivityDecay: -15
+      }
+    };
+  }
+  return res.json();
+}
+
+export async function updateLeadScoringConfig(companyId: string, config: Partial<LeadScoringConfig>): Promise<LeadScoringConfig> {
+  const res = await fetch('/api/lead-scoring/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId, config })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao salvar regras de lead scoring');
+  }
+  return res.json();
+}
+
+export async function recalculateAllScores(companyId: string): Promise<{ updatedCount: number; leads: Lead[] }> {
+  const res = await fetch('/api/lead-scoring/recalculate-all', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao recalcular scores');
+  }
+  return res.json();
+}
+
+export async function analyzeLeadScoreAI(leadId: string, companyId?: string): Promise<{
+  score: number;
+  qualificationLevel: 'Lead' | 'MQL' | 'SQL';
+  fitGrade: 'A' | 'B' | 'C' | 'D';
+  explanation: string;
+  breakdown: Array<{ reason: string; points: number }>;
+}> {
+  const res = await fetch(`/api/lead-scoring/analyze-ai`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ leadId, companyId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao analisar score com IA');
+  }
+  return res.json();
+}
+
+
 
 
