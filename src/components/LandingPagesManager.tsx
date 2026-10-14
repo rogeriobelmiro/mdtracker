@@ -777,8 +777,21 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
             <div className="text-2xl font-black text-amber-300 mt-1">{metrics.views.toLocaleString()}</div>
             <div className="text-[11px] text-blue-200 mt-0.5">Tráfego direto & anúncios</div>
           </div>
-          <div className="bg-white/10 p-3.5 rounded-2xl backdrop-blur-sm border border-white/10">
-            <div className="text-xs text-blue-200 font-medium">Leads Capturados</div>
+          <div 
+            onClick={() => onNavigateToTab?.('leads')}
+            className={`p-3.5 rounded-2xl backdrop-blur-sm border transition ${
+              onNavigateToTab ? 'bg-white/10 hover:bg-white/20 border-white/20 cursor-pointer group' : 'bg-white/10 border-white/10'
+            }`}
+            title="Clique para abrir a Gestão de Leads"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-blue-200 font-medium">Leads Capturados</div>
+              {onNavigateToTab && (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-0.5 group-hover:bg-emerald-500/30">
+                  Ver no CRM <ArrowRight className="w-2.5 h-2.5" />
+                </span>
+              )}
+            </div>
             <div className="text-2xl font-black text-emerald-300 mt-1">{metrics.conversions.toLocaleString()}</div>
             <div className="text-[11px] text-blue-200 mt-0.5">Entraram no CRM & fluxos</div>
           </div>
@@ -934,8 +947,14 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           <div className="text-[10px] text-slate-400 font-medium">Views</div>
                           <div className="text-sm font-bold text-slate-800">{lp.viewsCount || 0}</div>
                         </div>
-                        <div>
-                          <div className="text-[10px] text-slate-400 font-medium">Leads</div>
+                        <div 
+                          onClick={() => onNavigateToTab?.('leads')}
+                          className={`rounded-lg p-0.5 transition ${onNavigateToTab ? 'cursor-pointer hover:bg-emerald-50 hover:ring-1 hover:ring-emerald-300' : ''}`}
+                          title={onNavigateToTab ? 'Clique para abrir os leads capturados no CRM' : undefined}
+                        >
+                          <div className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-0.5">
+                            Leads <Users className="w-2.5 h-2.5 text-emerald-500" />
+                          </div>
                           <div className="text-sm font-bold text-emerald-600">{lp.conversionsCount || 0}</div>
                         </div>
                         <div>
@@ -979,7 +998,17 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {onNavigateToTab && (
+                          <button
+                            onClick={() => onNavigateToTab('leads')}
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition flex items-center gap-1"
+                            title="Ver leads no CRM"
+                          >
+                            <Users className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Leads</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setEditingPage(lp);
