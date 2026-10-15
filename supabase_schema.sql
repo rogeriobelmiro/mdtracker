@@ -353,18 +353,24 @@ CREATE TABLE IF NOT EXISTS broadcast_campaigns (
   id TEXT PRIMARY KEY,
   company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  channel TEXT DEFAULT 'email', -- 'email', 'sms', 'whatsapp'
+  channel TEXT DEFAULT 'email', -- 'email', 'sms', 'whatsapp', 'multichannel'
+  channels JSONB DEFAULT '["email"]'::jsonb,
   target_stage TEXT DEFAULT 'Todos',
   target_source TEXT DEFAULT 'Todas',
   target_tag TEXT DEFAULT 'Todas',
   message_template TEXT,
+  whatsapp_scheduled_at TIMESTAMPTZ,
   email_subject TEXT,
   email_preheader TEXT,
   email_sender_name TEXT,
   email_sender_email TEXT,
   email_body_html TEXT,
+  email_scheduled_at TIMESTAMPTZ,
   sms_text TEXT,
+  sms_scheduled_at TIMESTAMPTZ,
   tracking_link_id TEXT,
+  cta_url TEXT,
+  cta_text TEXT,
   status TEXT DEFAULT 'rascunho', -- 'rascunho', 'agendado', 'em_andamento', 'concluido'
   total_leads INTEGER DEFAULT 0,
   sent_count INTEGER DEFAULT 0,
@@ -374,6 +380,7 @@ CREATE TABLE IF NOT EXISTS broadcast_campaigns (
   provider TEXT DEFAULT 'simulado',
   delay_seconds INTEGER DEFAULT 5,
   scheduled_at TIMESTAMPTZ,
+  recipients JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -499,5 +506,18 @@ CREATE POLICY "Permitir all anonimo em instagram_comment_logs" ON public.instagr
 
 CREATE INDEX IF NOT EXISTS idx_insta_logs_company_id ON public.instagram_comment_logs(company_id);
 
+-- ==============================================================================
+-- MIGRAÇÃO: LANÇAMENTOS MULTICANAL, AGENDAMENTO & RASTREAMENTO DE ABERTURAS/CLIQUES
+-- ==============================================================================
+ALTER TABLE public.broadcast_campaigns
+  ADD COLUMN IF NOT EXISTS channels JSONB DEFAULT '["email"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS recipients JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS cta_url TEXT,
+  ADD COLUMN IF NOT EXISTS cta_text TEXT,
+  ADD COLUMN IF NOT EXISTS whatsapp_scheduled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS email_scheduled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS sms_scheduled_at TIMESTAMPTZ;
 
-
+-- Histórico de conversão e cliques nos leads
+ALTER TABLE public.leads
+  ADD COLUMN IF NOT EXISTS conversion_events JSONB DEFAULT '[]'::jsonb;
