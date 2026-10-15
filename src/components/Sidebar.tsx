@@ -163,9 +163,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: 'broadcast',
-          label: 'E-mail, SMS & Disparos',
+          label: 'Campanhas & Lançamentos',
           icon: Send,
-          badge: { text: 'Multicanal', variant: 'blue' },
+          badge: { text: 'E-mail, Whats & SMS', variant: 'purple' },
           allowedRoles: ['admin', 'manager']
         }
       ]

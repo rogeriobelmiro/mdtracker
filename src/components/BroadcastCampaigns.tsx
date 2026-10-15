@@ -30,7 +30,11 @@ import {
   X,
   Zap,
   ShieldCheck,
-  Share2
+  Share2,
+  Calendar,
+  CalendarDays,
+  MousePointerClick,
+  Flame
 } from 'lucide-react';
 import { 
   Lead, 
@@ -38,6 +42,7 @@ import {
   CampaignLink, 
   BroadcastCampaign, 
   BroadcastChannel, 
+  BroadcastRecipient,
   FunnelStage, 
   FUNNEL_STAGES,
   Product 
@@ -49,7 +54,9 @@ import {
   deleteBroadcastCampaign, 
   sendTestBroadcast, 
   launchBroadcastCampaign, 
-  generateBroadcastAI 
+  generateBroadcastAI,
+  fetchBroadcastRecipients,
+  simulateRecipientActivity
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { NavTabId } from './Sidebar';
@@ -168,7 +175,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeChannelTab, setActiveChannelTab] = useState<'all' | 'email' | 'sms' | 'whatsapp'>('all');
+  const [activeChannelTab, setActiveChannelTab] = useState<'all' | 'email' | 'sms' | 'whatsapp' | 'multichannel'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -178,10 +185,20 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
   // Form Fields
   const [channel, setChannel] = useState<BroadcastChannel>('email');
+  const [selectedChannels, setSelectedChannels] = useState<BroadcastChannel[]>(['email', 'whatsapp', 'sms']);
   const [campaignName, setCampaignName] = useState('');
   const [targetStage, setTargetStage] = useState<string>('Todos');
   const [targetSource, setTargetSource] = useState<string>('Todas');
   const [targetTag, setTargetTag] = useState<string>('Todas');
+
+  // Scheduling State (Data e Hora do Disparo de Lançamentos)
+  const [isScheduled, setIsScheduled] = useState<boolean>(false);
+  const [scheduledDate, setScheduledDate] = useState<string>('');
+  const [scheduledTime, setScheduledTime] = useState<string>('09:00');
+
+  // Call to Action (Link & Botão para Rastreamento de Cliques)
+  const [ctaUrl, setCtaUrl] = useState<string>('');
+  const [ctaText, setCtaText] = useState<string>('Garantir Minha Vaga');
   
   // Email fields
   const [emailSubject, setEmailSubject] = useState('');
@@ -200,6 +217,14 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
   // Preview Mode in Modal
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [multichannelPreviewTab, setMultichannelPreviewTab] = useState<'email' | 'whatsapp' | 'sms'>('email');
+
+  // Recipients Engagement Modal (Quem Abriu & Clicou)
+  const [selectedCampaignForRecipients, setSelectedCampaignForRecipients] = useState<BroadcastCampaign | null>(null);
+  const [campaignRecipients, setCampaignRecipients] = useState<BroadcastRecipient[]>([]);
+  const [isLoadingRecipients, setIsLoadingRecipients] = useState<boolean>(false);
+  const [recipientFilter, setRecipientFilter] = useState<'all' | 'opened' | 'clicked' | 'unopened'>('all');
+  const [recipientSearch, setRecipientSearch] = useState<string>('');
 
   // Test Dispatch State
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -284,6 +309,8 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
         hasChannelData = !!(l.email && l.email.includes('@'));
       } else if (channel === 'sms' || channel === 'whatsapp') {
         hasChannelData = !!(l.phone && l.phone.replace(/\D/g, '').length >= 10);
+      } else if (channel === 'multichannel') {
+        hasChannelData = !!((l.email && l.email.includes('@')) || (l.phone && l.phone.replace(/\D/g, '').length >= 10));
       }
 
       return matchesStage && matchesSource && hasChannelData;
@@ -303,11 +330,28 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   // Open New Campaign Modal
   const handleOpenCreateModal = (prefChannel?: BroadcastChannel) => {
     setEditingCampaignId(null);
-    setChannel(prefChannel || 'email');
-    setCampaignName(`Nova Campanha de ${prefChannel === 'sms' ? 'SMS' : prefChannel === 'whatsapp' ? 'WhatsApp' : 'E-mail'} - ${new Date().toLocaleDateString('pt-BR')}`);
+    const chosenChannel = prefChannel || 'email';
+    setChannel(chosenChannel);
+    setSelectedChannels(['email', 'whatsapp', 'sms']);
+    setMultichannelPreviewTab('email');
+    setCampaignName(
+      chosenChannel === 'multichannel' 
+        ? `Lançamento Multicanal - ${new Date().toLocaleDateString('pt-BR')}`
+        : `Nova Campanha de ${chosenChannel === 'sms' ? 'SMS' : chosenChannel === 'whatsapp' ? 'WhatsApp' : 'E-mail'} - ${new Date().toLocaleDateString('pt-BR')}`
+    );
     setTargetStage('Todos');
     setTargetSource('Todas');
     setTargetTag('Todas');
+
+    // Scheduling Defaults
+    setIsScheduled(false);
+    const tomorrow = new Date(Date.now() + 86400000);
+    setScheduledDate(tomorrow.toISOString().split('T')[0]);
+    setScheduledTime('09:00');
+
+    // CTA Link Tracking Defaults
+    setCtaUrl('https://mdtracker.com.br');
+    setCtaText('Garantir Minha Vaga com Bônus');
 
     // Defaults for email
     setEmailSubject('🚀 Oportunidade Exclusiva: Condição Especial Liberada');
@@ -322,7 +366,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
     // Defaults for WhatsApp
     setMessageTemplate('Olá {{nome}}! Tudo bem? Passando para te apresentar uma novidade exclusiva da {{empresa}}.');
     setDelaySeconds(5);
-    setProvider(prefChannel === 'sms' ? 'z_api' : prefChannel === 'whatsapp' ? 'simulado_web' : 'resend');
+    setProvider(chosenChannel === 'sms' ? 'z_api' : chosenChannel === 'whatsapp' ? 'simulado_web' : 'resend');
 
     setIsModalOpen(true);
   };
@@ -331,10 +375,28 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   const handleOpenEditModal = (camp: BroadcastCampaign) => {
     setEditingCampaignId(camp.id);
     setChannel(camp.channel);
+    setSelectedChannels(camp.channels || ['email', 'whatsapp', 'sms']);
+    setMultichannelPreviewTab('email');
     setCampaignName(camp.name);
     setTargetStage(camp.targetStage);
     setTargetSource(camp.targetSource);
     setTargetTag(camp.targetTag || 'Todas');
+
+    // Scheduling
+    setIsScheduled(!!camp.scheduledAt);
+    if (camp.scheduledAt) {
+      setScheduledDate(camp.scheduledAt.split('T')[0]);
+      setScheduledTime(camp.scheduledAt.includes('T') ? camp.scheduledAt.split('T')[1].substring(0, 5) : '09:00');
+    } else {
+      const tomorrow = new Date(Date.now() + 86400000);
+      setScheduledDate(tomorrow.toISOString().split('T')[0]);
+      setScheduledTime('09:00');
+    }
+
+    // CTA
+    setCtaUrl(camp.ctaUrl || '');
+    setCtaText(camp.ctaText || 'Garantir Minha Vaga');
+
     setEmailSubject(camp.emailSubject || '');
     setEmailPreheader(camp.emailPreheader || '');
     setEmailSenderName(camp.emailSenderName || currentCompany?.name || 'Equipe');
@@ -348,36 +410,44 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   };
 
   // Save Campaign
-  const handleSaveCampaign = async (status: 'rascunho' | 'concluido' = 'rascunho') => {
+  const handleSaveCampaign = async (statusOverride?: 'rascunho' | 'concluido' | 'agendado') => {
     if (!campaignName.trim()) {
       await alert('Por favor, informe o nome da campanha.');
       return;
     }
 
+    let effectiveScheduledAt: string | null = null;
+    let finalStatus: 'rascunho' | 'concluido' | 'agendado' = statusOverride || 'rascunho';
+
+    if (isScheduled && scheduledDate) {
+      effectiveScheduledAt = new Date(`${scheduledDate}T${scheduledTime || '09:00'}:00`).toISOString();
+      if (finalStatus !== 'concluido' && new Date(effectiveScheduledAt) > new Date()) {
+        finalStatus = 'agendado';
+      }
+    }
+
     const payload: Partial<BroadcastCampaign> = {
       name: campaignName,
       channel,
+      channels: channel === 'multichannel' ? selectedChannels : [channel],
       targetStage: targetStage as any,
       targetSource,
       targetTag,
-      status,
+      status: finalStatus,
       totalLeads: eligibleLeads.length,
       provider,
       delaySeconds,
       companyId,
-      ...(channel === 'email' ? {
-        emailSubject,
-        emailPreheader,
-        emailSenderName,
-        emailSenderEmail,
-        emailBodyHtml
-      } : {}),
-      ...(channel === 'sms' ? {
-        smsText
-      } : {}),
-      ...(channel === 'whatsapp' ? {
-        messageTemplate
-      } : {})
+      scheduledAt: effectiveScheduledAt || undefined,
+      ctaUrl,
+      ctaText,
+      emailSubject,
+      emailPreheader,
+      emailSenderName,
+      emailSenderEmail,
+      emailBodyHtml,
+      smsText,
+      messageTemplate
     };
 
     try {
@@ -388,11 +458,48 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
       } else {
         const created = await createBroadcastCampaign(payload);
         setCampaigns(prev => [created, ...prev]);
-        await alert(`Campanha "${created.name}" criada com sucesso!`);
+        await alert(
+          finalStatus === 'agendado'
+            ? `⏰ Campanha "${created.name}" agendada com sucesso para ${new Date(effectiveScheduledAt!).toLocaleDateString('pt-BR')} às ${new Date(effectiveScheduledAt!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}!`
+            : `Campanha "${created.name}" criada com sucesso!`
+        );
       }
       setIsModalOpen(false);
     } catch (err: any) {
       await alert(err.message || 'Erro ao salvar campanha');
+    }
+  };
+
+  // Open Recipients Engagement Modal (Quem Abriu e Clicou)
+  const handleOpenRecipientsModal = async (camp: BroadcastCampaign) => {
+    setSelectedCampaignForRecipients(camp);
+    setIsLoadingRecipients(true);
+    setRecipientFilter('all');
+    setRecipientSearch('');
+    try {
+      const data = await fetchBroadcastRecipients(camp.id);
+      setCampaignRecipients(data.recipients || []);
+    } catch (err: any) {
+      setCampaignRecipients(camp.recipients || []);
+    } finally {
+      setIsLoadingRecipients(false);
+    }
+  };
+
+  // Simulate activity on recipient (real-time test)
+  const handleSimulateRecipientActivity = async (leadId: string, action: 'open' | 'click') => {
+    if (!selectedCampaignForRecipients) return;
+    try {
+      const res = await simulateRecipientActivity(selectedCampaignForRecipients.id, { leadId, action });
+      if (res.success && res.recipient) {
+        setCampaignRecipients(prev => prev.map(r => r.leadId === leadId ? res.recipient : r));
+        if (res.campaign) {
+          setCampaigns(prev => prev.map(c => c.id === selectedCampaignForRecipients.id ? res.campaign : c));
+          setSelectedCampaignForRecipients(res.campaign);
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
     }
   };
 
@@ -490,9 +597,10 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
   // Variable inserter helper
   const insertVariable = (variable: string) => {
-    if (channel === 'email') {
+    const activeCh = channel === 'multichannel' ? multichannelPreviewTab : channel;
+    if (activeCh === 'email') {
       setEmailBodyHtml(prev => prev + variable);
-    } else if (channel === 'sms') {
+    } else if (activeCh === 'sms') {
       setSmsText(prev => prev + variable);
     } else {
       setMessageTemplate(prev => prev + variable);
@@ -525,6 +633,13 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              onClick={() => handleOpenCreateModal('multichannel')}
+              className="bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-rose-600/30 border border-white/20"
+            >
+              <Flame className="w-4 h-4 text-amber-200" />
+              <span>Novo Lançamento Multicanal</span>
+            </button>
+            <button
               onClick={() => handleOpenCreateModal('email')}
               className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-blue-600/30"
             >
@@ -532,18 +647,18 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
               <span>Novo E-mail</span>
             </button>
             <button
-              onClick={() => handleOpenCreateModal('sms')}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-purple-600/30"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Novo SMS</span>
-            </button>
-            <button
               onClick={() => handleOpenCreateModal('whatsapp')}
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/30"
             >
               <Radio className="w-4 h-4" />
               <span>Disparo WhatsApp</span>
+            </button>
+            <button
+              onClick={() => handleOpenCreateModal('sms')}
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-lg shadow-purple-600/30"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Novo SMS</span>
             </button>
           </div>
         </div>
@@ -553,7 +668,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
           <div className="bg-slate-800/60 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/60">
             <div className="text-xs text-slate-400 font-medium">Campanhas Criadas</div>
             <div className="text-2xl font-black text-white mt-1">{kpis.total}</div>
-            <div className="text-[11px] text-blue-400 mt-0.5">Multicanal ativo</div>
+            <div className="text-[11px] text-blue-400 mt-0.5">E-mail, Whats & SMS ativos</div>
           </div>
           <div className="bg-slate-800/60 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/60">
             <div className="text-xs text-slate-400 font-medium">E-mails Disparados</div>
@@ -561,14 +676,14 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
             <div className="text-[11px] text-emerald-400 mt-0.5">Taxa de Abertura: {kpis.emailOpenRate.toFixed(1)}%</div>
           </div>
           <div className="bg-slate-800/60 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/60">
+            <div className="text-xs text-slate-400 font-medium">Disparos WhatsApp</div>
+            <div className="text-2xl font-black text-emerald-400 mt-1">{kpis.totalWppSent.toLocaleString()}</div>
+            <div className="text-[11px] text-emerald-300 mt-0.5">Sincronizado p/ Lançamento</div>
+          </div>
+          <div className="bg-slate-800/60 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/60">
             <div className="text-xs text-slate-400 font-medium">SMS Entregues</div>
             <div className="text-2xl font-black text-purple-400 mt-1">{kpis.totalSmsSent.toLocaleString()}</div>
             <div className="text-[11px] text-purple-300 mt-0.5">Taxa de Entrega: {kpis.smsDeliveryRate.toFixed(1)}%</div>
-          </div>
-          <div className="bg-slate-800/60 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/60">
-            <div className="text-xs text-slate-400 font-medium">Disparos WhatsApp</div>
-            <div className="text-2xl font-black text-emerald-400 mt-1">{kpis.totalWppSent.toLocaleString()}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Intervalos anti-bloqueio</div>
           </div>
         </div>
       </div>
@@ -578,9 +693,10 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'all', label: 'Todas as Campanhas', icon: Send, count: campaigns.length },
+            { id: 'multichannel', label: 'Lançamentos Multicanal', icon: Flame, count: campaigns.filter(c => c.channel === 'multichannel').length },
             { id: 'email', label: 'E-mail Marketing', icon: Mail, count: campaigns.filter(c => c.channel === 'email').length },
-            { id: 'sms', label: 'SMS Marketing', icon: MessageSquare, count: campaigns.filter(c => c.channel === 'sms').length },
-            { id: 'whatsapp', label: 'WhatsApp Broadcast', icon: Radio, count: campaigns.filter(c => c.channel === 'whatsapp').length }
+            { id: 'whatsapp', label: 'WhatsApp Broadcast', icon: Radio, count: campaigns.filter(c => c.channel === 'whatsapp').length },
+            { id: 'sms', label: 'SMS Marketing', icon: MessageSquare, count: campaigns.filter(c => c.channel === 'sms').length }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeChannelTab === tab.id;
@@ -663,6 +779,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredCampaigns.map(camp => {
+            const isMultichannel = camp.channel === 'multichannel';
             const isEmail = camp.channel === 'email';
             const isSms = camp.channel === 'sms';
             const isWpp = camp.channel === 'whatsapp';
@@ -679,22 +796,25 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                 <div className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 ${
+                      isMultichannel ? 'bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-purple-500/15 text-rose-700 border border-rose-300' :
                       isEmail ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                       isSms ? 'bg-purple-50 text-purple-700 border border-purple-200' :
                       'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     }`}>
+                      {isMultichannel && <Flame className="w-3.5 h-3.5 text-rose-500" />}
                       {isEmail && <Mail className="w-3 h-3" />}
                       {isSms && <MessageSquare className="w-3 h-3" />}
                       {isWpp && <Radio className="w-3 h-3" />}
-                      <span>{camp.channel.toUpperCase()}</span>
+                      <span>{isMultichannel ? 'LANÇAMENTO MULTICANAL' : camp.channel.toUpperCase()}</span>
                     </span>
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      camp.status === 'concluido' ? 'bg-emerald-50 text-emerald-700' :
-                      camp.status === 'em_andamento' ? 'bg-amber-50 text-amber-700 animate-pulse' :
+                      camp.status === 'concluido' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                      camp.status === 'agendado' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                      camp.status === 'em_andamento' ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse' :
                       'bg-slate-100 text-slate-600'
                     }`}>
-                      {camp.status === 'concluido' ? 'Concluída' : camp.status === 'em_andamento' ? 'Disparando' : 'Rascunho'}
+                      {camp.status === 'concluido' ? '✓ Concluída' : camp.status === 'agendado' ? '⏰ Programada' : camp.status === 'em_andamento' ? 'Disparando' : 'Rascunho'}
                     </span>
                   </div>
 
@@ -702,14 +822,25 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     {camp.name}
                   </h3>
 
+                  {/* Scheduled Date/Time Badge for Launches */}
+                  {camp.scheduledAt && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50/90 px-3 py-1.5 rounded-xl border border-amber-200/90 mb-3">
+                      <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="truncate">
+                        Disparo: <strong>{new Date(camp.scheduledAt).toLocaleDateString('pt-BR')} às {new Date(camp.scheduledAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
-                    {isEmail ? (camp.emailSubject || 'Sem assunto definido') :
+                    {isMultichannel ? `Campanha sincronizada (E-mail: "${camp.emailSubject || 'Sem assunto'}" + Whats + SMS)` :
+                     isEmail ? (camp.emailSubject || 'Sem assunto definido') :
                      isSms ? (camp.smsText || 'Sem mensagem definida') :
                      (camp.messageTemplate || 'Sem mensagem')}
                   </p>
 
                   {/* Target Audience Pill */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
                     <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="truncate">
                       Alvo: <strong>{camp.targetStage}</strong> ({camp.totalLeads || 0} contatos)
@@ -723,14 +854,31 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                       <div className="text-sm font-bold text-slate-800">{camp.sentCount || 0}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-slate-400 font-medium">{isEmail ? 'Abertura' : 'Entregues'}</div>
-                      <div className="text-sm font-bold text-blue-600">{isEmail ? `${openRate}%` : (camp.deliveredCount || 0)}</div>
+                      <div className="text-[10px] text-slate-400 font-medium">{isEmail || isMultichannel ? 'Abertura' : 'Entregues'}</div>
+                      <div className="text-sm font-bold text-blue-600">{isEmail || isMultichannel ? `${openRate}%` : (camp.deliveredCount || 0)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-slate-400 font-medium">Cliques</div>
-                      <div className="text-sm font-bold text-emerald-600">{camp.clickedCount || 0}</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Cliques no Link</div>
+                      <div className="text-sm font-bold text-emerald-600">{camp.clickedCount || 0} ({clickRate}%)</div>
                     </div>
                   </div>
+
+                  {/* Button: Relatório de Quem Abriu e Clicou */}
+                  <button
+                    onClick={() => handleOpenRecipientsModal(camp)}
+                    className="w-full mt-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-bold text-xs py-2 px-3 rounded-xl transition flex items-center justify-between border border-blue-200/80 shadow-2xs group"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <span>Ver Quem Abriu & Clicou</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        {camp.openedCount || 0} abriram • {camp.clickedCount || 0} cliques
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-blue-500" />
+                    </div>
+                  </button>
                 </div>
 
                 {/* Card Actions */}
@@ -775,7 +923,6 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     </button>
                   </div>
                 </div>
-
               </div>
             );
           })}
@@ -855,7 +1002,23 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   1. Canal de Disparo
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChannel('multichannel');
+                      setSelectedChannels(['email', 'whatsapp', 'sms']);
+                      setMultichannelPreviewTab('email');
+                    }}
+                    className={`p-3 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
+                      channel === 'multichannel'
+                        ? 'border-rose-500 bg-rose-50/70 text-rose-700 font-bold shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    <Flame className="w-5 h-5 text-rose-500" />
+                    <span className="text-xs">Multicanal</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setChannel('email')}
@@ -870,18 +1033,6 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setChannel('sms')}
-                    className={`p-3 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
-                      channel === 'sms'
-                        ? 'border-purple-600 bg-purple-50/50 text-purple-700 font-bold'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                    }`}
-                  >
-                    <MessageSquare className="w-5 h-5" />
-                    <span className="text-xs">SMS</span>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setChannel('whatsapp')}
                     className={`p-3 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
                       channel === 'whatsapp'
@@ -892,7 +1043,63 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     <Radio className="w-5 h-5" />
                     <span className="text-xs">WhatsApp</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannel('sms')}
+                    className={`p-3 rounded-xl border text-center transition flex flex-col items-center gap-1.5 ${
+                      channel === 'sms'
+                        ? 'border-purple-600 bg-purple-50/50 text-purple-700 font-bold'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    <span className="text-xs">SMS</span>
+                  </button>
                 </div>
+
+                {channel === 'multichannel' && (
+                  <div className="mt-2.5 p-3 bg-rose-50/60 rounded-xl border border-rose-200 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-rose-800">Canais integrados neste lançamento:</span>
+                    <div className="flex items-center gap-3 text-xs">
+                      <label className="inline-flex items-center gap-1 text-slate-700 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={selectedChannels.includes('email')}
+                          onChange={e => {
+                            if (e.target.checked) setSelectedChannels(prev => [...prev, 'email']);
+                            else setSelectedChannels(prev => prev.filter(c => c !== 'email'));
+                          }}
+                          className="rounded text-blue-600"
+                        />
+                        <span>E-mail</span>
+                      </label>
+                      <label className="inline-flex items-center gap-1 text-slate-700 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={selectedChannels.includes('whatsapp')}
+                          onChange={e => {
+                            if (e.target.checked) setSelectedChannels(prev => [...prev, 'whatsapp']);
+                            else setSelectedChannels(prev => prev.filter(c => c !== 'whatsapp'));
+                          }}
+                          className="rounded text-emerald-600"
+                        />
+                        <span>WhatsApp</span>
+                      </label>
+                      <label className="inline-flex items-center gap-1 text-slate-700 cursor-pointer font-medium">
+                        <input
+                          type="checkbox"
+                          checked={selectedChannels.includes('sms')}
+                          onChange={e => {
+                            if (e.target.checked) setSelectedChannels(prev => [...prev, 'sms']);
+                            else setSelectedChannels(prev => prev.filter(c => c !== 'sms'));
+                          }}
+                          className="rounded text-purple-600"
+                        />
+                        <span>SMS</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Step 2: Campaign Name */}
@@ -904,16 +1111,120 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                   type="text"
                   value={campaignName}
                   onChange={e => setCampaignName(e.target.value)}
-                  placeholder="Ex: Disparo E-mail - Fechamento de Mês"
+                  placeholder="Ex: Lançamento Abertura de Carrinho - Turma 04"
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:border-blue-500 focus:outline-hidden"
                 />
               </div>
 
-              {/* Step 3: Audience Segmentation */}
+              {/* Step 3: Scheduling Date & Time (Data e Hora de Disparo de Lançamentos) */}
+              <div className="p-4 bg-gradient-to-br from-amber-500/10 via-amber-50/50 to-orange-500/10 rounded-2xl border border-amber-300/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                      3. Agendamento de Disparo (Lançamentos)
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isScheduled}
+                      onChange={e => setIsScheduled(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+
+                {isScheduled ? (
+                  <div className="space-y-3 pt-1">
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      Defina a <strong>data e horário exato</strong> para que os e-mails, WhatsApp e SMS sejam disparados automaticamente na sincronização do lançamento.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Data do Disparo
+                        </label>
+                        <input
+                          type="date"
+                          value={scheduledDate}
+                          onChange={e => setScheduledDate(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-amber-300 rounded-xl text-xs bg-white font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Hora do Disparo
+                        </label>
+                        <input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={e => setScheduledTime(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-amber-300 rounded-xl text-xs bg-white font-medium"
+                        />
+                      </div>
+                    </div>
+                    {scheduledDate && (
+                      <div className="text-[11px] font-bold text-amber-800 bg-amber-100/70 p-2.5 rounded-xl flex items-center gap-2 border border-amber-200">
+                        <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                        <span>
+                          Disparo programado para: <strong>{new Date(`${scheduledDate}T${scheduledTime || '09:00'}:00`).toLocaleDateString('pt-BR')} às {scheduledTime || '09:00'}</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Disparo imediato ao clicar em "Salvar & Disparar". Ative acima para definir a data e hora do lançamento.
+                  </p>
+                )}
+              </div>
+
+              {/* Step 4: CTA Link & Button (Rastreamento de Cliques) */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MousePointerClick className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    4. Link & Botão de Oferta (Rastreamento de Cliques)
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Link de Destino / Checkout
+                    </label>
+                    <input
+                      type="url"
+                      value={ctaUrl}
+                      onChange={e => setCtaUrl(e.target.value)}
+                      placeholder="https://seusite.com.br/checkout"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Texto do Botão / Chamada
+                    </label>
+                    <input
+                      type="text"
+                      value={ctaText}
+                      onChange={e => setCtaText(e.target.value)}
+                      placeholder="Ex: Garantir Minha Vaga"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-blue-700"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  🔗 Cada lead receberá links rastreados individualmente para identificar quem clicou no e-mail, Whats ou SMS.
+                </p>
+              </div>
+
+              {/* Step 5: Audience Segmentation */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    3. Segmentação da Base
+                    5. Segmentação da Base
                   </span>
                   <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                     {eligibleLeads.length} leads qualificados
@@ -956,15 +1267,16 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
 
                 <p className="text-[11px] text-slate-500">
                   {channel === 'email' ? 'Apenas contatos com e-mail válido serão incluídos.' :
+                   channel === 'multichannel' ? 'Contatos com e-mail ou telefone/WhatsApp com DDD serão qualificados.' :
                    'Apenas contatos com telefone/WhatsApp válido com DDD serão incluídos.'}
                 </p>
               </div>
 
-              {/* Step 4: Content Form Fields */}
+              {/* Step 6: Content Form Fields */}
               <div className="space-y-4 pt-2 border-t border-slate-200">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    4. Conteúdo da Mensagem
+                    6. Conteúdo da Mensagem
                   </span>
 
                   {/* Insert Variable Helper */}
@@ -983,8 +1295,44 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                   </div>
                 </div>
 
+                {/* Sub-tabs for Multichannel copy editor */}
+                {channel === 'multichannel' && (
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setMultichannelPreviewTab('email')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        multichannelPreviewTab === 'email' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>E-mail do Lançamento</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMultichannelPreviewTab('whatsapp')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        multichannelPreviewTab === 'whatsapp' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMultichannelPreviewTab('sms')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                        multichannelPreviewTab === 'sms' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>SMS</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* E-MAIL FIELDS */}
-                {channel === 'email' && (
+                {(channel === 'email' || (channel === 'multichannel' && multichannelPreviewTab === 'email')) && (
                   <div className="space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -1067,7 +1415,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                 )}
 
                 {/* SMS FIELDS */}
-                {channel === 'sms' && (
+                {(channel === 'sms' || (channel === 'multichannel' && multichannelPreviewTab === 'sms')) && (
                   <div className="space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -1106,7 +1454,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                 )}
 
                 {/* WHATSAPP FIELDS */}
-                {channel === 'whatsapp' && (
+                {(channel === 'whatsapp' || (channel === 'multichannel' && multichannelPreviewTab === 'whatsapp')) && (
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Mensagem do WhatsApp</label>
@@ -1144,8 +1492,42 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
             {/* RIGHT COLUMN: Live Interactive Preview */}
             <div className="flex-1 bg-slate-950 p-6 md:p-10 flex flex-col items-center justify-center overflow-hidden">
               
-              {/* Device Toggle */}
-              {channel === 'email' && (
+              {/* Preview channel selector for Multichannel */}
+              {channel === 'multichannel' && (
+                <div className="mb-4 bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1.5 border border-slate-800">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 px-2">Prévia:</span>
+                  <button
+                    onClick={() => setMultichannelPreviewTab('email')}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                      multichannelPreviewTab === 'email' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>E-mail</span>
+                  </button>
+                  <button
+                    onClick={() => setMultichannelPreviewTab('whatsapp')}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                      multichannelPreviewTab === 'whatsapp' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => setMultichannelPreviewTab('sms')}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+                      multichannelPreviewTab === 'sms' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>SMS</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Device Toggle for Email */}
+              {(channel === 'email' || (channel === 'multichannel' && multichannelPreviewTab === 'email')) && (
                 <div className="mb-4 bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700">
                   <button
                     onClick={() => setPreviewDevice('desktop')}
@@ -1169,7 +1551,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
               )}
 
               {/* LIVE PREVIEW CONTAINER */}
-              {channel === 'email' ? (
+              {(channel === 'email' || (channel === 'multichannel' && multichannelPreviewTab === 'email')) ? (
                 <div
                   className={`bg-white transition-all duration-300 overflow-y-auto shadow-2xl relative rounded-2xl border border-slate-700 ${
                     previewDevice === 'mobile' ? 'w-[375px] h-[600px]' : 'w-full max-w-2xl h-[600px]'
@@ -1198,7 +1580,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     }}
                   />
                 </div>
-              ) : channel === 'sms' ? (
+              ) : (channel === 'sms' || (channel === 'multichannel' && multichannelPreviewTab === 'sms')) ? (
                 <div className="w-[320px] h-[580px] bg-slate-900 rounded-[44px] border-[10px] border-slate-800 p-4 shadow-2xl flex flex-col justify-between relative">
                   {/* Smartphone Notch */}
                   <div className="w-24 h-4 bg-slate-800 rounded-b-xl mx-auto mb-4"></div>
@@ -1431,6 +1813,371 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* RECIPIENTS ENGAGEMENT MODAL (QUEM ABRIU E CLICOU)         */}
+      {/* ========================================================= */}
+      {selectedCampaignForRecipients && (
+        <div className="fixed inset-0 z-60 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 md:p-6 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
+            
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-400 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-extrabold text-white">
+                      Relatório de Engajamento: Quem Abriu e Clicou
+                    </h2>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 uppercase">
+                      {selectedCampaignForRecipients.channel}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Campanha: <strong className="text-slate-200">{selectedCampaignForRecipients.name}</strong> • Alvo: {selectedCampaignForRecipients.targetStage}
+                    {selectedCampaignForRecipients.scheduledAt && (
+                      <span className="ml-2 text-amber-300">
+                        • Disparo Programado: {new Date(selectedCampaignForRecipients.scheduledAt).toLocaleDateString('pt-BR')} às {new Date(selectedCampaignForRecipients.scheduledAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedCampaignForRecipients(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal KPI Highlights */}
+            {(() => {
+              const totalRecipients = campaignRecipients.length;
+              const openedCount = campaignRecipients.filter(r => r.status === 'aberto' || r.status === 'clicou' || !!r.openedAt).length;
+              const clickedCount = campaignRecipients.filter(r => r.status === 'clicou' || !!r.clickedAt).length;
+              const openRate = totalRecipients > 0 ? ((openedCount / totalRecipients) * 100).toFixed(1) : '0.0';
+              const clickRate = totalRecipients > 0 ? ((clickedCount / totalRecipients) * 100).toFixed(1) : '0.0';
+
+              return (
+                <div className="p-4 md:px-6 bg-slate-50 border-b border-slate-200 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div className="text-[11px] font-medium text-slate-500">Total de Contatos</div>
+                    <div className="text-xl font-black text-slate-900 mt-0.5">{totalRecipients}</div>
+                    <div className="text-[10px] text-slate-400">Leads no disparo</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div className="text-[11px] font-medium text-blue-600 flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Abriram a Mensagem</span>
+                    </div>
+                    <div className="text-xl font-black text-blue-600 mt-0.5">{openedCount}</div>
+                    <div className="text-[10px] text-emerald-600 font-semibold">{openRate}% taxa de abertura</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div className="text-[11px] font-medium text-emerald-600 flex items-center gap-1">
+                      <MousePointerClick className="w-3.5 h-3.5" />
+                      <span>Clicaram no Link / Botão</span>
+                    </div>
+                    <div className="text-xl font-black text-emerald-600 mt-0.5">{clickedCount}</div>
+                    <div className="text-[10px] text-emerald-700 font-semibold">{clickRate}% taxa de cliques</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <div className="text-[11px] font-medium text-slate-500">CTA Rastreado</div>
+                    <div className="text-xs font-bold text-slate-800 mt-1 truncate" title={selectedCampaignForRecipients.ctaUrl || 'mdtr.link/oferta'}>
+                      {selectedCampaignForRecipients.ctaText || 'Garantir Minha Vaga'}
+                    </div>
+                    <div className="text-[10px] text-blue-600 truncate">{selectedCampaignForRecipients.ctaUrl || 'mdtr.link/oferta'}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Filter Tabs & Search Bar */}
+            <div className="px-6 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+              {(() => {
+                const total = campaignRecipients.length;
+                const opened = campaignRecipients.filter(r => r.status === 'aberto' || r.status === 'clicou' || !!r.openedAt).length;
+                const clicked = campaignRecipients.filter(r => r.status === 'clicou' || !!r.clickedAt).length;
+                const unopened = total - opened;
+
+                return (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                    <button
+                      onClick={() => setRecipientFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                        recipientFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>Todos</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-700 text-white">{total}</span>
+                    </button>
+                    <button
+                      onClick={() => setRecipientFilter('opened')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                        recipientFilter === 'opened' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Abriram</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500 text-white">{opened}</span>
+                    </button>
+                    <button
+                      onClick={() => setRecipientFilter('clicked')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                        recipientFilter === 'clicked' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <MousePointerClick className="w-3.5 h-3.5" />
+                      <span>Clicaram no Link</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500 text-white">{clicked}</span>
+                    </button>
+                    <button
+                      onClick={() => setRecipientFilter('unopened')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                        recipientFilter === 'unopened' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                      }`}
+                    >
+                      <span>Não Abriram</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500 text-white">{unopened}</span>
+                    </button>
+                  </div>
+                );
+              })()}
+
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={recipientSearch}
+                  onChange={e => setRecipientSearch(e.target.value)}
+                  placeholder="Buscar lead por nome ou email..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:outline-hidden"
+                />
+              </div>
+            </div>
+
+            {/* Test Activity Simulation Banner */}
+            <div className="px-6 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between gap-3 text-xs text-blue-900 shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>
+                  <strong>Validação em Tempo Real:</strong> Você pode simular a abertura ou o clique em qualquer contato abaixo para ver o CRM e as métricas atualizarem instantaneamente.
+                </span>
+              </div>
+            </div>
+
+            {/* Recipients Table / List */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              {isLoadingRecipients ? (
+                <div className="p-12 text-center text-slate-500">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
+                  <p className="text-sm">Carregando contatos e histórico de cliques...</p>
+                </div>
+              ) : (() => {
+                const filtered = campaignRecipients.filter(rec => {
+                  const isOpened = rec.status === 'aberto' || rec.status === 'clicou' || !!rec.openedAt;
+                  const isClicked = rec.status === 'clicou' || !!rec.clickedAt;
+
+                  if (recipientFilter === 'opened' && !isOpened) return false;
+                  if (recipientFilter === 'clicked' && !isClicked) return false;
+                  if (recipientFilter === 'unopened' && isOpened) return false;
+
+                  if (recipientSearch.trim()) {
+                    const q = recipientSearch.toLowerCase();
+                    const matchesName = rec.name.toLowerCase().includes(q);
+                    const matchesEmail = (rec.email || '').toLowerCase().includes(q);
+                    const matchesPhone = (rec.phone || '').toLowerCase().includes(q);
+                    return matchesName || matchesEmail || matchesPhone;
+                  }
+
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-12 text-center text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Users className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                      <p className="text-sm font-semibold text-slate-700">Nenhum contato encontrado com este filtro</p>
+                      <p className="text-xs text-slate-400 mt-1">Tente ajustar a busca ou a aba de filtro acima.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {filtered.map(rec => {
+                      const hasOpened = rec.status === 'aberto' || rec.status === 'clicou' || !!rec.openedAt;
+                      const hasClicked = rec.status === 'clicou' || !!rec.clickedAt;
+
+                      return (
+                        <div
+                          key={rec.leadId}
+                          className="bg-white p-4 rounded-2xl border border-slate-200/90 hover:border-blue-400 hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        >
+                          {/* Lead Profile Info */}
+                          <div className="flex items-center gap-3 min-w-[240px]">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+                              {rec.name ? rec.name.charAt(0).toUpperCase() : 'L'}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-bold text-slate-900 truncate">
+                                  {rec.name}
+                                </h4>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
+                                  {rec.stage || 'Lead'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-2">
+                                <span>{rec.email || 'Sem e-mail'}</span>
+                                {rec.phone && <span>• {rec.phone}</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Channel Badge */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 ${
+                              rec.channel === 'whatsapp' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                              rec.channel === 'sms' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                              'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}>
+                              {rec.channel === 'whatsapp' && <Radio className="w-3 h-3" />}
+                              {rec.channel === 'sms' && <MessageSquare className="w-3 h-3" />}
+                              {rec.channel === 'email' && <Mail className="w-3 h-3" />}
+                              <span>{rec.channel.toUpperCase()}</span>
+                            </span>
+                          </div>
+
+                          {/* Engagement Status & Timestamps */}
+                          <div className="grid grid-cols-2 gap-4 text-xs shrink-0 md:min-w-[320px]">
+                            {/* Opened Status */}
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-semibold text-slate-500">Abertura:</span>
+                                {hasOpened ? (
+                                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 px-1.5 py-0.2 rounded flex items-center gap-1">
+                                    <Eye className="w-2.5 h-2.5" />
+                                    <span>Abriu</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-slate-400">Não abriu</span>
+                                )}
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-800">
+                                {rec.openedAt ? (
+                                  <div className="flex items-center gap-1">
+                                    {rec.device === 'mobile' ? <Smartphone className="w-3 h-3 text-slate-400" /> : <Monitor className="w-3 h-3 text-slate-400" />}
+                                    <span>{new Date(rec.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 italic">Pendente</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Clicked Status */}
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-semibold text-slate-500">Clique no Link:</span>
+                                {hasClicked ? (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded flex items-center gap-1">
+                                    <MousePointerClick className="w-2.5 h-2.5" />
+                                    <span>Clicou</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-slate-400">Sem clique</span>
+                                )}
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-800">
+                                {rec.clickedAt ? (
+                                  <div className="text-emerald-700 font-bold truncate">
+                                    {new Date(rec.clickedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 italic">Não clicou</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0 justify-end">
+                            {/* Simulation buttons */}
+                            {!hasOpened && (
+                              <button
+                                onClick={() => handleSimulateRecipientActivity(rec.leadId, 'open')}
+                                className="text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition"
+                                title="Simular que este contato abriu o e-mail/mensagem"
+                              >
+                                + Abertura
+                              </button>
+                            )}
+                            {!hasClicked && (
+                              <button
+                                onClick={() => handleSimulateRecipientActivity(rec.leadId, 'click')}
+                                className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition"
+                                title="Simular que este contato clicou no botão/link"
+                              >
+                                + Clique
+                              </button>
+                            )}
+
+                            {rec.phone && (
+                              <a
+                                href={`https://wa.me/55${rec.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${rec.name}! Vi que você demonstrou interesse no nosso lançamento recente.`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition border border-emerald-200"
+                                title="Conversar no WhatsApp"
+                              >
+                                <Radio className="w-4 h-4" />
+                              </a>
+                            )}
+
+                            {onNavigateToTab && (
+                              <button
+                                onClick={() => {
+                                  setSelectedCampaignForRecipients(null);
+                                  onNavigateToTab('crm');
+                                }}
+                                className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition border border-slate-200"
+                                title="Abrir Histórico do Lead no CRM"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <div className="text-xs text-slate-500">
+                Os dados de abertura e cliques são salvos automaticamente no histórico individual de cada lead no CRM.
+              </div>
+              <button
+                onClick={() => setSelectedCampaignForRecipients(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition"
+              >
+                Fechar Relatório
+              </button>
+            </div>
+
           </div>
         </div>
       )}

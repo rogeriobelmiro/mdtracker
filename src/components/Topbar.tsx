@@ -126,7 +126,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       case 'broadcast':
         return {
           section: 'Atração & Vendas',
-          title: 'E-mail Marketing, SMS & Disparos Multicanal',
+          title: 'Campanhas & Lançamentos (E-mail, WhatsApp & SMS)',
           icon: Send
         };
       case 'products':

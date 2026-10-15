@@ -64,11 +64,30 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
   const leadTimelineEvents = useMemo(() => {
     if (!selectedLead) return [];
-    const list: any[] = [...(selectedLead.conversionEvents || [])];
+    const rawList: any[] = [...(selectedLead.conversionEvents || [])];
+
+    // Normalize events so popup conversions are recognized
+    const list = rawList.map(evt => {
+      const isEvtPopup = evt.type === 'popup' || 
+                         evt.eventName?.toLowerCase().includes('popup') || 
+                         evt.eventName?.toLowerCase().includes('pop-up') ||
+                         evt.details?.toLowerCase().includes('pop-up') ||
+                         evt.details?.toLowerCase().includes('popup');
+      if (isEvtPopup) {
+        return {
+          ...evt,
+          type: 'popup',
+          eventName: evt.eventName === 'Lead_Popup' ? 'Lead Capturado (Pop-up)' : evt.eventName
+        };
+      }
+      return evt;
+    });
 
     // Always synthesize capture/entry event if missing
     const hasEntry = list.some(e => 
       e.type === 'landing_page' || 
+      e.type === 'popup' ||
+      e.type === 'popup_capture' ||
       e.type === 'form_submitted' ||
       e.eventName?.toLowerCase().includes('captura') || 
       e.eventName?.toLowerCase().includes('cadastro') ||
@@ -77,10 +96,11 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
 
     if (!hasEntry) {
       const isLp = selectedLead.source?.toLowerCase().includes('landing page');
+      const isPopup = selectedLead.source?.toLowerCase().includes('pop-up') || selectedLead.source?.toLowerCase().includes('popup');
       list.unshift({
         id: `evt-entry-${selectedLead.id}`,
-        type: isLp ? 'landing_page' : 'lead_cadastrado',
-        eventName: isLp ? 'Lead Capturado (Landing Page)' : 'Cadastro do Lead no Sistema',
+        type: isPopup ? 'popup' : isLp ? 'landing_page' : 'lead_cadastrado',
+        eventName: isPopup ? 'Lead Capturado (Pop-up)' : isLp ? 'Lead Capturado (Landing Page)' : 'Cadastro do Lead no Sistema',
         status: 'sucesso',
         timestamp: selectedLead.createdAt,
         details: selectedLead.notes || `Lead registrado através de: ${selectedLead.source || 'Formulário'}`,
@@ -155,14 +175,19 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
     const query = currentSearchQuery.toLowerCase();
     const matchesSearch =
       (lead.name || '').toLowerCase().includes(query) ||
+      (lead.phone || '').includes(query) ||
+      (lead.email || '').toLowerCase().includes(query) ||
       (lead.location?.city || '').toLowerCase().includes(query) ||
+      (lead.source || '').toLowerCase().includes(query) ||
+      (lead.linkTitle || '').toLowerCase().includes(query) ||
+      (lead.notes || '').toLowerCase().includes(query) ||
       (lead.utmCampaign || '').toLowerCase().includes(query) ||
       (lead.utmContent || '').toLowerCase().includes(query) ||
       (lead.utmTerm || '').toLowerCase().includes(query) ||
-      (lead.phone || '').includes(query);
+      (lead.utmSource || '').toLowerCase().includes(query);
 
     const matchesStage = stageFilter === 'all' || lead.stage === stageFilter;
-    const matchesSource = sourceFilter === 'all' || lead.utmSource === sourceFilter;
+    const matchesSource = sourceFilter === 'all' || lead.utmSource === sourceFilter || lead.source === sourceFilter;
     const matchesLink = !linkIdFilter || lead.linkId === linkIdFilter;
 
     return matchesSearch && matchesStage && matchesSource && matchesLink;
@@ -351,9 +376,15 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
             <span className="opacity-75 font-mono text-[9px]">({lead.qualificationLevel || 'Lead'})</span>
           </span>
         )}
-        <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold border border-slate-200 truncate max-w-[100px]" title={lead.utmSource || lead.source}>
-          {lead.utmSource || lead.source || 'Direto'}
-        </span>
+        {lead.source?.toLowerCase().includes('pop-up') || lead.source?.toLowerCase().includes('popup') || lead.utmMedium === 'pop_up' ? (
+          <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 truncate max-w-[130px]" title={lead.source || lead.utmSource}>
+            🎯 {lead.source || 'Pop-up'}
+          </span>
+        ) : (
+          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold border border-slate-200 truncate max-w-[100px]" title={lead.utmSource || lead.source}>
+            {lead.utmSource || lead.source || 'Direto'}
+          </span>
+        )}
         {lead.utmCampaign && (
           <span className="text-slate-500 font-mono truncate max-w-[120px]" title={lead.utmCampaign}>
             📢 {lead.utmCampaign}
@@ -690,9 +721,15 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                   {/* Source & Ad Attribution */}
                   <td className="py-3.5 px-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
-                        {lead.utmSource || lead.source}
-                      </span>
+                      {lead.source?.toLowerCase().includes('pop-up') || lead.source?.toLowerCase().includes('popup') || lead.utmMedium === 'pop_up' ? (
+                        <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200">
+                          🎯 {lead.source || 'Pop-up'}
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
+                          {lead.utmSource || lead.source}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono mt-1 space-y-0.5">
                       <div className="truncate max-w-[170px]">📢 {lead.utmCampaign || 'campanha_geral'}</div>
@@ -1083,13 +1120,14 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className={`font-black uppercase text-[9px] px-2 py-0.5 rounded-full ${
+                            evt.type === 'popup' || evt.type === 'popup_capture' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
                             evt.type === 'landing_page' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                             evt.type === 'webhook' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                             evt.type === 'meta_capi' || evt.type === 'meta_pixel' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
                             evt.type === 'google_ads' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                             'bg-slate-200 text-slate-800'
                           }`}>
-                            {evt.type?.replace('_', ' ')}
+                            {evt.type === 'popup' || evt.type === 'popup_capture' ? 'POP-UP' : evt.type?.replace('_', ' ')}
                           </span>
                           <span className="text-slate-900 font-bold">{evt.eventName}</span>
                         </div>

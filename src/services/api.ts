@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -605,7 +605,7 @@ export async function launchBroadcastCampaign(id: string): Promise<any> {
 }
 
 export async function generateBroadcastAI(payload: {
-  channel: 'email' | 'sms' | 'whatsapp';
+  channel: 'email' | 'sms' | 'whatsapp' | 'multichannel';
   goal?: string;
   productName?: string;
   tone?: string;
@@ -619,6 +619,28 @@ export async function generateBroadcastAI(payload: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Erro ao gerar copy com IA');
+  }
+  return res.json();
+}
+
+export async function fetchBroadcastRecipients(campaignId: string): Promise<{ recipients: BroadcastRecipient[]; stats: any }> {
+  const res = await fetch(`/api/broadcast-campaigns/${campaignId}/recipients`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao buscar destinatários');
+  }
+  return res.json();
+}
+
+export async function simulateRecipientActivity(campaignId: string, payload: { leadId: string; action: 'open' | 'click' }): Promise<any> {
+  const res = await fetch(`/api/broadcast-campaigns/${campaignId}/simulate-activity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao simular atividade');
   }
   return res.json();
 }

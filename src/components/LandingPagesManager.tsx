@@ -377,6 +377,13 @@ const TEMPLATES: Array<{
   }
 ];
 
+const getButtonShapeClass = (shape?: string) => {
+  if (shape === 'rounded-full') return 'rounded-full';
+  if (shape === 'rounded-md') return 'rounded-md';
+  if (shape === 'square') return 'rounded-none';
+  return 'rounded-xl';
+};
+
 export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   currentCompany,
   products = [],
@@ -394,7 +401,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   // Editor Modal State
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile' | 'iframe'>('desktop');
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [activeEditorTab, setActiveEditorTab] = useState<'general' | 'hero' | 'form' | 'features' | 'social' | 'scarcity' | 'theme'>('general');
 
   // Preview Interactive Form State
@@ -1148,6 +1156,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                     previewDevice === 'desktop' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                   }`}
+                  title="Visualização Desktop idêntica à Web"
                 >
                   <Monitor className="w-3.5 h-3.5" />
                   <span>Desktop</span>
@@ -1157,9 +1166,20 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                     previewDevice === 'mobile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                   }`}
+                  title="Visualização Mobile em Smartphone"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                   <span>Mobile</span>
+                </button>
+                <button
+                  onClick={() => setPreviewDevice('iframe')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                    previewDevice === 'iframe' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização Web Real via Iframe (/p/:slug)"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Iframe Web</span>
                 </button>
               </div>
 
@@ -1885,154 +1905,400 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
             </div>
 
             {/* RIGHT COLUMN: Live Interactive Device Preview */}
-            <div className="flex-1 bg-slate-950 p-4 md:p-8 flex items-center justify-center overflow-hidden">
-              <div
-                className={`bg-white transition-all duration-300 overflow-y-auto shadow-2xl relative ${
-                  previewDevice === 'mobile'
-                    ? 'w-[375px] h-[680px] rounded-[44px] border-[12px] border-slate-800 ring-1 ring-slate-700'
-                    : 'w-full h-full rounded-2xl border border-slate-800'
-                }`}
-                style={{ fontFamily: editingPage.theme?.fontFamily || 'Inter' }}
-              >
-                {/* Mobile Camera Notch */}
-                {previewDevice === 'mobile' && (
-                  <div className="sticky top-0 w-full h-6 bg-slate-800 flex items-center justify-center z-50">
-                    <div className="w-20 h-4 bg-slate-900 rounded-b-xl"></div>
-                  </div>
-                )}
+            <div className="flex-1 bg-slate-950 p-3 md:p-6 flex items-center justify-center overflow-hidden">
+              {(() => {
+                const primaryColor = editingPage.theme?.primaryColor || '#2563eb';
+                const companyName = editingPage.footer?.companyName || currentCompany.name || 'MDTracker Growth';
+                const buttonShapeClass = getButtonShapeClass(editingPage.theme?.buttonStyle);
 
-                {/* Simulated Top Nav */}
-                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-7 h-7 rounded-lg text-white font-bold flex items-center justify-center text-xs shadow-xs"
-                      style={{ backgroundColor: editingPage.theme?.primaryColor || '#2563eb' }}
-                    >
-                      {(currentCompany.name || 'M').charAt(0)}
+                if (previewDevice === 'iframe') {
+                  return (
+                    <div className="w-full h-full flex flex-col bg-white rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+                      {/* Browser simulated top header */}
+                      <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-500/80 inline-block"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
+                          </div>
+                          <span className="font-mono text-[11px] text-slate-400 ml-2 bg-slate-800 px-3 py-1 rounded-md border border-slate-700">
+                            /p/{editingPage.slug}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[11px] text-slate-400 hidden sm:inline">
+                            Servidor Web Express em Tempo Real
+                          </span>
+                          <a 
+                            href={`/p/${editingPage.slug}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold"
+                          >
+                            <span>Abrir Página Externa</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                      <iframe
+                        key={editingPage.slug + (editingPage.updatedAt || '')}
+                        src={`/p/${editingPage.slug}`}
+                        className="w-full flex-1 border-0"
+                        title="Preview Web Oficial"
+                      />
                     </div>
-                    <span className="font-bold text-slate-900 text-sm">{currentCompany.name}</span>
-                  </div>
-                  <span 
-                    className="text-xs font-bold text-white px-3 py-1.5 rounded-lg shadow-xs"
-                    style={{ backgroundColor: editingPage.theme?.primaryColor || '#2563eb' }}
+                  );
+                }
+
+                return (
+                  <div
+                    className={`bg-white transition-all duration-300 overflow-y-auto shadow-2xl relative ${
+                      previewDevice === 'mobile'
+                        ? 'w-[375px] h-[680px] rounded-[44px] border-[12px] border-slate-800 ring-1 ring-slate-700'
+                        : 'w-full h-full rounded-2xl border border-slate-800'
+                    }`}
+                    style={{ fontFamily: editingPage.theme?.fontFamily || 'Inter' }}
                   >
-                    {editingPage.hero?.ctaText || 'Acessar'}
-                  </span>
-                </div>
-
-                {/* Hero Section */}
-                <div className="p-6 md:p-10 bg-gradient-to-b from-white via-slate-50 to-slate-100">
-                  {editingPage.hero?.badge && (
-                    <div className="inline-block px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold mb-4">
-                      {editingPage.hero.badge}
-                    </div>
-                  )}
-
-                  <h1 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-3">
-                    {editingPage.hero?.headline || editingPage.title}
-                  </h1>
-
-                  <p className="text-sm md:text-base text-slate-600 mb-6 leading-relaxed">
-                    {editingPage.hero?.subheadline || editingPage.description}
-                  </p>
-
-                  {/* Countdown Timer Preview */}
-                  {editingPage.countdown?.enabled && (
-                    <div className="p-3 bg-slate-900 text-white rounded-xl mb-6 text-center">
-                      <div className="text-[10px] text-slate-400 uppercase font-semibold mb-2">
-                        {editingPage.countdown.title || 'Oferta encerra em:'}
+                    {/* Mobile Camera Notch */}
+                    {previewDevice === 'mobile' && (
+                      <div className="sticky top-0 w-full h-6 bg-slate-800 flex items-center justify-center z-50">
+                        <div className="w-20 h-4 bg-slate-900 rounded-b-xl"></div>
                       </div>
-                      <div className="grid grid-cols-4 gap-1 text-center font-bold">
-                        <div className="bg-slate-800 p-1 rounded text-amber-400 text-sm">03d</div>
-                        <div className="bg-slate-800 p-1 rounded text-white text-sm">12h</div>
-                        <div className="bg-slate-800 p-1 rounded text-white text-sm">45m</div>
-                        <div className="bg-slate-800 p-1 rounded text-emerald-400 text-sm">19s</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Simulated Capture Form */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-md">
-                    <h3 className="text-base font-bold text-slate-900 mb-1">
-                      {editingPage.form?.title || 'Garanta sua Vaga'}
-                    </h3>
-                    {editingPage.form?.subtitle && (
-                      <p className="text-xs text-slate-500 mb-4">{editingPage.form.subtitle}</p>
                     )}
 
-                    <form onSubmit={handleTestPreviewSubmit} className="space-y-3">
-                      {(editingPage.form?.fields || []).map(f => (
-                        <div key={f.id}>
-                          <label className="block text-[11px] font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            {f.label} {f.required && <span className="text-red-500">*</span>}
-                          </label>
-                          <input
-                            type={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}
-                            value={previewFormValues[f.name || f.id] || ''}
-                            onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
-                            placeholder={f.placeholder}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                          />
+                    {/* Browser bar for desktop */}
+                    {previewDevice === 'desktop' && (
+                      <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 sticky top-0 z-50">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                          </div>
+                          <div className="bg-white border border-slate-200 px-3 py-1 rounded-md text-[11px] text-slate-500 font-mono flex items-center gap-1.5 shadow-xs">
+                            <Globe className="w-3 h-3 text-slate-400" />
+                            <span>https://mdtracker.app/p/{editingPage.slug}</span>
+                          </div>
                         </div>
-                      ))}
-
-                      {previewSubmitStatus && (
-                        <div className="p-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-lg font-medium">
-                          {previewSubmitStatus}
+                        <div className="text-[11px] text-slate-400 font-medium hidden md:block">
+                          Preview Desktop Idêntico à Web
                         </div>
-                      )}
+                      </div>
+                    )}
 
+                    {/* Simulated Top Nav Header */}
+                    <header className={`px-6 py-4 bg-white/95 border-b border-slate-200 flex items-center justify-between sticky z-40 backdrop-blur-md shadow-xs ${previewDevice === 'desktop' ? 'top-[37px]' : 'top-6'}`}>
+                      <div className="flex items-center gap-2.5">
+                        <div 
+                          className="w-9 h-9 rounded-xl text-white font-bold flex items-center justify-center text-sm shadow-md"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {(companyName || 'M').charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-bold text-slate-900 tracking-tight text-base">{companyName}</span>
+                      </div>
                       <button
-                        type="submit"
-                        className="w-full py-2.5 px-4 font-bold text-xs text-white rounded-xl shadow-md transition"
-                        style={{ backgroundColor: editingPage.theme?.primaryColor || '#2563eb' }}
+                        type="button"
+                        onClick={() => {
+                          const formEl = document.getElementById('preview-capture-form');
+                          formEl?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className={`text-xs sm:text-sm font-semibold text-white px-4 py-2 transition inline-flex items-center gap-1.5 shadow-xs hover:brightness-95 ${buttonShapeClass}`}
+                        style={{ backgroundColor: primaryColor }}
                       >
-                        {editingPage.form?.buttonText || 'Enviar Dados Agora'}
+                        <span>{editingPage.hero?.ctaText || 'Acessar Agora'}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
-                    </form>
-                  </div>
-                </div>
+                    </header>
 
-                {/* Features Section */}
-                {(editingPage.features && editingPage.features.length > 0) && (
-                  <div className="p-6 md:p-8 bg-white border-t border-slate-200">
-                    <div className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-4">
-                      Por que nos escolher
-                    </div>
-                    <div className="space-y-3">
-                      {editingPage.features.map((feat, idx) => (
-                        <div key={feat.id || idx} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                          <div className="font-bold text-xs text-slate-900 mb-0.5">{feat.title}</div>
-                          <div className="text-[11px] text-slate-600">{feat.description}</div>
+                    {/* Hero Section */}
+                    <section className="pt-10 pb-16 md:pt-14 md:pb-20 px-6 sm:px-10 bg-gradient-to-b from-white via-slate-50 to-slate-100 border-b border-slate-200/80">
+                      <div className={previewDevice === 'desktop' ? 'grid grid-cols-12 gap-8 lg:gap-10 items-start' : 'flex flex-col gap-6'}>
+                        
+                        {/* Left: Copy & Value Proposition */}
+                        <div className={previewDevice === 'desktop' ? 'col-span-7 text-left' : 'w-full text-center'}>
+                          {editingPage.hero?.badge && (
+                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 bg-blue-50 text-blue-700 border border-blue-200 shadow-xs">
+                              <span>{editingPage.hero.badge}</span>
+                            </div>
+                          )}
+
+                          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-4">
+                            {editingPage.hero?.headline || editingPage.title}
+                          </h1>
+
+                          <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-6 font-normal">
+                            {editingPage.hero?.subheadline || editingPage.description}
+                          </p>
+
+                          {/* Countdown Timer Preview */}
+                          {editingPage.countdown?.enabled && (
+                            <div className={`mb-6 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl max-w-lg ${previewDevice === 'desktop' ? '' : 'mx-auto'}`}>
+                              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+                                {editingPage.countdown.title || 'Tempo restante para garantir esta condição:'}
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-center font-bold">
+                                <div className="bg-slate-800 p-2 rounded-xl">
+                                  <span className="text-2xl font-black text-amber-400">03</span>
+                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                                </div>
+                                <div className="bg-slate-800 p-2 rounded-xl">
+                                  <span className="text-2xl font-black text-white">14</span>
+                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                                </div>
+                                <div className="bg-slate-800 p-2 rounded-xl">
+                                  <span className="text-2xl font-black text-white">45</span>
+                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                                </div>
+                                <div className="bg-slate-800 p-2 rounded-xl">
+                                  <span className="text-2xl font-black text-emerald-400">22</span>
+                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Hero CTA Button */}
+                          <div className={`flex flex-col sm:flex-row items-center gap-4 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const formEl = document.getElementById('preview-capture-form');
+                                formEl?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className={`w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg shadow-blue-500/20 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 ${buttonShapeClass}`}
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <span>{editingPage.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
+                              <ArrowRight className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          {/* Trust indicators */}
+                          <div className={`mt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              Acesso Imediato
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              Sem Spam ou Mensagens Indesejadas
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              Privacidade Garantida
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* FAQ Section */}
-                {(editingPage.faq?.enabled && editingPage.faq.items && editingPage.faq.items.length > 0) && (
-                  <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-200">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
-                      Perguntas Frequentes
-                    </div>
-                    <div className="space-y-2">
-                      {editingPage.faq.items.map((faq, idx) => (
-                        <div key={faq.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 text-xs">
-                          <div className="font-bold text-slate-900 mb-1">{faq.question}</div>
-                          <div className="text-slate-600 text-[11px]">{faq.answer}</div>
+                        {/* Right: Capture Form Card */}
+                        <div className={previewDevice === 'desktop' ? 'col-span-5' : 'w-full'}>
+                          <div id="preview-capture-form" className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
+                            <div className="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                              Cadastre-se Grátis
+                            </div>
+
+                            <div className="mb-5">
+                              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                                {editingPage.form?.title || 'Garanta sua Vaga'}
+                              </h2>
+                              {editingPage.form?.subtitle && (
+                                <p className="text-xs sm:text-sm text-slate-500 mt-1">{editingPage.form.subtitle}</p>
+                              )}
+                            </div>
+
+                            <form onSubmit={handleTestPreviewSubmit} className="space-y-3.5">
+                              {(editingPage.form?.fields || [
+                                { id: 'name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome', required: true, enabled: true },
+                                { id: 'phone', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true, enabled: true },
+                                { id: 'email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true, enabled: true }
+                              ]).map(f => (
+                                <div key={f.id}>
+                                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                                    {f.label} {f.required && <span className="text-red-500">*</span>}
+                                  </label>
+                                  {f.type === 'textarea' ? (
+                                    <textarea
+                                      value={previewFormValues[f.name || f.id] || ''}
+                                      onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
+                                      placeholder={f.placeholder}
+                                      rows={3}
+                                      required={f.required}
+                                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
+                                    />
+                                  ) : (
+                                    <input
+                                      type={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}
+                                      value={previewFormValues[f.name || f.id] || ''}
+                                      onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
+                                      placeholder={f.placeholder}
+                                      required={f.required}
+                                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+
+                              {previewSubmitStatus && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium">
+                                  {previewSubmitStatus}
+                                </div>
+                              )}
+
+                              <button
+                                type="submit"
+                                className={`w-full py-3.5 px-6 font-bold text-sm sm:text-base text-white shadow-md transition flex items-center justify-center gap-2 hover:brightness-95 ${buttonShapeClass}`}
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                <span>{editingPage.form?.buttonText || 'Enviar Dados Agora'}</span>
+                              </button>
+
+                              <p className="text-[11px] text-slate-400 text-center mt-2.5">
+                                🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).
+                              </p>
+                            </form>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+
+                      </div>
+                    </section>
+
+                    {/* Features & Benefits Section */}
+                    {editingPage.features && editingPage.features.length > 0 && (
+                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-b border-slate-200">
+                        <div className="text-center max-w-2xl mx-auto mb-10">
+                          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                            Por que escolher
+                          </span>
+                          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
+                            Tudo que você precisa para acelerar seu negócio
+                          </h2>
+                        </div>
+
+                        <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'}`}>
+                          {editingPage.features.map((feat, idx) => (
+                            <div key={feat.id || idx} className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
+                              <div 
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm text-sm sm:text-base"
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                {idx + 1}
+                              </div>
+                              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">{feat.title}</h3>
+                              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feat.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Social Proof & Testimonials Section */}
+                    {editingPage.socialProof?.enabled && ((editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0) || (editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0)) && (
+                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-slate-900 text-white">
+                        {editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0 && (
+                          <div className={`grid gap-6 mb-12 text-center border-b border-slate-800 pb-10 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                            {editingPage.socialProof.stats.map((s, idx) => (
+                              <div key={idx}>
+                                <div className="text-3xl sm:text-4xl font-black text-amber-400 mb-1">{s.value}</div>
+                                <div className="text-xs sm:text-sm text-slate-400 font-medium">{s.label}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0 && (
+                          <>
+                            <div className="text-center max-w-xl mx-auto mb-8">
+                              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
+                            </div>
+                            <div className={`grid gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                              {editingPage.socialProof.testimonials.map((t, idx) => (
+                                <div key={t.id || idx} className="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
+                                  <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
+                                    {'★'.repeat(t.rating || 5)}
+                                  </div>
+                                  <p className="text-xs sm:text-sm text-slate-300 italic mb-4">"{t.text}"</p>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs sm:text-sm shadow-sm">
+                                      {(t.name || 'C').charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-xs sm:text-sm text-white">{t.name}</div>
+                                      <div className="text-[11px] text-slate-400">{t.role}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </section>
+                    )}
+
+                    {/* FAQ Section */}
+                    {editingPage.faq?.enabled && editingPage.faq.items && editingPage.faq.items.length > 0 && (
+                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-t border-slate-200">
+                        <div className="max-w-4xl mx-auto">
+                          <div className="text-center mb-10">
+                            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                              Tire suas dúvidas
+                            </span>
+                            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
+                              Perguntas Frequentes
+                            </h2>
+                          </div>
+
+                          <div className="space-y-3">
+                            {editingPage.faq.items.map((item, idx) => {
+                              const isOpen = openFaqIndex === idx;
+                              return (
+                                <div key={item.id || idx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                                    className="w-full p-4 sm:p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition"
+                                  >
+                                    <span className="text-xs sm:text-sm">{item.question}</span>
+                                    <span className="text-base sm:text-lg font-bold text-slate-400">
+                                      {isOpen ? '−' : '+'}
+                                    </span>
+                                  </button>
+                                  {isOpen && (
+                                    <div className="p-4 sm:p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
+                                      {item.answer}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Footer Preview */}
+                    <footer className="bg-slate-900 text-slate-400 py-10 px-6 sm:px-10 border-t border-slate-800 text-xs">
+                      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs shadow-md"
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            {(companyName || 'M').charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-bold text-white text-sm">{companyName}</span>
+                        </div>
+                        <div className="text-center md:text-right">
+                          <p>&copy; {new Date().getFullYear()} {companyName}. {editingPage.footer?.copyrightText || 'Todos os direitos reservados.'}</p>
+                          <p className="text-[11px] text-slate-500 mt-1">Desenvolvido com tecnologia de alta conversão MDTracker Growth Suite.</p>
+                        </div>
+                      </div>
+                    </footer>
+
                   </div>
-                )}
-
-                {/* Footer Preview */}
-                <div className="p-6 bg-slate-900 text-slate-400 text-center text-[10px]">
-                  &copy; {new Date().getFullYear()} {currentCompany.name}. Todos os direitos reservados.
-                </div>
-
-              </div>
+                );
+              })()}
             </div>
 
           </div>

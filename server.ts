@@ -141,23 +141,41 @@ const mapLeadToDB = (lead: any) => ({
 });
 
 async function safeInsertLead(dbRow: any) {
-    let { error } = await supabase.from('leads').insert(dbRow);
-    if (error && (error.message?.includes('bot_active') || error.details?.includes('bot_active'))) {
-        const fallback = { ...dbRow };
-        delete fallback.bot_active;
-        const res = await supabase.from('leads').insert(fallback);
+    let rowToInsert = { ...dbRow };
+    let { error } = await supabase.from('leads').insert(rowToInsert);
+    if (error) {
+        console.error('safeInsertLead initial error:', error.message, error.details);
+        if (error.message?.includes('bot_active') || error.details?.includes('bot_active')) {
+            delete rowToInsert.bot_active;
+        }
+        if (error.message?.includes('link_id') || error.details?.includes('link_id') || error.code === '23503') {
+            rowToInsert.link_id = null;
+        }
+        const res = await supabase.from('leads').insert(rowToInsert);
         error = res.error;
+        if (error) {
+            console.error('safeInsertLead retry error:', error.message);
+        }
     }
     return { error };
 }
 
 async function safeUpdateLead(id: string, dbRow: any) {
-    let { error } = await supabase.from('leads').update(dbRow).eq('id', id);
-    if (error && (error.message?.includes('bot_active') || error.details?.includes('bot_active'))) {
-        const fallback = { ...dbRow };
-        delete fallback.bot_active;
-        const res = await supabase.from('leads').update(fallback).eq('id', id);
+    let rowToUpdate = { ...dbRow };
+    let { error } = await supabase.from('leads').update(rowToUpdate).eq('id', id);
+    if (error) {
+        console.error('safeUpdateLead initial error:', error.message, error.details);
+        if (error.message?.includes('bot_active') || error.details?.includes('bot_active')) {
+            delete rowToUpdate.bot_active;
+        }
+        if (error.message?.includes('link_id') || error.details?.includes('link_id') || error.code === '23503') {
+            rowToUpdate.link_id = null;
+        }
+        const res = await supabase.from('leads').update(rowToUpdate).eq('id', id);
         error = res.error;
+        if (error) {
+            console.error('safeUpdateLead retry error:', error.message);
+        }
     }
     return { error };
 }
@@ -184,7 +202,11 @@ const mapLeadFromDB = (db: any) => {
         device: db.device,
         browser: db.browser,
         notes: db.notes,
-        conversionEvents: db.conversion_events || [],
+        conversionEvents: Array.isArray(db.conversion_events) 
+            ? db.conversion_events 
+            : (typeof db.conversion_events === 'string' 
+                ? (() => { try { return JSON.parse(db.conversion_events); } catch { return []; } })() 
+                : []),
         botActive: db.bot_active !== undefined ? db.bot_active : true,
         score: db.score !== undefined ? db.score : computed.score,
         qualificationLevel: db.qualification_level || computed.qualificationLevel,
@@ -917,30 +939,37 @@ let inMemoryLandingPages: any[] = [
 // ==========================================
 const mapBroadcastCampaignToDB = (bc: any) => ({
     id: bc.id,
-    company_id: bc.companyId || 'comp-alfa',
+    company_id: bc.companyId || bc.company_id || 'comp-alfa',
     name: bc.name,
     channel: bc.channel || 'email',
-    target_stage: bc.targetStage || 'Todos',
-    target_source: bc.targetSource || 'Todas',
-    target_tag: bc.targetTag || 'Todas',
-    message_template: bc.messageTemplate || '',
-    email_subject: bc.emailSubject || '',
-    email_preheader: bc.emailPreheader || '',
-    email_sender_name: bc.emailSenderName || '',
-    email_sender_email: bc.emailSenderEmail || '',
-    email_body_html: bc.emailBodyHtml || '',
-    sms_text: bc.smsText || '',
-    tracking_link_id: bc.trackingLinkId || null,
+    channels: bc.channels || (bc.channel === 'multichannel' ? ['email', 'whatsapp', 'sms'] : [bc.channel || 'email']),
+    target_stage: bc.targetStage || bc.target_stage || 'Todos',
+    target_source: bc.targetSource || bc.target_source || 'Todas',
+    target_tag: bc.targetTag || bc.target_tag || 'Todas',
+    message_template: bc.messageTemplate || bc.message_template || '',
+    whatsapp_scheduled_at: bc.whatsappScheduledAt || bc.whatsapp_scheduled_at || null,
+    email_subject: bc.emailSubject || bc.email_subject || '',
+    email_preheader: bc.emailPreheader || bc.email_preheader || '',
+    email_sender_name: bc.emailSenderName || bc.email_sender_name || '',
+    email_sender_email: bc.emailSenderEmail || bc.email_sender_email || '',
+    email_body_html: bc.emailBodyHtml || bc.email_body_html || '',
+    email_scheduled_at: bc.emailScheduledAt || bc.email_scheduled_at || null,
+    sms_text: bc.smsText || bc.sms_text || '',
+    sms_scheduled_at: bc.smsScheduledAt || bc.sms_scheduled_at || null,
+    tracking_link_id: bc.trackingLinkId || bc.tracking_link_id || null,
+    cta_url: bc.ctaUrl || bc.cta_url || '',
+    cta_text: bc.ctaText || bc.cta_text || '',
     status: bc.status || 'rascunho',
-    total_leads: Number(bc.totalLeads || 0),
-    sent_count: Number(bc.sentCount || 0),
-    delivered_count: Number(bc.deliveredCount || 0),
-    opened_count: Number(bc.openedCount || 0),
-    clicked_count: Number(bc.clickedCount || 0),
+    total_leads: Number(bc.totalLeads || bc.total_leads || 0),
+    sent_count: Number(bc.sentCount || bc.sent_count || 0),
+    delivered_count: Number(bc.deliveredCount || bc.delivered_count || 0),
+    opened_count: Number(bc.openedCount || bc.opened_count || 0),
+    clicked_count: Number(bc.clickedCount || bc.clicked_count || 0),
     provider: bc.provider || 'simulado',
-    delay_seconds: Number(bc.delaySeconds || 5),
-    scheduled_at: bc.scheduledAt || null,
-    created_at: bc.createdAt || new Date().toISOString(),
+    delay_seconds: Number(bc.delaySeconds || bc.delay_seconds || 5),
+    scheduled_at: bc.scheduledAt || bc.scheduled_at || null,
+    recipients: bc.recipients || [],
+    created_at: bc.createdAt || bc.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString()
 });
 
@@ -949,17 +978,23 @@ const mapBroadcastCampaignFromDB = (db: any) => ({
     companyId: db.company_id,
     name: db.name,
     channel: db.channel || 'email',
+    channels: db.channels || (db.channel === 'multichannel' ? ['email', 'whatsapp', 'sms'] : [db.channel || 'email']),
     targetStage: db.target_stage || 'Todos',
     targetSource: db.target_source || 'Todas',
     targetTag: db.target_tag || 'Todas',
     messageTemplate: db.message_template || '',
+    whatsappScheduledAt: db.whatsapp_scheduled_at,
     emailSubject: db.email_subject || '',
     emailPreheader: db.email_preheader || '',
     emailSenderName: db.email_sender_name || '',
     emailSenderEmail: db.email_sender_email || '',
     emailBodyHtml: db.email_body_html || '',
+    emailScheduledAt: db.email_scheduled_at,
     smsText: db.sms_text || '',
+    smsScheduledAt: db.sms_scheduled_at,
     trackingLinkId: db.tracking_link_id,
+    ctaUrl: db.cta_url || '',
+    ctaText: db.cta_text || '',
     status: db.status || 'rascunho',
     totalLeads: Number(db.total_leads || 0),
     sentCount: Number(db.sent_count || 0),
@@ -969,10 +1004,93 @@ const mapBroadcastCampaignFromDB = (db: any) => ({
     provider: db.provider || 'simulado',
     delaySeconds: Number(db.delay_seconds || 5),
     scheduledAt: db.scheduled_at,
-    createdAt: db.created_at || new Date().toISOString()
+    recipients: Array.isArray(db.recipients) ? db.recipients : (typeof db.recipients === 'string' ? (() => { try { return JSON.parse(db.recipients); } catch { return []; } })() : []),
+    createdAt: db.created_at || new Date().toISOString(),
+    updatedAt: db.updated_at
 });
 
+function generateMockRecipientsForCampaign(camp: any, count = 20) {
+    const names = [
+        'Rogério Belmiro', 'Mariana Costa', 'Carlos Eduardo', 'Juliana Torres', 'Lucas Mendes',
+        'Beatriz Silva', 'Felipe Santos', 'Camila Rocha', 'Rodrigo Oliveira', 'Larissa Lima',
+        'Gabriel Souza', 'Amanda Pereira', 'Thiago Ribeiro', 'Fernanda Alves', 'Bruno Carvalho',
+        'Patricia Martins', 'Diego Ferreira', 'Renata Barbosa', 'Gustavo Gomes', 'Vanessa Castro'
+    ];
+    const recipients: any[] = [];
+    const isCompleted = camp.status === 'concluido';
+    const sentBaseTime = camp.created_at ? new Date(camp.created_at).getTime() : Date.now() - 3600000 * 12;
+
+    const actualCount = Math.min(count, names.length);
+    for (let i = 0; i < actualCount; i++) {
+        const name = names[i];
+        const cleanName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.');
+        const isOpened = isCompleted && (i < Math.floor(actualCount * 0.72));
+        const isClicked = isCompleted && (i < Math.floor(actualCount * 0.42));
+        const sentAt = new Date(sentBaseTime + i * 180000).toISOString();
+        const openedAt = isOpened ? new Date(sentBaseTime + i * 180000 + (i + 1) * 240000).toISOString() : undefined;
+        const clickedAt = isClicked ? new Date(sentBaseTime + i * 180000 + (i + 1) * 360000).toISOString() : undefined;
+
+        recipients.push({
+            leadId: `lead-recip-${i + 1}`,
+            name,
+            email: `${cleanName}@gmail.com`,
+            phone: `1198${(1000000 + i * 12345).toString().slice(0, 7)}`,
+            channel: camp.channel === 'multichannel' ? (i % 3 === 0 ? 'whatsapp' : i % 3 === 1 ? 'email' : 'sms') : camp.channel,
+            stage: i % 4 === 0 ? 'Novo Lead' : i % 4 === 1 ? 'Contatado' : i % 4 === 2 ? 'Em Negociação' : 'Convertido',
+            status: isClicked ? 'clicou' : isOpened ? 'aberto' : isCompleted ? 'entregue' : 'pendente',
+            sentAt: isCompleted ? sentAt : undefined,
+            openedAt,
+            clickedAt,
+            device: isOpened ? (i % 2 === 0 ? 'iPhone (iOS)' : 'Chrome (Windows)') : undefined
+        });
+    }
+    return recipients;
+}
+
 let inMemoryBroadcastCampaigns: any[] = [
+  {
+    id: 'camp-launch-carrinho',
+    company_id: 'comp-alfa',
+    name: '🚀 Lançamento: Abertura Oficial de Carrinho (Lote 1)',
+    channel: 'multichannel',
+    channels: ['email', 'whatsapp', 'sms'],
+    target_stage: 'Todos',
+    target_source: 'Todas',
+    target_tag: 'Todas',
+    scheduled_at: new Date(Date.now() + 86400000 * 2).toISOString(), // Em 2 dias às 09:00
+    email_scheduled_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+    whatsapp_scheduled_at: new Date(Date.now() + 86400000 * 2 + 1800000).toISOString(),
+    sms_scheduled_at: new Date(Date.now() + 86400000 * 2 + 3600000).toISOString(),
+    email_subject: '🔥 OFICIAL: Carrinho Aberto! Garanta Sua Vaga no Lote 1 com Bônus VIP',
+    email_preheader: 'Apenas os primeiros 50 inscritos recebem mentoria individual exclusiva',
+    email_sender_name: 'Equipe de Lançamento',
+    email_sender_email: 'lancamento@alfa.com.br',
+    email_body_html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <span style="background: #fef2f2; color: #dc2626; font-weight: bold; font-size: 12px; padding: 6px 14px; border-radius: 9999px; text-transform: uppercase;">Abertura Oficial de Carrinho</span>
+  </div>
+  <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; text-align: center;">Olá, {{nome}}! As inscrições estão oficialmente abertas 🚀</h2>
+  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">O momento tão esperado chegou. O Lote 1 com bônus de consultoria já está liberado exclusivamente para quem esteve na lista VIP.</p>
+  <div style="text-align: center; margin-top: 28px;">
+    <a href="https://mdtracker.com.br/abertura" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Garantir Minha Vaga no Lote 1 &rarr;</a>
+  </div>
+</div>`,
+    message_template: '🚨 ATENÇÃO {{nome}}! Acabamos de abrir as vagas no Lote 1 com bônus VIP exclusivo. O link oficial é: https://mdtracker.com.br/abertura',
+    sms_text: '{{nome}}, carrinho ABERTO! Acesse agora o Lote 1 com condicao especial: mdtr.link/lote1',
+    cta_url: 'https://mdtracker.com.br/abertura',
+    cta_text: 'Acessar Inscrição no Lote 1',
+    status: 'agendado',
+    total_leads: 20,
+    sent_count: 0,
+    delivered_count: 0,
+    opened_count: 0,
+    clicked_count: 0,
+    provider: 'simulado',
+    delay_seconds: 3,
+    recipients: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
   {
     id: 'camp-email-welcome',
     company_id: 'comp-alfa',
@@ -991,30 +1109,19 @@ let inMemoryBroadcastCampaigns: any[] = [
   </div>
   <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; text-align: center;">Olá, {{nome}}! Seja muito bem-vindo(a) à nossa comunidade</h2>
   <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">Ficamos muito contentes com seu cadastro. Nossa missão é te ajudar a dobrar sua taxa de conversão de leads e ter visibilidade total sobre cada venda originada nos seus anúncios.</p>
-  <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-    <p style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 600;">Seus benefícios ativos:</p>
-    <ul style="margin: 8px 0 0 16px; padding: 0; color: #475569; font-size: 14px;">
-      <li>Atribuição UTM e rastreio de CAPI em tempo real</li>
-      <li>Chatbot integrado com inteligência artificial para atendimento 24/7</li>
-      <li>Funil de CRM visual com histórico completo de conversas</li>
-    </ul>
-  </div>
   <div style="text-align: center; margin-top: 32px;">
     <a href="https://mdtracker.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Acessar Meu Painel Agora &rarr;</a>
   </div>
-  <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 36px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
-    Alfa Marketing • CNPJ: 12.345.678/0001-90<br/>
-    Caso não deseje mais receber nossos e-mails, <a href="#" style="color: #64748b; text-decoration: underline;">clique aqui para cancelar</a>.
-  </p>
 </div>`,
     status: 'concluido',
-    total_leads: 52,
-    sent_count: 52,
-    delivered_count: 51,
-    opened_count: 32,
-    clicked_count: 18,
+    total_leads: 20,
+    sent_count: 20,
+    delivered_count: 19,
+    opened_count: 14,
+    clicked_count: 8,
     provider: 'resend',
     delay_seconds: 2,
+    recipients: [],
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -1028,13 +1135,14 @@ let inMemoryBroadcastCampaigns: any[] = [
     target_tag: 'Todas',
     sms_text: 'Oi {{nome}}! Vimos seu interesse em nossa consultoria. Use o cupom VIP15 no WhatsApp hoje e garanta 15% OFF imediato: mdtr.link/vip15',
     status: 'concluido',
-    total_leads: 28,
-    sent_count: 28,
-    delivered_count: 27,
-    opened_count: 25,
-    clicked_count: 14,
+    total_leads: 18,
+    sent_count: 18,
+    delivered_count: 18,
+    opened_count: 15,
+    clicked_count: 7,
     provider: 'z_api',
     delay_seconds: 3,
+    recipients: [],
     created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -1048,17 +1156,24 @@ let inMemoryBroadcastCampaigns: any[] = [
     target_tag: 'Todas',
     message_template: 'Olá, {{nome}}! Tudo bem? Faz algum tempo que conversamos. Lançamos uma nova funcionalidade no sistema e gostaríamos de te presentear com 7 dias grátis para testar. Tem interesse?',
     status: 'concluido',
-    total_leads: 18,
-    sent_count: 18,
-    delivered_count: 17,
-    opened_count: 16,
-    clicked_count: 9,
+    total_leads: 16,
+    sent_count: 16,
+    delivered_count: 15,
+    opened_count: 13,
+    clicked_count: 6,
     provider: 'simulado_web',
     delay_seconds: 5,
+    recipients: [],
     created_at: new Date(Date.now() - 86400000 * 6).toISOString(),
     updated_at: new Date().toISOString()
   }
 ];
+
+// Seed recipients into mock campaigns
+inMemoryBroadcastCampaigns[0].recipients = generateMockRecipientsForCampaign(inMemoryBroadcastCampaigns[0], 20);
+inMemoryBroadcastCampaigns[1].recipients = generateMockRecipientsForCampaign(inMemoryBroadcastCampaigns[1], 20);
+inMemoryBroadcastCampaigns[2].recipients = generateMockRecipientsForCampaign(inMemoryBroadcastCampaigns[2], 18);
+inMemoryBroadcastCampaigns[3].recipients = generateMockRecipientsForCampaign(inMemoryBroadcastCampaigns[3], 16);
 
 const mapLeadCallFromDB = (db: any) => ({
     id: db.id,
@@ -2293,14 +2408,14 @@ app.post('/api/popups/:id/submit', async (req: Request, res: Response) => {
 
         // Conversion event
         const conversionEvent: ConversionEventLog = {
-            id: `evt-${Date.now()}`,
-            type: 'organic',
-            eventName: 'Lead_Popup',
+            id: `evt-popup-${Date.now()}`,
+            type: 'popup',
+            eventName: 'Lead Capturado (Pop-up)',
             status: 'sucesso',
             timestamp: new Date().toISOString(),
-            details: `Capturado via Pop-up: "${popup.name}"`,
+            details: `Capturado via Pop-up Inteligente: "${popup.name}" (Gatilho: ${popup.triggerType || 'exit_intent'})`,
             utmSource: body.utmSource || 'popup_site',
-            utmMedium: body.utmMedium || 'capture_form',
+            utmMedium: body.utmMedium || 'pop_up',
             utmCampaign: body.utmCampaign || popup.name,
             utmContent: body.utmContent || '',
             utmTerm: body.utmTerm || ''
@@ -2323,16 +2438,34 @@ app.post('/api/popups/:id/submit', async (req: Request, res: Response) => {
             }
         }
 
+        if (!existingLead && leadEmail && leadEmail.trim() !== '') {
+            const { data: emailMatches } = await supabase
+                .from('leads')
+                .select('*')
+                .eq('company_id', companyId)
+                .eq('email', leadEmail.trim().toLowerCase())
+                .order('created_at', { ascending: false });
+            if (emailMatches && emailMatches.length > 0) {
+                existingLead = emailMatches.find(l => l.stage !== 'Convertido' && l.stage !== 'Perdido') || emailMatches[0];
+            }
+        }
+
         if (existingLead) {
             leadId = existingLead.id;
-            const updatedEvents = [...(existingLead.conversion_events || []), conversionEvent];
-            await supabase.from('leads').update({
-                name: leadName !== 'Lead via Pop-up' ? leadName : existingLead.name,
+            let currentEvents: any[] = [];
+            if (Array.isArray(existingLead.conversion_events)) {
+                currentEvents = existingLead.conversion_events;
+            } else if (typeof existingLead.conversion_events === 'string') {
+                try { currentEvents = JSON.parse(existingLead.conversion_events); } catch {}
+            }
+            const updatedEvents = [...currentEvents, conversionEvent];
+            await safeUpdateLead(existingLead.id, {
+                name: (leadName && leadName !== 'Lead via Pop-up') ? leadName : existingLead.name,
                 email: leadEmail || existingLead.email,
                 conversion_events: updatedEvents,
-                notes: (existingLead.notes ? existingLead.notes + '\n' : '') + `[${new Date().toLocaleDateString('pt-BR')}] Preencheu pop-up: ${popup.name}`,
+                notes: (existingLead.notes ? existingLead.notes + '\n' : '') + `[${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}] Preencheu Pop-up: "${popup.name}"`,
                 updated_at: new Date().toISOString()
-            }).eq('id', existingLead.id);
+            });
         } else {
             const newLead: Lead = {
                 id: leadId,
@@ -4166,16 +4299,31 @@ app.post('/api/broadcast-campaigns', async (req: Request, res: Response) => {
         const campaignData = {
             ...req.body,
             id,
+            status: (req.body.scheduledAt && new Date(req.body.scheduledAt) > new Date() && req.body.status !== 'concluido') ? 'agendado' : (req.body.status || 'rascunho'),
             companyId: req.body.companyId || 'comp-alfa'
         };
 
         const dbRow = mapBroadcastCampaignToDB(campaignData);
 
         try {
-            const { data, error } = await supabase.from('broadcast_campaigns').insert(dbRow).select().single();
+            let rowToInsert = { ...dbRow };
+            let { data, error } = await supabase.from('broadcast_campaigns').insert(rowToInsert).select().single();
+            if (error) {
+                const fallback = { ...rowToInsert };
+                delete fallback.recipients;
+                delete fallback.channels;
+                delete fallback.cta_url;
+                delete fallback.cta_text;
+                delete fallback.whatsapp_scheduled_at;
+                delete fallback.email_scheduled_at;
+                delete fallback.sms_scheduled_at;
+                const retry = await supabase.from('broadcast_campaigns').insert(fallback).select().single();
+                data = retry.data;
+                error = retry.error;
+            }
             if (!error && data) {
-                inMemoryBroadcastCampaigns.unshift(dbRow);
-                return res.status(201).json(mapBroadcastCampaignFromDB(data));
+                inMemoryBroadcastCampaigns.unshift({ ...dbRow, ...data });
+                return res.status(201).json(mapBroadcastCampaignFromDB({ ...dbRow, ...data }));
             }
         } catch {}
 
@@ -4189,14 +4337,32 @@ app.post('/api/broadcast-campaigns', async (req: Request, res: Response) => {
 app.put('/api/broadcast-campaigns/:id', async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
-        const dbRow = mapBroadcastCampaignToDB({ ...req.body, id });
+        let status = req.body.status || 'rascunho';
+        if (req.body.scheduledAt && new Date(req.body.scheduledAt) > new Date() && status !== 'concluido') {
+            status = 'agendado';
+        }
+        const dbRow = mapBroadcastCampaignToDB({ ...req.body, id, status });
 
         try {
-            const { data, error } = await supabase.from('broadcast_campaigns').update(dbRow).eq('id', id).select().single();
+            let rowToUpdate = { ...dbRow };
+            let { data, error } = await supabase.from('broadcast_campaigns').update(rowToUpdate).eq('id', id).select().single();
+            if (error) {
+                const fallback = { ...rowToUpdate };
+                delete fallback.recipients;
+                delete fallback.channels;
+                delete fallback.cta_url;
+                delete fallback.cta_text;
+                delete fallback.whatsapp_scheduled_at;
+                delete fallback.email_scheduled_at;
+                delete fallback.sms_scheduled_at;
+                const retry = await supabase.from('broadcast_campaigns').update(fallback).eq('id', id).select().single();
+                data = retry.data;
+                error = retry.error;
+            }
             if (!error && data) {
                 const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === id);
-                if (idx !== -1) inMemoryBroadcastCampaigns[idx] = { ...inMemoryBroadcastCampaigns[idx], ...dbRow };
-                return res.json(mapBroadcastCampaignFromDB(data));
+                if (idx !== -1) inMemoryBroadcastCampaigns[idx] = { ...inMemoryBroadcastCampaigns[idx], ...dbRow, ...data };
+                return res.json(mapBroadcastCampaignFromDB({ ...dbRow, ...data }));
             }
         } catch {}
 
@@ -4266,12 +4432,187 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
     }
 });
 
+// Helper to execute a broadcast campaign (manual or scheduled)
+async function executeBroadcastCampaign(campIdOrObj: string | any) {
+    const id = typeof campIdOrObj === 'string' ? campIdOrObj : campIdOrObj.id;
+    let camp = inMemoryBroadcastCampaigns.find(c => c.id === id);
+    if (!camp) {
+        try {
+            const { data } = await supabase.from('broadcast_campaigns').select('*').eq('id', id).single();
+            if (data) camp = data;
+        } catch {}
+    }
+    if (!camp) return null;
+
+    const companyId = camp.company_id || camp.companyId || 'comp-alfa';
+
+    // 1. Fetch real leads from DB
+    let leadsList: any[] = [];
+    try {
+        let query = supabase.from('leads').select('*').eq('company_id', companyId);
+        if (camp.target_stage && camp.target_stage !== 'Todos') {
+            query = query.eq('stage', camp.target_stage);
+        }
+        const { data: dbLeads } = await query.order('created_at', { ascending: false }).limit(40);
+        if (dbLeads && dbLeads.length > 0) {
+            leadsList = dbLeads;
+        }
+    } catch {}
+
+    const now = new Date();
+    const recipients: any[] = [];
+    
+    // Process real leads first
+    for (let i = 0; i < leadsList.length; i++) {
+        const lead = leadsList[i];
+        const isOpened = Math.random() < 0.72;
+        const isClicked = isOpened && Math.random() < 0.44;
+        const sentTime = new Date(now.getTime() - (i + 1) * 120000);
+        const openedTime = isOpened ? new Date(sentTime.getTime() + 180000 + i * 60000) : undefined;
+        const clickedTime = isClicked && openedTime ? new Date(openedTime.getTime() + 240000 + i * 30000) : undefined;
+
+        recipients.push({
+            leadId: lead.id,
+            name: lead.name,
+            email: lead.email || `${lead.name.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
+            phone: lead.phone || '11999998888',
+            channel: camp.channel === 'multichannel' ? (i % 3 === 0 ? 'whatsapp' : i % 3 === 1 ? 'email' : 'sms') : camp.channel,
+            stage: lead.stage || 'Novo Lead',
+            status: isClicked ? 'clicou' : isOpened ? 'aberto' : 'entregue',
+            sentAt: sentTime.toISOString(),
+            openedAt: openedTime?.toISOString(),
+            clickedAt: clickedTime?.toISOString(),
+            device: isOpened ? (i % 2 === 0 ? 'iPhone (iOS)' : 'Chrome (Windows)') : undefined
+        });
+
+        // Register in lead conversionEvents
+        try {
+            let currentEvents: any[] = [];
+            if (Array.isArray(lead.conversion_events)) {
+                currentEvents = lead.conversion_events;
+            } else if (typeof lead.conversion_events === 'string') {
+                try { currentEvents = JSON.parse(lead.conversion_events); } catch {}
+            }
+            const newEvents: any[] = [...currentEvents];
+            newEvents.push({
+                id: `evt-bc-sent-${Date.now()}-${i}`,
+                type: 'broadcast',
+                eventName: `Campanha Recebida (${(camp.channel || 'email').toUpperCase()})`,
+                status: 'sucesso',
+                timestamp: sentTime.toISOString(),
+                details: `Disparo da Campanha: "${camp.name}"`
+            });
+            if (isOpened) {
+                newEvents.push({
+                    id: `evt-bc-open-${Date.now()}-${i}`,
+                    type: 'broadcast_open',
+                    eventName: `E-mail / Mensagem Aberta`,
+                    status: 'sucesso',
+                    timestamp: openedTime!.toISOString(),
+                    details: `Abriu o conteúdo da campanha: "${camp.name}"`
+                });
+            }
+            if (isClicked) {
+                newEvents.push({
+                    id: `evt-bc-click-${Date.now()}-${i}`,
+                    type: 'broadcast_click',
+                    eventName: `Clicou no Botão/Link da Campanha`,
+                    status: 'sucesso',
+                    timestamp: clickedTime!.toISOString(),
+                    details: `Clicou no link oficial da campanha: "${camp.name}"`
+                });
+            }
+            await safeUpdateLead(lead.id, {
+                conversion_events: newEvents,
+                updated_at: now.toISOString()
+            });
+        } catch {}
+    }
+
+    // If fewer than 15 real leads, add mock recipients so user has full visibility of sample engagement
+    if (recipients.length < 15) {
+        const mockRecipients = generateMockRecipientsForCampaign(camp, 20);
+        const needed = 15 - recipients.length;
+        recipients.push(...mockRecipients.slice(0, needed));
+    }
+
+    const total = recipients.length;
+    const sent = total;
+    const delivered = recipients.filter(r => r.status !== 'falha').length;
+    const opened = recipients.filter(r => r.status === 'aberto' || r.status === 'clicou').length;
+    const clicked = recipients.filter(r => r.status === 'clicou').length;
+
+    camp.status = 'concluido';
+    camp.total_leads = total;
+    camp.sent_count = sent;
+    camp.delivered_count = delivered;
+    camp.opened_count = opened;
+    camp.clicked_count = clicked;
+    camp.recipients = recipients;
+    camp.updated_at = now.toISOString();
+
+    const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === id);
+    if (idx !== -1) {
+        inMemoryBroadcastCampaigns[idx] = camp;
+    } else {
+        inMemoryBroadcastCampaigns.unshift(camp);
+    }
+
+    try {
+        await supabase.from('broadcast_campaigns').update({
+            status: 'concluido',
+            total_leads: total,
+            sent_count: sent,
+            delivered_count: delivered,
+            opened_count: opened,
+            clicked_count: clicked,
+            updated_at: now.toISOString()
+        }).eq('id', id);
+    } catch {}
+
+    return camp;
+}
+
+// Background Scheduler for Launch Broadcast Campaigns (every 30 seconds)
+setInterval(async () => {
+    try {
+        const now = new Date();
+        const dueCampaigns = inMemoryBroadcastCampaigns.filter(c => 
+            c.status === 'agendado' && c.scheduled_at && new Date(c.scheduled_at) <= now
+        );
+        for (const camp of dueCampaigns) {
+            console.log(`⏰ Executando disparo agendado de lançamento: "${camp.name}" (${camp.id})`);
+            await executeBroadcastCampaign(camp);
+        }
+    } catch (e: any) {
+        console.error('Scheduler error in broadcast campaigns:', e.message);
+    }
+}, 30000);
+
 // Launch Broadcast to Audience
 app.post('/api/broadcast-campaigns/:id/launch', async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
-        let camp = inMemoryBroadcastCampaigns.find(c => c.id === id);
+        const updatedCamp = await executeBroadcastCampaign(id);
 
+        if (!updatedCamp) {
+            return res.status(404).json({ error: 'Campanha não encontrada' });
+        }
+
+        res.json({
+            success: true,
+            campaign: mapBroadcastCampaignFromDB(updatedCamp)
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Campaign Recipients (Who opened and who clicked)
+app.get('/api/broadcast-campaigns/:id/recipients', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        let camp = inMemoryBroadcastCampaigns.find(c => c.id === id);
         if (!camp) {
             try {
                 const { data } = await supabase.from('broadcast_campaigns').select('*').eq('id', id).single();
@@ -4283,36 +4624,70 @@ app.post('/api/broadcast-campaigns/:id/launch', async (req: Request, res: Respon
             return res.status(404).json({ error: 'Campanha não encontrada' });
         }
 
-        // Calculate simulated delivery results
-        const total = Math.max(camp.total_leads || camp.totalLeads || 25, 10);
-        const sent = total;
-        const delivered = Math.floor(sent * 0.98);
-        const opened = camp.channel === 'email' ? Math.floor(delivered * 0.62) : Math.floor(delivered * 0.88);
-        const clicked = Math.floor(opened * 0.38);
+        // If no recipients yet (e.g. freshly created or older seed), generate on the fly
+        let recipients = camp.recipients;
+        if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+            recipients = generateMockRecipientsForCampaign(camp, camp.total_leads || 20);
+            camp.recipients = recipients;
+            const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === id);
+            if (idx !== -1) inMemoryBroadcastCampaigns[idx].recipients = recipients;
+        }
 
-        camp.status = 'concluido';
-        camp.total_leads = total;
-        camp.sent_count = sent;
-        camp.delivered_count = delivered;
-        camp.opened_count = opened;
-        camp.clicked_count = clicked;
-
-        try {
-            await supabase.from('broadcast_campaigns').update({
-                status: 'concluido',
-                total_leads: total,
-                sent_count: sent,
-                delivered_count: delivered,
-                opened_count: opened,
-                clicked_count: clicked,
-                updated_at: new Date().toISOString()
-            }).eq('id', id);
-        } catch {}
+        const total = recipients.length;
+        const sent = camp.sent_count || total;
+        const opened = recipients.filter((r: any) => r.status === 'aberto' || r.status === 'clicou').length;
+        const clicked = recipients.filter((r: any) => r.status === 'clicou').length;
 
         res.json({
             success: true,
-            campaign: mapBroadcastCampaignFromDB(camp)
+            campaignId: camp.id,
+            campaignName: camp.name,
+            channel: camp.channel,
+            status: camp.status,
+            scheduledAt: camp.scheduled_at,
+            recipients,
+            stats: {
+                total,
+                sent,
+                opened,
+                clicked,
+                openRate: sent > 0 ? ((opened / sent) * 100).toFixed(1) : '0.0',
+                clickRate: sent > 0 ? ((clicked / sent) * 100).toFixed(1) : '0.0'
+            }
         });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Simulate Open or Click for a Recipient (Live Test)
+app.post('/api/broadcast-campaigns/:id/simulate-activity', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const { leadId, action } = req.body; // action: 'open' | 'click'
+        let camp = inMemoryBroadcastCampaigns.find(c => c.id === id);
+        if (!camp) {
+            return res.status(404).json({ error: 'Campanha não encontrada' });
+        }
+
+        let recipients = camp.recipients || [];
+        let recip = recipients.find((r: any) => r.leadId === leadId);
+        const now = new Date().toISOString();
+
+        if (recip) {
+            if (action === 'click') {
+                recip.status = 'clicou';
+                if (!recip.openedAt) recip.openedAt = now;
+                recip.clickedAt = now;
+                camp.clicked_count = (camp.clicked_count || 0) + 1;
+            } else {
+                if (recip.status !== 'clicou') recip.status = 'aberto';
+                recip.openedAt = now;
+                camp.opened_count = (camp.opened_count || 0) + 1;
+            }
+        }
+
+        res.json({ success: true, recipient: recip, campaign: mapBroadcastCampaignFromDB(camp) });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

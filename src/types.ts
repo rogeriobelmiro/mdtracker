@@ -69,7 +69,7 @@ export interface LeadLocation {
 
 export interface ConversionEventLog {
   id: string;
-  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook' | 'organic';
+  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook' | 'organic' | 'landing_page' | 'popup';
   eventName: string;
   status: 'sucesso' | 'simulado' | 'falha';
   timestamp: string;
@@ -187,27 +187,47 @@ export interface ChatbotConfig {
   directWelcomeMessage?: string;
 }
 
-export type BroadcastChannel = 'email' | 'sms' | 'whatsapp';
+export type BroadcastChannel = 'email' | 'sms' | 'whatsapp' | 'multichannel';
+
+export interface BroadcastRecipient {
+  leadId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  channel: BroadcastChannel;
+  stage?: string;
+  status: 'pendente' | 'enviado' | 'entregue' | 'aberto' | 'clicou' | 'falha';
+  sentAt?: string;
+  openedAt?: string;
+  clickedAt?: string;
+  device?: string;
+}
 
 export interface BroadcastCampaign {
   id: string;
   companyId?: string;
   name: string;
   channel: BroadcastChannel;
+  channels?: BroadcastChannel[];
   targetStage: FunnelStage | 'Todos';
   targetSource: string | 'Todas';
   targetTag?: string | 'Todas';
   // WhatsApp specific
   messageTemplate?: string;
+  whatsappScheduledAt?: string;
   // E-mail specific
   emailSubject?: string;
   emailPreheader?: string;
   emailSenderName?: string;
   emailSenderEmail?: string;
   emailBodyHtml?: string;
+  emailScheduledAt?: string;
   // SMS specific
   smsText?: string;
+  smsScheduledAt?: string;
   trackingLinkId?: string;
+  ctaUrl?: string;
+  ctaText?: string;
   status: 'rascunho' | 'em_andamento' | 'concluido' | 'agendado';
   totalLeads: number;
   sentCount: number;
@@ -217,7 +237,9 @@ export interface BroadcastCampaign {
   provider: string; // 'resend' | 'sendgrid' | 'z_api' | 'twilio' | 'simulado_web' | 'evolution_api'
   delaySeconds: number;
   scheduledAt?: string;
+  recipients?: BroadcastRecipient[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ChatMessage {

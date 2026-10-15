@@ -162,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Radio className="w-3.5 h-3.5" />
-                Disparos
+                Lançamentos & Disparos
               </button>
             )}
 

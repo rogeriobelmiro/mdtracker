@@ -596,6 +596,12 @@ export default function App() {
               <SmartPopupsManager
                 popups={companyPopups}
                 currentCompany={currentCompany}
+                leads={companyLeads}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+                onFilterLeadsByPopup={(popupName) => {
+                  setLeadSearchQuery(popupName);
+                  setActiveTab('leads');
+                }}
                 onCreatePopup={handleCreatePopup}
                 onUpdatePopup={handleUpdatePopup}
                 onDeletePopup={handleDeletePopup}
