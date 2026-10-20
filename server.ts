@@ -6535,6 +6535,33 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
         const body = req.body;
         console.log('[Instagram Webhook] Evento recebido:', JSON.stringify(body).slice(0, 300));
 
+        // Auditoria em tempo real de qualquer payload recebido da Meta
+        if (supabase) {
+            try {
+                const sampleText = body.entry?.[0]?.changes?.[0]?.value?.text || 
+                                   body.entry?.[0]?.messaging?.[0]?.message?.text || 
+                                   JSON.stringify(body).slice(0, 150);
+                const sampleUser = body.entry?.[0]?.changes?.[0]?.value?.from?.username ? 
+                                   `@${body.entry[0].changes[0].value.from.username}` : 
+                                   (body.entry?.[0]?.messaging?.[0]?.sender?.id ? `@id_${body.entry[0].messaging[0].sender.id}` : '@webhook_meta');
+                
+                await supabase.from('instagram_comment_logs').insert([{
+                    id: `hook-${Date.now()}`,
+                    company_id: 'comp-1786498560971',
+                    rule_id: 'raw-webhook',
+                    rule_name: `Ping Webhook Meta (${body.object || 'desconhecido'})`,
+                    instagram_username: sampleUser,
+                    comment_text: sampleText,
+                    public_reply_given: 'Recebido da Meta',
+                    dm_sent_text: 'Em processamento',
+                    status: 'delivered',
+                    timestamp: new Date().toISOString()
+                }]);
+            } catch (e: any) {
+                console.warn('[Webhook Log Error]', e.message);
+            }
+        }
+
         if ((body.object === 'instagram' || body.object === 'page') && Array.isArray(body.entry)) {
             for (const entry of body.entry) {
                 // 1. Tratar comentários em posts (changes)
