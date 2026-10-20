@@ -6709,6 +6709,8 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                             rule_name: newLog.ruleName,
                                             instagram_username: newLog.instagramUsername,
                                             comment_text: newLog.commentText,
+                                            post_id: val.from?.id || null,
+                                            post_snippet: val.media?.id || null,
                                             public_reply_given: newLog.publicReplyGiven,
                                             dm_sent_text: newLog.dmSentText,
                                             status: newLog.status,
@@ -6731,12 +6733,25 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                 // 2. Tratar mensagens diretas recebidas (messaging) - Respostas do Follow-Gate
                 if (Array.isArray(entry.messaging)) {
                     for (const msgEvent of entry.messaging) {
+                        // Ignorar mensagens de eco (mensagens enviadas pela própria página/bot)
+                        if (msgEvent.message?.is_echo) {
+                            console.log('[Instagram Webhook] Ignorando echo message');
+                            continue;
+                        }
+
                         const senderId = msgEvent.sender?.id;
                         const rawMsg = msgEvent.message?.text || msgEvent.message?.quick_reply?.payload || msgEvent.postback?.payload || msgEvent.postback?.title || '';
-                        const msgText = rawMsg.trim().toLowerCase();
-                        if (!senderId || !msgText) continue;
+                        const cleanText = normalizeTriggerText(rawMsg);
+                        if (!senderId || !cleanText) continue;
 
-                        // Buscar sessão ativa por senderId ou varrer sessões existentes
+                        // Ignorar se a mensagem foi disparada pela própria página conectada
+                        if (senderId === '17841403206297941' || senderId === '205343386680447') {
+                            continue;
+                        }
+
+                        console.log(`[Instagram Messaging Webhook] Recebida DM de ${senderId}: "${rawMsg}"`);
+
+                        // Buscar sessão ativa por senderId ou varrer sessões existentes no Map
                         let targetSession: any = instagramFollowGateSessions.get(senderId);
                         if (!targetSession) {
                             for (const [k, s] of instagramFollowGateSessions.entries()) {
@@ -6747,13 +6762,70 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                             }
                         }
 
-                        // Fallback: se houver sessão recente no Map
-                        if (!targetSession && instagramFollowGateSessions.size > 0) {
-                            const latest = Array.from(instagramFollowGateSessions.values()).pop();
-                            targetSession = latest;
+                        // Fallback persistente no Supabase (essencial para Vercel Serverless / Lambdas)
+                        if (!targetSession && supabase) {
+                            try {
+                                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+                                // 1. Tentar buscar pelo senderId salvo em post_id nas últimas 24h
+                                let { data: sessionLog } = await supabase
+                                    .from('instagram_comment_logs')
+                                    .select('*')
+                                    .eq('post_id', senderId)
+                                    .ilike('dm_sent_text', '%segue%')
+                                    .gte('timestamp', oneDayAgo)
+                                    .order('timestamp', { ascending: false })
+                                    .limit(1)
+                                    .maybeSingle();
+
+                                // 2. Se não encontrou por post_id exato, buscar a sessão de follow gate mais recente nas últimas 24h
+                                if (!sessionLog) {
+                                    const { data: latestLog } = await supabase
+                                        .from('instagram_comment_logs')
+                                        .select('*')
+                                        .ilike('dm_sent_text', '%segue%')
+                                        .gte('timestamp', oneDayAgo)
+                                        .order('timestamp', { ascending: false })
+                                        .limit(1)
+                                        .maybeSingle();
+                                    sessionLog = latestLog;
+                                }
+
+                                if (sessionLog) {
+                                    // Verificar se este seguidor já confirmou anteriormente
+                                    const { data: alreadyConfirmed } = await supabase
+                                        .from('instagram_comment_logs')
+                                        .select('id')
+                                        .eq('post_id', senderId)
+                                        .ilike('rule_name', '%(Seguidor Confirmado)%')
+                                        .gte('timestamp', sessionLog.timestamp)
+                                        .limit(1)
+                                        .maybeSingle();
+
+                                    if (!alreadyConfirmed) {
+                                        targetSession = {
+                                            companyId: sessionLog.company_id,
+                                            ruleId: sessionLog.rule_id,
+                                            username: sessionLog.instagram_username,
+                                            commentId: null,
+                                            senderId: senderId,
+                                            step: 'awaiting_follow_answer',
+                                            createdAt: new Date(sessionLog.timestamp).getTime()
+                                        };
+                                    } else {
+                                        console.log('[Instagram Webhook] Sessão de Follow Gate já confirmada anteriormente para', senderId);
+                                        continue;
+                                    }
+                                }
+                            } catch (e: any) {
+                                console.warn('[Follow-Gate Supabase Session Error]:', e.message);
+                            }
                         }
 
-                        if (!targetSession) continue;
+                        if (!targetSession) {
+                            console.log('[Instagram Webhook] Nenhuma sessão de Follow-Gate pendente para senderId:', senderId);
+                            continue;
+                        }
 
                         // Buscar a regra no Supabase e em memória
                         let rule: any = inMemoryInstagramAutomations.find(r => r.id === targetSession.ruleId);
@@ -6768,18 +6840,31 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                             } catch {}
                         }
 
-                        if (!rule) continue;
+                        if (!rule) {
+                            console.warn('[Instagram Webhook] Regra não encontrada para ID:', targetSession.ruleId);
+                            continue;
+                        }
 
                         let compSettings = await resolveInstagramSettings(targetSession.companyId);
                         const accessToken = compSettings?.accessToken;
                         const cleanPageId = (compSettings?.pageId && !compSettings.pageId.startsWith('100000000000')) ? compSettings.pageId : undefined;
 
-                        if (msgText === 'não' || msgText === 'nao' || msgText === 'n' || msgText.includes('não sigo') || msgText.includes('nao sigo') || msgText.includes('ainda nao') || msgText.includes('ainda não')) {
+                        const isNegation = cleanText.includes('nao') || cleanText === 'n';
+                        const isAffirmation = cleanText === 'sim' || cleanText === 's' || cleanText === 'segui' || 
+                                              cleanText.includes('sim') || cleanText.includes('segui') || 
+                                              cleanText.includes('ja sigo') || cleanText.includes('seguindo') || 
+                                              cleanText.includes('pronto') || cleanText.includes('feito') ||
+                                              cleanText.includes('comecei a seguir') || cleanText === 'sigo';
+
+                        const isNo = isNegation && !cleanText.includes('sim');
+                        const isYes = isAffirmation && !isNegation;
+
+                        if (isNo) {
                             targetSession.step = 'awaiting_follow_action';
                             const template = rule.followGateConfig?.notFollowingMessage || DEFAULT_FOLLOW_GATE_CONFIG.notFollowingMessage;
-                            const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
+                            const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username || '');
                             await sendInstagramDirectMessage(senderId, msgToSend, accessToken, cleanPageId);
-                        } else if (msgText === 'sim' || msgText === 'segui' || msgText.includes('sigo') || msgText.includes('já sigo') || msgText.includes('ja sigo') || msgText === 's') {
+                        } else if (isYes) {
                             // Verificar se realmente segue via Graph API
                             let isFollowing = true;
                             if (accessToken) {
@@ -6787,17 +6872,17 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                             }
                             if (!isFollowing && rule.followGateConfig?.strictMetaCheck !== false && accessToken) {
                                 const template = rule.followGateConfig?.verifyFailMessage || DEFAULT_FOLLOW_GATE_CONFIG.verifyFailMessage;
-                                const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
+                                const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username || '');
                                 await sendInstagramDirectMessage(senderId, msgToSend, accessToken, cleanPageId);
                             } else {
                                 // Seguidor confirmado: envia DM final com link de acesso e post relacionado
                                 const confirmTemplate = rule.followGateConfig?.confirmFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.confirmFollowMessage;
-                                let dm = rule.directMessage.replace(/\{\{username\}\}/gi, targetSession.username);
+                                let dm = rule.directMessage.replace(/\{\{username\}\}/gi, targetSession.username || '');
                                 if (rule.ctaButton?.url && !dm.includes(rule.ctaButton.url)) {
                                     const btnLabel = rule.ctaButton.text ? `\n\n👉 ${rule.ctaButton.text}:\n` : '\n\n👉 Link de Acesso:\n';
                                     dm = `${dm}${btnLabel}${rule.ctaButton.url}`;
                                 }
-                                const fullMsg = `${confirmTemplate.replace(/\{\{username\}\}/gi, targetSession.username)}\n\n${dm}`;
+                                const fullMsg = `${confirmTemplate.replace(/\{\{username\}\}/gi, targetSession.username || '')}\n\n${dm}`;
                                 await sendInstagramDirectMessage(senderId, fullMsg, accessToken, cleanPageId);
 
                                 // Envio de post relacionado complementar
@@ -6816,8 +6901,30 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                             .update({ stats: rule.stats, updated_at: new Date().toISOString() })
                                             .eq('id', rule.id)
                                     ).catch(() => {});
+
+                                    Promise.resolve(
+                                        supabase
+                                            .from('instagram_comment_logs')
+                                            .insert([{
+                                                id: `log-fg-${Date.now()}`,
+                                                company_id: targetSession.companyId,
+                                                rule_id: targetSession.ruleId,
+                                                rule_name: `${rule.name} (Seguidor Confirmado)`,
+                                                instagram_username: targetSession.username,
+                                                comment_text: rawMsg,
+                                                post_id: senderId,
+                                                public_reply_given: 'Confirmado no Direct ✅',
+                                                dm_sent_text: fullMsg,
+                                                status: 'delivered',
+                                                timestamp: new Date().toISOString()
+                                            }])
+                                    ).catch(() => {});
                                 }
                             }
+                        } else {
+                            // Resposta alternativa durante o portão de confirmação
+                            const clarifyMsg = 'Para eu te liberar o acesso exclusivo, por favor responda com "SIM" (se você já segue nosso perfil) ou "NÃO" 👇';
+                            await sendInstagramDirectMessage(senderId, clarifyMsg, accessToken, cleanPageId);
                         }
                     }
                 }
