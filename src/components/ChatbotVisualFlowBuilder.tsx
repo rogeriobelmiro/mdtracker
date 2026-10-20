@@ -495,51 +495,46 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     }
   };
 
-  // Canvas Pan Handlers - Permite arrastar o fluxo infinitamente independente do tamanho
+  // Canvas Pan Handlers - Permite arrastar todo o fluxo livremente
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
     if (e.button !== 0) return; // Apenas botão esquerdo
+
+    // Se clicar em botões, inputs, controles de zoom ou na barra de ferramentas, não inicia pan do canvas
     const target = e.target as HTMLElement;
-
-    // Se clicar no fundo, grid dots ou no SVG, inicia o arraste livre do canvas (pan)
     if (
-      target === containerRef.current ||
-      target.tagName === 'svg' ||
-      target.tagName === 'path' ||
-      target.classList.contains('canvas-background')
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('select') ||
+      target.closest('a') ||
+      target.closest('.no-pan')
     ) {
-      setIsPanning(true);
-      const startX = e.clientX - pan.x;
-      const startY = e.clientY - pan.y;
-
-      const onWindowPanMove = (moveEv: MouseEvent) => {
-        setPan({
-          x: moveEv.clientX - startX,
-          y: moveEv.clientY - startY
-        });
-      };
-
-      const onWindowPanUp = () => {
-        window.removeEventListener('mousemove', onWindowPanMove);
-        window.removeEventListener('mouseup', onWindowPanUp);
-        setIsPanning(false);
-      };
-
-      window.addEventListener('mousemove', onWindowPanMove);
-      window.addEventListener('mouseup', onWindowPanUp);
+      return;
     }
-  };
 
-  const handleMouseMoveCanvas = (e: React.MouseEvent) => {
-    if (isPanning) {
+    setIsPanning(true);
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const startPanX = pan.x;
+    const startPanY = pan.y;
+
+    const onWindowPanMove = (moveEv: MouseEvent) => {
+      const dx = moveEv.clientX - startClientX;
+      const dy = moveEv.clientY - startClientY;
       setPan({
-        x: e.clientX - panStart.x,
-        y: e.clientY - panStart.y
+        x: Math.round(startPanX + dx),
+        y: Math.round(startPanY + dy)
       });
-    }
-  };
+    };
 
-  const handleMouseUpCanvas = () => {
-    if (isPanning) setIsPanning(false);
+    const onWindowPanUp = () => {
+      window.removeEventListener('mousemove', onWindowPanMove);
+      window.removeEventListener('mouseup', onWindowPanUp);
+      setIsPanning(false);
+    };
+
+    window.addEventListener('mousemove', onWindowPanMove);
+    window.addEventListener('mouseup', onWindowPanUp);
   };
 
   // Suporte a Wheel (Scroll para pan ou Ctrl+Scroll para zoom)
@@ -1181,10 +1176,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         <div
           ref={containerRef}
           onMouseDown={handleMouseDownCanvas}
-          onMouseMove={handleMouseMoveCanvas}
-          onMouseUp={handleMouseUpCanvas}
           onWheel={handleWheelCanvas}
-          className="flex-1 relative overflow-hidden canvas-background cursor-grab active:cursor-grabbing bg-[#080c14]"
+          className={`flex-1 relative overflow-hidden canvas-background ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} bg-[#080c14] select-none`}
           style={{
             backgroundImage: `radial-gradient(#1e293b 1px, transparent 1px)`,
             backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
@@ -1192,7 +1185,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           }}
         >
           {/* BARRA SUPERIOR DE FERRAMENTAS DO CANVAS */}
-          <div className="absolute top-3 left-4 z-10 flex items-center gap-1.5 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg text-xs font-medium text-slate-300">
+          <div 
+            onMouseDown={e => e.stopPropagation()}
+            className="no-pan absolute top-3 left-4 z-10 flex items-center gap-1.5 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg text-xs font-medium text-slate-300"
+          >
             
             <button
               onClick={handleFitView}
@@ -1257,14 +1253,14 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           >
             {/* SVG DAS CONEXÕES */}
             <svg
-              className="absolute top-0 left-0 w-[8000px] h-[8000px] pointer-events-auto overflow-visible"
+              className="absolute top-0 left-0 w-[8000px] h-[8000px] pointer-events-none overflow-visible"
               style={{ zIndex: 1 }}
             >
               {renderConnections()}
             </svg>
 
             {/* RENDERIZAÇÃO DOS NÓS */}
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-auto" style={{ zIndex: 2 }}>
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ zIndex: 2 }}>
               {currentFlow.nodes.map(node => {
                 const isSelected = selectedNodeId === node.id;
                 const isDragging = draggingNodeId === node.id;
@@ -1282,7 +1278,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-64 rounded-2xl bg-[#101726]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute w-64 rounded-2xl bg-[#101726]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-orange-500 ring-2 ring-orange-500/20 shadow-orange-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
@@ -1330,7 +1326,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-2xl cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-2xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-blue-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
@@ -1386,7 +1382,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute w-60 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-cyan-500 ring-2 ring-cyan-500/20 shadow-cyan-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
@@ -1443,7 +1439,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute w-60 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-pink-500 ring-2 ring-pink-500/20 shadow-pink-500/10' 
                           : 'border-pink-900/40 hover:border-pink-600/60'
@@ -1472,7 +1468,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
+                      className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected ? 'border-slate-400 ring-2 ring-slate-500/20' : 'border-slate-800'
                       } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
@@ -1496,7 +1492,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                     key={node.id}
                     onMouseDown={e => handleNodeMouseDown(e, node)}
                     onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                    className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border p-3 cursor-grab select-none ${
+                    className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border p-3 cursor-grab select-none pointer-events-auto ${
                       isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'
                     }`}
                     style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
@@ -1510,7 +1506,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           </div>
 
           {/* CONTROLES DE ZOOM NO CANTO INFERIOR ESQUERDO (AMPLIADO DE 15% A 300%) */}
-          <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg">
+          <div 
+            onMouseDown={e => e.stopPropagation()}
+            className="no-pan absolute bottom-4 left-4 z-10 flex flex-col gap-1 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg"
+          >
             <button
               onClick={() => setZoom(prev => Math.min(prev + 0.15, 3.0))}
               className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
@@ -1541,7 +1540,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           </div>
 
           {/* MINIMAP NO CANTO INFERIOR DIREITO */}
-          <div className="absolute bottom-4 right-4 z-10 w-36 h-24 bg-[#0a0f1d]/90 backdrop-blur-md border border-slate-800 rounded-xl p-2 hidden sm:flex flex-col justify-between shadow-2xl">
+          <div 
+            onMouseDown={e => e.stopPropagation()}
+            className="no-pan absolute bottom-4 right-4 z-10 w-36 h-24 bg-[#0a0f1d]/90 backdrop-blur-md border border-slate-800 rounded-xl p-2 hidden sm:flex flex-col justify-between shadow-2xl"
+          >
             <div className="relative w-full h-full overflow-hidden">
               {currentFlow.nodes.map(n => (
                 <div
