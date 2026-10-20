@@ -24,7 +24,12 @@ import {
   Check,
   X,
   Flame,
-  LayoutGrid
+  LayoutGrid,
+  List,
+  ArrowUp,
+  ArrowDown,
+  Hash,
+  Link2
 } from 'lucide-react';
 import {
   ChatbotProject,
@@ -112,6 +117,7 @@ export const ChatbotProjectHub: React.FC<ChatbotProjectHubProps> = ({
     projects[0]?.id || ''
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modais de Criação / Edição
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -373,6 +379,31 @@ export const ChatbotProjectHub: React.FC<ChatbotProjectHubProps> = ({
     await onSaveProjects(updatedProjects, activeProject.id);
   };
 
+  // Reordenar Fluxo na Sequência (Mover para Cima ou para Baixo)
+  const handleMoveFlow = async (flowId: string, direction: 'up' | 'down', e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!activeProject || !activeProject.flows) return;
+    const flows = [...activeProject.flows];
+    const index = flows.findIndex(f => f.id === flowId);
+    if (index === -1) return;
+    
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= flows.length) return;
+
+    // Troca as posições dos dois fluxos
+    const temp = flows[index];
+    flows[index] = flows[targetIndex];
+    flows[targetIndex] = temp;
+
+    const updatedProjects = projects.map(p =>
+      p.id === activeProject.id
+        ? { ...p, flows, updatedAt: new Date().toISOString() }
+        : p
+    );
+
+    await onSaveProjects(updatedProjects, activeProject.id);
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-[#070b12] text-slate-100 overflow-hidden select-none">
       
@@ -587,13 +618,53 @@ export const ChatbotProjectHub: React.FC<ChatbotProjectHubProps> = ({
           </div>
         )}
 
-        {/* 2.4 GRADE DE CARDS DOS FLUXOS DO PROJETO */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <GitFork className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Fluxos do Projeto ({filteredFlows.length})</span>
-            </h4>
+        {/* 2.4 SEQUÊNCIA DE FLUXOS DO PROJETO (CARDS VS LISTA SEQUENCIAL) */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d1424] border border-slate-800/80 rounded-2xl p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
+                <GitFork className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <span>Sequência de Fluxos do Projeto</span>
+                  <span className="text-[10px] px-2 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">
+                    {filteredFlows.length} fluxos
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Ordem em que os fluxos acontecem e se encadeiam no projeto
+                </p>
+              </div>
+            </div>
+
+            {/* Alternância de Modo de Visualização: Cards vs Lista Sequencial */}
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl self-start sm:self-auto">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  viewMode === 'grid'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Visualizar como Grade de Cards"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  viewMode === 'list'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Visualizar como Lista Sequencial da Esteira"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>Lista Sequencial</span>
+              </button>
+            </div>
           </div>
 
           {filteredFlows.length === 0 ? (
@@ -618,9 +689,168 @@ export const ChatbotProjectHub: React.FC<ChatbotProjectHubProps> = ({
                 <span>Criar Primeiro Fluxo</span>
               </button>
             </div>
+          ) : viewMode === 'list' ? (
+            /* ============================================================ */
+            /* 2.4.A VISUALIZAÇÃO EM LISTA SEQUENCIAL */
+            /* ============================================================ */
+            <div className="space-y-2.5">
+              {filteredFlows.map((flow, index) => {
+                const sequenceNum = index + 1;
+                const startNode = flow.nodes?.find(n => n.type === 'start');
+                const trigger = startNode?.config?.triggerConfig;
+                const isProactive = trigger?.type === 'proactive_time';
+                const isKeyword = trigger?.type === 'keyword_match';
+
+                let triggerBadge = '⚡ Resposta Imediata';
+                let triggerColor = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+                if (isProactive) {
+                  triggerColor = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+                  if (trigger?.previousProjectName || trigger?.previousFlowName) {
+                    const origin = trigger.previousFlowName 
+                      ? `${trigger.previousProjectName ? `${trigger.previousProjectName} → ` : ''}${trigger.previousFlowName}`
+                      : trigger.previousProjectName;
+                    triggerBadge = trigger.timingMode === 'immediate'
+                      ? `⚡ Imediato após "${origin}"`
+                      : `⏰ ${trigger.delayAmount || 2} ${trigger.delayUnit === 'hours' ? 'h' : 'dias'} após "${origin}"`;
+                  } else {
+                    triggerBadge = `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${trigger?.delayUnit === 'hours' ? 'h' : 'dias'}`;
+                  }
+                } else if (isKeyword) {
+                  triggerColor = 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+                  triggerBadge = `🏷️ Palavras: ${(trigger?.keywords || []).slice(0, 2).join(', ') || 'termo'}`;
+                }
+
+                const crmActionsCount = (flow.nodes || []).filter(n => n.type === 'crm_action').length;
+                const linkNodesCount = (flow.nodes || []).filter(n => n.config?.linkUrl).length;
+
+                return (
+                  <div
+                    key={flow.id}
+                    onClick={() => onOpenFlow(activeProject.id, flow.id)}
+                    className="group bg-[#0f172a]/90 hover:bg-[#131d33] border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-4 shadow-lg transition-all duration-150 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    {/* Esquerda: Número Sequencial + Informações do Fluxo */}
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      {/* Número Sequencial e Reordenação */}
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                        <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600/20 to-blue-600/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-black text-sm shadow-xs">
+                          #{sequenceNum}
+                        </span>
+
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={e => handleMoveFlow(flow.id, 'up', e)}
+                            disabled={index === 0}
+                            className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition ${
+                              index === 0 ? 'opacity-20 cursor-not-allowed' : ''
+                            }`}
+                            title="Mover para cima na sequência"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={e => handleMoveFlow(flow.id, 'down', e)}
+                            disabled={index === filteredFlows.length - 1}
+                            className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition ${
+                              index === filteredFlows.length - 1 ? 'opacity-20 cursor-not-allowed' : ''
+                            }`}
+                            title="Mover para baixo na sequência"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Nome e Descrição */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition truncate">
+                            {flow.name}
+                          </h4>
+                          <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                            (Sequência {sequenceNum} de {filteredFlows.length})
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                          {flow.subtitle || 'Fluxo visual com árvore de decisão'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Meio: Sequenciamento / Gatilho */}
+                    <div className="shrink-0">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border ${triggerColor}`}>
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate max-w-[280px]">{triggerBadge}</span>
+                      </span>
+                    </div>
+
+                    {/* Direita: Métricas, Status e Ações */}
+                    <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-slate-800">
+                      {/* Métricas Rápidas */}
+                      <div className="flex items-center gap-3 text-xs text-slate-400">
+                        <span title="Total de Blocos">
+                          <strong className="text-white">{flow.nodes?.length || 0}</strong> blocos
+                        </span>
+                        <span className="text-slate-700">•</span>
+                        <span title="Ações no CRM">
+                          <strong className="text-pink-400">{crmActionsCount}</strong> CRM
+                        </span>
+                        <span className="text-slate-700">•</span>
+                        <span title="Links Externos">
+                          <strong className="text-cyan-400">{linkNodesCount}</strong> links
+                        </span>
+                      </div>
+
+                      {/* Status Toggle */}
+                      <button
+                        onClick={e => handleToggleFlowActive(flow.id, e)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition shrink-0 ${
+                          flow.active
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-800 text-slate-500 border-slate-700'
+                        }`}
+                        title={flow.active ? 'Fluxo ativo (clique para pausar)' : 'Fluxo pausado (clique para ativar)'}
+                      >
+                        {flow.active ? '● Ativo' : '○ Pausado'}
+                      </button>
+
+                      {/* Botões de Ação */}
+                      <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={e => handleDuplicateFlow(flow, e)}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                          title="Duplicar fluxo"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={e => handleDeleteFlow(flow.id, e)}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 transition"
+                          title="Excluir fluxo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onOpenFlow(activeProject.id, flow.id)}
+                          className="ml-1 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                        >
+                          <span>Abrir</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* ============================================================ */
+            /* 2.4.B VISUALIZAÇÃO EM GRADE DE CARDS (COM NÚMERO SEQUENCIAL) */
+            /* ============================================================ */
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filteredFlows.map(flow => {
+              {filteredFlows.map((flow, index) => {
+                const sequenceNum = index + 1;
                 const startNode = flow.nodes?.find(n => n.type === 'start');
                 const trigger = startNode?.config?.triggerConfig;
                 const isProactive = trigger?.type === 'proactive_time';
@@ -657,8 +887,43 @@ export const ChatbotProjectHub: React.FC<ChatbotProjectHubProps> = ({
                   >
                     {/* Top card info */}
                     <div className="space-y-3">
+                      {/* BARRA SUPERIOR DE SEQUÊNCIA (#1, #2, #3...) E REORDENAÇÃO */}
+                      <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 font-black text-xs shadow-xs flex items-center gap-1">
+                            <Hash className="w-3 h-3 text-cyan-400" />
+                            <span>{sequenceNum}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 ml-0.5 lowercase">na sequência</span>
+                          </span>
+                        </div>
+
+                        {/* Reordenar na sequência */}
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={e => handleMoveFlow(flow.id, 'up', e)}
+                            disabled={index === 0}
+                            className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition ${
+                              index === 0 ? 'opacity-20 cursor-not-allowed' : ''
+                            }`}
+                            title="Mover para cima na sequência"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={e => handleMoveFlow(flow.id, 'down', e)}
+                            disabled={index === filteredFlows.length - 1}
+                            className={`p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition ${
+                              index === filteredFlows.length - 1 ? 'opacity-20 cursor-not-allowed' : ''
+                            }`}
+                            title="Mover para baixo na sequência"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600/20 to-blue-600/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
                             <GitFork className="w-5 h-5" />
                           </div>

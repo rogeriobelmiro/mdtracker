@@ -440,6 +440,16 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [newTriggerKeyword, setNewTriggerKeyword] = useState('');
 
+  // Conexão Interativa entre Nós pelas Bolinhas (Portas de Entrada e Saída)
+  const [connecting, setConnecting] = useState<{
+    fromNodeId: string;
+    fromOptionId?: string;
+    startX: number;
+    startY: number;
+    color?: string;
+  } | null>(null);
+  const [connectingMouse, setConnectingMouse] = useState<{ x: number; y: number } | null>(null);
+
   // Modais
   const [isTestSimulatorOpen, setIsTestSimulatorOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
@@ -520,6 +530,216 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       updateNodes(next, false);
     }
   };
+
+  // -------------------------------------------------------------
+  // LÓGICA DE CONEXÃO INTERATIVA POR BOLINHAS (ENTRADA E SAÍDA)
+  // -------------------------------------------------------------
+  const getNodePorts = (node: ChatbotFlowNode) => {
+    const NODE_WIDTH = 256;
+    switch (node.type) {
+      case 'start':
+        return {
+          output: { x: node.x + NODE_WIDTH, y: node.y + 44 }
+        };
+      case 'condition':
+        return {
+          input: { x: node.x, y: node.y + 44 },
+          optionsOutputs: (node.options || []).map((opt, idx) => ({
+            optionId: opt.id,
+            x: node.x + NODE_WIDTH,
+            y: node.y + 71 + (idx * 33),
+            color: opt.color || '#3b82f6'
+          }))
+        };
+      case 'message':
+        return {
+          input: { x: node.x, y: node.y + 40 },
+          output: { x: node.x + NODE_WIDTH, y: node.y + 40 }
+        };
+      case 'crm_action':
+        return {
+          input: { x: node.x, y: node.y + 28 },
+          output: { x: node.x + NODE_WIDTH, y: node.y + 28 }
+        };
+      case 'end':
+        return {
+          input: { x: node.x, y: node.y + 28 }
+        };
+      default:
+        return {
+          input: { x: node.x, y: node.y + 36 },
+          output: { x: node.x + NODE_WIDTH, y: node.y + 36 }
+        };
+    }
+  };
+
+  const handleStartConnect = (
+    e: React.MouseEvent,
+    fromNodeId: string,
+    fromOptionId?: string,
+    color?: string
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const sourceNode = currentFlow.nodes.find(n => n.id === fromNodeId);
+    if (!sourceNode) return;
+    const ports = getNodePorts(sourceNode);
+    let startX = sourceNode.x + 256;
+    let startY = sourceNode.y + 40;
+
+    if (fromOptionId && ports.optionsOutputs) {
+      const optPort = ports.optionsOutputs.find(o => o.optionId === fromOptionId);
+      if (optPort) {
+        startX = optPort.x;
+        startY = optPort.y;
+      }
+    } else if (ports.output) {
+      startX = ports.output.x;
+      startY = ports.output.y;
+    }
+
+    setConnecting({
+      fromNodeId,
+      fromOptionId,
+      startX,
+      startY,
+      color: color || '#3b82f6'
+    });
+    setConnectingMouse({ x: startX, y: startY });
+
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    let hasDragged = false;
+
+    const onWindowMouseMove = (moveEv: MouseEvent) => {
+      const dx = moveEv.clientX - startClientX;
+      const dy = moveEv.clientY - startClientY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasDragged = true;
+      }
+      const bounds = containerRef.current?.getBoundingClientRect();
+      if (bounds) {
+        const mouseCanvasX = (moveEv.clientX - bounds.left - pan.x) / zoom;
+        const mouseCanvasY = (moveEv.clientY - bounds.top - pan.y) / zoom;
+        setConnectingMouse({ x: Math.round(mouseCanvasX), y: Math.round(mouseCanvasY) });
+      }
+    };
+
+    const onWindowMouseUp = (upEv: MouseEvent) => {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+
+      if (hasDragged) {
+        const elem = document.elementFromPoint(upEv.clientX, upEv.clientY);
+        const targetCard = elem?.closest('[data-node-id]');
+        if (targetCard) {
+          const targetId = targetCard.getAttribute('data-node-id');
+          if (targetId && targetId !== fromNodeId) {
+            handleFinishConnect(targetId);
+            return;
+          }
+        }
+        setConnecting(null);
+        setConnectingMouse(null);
+      }
+    };
+
+    window.addEventListener('mousemove', onWindowMouseMove);
+    window.addEventListener('mouseup', onWindowMouseUp);
+  };
+
+  const handleFinishConnect = (targetNodeId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!connecting) return;
+    if (connecting.fromNodeId === targetNodeId) return;
+
+    const updatedNodes = currentFlow.nodes.map(n => {
+      if (n.id === connecting.fromNodeId) {
+        if (connecting.fromOptionId) {
+          return {
+            ...n,
+            options: (n.options || []).map(opt =>
+              opt.id === connecting.fromOptionId ? { ...opt, targetNodeId } : opt
+            )
+          };
+        } else {
+          return {
+            ...n,
+            targetNodeId
+          };
+        }
+      }
+      return n;
+    });
+
+    updateNodes(updatedNodes);
+    setConnecting(null);
+    setConnectingMouse(null);
+  };
+
+  const cancelConnecting = () => {
+    setConnecting(null);
+    setConnectingMouse(null);
+  };
+
+  const handleDisconnect = (fromNodeId: string, fromOptionId?: string) => {
+    const updatedNodes = currentFlow.nodes.map(n => {
+      if (n.id === fromNodeId) {
+        if (fromOptionId) {
+          return {
+            ...n,
+            options: (n.options || []).map(opt =>
+              opt.id === fromOptionId ? { ...opt, targetNodeId: undefined } : opt
+            )
+          };
+        } else {
+          return {
+            ...n,
+            targetNodeId: undefined
+          };
+        }
+      }
+      return n;
+    });
+    updateNodes(updatedNodes);
+  };
+
+  const handleConnectDirect = (fromNodeId: string, fromOptionId: string | undefined, targetNodeId: string | undefined) => {
+    const updatedNodes = currentFlow.nodes.map(n => {
+      if (n.id === fromNodeId) {
+        if (fromOptionId) {
+          return {
+            ...n,
+            options: (n.options || []).map(opt =>
+              opt.id === fromOptionId ? { ...opt, targetNodeId } : opt
+            )
+          };
+        } else {
+          return {
+            ...n,
+            targetNodeId
+          };
+        }
+      }
+      return n;
+    });
+    updateNodes(updatedNodes);
+  };
+
+  // Cancelar conexão ao pressionar Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && connecting) {
+        cancelConnecting();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [connecting]);
 
   // Salvar Fluxo
   const handleSave = async () => {
@@ -622,6 +842,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
     if (e.button !== 0) return; // Apenas botão esquerdo
 
+    if (connecting) {
+      cancelConnecting();
+      return;
+    }
+
     // Se clicar em botões, inputs, controles de zoom ou na barra de ferramentas, não inicia pan do canvas
     const target = e.target as HTMLElement;
     if (
@@ -673,6 +898,17 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         x: prev.x - e.deltaX * 0.8,
         y: prev.y - e.deltaY * 0.8
       }));
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (connecting) {
+      const bounds = containerRef.current?.getBoundingClientRect();
+      if (bounds) {
+        const mouseCanvasX = (e.clientX - bounds.left - pan.x) / zoom;
+        const mouseCanvasY = (e.clientY - bounds.top - pan.y) / zoom;
+        setConnectingMouse({ x: Math.round(mouseCanvasX), y: Math.round(mouseCanvasY) });
+      }
     }
   };
 
@@ -1156,52 +1392,150 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       if (node.targetNodeId) {
         const target = currentFlow.nodes.find(n => n.id === node.targetNodeId);
         if (target) {
-          const x1 = node.x + 240;
-          const y1 = node.y + 40;
-          const x2 = target.x;
-          const y2 = target.y + 35;
-          const dx = Math.abs(x2 - x1) * 0.55;
-          const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+          const sourcePort = getNodePorts(node).output;
+          const targetPort = getNodePorts(target).input;
+          if (sourcePort && targetPort) {
+            const x1 = sourcePort.x;
+            const y1 = sourcePort.y;
+            const x2 = targetPort.x;
+            const y2 = targetPort.y;
+            const dx = Math.max(Math.abs(x2 - x1) * 0.55, 40);
+            const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            const strokeColor = node.type === 'start' ? '#f97316' : node.type === 'crm_action' ? '#ec4899' : '#06b6d4';
 
-          lines.push(
-            <g key={`conn-${node.id}-${target.id}`}>
-              <path d={pathData} fill="none" stroke="#334155" strokeWidth={4} className="opacity-40" />
-              <path d={pathData} fill="none" stroke="#64748b" strokeWidth={2} />
-              <circle cx={x2} cy={y2} r={3} fill="#94a3b8" />
-            </g>
-          );
+            lines.push(
+              <g key={`conn-${node.id}-${target.id}`} className="group/conn pointer-events-auto">
+                {/* Linha invisível mais espessa para facilitar passar o mouse */}
+                <path d={pathData} fill="none" stroke="transparent" strokeWidth={24} className="cursor-pointer" />
+                {/* Sombra de contraste */}
+                <path d={pathData} fill="none" stroke="#020617" strokeWidth={6} className="opacity-80" />
+                {/* Linha com a cor temática do bloco */}
+                <path
+                  d={pathData}
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth={2.5}
+                  className="group-hover/conn:stroke-white transition-colors"
+                />
+                <circle cx={x2} cy={y2} r={3.5} fill={strokeColor} />
+                {/* Botão de excluir conexão no meio do fio */}
+                <g
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDisconnect(node.id);
+                  }}
+                  className="opacity-0 group-hover/conn:opacity-100 transition-opacity cursor-pointer"
+                  title="Desconectar este fio"
+                >
+                  <circle cx={midX} cy={midY} r={11} fill="#ef4444" stroke="#0f172a" strokeWidth={2} />
+                  <text
+                    x={midX}
+                    y={midY}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#ffffff"
+                    fontSize={11}
+                    fontWeight="bold"
+                    className="select-none pointer-events-none"
+                  >
+                    ✕
+                  </text>
+                </g>
+              </g>
+            );
+          }
         }
       }
 
       if (node.options && node.options.length > 0) {
-        node.options.forEach((opt, idx) => {
+        node.options.forEach((opt) => {
           if (opt.targetNodeId) {
             const target = currentFlow.nodes.find(n => n.id === opt.targetNodeId);
             if (target) {
-              const x1 = node.x + 240;
-              const y1 = node.y + 70 + (idx * 28);
-              const x2 = target.x;
-              const y2 = target.y + 35;
-              const dx = Math.abs(x2 - x1) * 0.55;
-              const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
-              const strokeColor = opt.color || '#3b82f6';
+              const sourcePorts = getNodePorts(node);
+              const optPort = sourcePorts.optionsOutputs?.find(o => o.optionId === opt.id);
+              const targetPort = getNodePorts(target).input;
+              if (optPort && targetPort) {
+                const x1 = optPort.x;
+                const y1 = optPort.y;
+                const x2 = targetPort.x;
+                const y2 = targetPort.y;
+                const dx = Math.max(Math.abs(x2 - x1) * 0.55, 40);
+                const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+                const strokeColor = opt.color || '#3b82f6';
 
-              lines.push(
-                <g key={`opt-conn-${node.id}-${opt.id}-${target.id}`}>
-                  <path d={pathData} fill="none" stroke="#0f172a" strokeWidth={5} className="opacity-70" />
-                  <path d={pathData} fill="none" stroke={strokeColor} strokeWidth={2} />
-                  <circle cx={x2} cy={y2} r={3.5} fill={strokeColor} />
-                </g>
-              );
+                lines.push(
+                  <g key={`opt-conn-${node.id}-${opt.id}-${target.id}`} className="group/conn pointer-events-auto">
+                    <path d={pathData} fill="none" stroke="transparent" strokeWidth={24} className="cursor-pointer" />
+                    <path d={pathData} fill="none" stroke="#020617" strokeWidth={6} className="opacity-80" />
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke={strokeColor}
+                      strokeWidth={2.5}
+                      className="group-hover/conn:stroke-white transition-colors"
+                    />
+                    <circle cx={x2} cy={y2} r={3.5} fill={strokeColor} />
+                    <g
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDisconnect(node.id, opt.id);
+                      }}
+                      className="opacity-0 group-hover/conn:opacity-100 transition-opacity cursor-pointer"
+                      title="Desconectar este caminho"
+                    >
+                      <circle cx={midX} cy={midY} r={11} fill="#ef4444" stroke="#0f172a" strokeWidth={2} />
+                      <text
+                        x={midX}
+                        y={midY}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="#ffffff"
+                        fontSize={11}
+                        fontWeight="bold"
+                        className="select-none pointer-events-none"
+                      >
+                        ✕
+                      </text>
+                    </g>
+                  </g>
+                );
+              }
             }
           }
         });
       }
     });
 
+    // Fio temporário sendo puxado/conectado pelo usuário
+    if (connecting && connectingMouse) {
+      const dx = Math.max(Math.abs(connectingMouse.x - connecting.startX) * 0.55, 40);
+      const tempPath = `M ${connecting.startX} ${connecting.startY} C ${connecting.startX + dx} ${connecting.startY}, ${connectingMouse.x - dx} ${connectingMouse.y}, ${connectingMouse.x} ${connectingMouse.y}`;
+      lines.push(
+        <g key="connecting-wire-active" className="pointer-events-none">
+          <path d={tempPath} fill="none" stroke="#020617" strokeWidth={8} className="opacity-70" />
+          <path
+            d={tempPath}
+            fill="none"
+            stroke={connecting.color || '#06b6d4'}
+            strokeWidth={3}
+            strokeDasharray="8,6"
+          />
+          <circle cx={connectingMouse.x} cy={connectingMouse.y} r={7} fill={connecting.color || '#06b6d4'} className="opacity-60" />
+          <circle cx={connectingMouse.x} cy={connectingMouse.y} r={4.5} fill="#ffffff" />
+        </g>
+      );
+    }
+
     return lines;
   };
 
+  const currentFlowIndex = flows.findIndex(f => f.id === currentFlow.id);
+  const currentSeqNum = currentFlowIndex >= 0 ? currentFlowIndex + 1 : 1;
   const selectedNode = currentFlow.nodes.find(n => n.id === selectedNodeId);
 
   return (
@@ -1245,8 +1579,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           <div className="relative">
             <button
               onClick={() => setIsFlowSelectorOpen(!isFlowSelectorOpen)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-white transition"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-white transition shadow-xs"
             >
+              <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-black text-[10px]">
+                #{currentSeqNum}
+              </span>
               <span className="text-slate-400 font-normal">Fluxo /</span>
               <span className="truncate max-w-[200px] sm:max-w-[260px]">{currentFlow.name}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -1270,7 +1607,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 </div>
 
                 <div className="space-y-1 mt-1 max-h-64 overflow-y-auto">
-                  {flows.map(f => (
+                  {flows.map((f, idx) => (
                     <div
                       key={f.id}
                       onClick={() => {
@@ -1285,9 +1622,14 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                           : 'hover:bg-slate-800/60 text-slate-300'
                       }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <p className="text-xs font-bold truncate">{f.name}</p>
-                        <p className="text-[10px] text-slate-400">{f.nodes?.length || 0} blocos</p>
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-black flex items-center justify-center shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate">{f.name}</p>
+                          <p className="text-[10px] text-slate-400">{f.nodes?.length || 0} blocos</p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {f.active ? (
@@ -1538,6 +1880,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             <p>• <strong>Clique e segure</strong> para arrastar.</p>
             <p>• <strong>Solte o mouse</strong> para soltar o bloco.</p>
             <p>• <strong>Clique 2x</strong> para abrir as propriedades.</p>
+            <p className="text-cyan-400 pt-0.5">• <strong>Bolinhas nas pontas:</strong> Puxe ou clique para ligar um bloco no outro.</p>
           </div>
         </div>
 
@@ -1545,6 +1888,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         <div
           ref={containerRef}
           onMouseDown={handleMouseDownCanvas}
+          onMouseMove={handleCanvasMouseMove}
           onWheel={handleWheelCanvas}
           className={`flex-1 relative overflow-hidden canvas-background ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} bg-[#080c14] select-none`}
           style={{
@@ -1553,6 +1897,25 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             backgroundPosition: `${pan.x}px ${pan.y}px`
           }}
         >
+          {/* BANNER INFORMATIVO AO CONECTAR BLOCOS */}
+          {connecting && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-[#0d1527]/95 text-cyan-300 backdrop-blur-md px-4 py-2 rounded-2xl border border-cyan-500/50 shadow-2xl shadow-cyan-950/80 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-150">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+              </span>
+              <span className="text-xs font-bold text-white">
+                Conectando bloco... Clique ou solte na bolinha de entrada do bloco destino (ESC para cancelar)
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); cancelConnecting(); }}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-bold border border-slate-700 transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+
           {/* BARRA SUPERIOR DE FERRAMENTAS DO CANVAS */}
           <div 
             onMouseDown={e => e.stopPropagation()}
@@ -1667,8 +2030,14 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   return (
                     <div
                       key={node.id}
+                      data-node-id={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      onMouseUp={e => {
+                        if (connecting && connecting.fromNodeId !== node.id) {
+                          handleFinishConnect(node.id, e);
+                        }
+                      }}
                       className={`absolute w-64 rounded-2xl bg-[#101726]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-orange-500 ring-2 ring-orange-500/20 shadow-orange-500/10' 
@@ -1704,8 +2073,28 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         {node.content}
                       </div>
 
-                      {/* Conector Saída */}
-                      <div className="absolute -right-2 top-10 w-4 h-4 rounded-full bg-orange-500 border-2 border-slate-900 cursor-crosshair shadow-md" />
+                      {/* Conector Saída Interativo */}
+                      <div
+                        onMouseDown={e => handleStartConnect(e, node.id, undefined, '#f97316')}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) {
+                            if (connecting.fromNodeId === node.id) {
+                              cancelConnecting();
+                            } else {
+                              handleFinishConnect(node.id, e);
+                            }
+                          } else {
+                            handleStartConnect(e, node.id, undefined, '#f97316');
+                          }
+                        }}
+                        className={`absolute -right-2.5 top-9 w-5 h-5 rounded-full bg-orange-500 border-2 border-slate-900 cursor-crosshair shadow-lg transition-transform hover:scale-130 flex items-center justify-center ${
+                          connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
+                        }`}
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
                     </div>
                   );
                 }
@@ -1715,8 +2104,14 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   return (
                     <div
                       key={node.id}
+                      data-node-id={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      onMouseUp={e => {
+                        if (connecting && connecting.fromNodeId !== node.id) {
+                          handleFinishConnect(node.id, e);
+                        }
+                      }}
                       className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-2xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-blue-500/10' 
@@ -1724,7 +2119,22 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      <div className="absolute -left-2 top-9 w-4 h-4 rounded-full bg-blue-500 border-2 border-slate-900" />
+                      {/* Conector Entrada Interativo */}
+                      <div
+                        onMouseUp={e => handleFinishConnect(node.id, e)}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) handleFinishConnect(node.id, e);
+                        }}
+                        className={`absolute -left-2.5 top-9 w-5 h-5 rounded-full bg-blue-500 border-2 border-slate-900 shadow-md transition-all flex items-center justify-center ${
+                          connecting && connecting.fromNodeId !== node.id
+                            ? 'ring-4 ring-cyan-400 ring-offset-2 ring-offset-slate-950 animate-pulse scale-130 cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={connecting ? 'Solte ou clique aqui para ligar a este bloco' : 'Entrada do bloco'}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
 
                       <div className="p-3 border-b border-slate-800/80 flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
@@ -1749,11 +2159,31 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                               </span>
                             </div>
 
+                            {/* Conector Saída da Opção */}
                             <div
-                              className="w-3.5 h-3.5 rounded-full border-2 border-slate-900 cursor-crosshair shrink-0 hover:scale-125 transition"
+                              onMouseDown={e => handleStartConnect(e, node.id, opt.id, opt.color || '#3b82f6')}
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (connecting) {
+                                  if (connecting.fromNodeId === node.id && connecting.fromOptionId === opt.id) {
+                                    cancelConnecting();
+                                  } else {
+                                    handleFinishConnect(node.id, e);
+                                  }
+                                } else {
+                                  handleStartConnect(e, node.id, opt.id, opt.color || '#3b82f6');
+                                }
+                              }}
+                              className={`w-4 h-4 rounded-full border-2 border-slate-900 cursor-crosshair shrink-0 hover:scale-130 transition shadow-md flex items-center justify-center ${
+                                connecting?.fromNodeId === node.id && connecting?.fromOptionId === opt.id
+                                  ? 'ring-4 ring-white scale-125'
+                                  : ''
+                              }`}
                               style={{ backgroundColor: opt.color || '#3b82f6' }}
-                              title={`Conectar: ${opt.label}`}
-                            />
+                              title={`Ligar: ${opt.label} (arrastar ou clicar na bolinha)`}
+                            >
+                              <div className="w-1 h-1 rounded-full bg-white pointer-events-none" />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1771,16 +2201,37 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   return (
                     <div
                       key={node.id}
+                      data-node-id={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
+                      onMouseUp={e => {
+                        if (connecting && connecting.fromNodeId !== node.id) {
+                          handleFinishConnect(node.id, e);
+                        }
+                      }}
+                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-cyan-500 ring-2 ring-cyan-500/20 shadow-cyan-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
                       } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      <div className="absolute -left-2 top-8 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900" />
+                      {/* Conector Entrada Interativo */}
+                      <div
+                        onMouseUp={e => handleFinishConnect(node.id, e)}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) handleFinishConnect(node.id, e);
+                        }}
+                        className={`absolute -left-2.5 top-8 w-5 h-5 rounded-full bg-cyan-500 border-2 border-slate-900 shadow-md transition-all flex items-center justify-center ${
+                          connecting && connecting.fromNodeId !== node.id
+                            ? 'ring-4 ring-cyan-400 ring-offset-2 ring-offset-slate-950 animate-pulse scale-130 cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={connecting ? 'Solte ou clique aqui para ligar a este bloco' : 'Entrada da mensagem'}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
 
                       <div className="p-2.5 border-b border-slate-800/80 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1816,9 +2267,28 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         </div>
                       )}
 
-                      {node.targetNodeId && (
-                        <div className="absolute -right-2 top-8 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900 cursor-crosshair" />
-                      )}
+                      {/* Conector Saída Interativo (Sempre Disponível para Ligar) */}
+                      <div
+                        onMouseDown={e => handleStartConnect(e, node.id, undefined, '#06b6d4')}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) {
+                            if (connecting.fromNodeId === node.id) {
+                              cancelConnecting();
+                            } else {
+                              handleFinishConnect(node.id, e);
+                            }
+                          } else {
+                            handleStartConnect(e, node.id, undefined, '#06b6d4');
+                          }
+                        }}
+                        className={`absolute -right-2.5 top-8 w-5 h-5 rounded-full bg-cyan-500 border-2 border-slate-900 cursor-crosshair shadow-md transition-transform hover:scale-130 flex items-center justify-center ${
+                          connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
+                        }`}
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
                     </div>
                   );
                 }
@@ -1828,25 +2298,69 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   return (
                     <div
                       key={node.id}
+                      data-node-id={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
+                      onMouseUp={e => {
+                        if (connecting && connecting.fromNodeId !== node.id) {
+                          handleFinishConnect(node.id, e);
+                        }
+                      }}
+                      className={`absolute w-64 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected 
                           ? 'border-pink-500 ring-2 ring-pink-500/20 shadow-pink-500/10' 
                           : 'border-pink-900/40 hover:border-pink-600/60'
                       } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      <div className="absolute -left-2 top-6 w-4 h-4 rounded-full bg-pink-500 border-2 border-slate-900" />
+                      {/* Conector Entrada Interativo */}
+                      <div
+                        onMouseUp={e => handleFinishConnect(node.id, e)}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) handleFinishConnect(node.id, e);
+                        }}
+                        className={`absolute -left-2.5 top-5 w-5 h-5 rounded-full bg-pink-500 border-2 border-slate-900 shadow-md transition-all flex items-center justify-center ${
+                          connecting && connecting.fromNodeId !== node.id
+                            ? 'ring-4 ring-pink-400 ring-offset-2 ring-offset-slate-950 animate-pulse scale-130 cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={connecting ? 'Solte ou clique aqui para ligar a esta ação CRM' : 'Entrada da ação CRM'}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
 
                       <div className="p-2.5 flex items-center gap-2.5">
                         <div className="w-6 h-6 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
                           <Zap className="w-3.5 h-3.5" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 pr-4">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-pink-400">{node.title}</p>
                           <p className="text-xs font-bold text-white truncate">{node.content}</p>
                         </div>
+                      </div>
+
+                      {/* Conector Saída Interativo */}
+                      <div
+                        onMouseDown={e => handleStartConnect(e, node.id, undefined, '#ec4899')}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) {
+                            if (connecting.fromNodeId === node.id) {
+                              cancelConnecting();
+                            } else {
+                              handleFinishConnect(node.id, e);
+                            }
+                          } else {
+                            handleStartConnect(e, node.id, undefined, '#ec4899');
+                          }
+                        }}
+                        className={`absolute -right-2.5 top-5 w-5 h-5 rounded-full bg-pink-500 border-2 border-slate-900 cursor-crosshair shadow-md transition-transform hover:scale-130 flex items-center justify-center ${
+                          connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
+                        }`}
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
                       </div>
                     </div>
                   );
@@ -1857,14 +2371,36 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   return (
                     <div
                       key={node.id}
+                      data-node-id={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
                       onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                      className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
+                      onMouseUp={e => {
+                        if (connecting && connecting.fromNodeId !== node.id) {
+                          handleFinishConnect(node.id, e);
+                        }
+                      }}
+                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none pointer-events-auto ${
                         isSelected ? 'border-slate-400 ring-2 ring-slate-500/20' : 'border-slate-800'
                       } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      <div className="absolute -left-2 top-6 w-4 h-4 rounded-full bg-slate-500 border-2 border-slate-900" />
+                      {/* Conector Entrada Interativo */}
+                      <div
+                        onMouseUp={e => handleFinishConnect(node.id, e)}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (connecting) handleFinishConnect(node.id, e);
+                        }}
+                        className={`absolute -left-2.5 top-5 w-5 h-5 rounded-full bg-slate-500 border-2 border-slate-900 shadow-md transition-all flex items-center justify-center ${
+                          connecting && connecting.fromNodeId !== node.id
+                            ? 'ring-4 ring-slate-300 ring-offset-2 ring-offset-slate-950 animate-pulse scale-130 cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={connecting ? 'Solte ou clique aqui para finalizar o fluxo' : 'Entrada de finalização'}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                      </div>
+
                       <div className="p-2.5 flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
                           <Flag className="w-3 h-3" />
@@ -1881,9 +2417,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 return (
                   <div
                     key={node.id}
+                    data-node-id={node.id}
                     onMouseDown={e => handleNodeMouseDown(e, node)}
                     onDoubleClick={e => handleNodeDoubleClick(e, node)}
-                    className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border p-3 cursor-grab select-none pointer-events-auto ${
+                    onMouseUp={e => {
+                      if (connecting && connecting.fromNodeId !== node.id) {
+                        handleFinishConnect(node.id, e);
+                      }
+                    }}
+                    className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border p-3 cursor-grab select-none pointer-events-auto ${
                       isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'
                     }`}
                     style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
@@ -2095,9 +2637,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                             ? ((projects || []).find(p => p.id === selectedProjId)?.flows || [])
                             : flows.filter(f => f.id !== currentFlow.id);
 
-                          return candidateFlows.map(f => (
+                          return candidateFlows.map((f, fIdx) => (
                             <option key={f.id} value={f.id}>
-                              {f.name}
+                              #{fIdx + 1} - {f.name}
                             </option>
                           ));
                         })()}
@@ -2378,6 +2920,45 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             )}
 
+            {/* PRÓXIMO PASSO / DESTINO DA CONEXÃO NO FLUXO */}
+            {selectedNode.type !== 'condition' && selectedNode.type !== 'end' && (
+              <div className="space-y-2 p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <GitFork className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Ligar ao Próximo Bloco</span>
+                  </label>
+                  {selectedNode.targetNodeId && (
+                    <button
+                      onClick={() => handleDisconnect(selectedNode.id)}
+                      className="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1 transition"
+                    >
+                      <X className="w-3 h-3" />
+                      <span>Desconectar</span>
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={selectedNode.targetNodeId || ''}
+                  onChange={e => handleConnectDirect(selectedNode.id, undefined, e.target.value || undefined)}
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium"
+                >
+                  <option value="">Nenhum (Finaliza aqui ou aguarda resposta)</option>
+                  {currentFlow.nodes
+                    .filter(n => n.id !== selectedNode.id && n.type !== 'start')
+                    .map(n => (
+                      <option key={n.id} value={n.id}>
+                        → {n.title} ({n.type === 'condition' ? 'Condição/Roteador' : n.type === 'message' ? 'Mensagem' : n.type === 'crm_action' ? 'Ação CRM' : 'Fim'})
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-slate-400">
+                  Dica: Você também pode ligar arrastando ou clicando nas bolinhas do bloco no canvas.
+                </p>
+              </div>
+            )}
+
             {/* Opções de Ramificação (se for Condition / Roteador) */}
             {selectedNode.type === 'condition' && (
               <div className="space-y-2 pt-2 border-t border-slate-800">
@@ -2400,38 +2981,68 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   </button>
                 </div>
 
-                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                   {(selectedNode.options || []).map((opt) => (
-                    <div key={opt.id} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={opt.color || '#3b82f6'}
-                        onChange={e => {
-                          const col = e.target.value;
-                          const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, color: col } : o);
-                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                        }}
-                        className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={opt.label}
-                        onChange={e => {
-                          const val = e.target.value;
-                          const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, label: val } : o);
-                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                        }}
-                        className="flex-1 bg-transparent text-xs text-white focus:outline-none"
-                      />
-                      <button
-                        onClick={() => {
-                          const updated = (selectedNode.options || []).filter(o => o.id !== opt.id);
-                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                        }}
-                        className="text-slate-500 hover:text-rose-400 p-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <div key={opt.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={opt.color || '#3b82f6'}
+                          onChange={e => {
+                            const col = e.target.value;
+                            const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, color: col } : o);
+                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                          }}
+                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent shrink-0"
+                        />
+                        <input
+                          type="text"
+                          value={opt.label}
+                          onChange={e => {
+                            const val = e.target.value;
+                            const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, label: val } : o);
+                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                          }}
+                          className="flex-1 bg-transparent text-xs text-white focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            const updated = (selectedNode.options || []).filter(o => o.id !== opt.id);
+                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                          }}
+                          className="text-slate-500 hover:text-rose-400 p-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Destino desta opção/caminho */}
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/60">
+                        <span className="text-[10px] text-slate-400 shrink-0 font-semibold">Leva para:</span>
+                        <select
+                          value={opt.targetNodeId || ''}
+                          onChange={e => handleConnectDirect(selectedNode.id, opt.id, e.target.value || undefined)}
+                          className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500"
+                        >
+                          <option value="">Sem conexão (solto)</option>
+                          {currentFlow.nodes
+                            .filter(n => n.id !== selectedNode.id && n.type !== 'start')
+                            .map(n => (
+                              <option key={n.id} value={n.id}>
+                                → {n.title}
+                              </option>
+                            ))}
+                        </select>
+                        {opt.targetNodeId && (
+                          <button
+                            onClick={() => handleDisconnect(selectedNode.id, opt.id)}
+                            className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-950/40"
+                            title="Desconectar este caminho"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
