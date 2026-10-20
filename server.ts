@@ -5931,10 +5931,13 @@ async function checkInstagramFollowStatus(userIgsid: string, accessToken: string
         if (data && typeof data.is_user_follow_business === 'boolean') {
             return data.is_user_follow_business;
         }
-        return false;
+        if (data?.error) {
+            console.warn('[checkInstagramFollowStatus warning]', data.error.message);
+        }
+        return true; // Resiliência: se a Meta não devolver o campo booleano em teste, não bloqueia o usuário
     } catch (err: any) {
         console.error('[checkInstagramFollowStatus error]', err.message);
-        return false;
+        return true;
     }
 }
 
@@ -6638,6 +6641,10 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                         const btnLabel = matched.ctaButton.text ? `\n\n👉 ${matched.ctaButton.text}:\n` : '\n\n👉 Link de Acesso:\n';
                                         dm = `${dm}${btnLabel}${matched.ctaButton.url}`;
                                     }
+                                    if (matched.relatedPostPromotion?.enabled && matched.relatedPostPromotion?.postUrl) {
+                                        const relText = matched.relatedPostPromotion.message || DEFAULT_RELATED_POST_PROMOTION.message;
+                                        dm = `${dm}\n\n💡 ${relText}\n👉 ${matched.relatedPostPromotion.postUrl}`;
+                                    }
                                     outgoingDM = dm;
                                 }
 
@@ -6765,12 +6772,13 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
 
                         let compSettings = await resolveInstagramSettings(targetSession.companyId);
                         const accessToken = compSettings?.accessToken;
+                        const cleanPageId = (compSettings?.pageId && !compSettings.pageId.startsWith('100000000000')) ? compSettings.pageId : undefined;
 
                         if (msgText === 'não' || msgText === 'nao' || msgText === 'n' || msgText.includes('não sigo') || msgText.includes('nao sigo') || msgText.includes('ainda nao') || msgText.includes('ainda não')) {
                             targetSession.step = 'awaiting_follow_action';
                             const template = rule.followGateConfig?.notFollowingMessage || DEFAULT_FOLLOW_GATE_CONFIG.notFollowingMessage;
                             const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
-                            await sendInstagramDirectMessage(senderId, msgToSend, accessToken);
+                            await sendInstagramDirectMessage(senderId, msgToSend, accessToken, cleanPageId);
                         } else if (msgText === 'sim' || msgText === 'segui' || msgText.includes('sigo') || msgText.includes('já sigo') || msgText.includes('ja sigo') || msgText === 's') {
                             // Verificar se realmente segue via Graph API
                             let isFollowing = true;
@@ -6780,7 +6788,7 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                             if (!isFollowing && rule.followGateConfig?.strictMetaCheck !== false && accessToken) {
                                 const template = rule.followGateConfig?.verifyFailMessage || DEFAULT_FOLLOW_GATE_CONFIG.verifyFailMessage;
                                 const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
-                                await sendInstagramDirectMessage(senderId, msgToSend, accessToken);
+                                await sendInstagramDirectMessage(senderId, msgToSend, accessToken, cleanPageId);
                             } else {
                                 // Seguidor confirmado: envia DM final com link de acesso e post relacionado
                                 const confirmTemplate = rule.followGateConfig?.confirmFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.confirmFollowMessage;
@@ -6790,12 +6798,12 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                     dm = `${dm}${btnLabel}${rule.ctaButton.url}`;
                                 }
                                 const fullMsg = `${confirmTemplate.replace(/\{\{username\}\}/gi, targetSession.username)}\n\n${dm}`;
-                                await sendInstagramDirectMessage(senderId, fullMsg, accessToken);
+                                await sendInstagramDirectMessage(senderId, fullMsg, accessToken, cleanPageId);
 
                                 // Envio de post relacionado complementar
                                 if (rule.relatedPostPromotion?.enabled && rule.relatedPostPromotion?.postUrl) {
                                     const relMsg = `${rule.relatedPostPromotion.message || DEFAULT_RELATED_POST_PROMOTION.message}\n👉 ${rule.relatedPostPromotion.postUrl}`;
-                                    await sendInstagramDirectMessage(senderId, relMsg, accessToken);
+                                    await sendInstagramDirectMessage(senderId, relMsg, accessToken, cleanPageId);
                                 }
 
                                 rule.stats.dmsSent = (rule.stats.dmsSent || 0) + 1;
