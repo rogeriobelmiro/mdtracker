@@ -184,6 +184,17 @@ export interface ChatbotFlowNodeOption {
   targetNodeId?: string;
 }
 
+export type FlowTriggerType = 'instant_reply' | 'proactive_time' | 'keyword_match';
+
+export interface FlowTriggerConfig {
+  type: FlowTriggerType;
+  delayAmount?: number;
+  delayUnit?: 'seconds' | 'minutes' | 'hours' | 'days';
+  proactiveCondition?: 'after_lead_created' | 'after_last_message' | 'on_stage_change';
+  keywords?: string[];
+  targetStage?: string;
+}
+
 export interface ChatbotFlowNodeConfig {
   crmActionType?: 'notify_team' | 'move_stage' | 'create_task' | 'add_tag';
   crmActionValue?: string;
@@ -193,6 +204,9 @@ export interface ChatbotFlowNodeConfig {
   variableName?: string;
   abSplitPercentage?: number;
   promptInstructions?: string;
+  linkUrl?: string;
+  linkText?: string;
+  triggerConfig?: FlowTriggerConfig;
 }
 
 export interface ChatbotFlowNode {

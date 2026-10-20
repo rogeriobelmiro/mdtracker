@@ -16,11 +16,13 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Minimize2,
   Trash2,
   Copy,
   Plus,
   Check,
   ChevronRight,
+  ChevronDown,
   ArrowLeft,
   X,
   Layers,
@@ -29,14 +31,20 @@ import {
   Info,
   CheckCircle2,
   AlertCircle,
-  Flag
+  Flag,
+  Clock,
+  ExternalLink,
+  Link2,
+  Flame,
+  MousePointer
 } from 'lucide-react';
 import {
   ChatbotFlow,
   ChatbotFlowNode,
   ChatbotFlowNodeOption,
   Company,
-  IntegrationSettings
+  IntegrationSettings,
+  FlowTriggerType
 } from '../types';
 
 interface ChatbotVisualFlowBuilderProps {
@@ -46,8 +54,8 @@ interface ChatbotVisualFlowBuilderProps {
   onBackToModeSelect?: () => void;
 }
 
-// Fluxo padrão idêntico ao do print do usuário
-export const INITIAL_DEFAULT_FLOW: ChatbotFlow = {
+// 1. Fluxo padrão 1: Idêntico ao print do usuário
+export const DEFAULT_FLOW_DIAGNOSTICO: ChatbotFlow = {
   id: 'flow-diagnostico-google-wpp',
   name: 'Diagnóstico + Google → WhatsApp',
   subtitle: 'O que acontece depois da primeira mensagem de "Diagnóstico + Google → WhatsApp"',
@@ -60,10 +68,18 @@ export const INITIAL_DEFAULT_FLOW: ChatbotFlow = {
       type: 'start',
       title: 'Começo do fluxo',
       badge: 'Abordagem enviada',
-      content: 'Diagnóstico + Google → WhatsApp\n\nOlá, tudo bem? Sou Caio da Atto Digital...\n\n[mensagem do modelo]',
+      content: 'Diagnóstico + Google → WhatsApp\n\nOlá, tudo bem? Sou Rogério da Muda Digital...\n\n[mensagem do modelo]',
       x: 60,
       y: 260,
-      targetNodeId: 'node-router'
+      targetNodeId: 'node-router',
+      config: {
+        triggerConfig: {
+          type: 'proactive_time',
+          delayAmount: 2,
+          delayUnit: 'days',
+          proactiveCondition: 'after_last_message'
+        }
+      }
     },
     {
       id: 'node-router',
@@ -99,7 +115,11 @@ export const INITIAL_DEFAULT_FLOW: ChatbotFlow = {
       content: 'depende do que fizer sentido pra vocês, por isso montei uma prévia antes, posso te mandar o link e te explicar os valores em cima dele?',
       x: 680,
       y: 180,
-      config: { messageType: 'suggestion' }
+      config: {
+        messageType: 'suggestion',
+        linkUrl: 'https://mudadigital.com.br/planos',
+        linkText: 'Conhecer Planos e Valores 🔗'
+      }
     },
     {
       id: 'node-msg-info',
@@ -110,7 +130,11 @@ export const INITIAL_DEFAULT_FLOW: ChatbotFlow = {
       x: 680,
       y: 330,
       targetNodeId: 'node-msg-detail',
-      config: { messageType: 'suggestion' }
+      config: {
+        messageType: 'suggestion',
+        linkUrl: 'https://mudadigital.com.br/diagnostico',
+        linkText: 'Ver Diagnóstico Completo 🚀'
+      }
     },
     {
       id: 'node-crm-task',
@@ -192,87 +216,172 @@ export const INITIAL_DEFAULT_FLOW: ChatbotFlow = {
   ]
 };
 
+// 2. Fluxo padrão 2: Follow-up Proativo 2 Dias Depois
+export const DEFAULT_FLOW_FOLLOWUP: ChatbotFlow = {
+  id: 'flow-followup-2-dias',
+  name: 'Follow-up Proativo (2 Dias Depois)',
+  subtitle: 'Chama o lead sozinho 2 dias após primeiro contato para saber se já decidiu',
+  active: false,
+  updatedAt: new Date().toISOString(),
+  connections: [],
+  nodes: [
+    {
+      id: 'node-start',
+      type: 'start',
+      title: 'Começo do fluxo',
+      badge: 'Proativo 2 Dias',
+      content: 'Chamar sozinho o lead 2 dias após a proposta:\n\n"Olá {{nome}}! Tudo bem por aí? Passando para saber se você conseguiu avaliar a proposta que te mandei..."',
+      x: 60,
+      y: 200,
+      targetNodeId: 'node-decision',
+      config: {
+        triggerConfig: {
+          type: 'proactive_time',
+          delayAmount: 2,
+          delayUnit: 'days',
+          proactiveCondition: 'after_last_message'
+        }
+      }
+    },
+    {
+      id: 'node-decision',
+      type: 'condition',
+      title: 'Se o lead responder',
+      content: 'Classifica o retorno do follow-up',
+      x: 400,
+      y: 160,
+      options: [
+        { id: 'f-opt-1', label: 'Já decidi, vamos fechar!', color: '#10b981', targetNodeId: 'node-f-crm-won' },
+        { id: 'f-opt-2', label: 'Tenho algumas dúvidas ainda', color: '#3b82f6', targetNodeId: 'node-f-msg-support' },
+        { id: 'f-opt-3', label: 'Não vou fechar agora', color: '#ef4444', targetNodeId: 'node-f-crm-lost' }
+      ]
+    },
+    {
+      id: 'node-f-crm-won',
+      type: 'crm_action',
+      title: 'Ação no CRM',
+      content: 'Mover para Proposta Aceita / Fechamento',
+      x: 740,
+      y: 60,
+      config: { crmActionType: 'move_stage', crmActionValue: 'Fechamento' }
+    },
+    {
+      id: 'node-f-msg-support',
+      type: 'message',
+      title: 'Mensagem',
+      badge: 'Sugestão no chat',
+      content: 'Perfeito! Qual é o principal ponto que você gostaria de esclarecer? Se preferir podemos agendar 5 minutinhos de ligação.',
+      x: 740,
+      y: 200,
+      config: {
+        linkUrl: 'https://mudadigital.com.br/duvidas',
+        linkText: 'Ver FAQ de Dúvidas Frequentes ❓'
+      }
+    },
+    {
+      id: 'node-f-crm-lost',
+      type: 'crm_action',
+      title: 'Ação no CRM',
+      content: 'Mover para Sem interesse (Follow em 60d)',
+      x: 740,
+      y: 350,
+      config: { crmActionType: 'move_stage', crmActionValue: 'Sem interesse' }
+    }
+  ]
+};
+
 export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> = ({
   currentCompany,
   settings,
   onSaveFlows,
   onBackToModeSelect
 }) => {
-  // Estado dos fluxos
+  // Lista de Fluxos
   const initialFlows = useMemo(() => {
     if (settings.chatbotConfig?.flows && settings.chatbotConfig.flows.length > 0) {
       return settings.chatbotConfig.flows;
     }
-    return [INITIAL_DEFAULT_FLOW];
+    return [DEFAULT_FLOW_DIAGNOSTICO, DEFAULT_FLOW_FOLLOWUP];
   }, [settings.chatbotConfig?.flows]);
 
   const [flows, setFlows] = useState<ChatbotFlow[]>(initialFlows);
   const [activeFlowId, setActiveFlowId] = useState<string>(
-    settings.chatbotConfig?.activeFlowId || initialFlows[0]?.id || 'flow-diagnostico-google-wpp'
+    settings.chatbotConfig?.activeFlowId || initialFlows[0]?.id || DEFAULT_FLOW_DIAGNOSTICO.id
   );
 
-  const currentFlow = flows.find(f => f.id === activeFlowId) || flows[0] || INITIAL_DEFAULT_FLOW;
+  const currentFlow = flows.find(f => f.id === activeFlowId) || flows[0] || DEFAULT_FLOW_DIAGNOSTICO;
 
-  // Canvas Viewport & Navigation
+  // Viewport & Pan / Zoom (Suporta zoom de 0.15 até 3.0 e pan infinito)
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 30, y: 20 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // Seleção e Interação
+  // Seleção e Interação com Nós
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Conexão interativa arrastando
-  const [connectingSource, setConnectingSource] = useState<{
-    nodeId: string;
-    optionId?: string;
-  } | null>(null);
-
-  // Modais e Painéis
+  // Modais
   const [isTestSimulatorOpen, setIsTestSimulatorOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
-  const [isVersionsModalOpen, setIsVersionsModalOpen] = useState(false);
+  const [isFlowSelectorOpen, setIsFlowSelectorOpen] = useState(false);
+  const [isNewFlowModalOpen, setIsNewFlowModalOpen] = useState(false);
+  const [newFlowName, setNewFlowName] = useState('');
+  const [newFlowTemplate, setNewFlowTemplate] = useState<'diagnostico' | 'followup' | 'blank'>('diagnostico');
+
+  // Status
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [flowActiveToggle, setFlowActiveToggle] = useState(currentFlow.active ?? true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Histórico para Undo/Redo
   const [history, setHistory] = useState<ChatbotFlowNode[][]>([currentFlow.nodes]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Simulador de Teste State
+  // Simulador de Teste
   const [simStepNodeId, setSimStepNodeId] = useState<string>('node-start');
   const [simHistory, setSimHistory] = useState<Array<{
     sender: 'bot' | 'user' | 'system';
     text: string;
+    linkUrl?: string;
+    linkText?: string;
     nodeId: string;
   }>>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizar toggle ativo quando o fluxo muda
   useEffect(() => {
     setFlowActiveToggle(currentFlow.active ?? true);
   }, [currentFlow.id]);
 
-  // Atualizar nós do fluxo atual
+  // Atualizar nós
   const updateNodes = (newNodes: ChatbotFlowNode[], recordHistory = true) => {
-    const updated = flows.map(f => {
+    setFlows(prev => prev.map(f => {
       if (f.id === currentFlow.id) {
         return { ...f, nodes: newNodes, updatedAt: new Date().toISOString() };
       }
       return f;
-    });
-    setFlows(updated);
+    }));
 
     if (recordHistory) {
-      const nextHistory = history.slice(0, historyIndex + 1);
-      nextHistory.push(newNodes);
-      setHistory(nextHistory);
-      setHistoryIndex(nextHistory.length - 1);
+      setHistory(prevHist => {
+        const nextHistory = prevHist.slice(0, historyIndex + 1);
+        nextHistory.push(newNodes);
+        return nextHistory;
+      });
+      setHistoryIndex(prev => prev + 1);
     }
+  };
+
+  const pushHistory = (newNodes: ChatbotFlowNode[]) => {
+    setHistory(prevHist => {
+      const nextHistory = prevHist.slice(0, historyIndex + 1);
+      nextHistory.push(newNodes);
+      return nextHistory;
+    });
+    setHistoryIndex(prev => prev + 1);
   };
 
   const handleUndo = () => {
@@ -312,12 +421,111 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     }
   };
 
-  // Canvas Pan Handlers
+  // Criar Novo Fluxo
+  const handleCreateNewFlow = () => {
+    const name = newFlowName.trim() || `Novo Fluxo ${flows.length + 1}`;
+    let nodes: ChatbotFlowNode[] = [];
+
+    if (newFlowTemplate === 'diagnostico') {
+      nodes = JSON.parse(JSON.stringify(DEFAULT_FLOW_DIAGNOSTICO.nodes));
+    } else if (newFlowTemplate === 'followup') {
+      nodes = JSON.parse(JSON.stringify(DEFAULT_FLOW_FOLLOWUP.nodes));
+    } else {
+      nodes = [
+        {
+          id: 'node-start',
+          type: 'start',
+          title: 'Começo do fluxo',
+          badge: 'Início',
+          content: 'Olá! Sou seu assistente virtual. Como posso te ajudar?',
+          x: 80,
+          y: 200,
+          config: {
+            triggerConfig: {
+              type: 'instant_reply',
+              delayAmount: 3,
+              delayUnit: 'seconds'
+            }
+          }
+        }
+      ];
+    }
+
+    const newFlow: ChatbotFlow = {
+      id: `flow-${Date.now()}`,
+      name,
+      subtitle: `Fluxo criado em ${new Date().toLocaleDateString('pt-BR')}`,
+      active: true,
+      updatedAt: new Date().toISOString(),
+      connections: [],
+      nodes
+    };
+
+    const nextFlows = [newFlow, ...flows];
+    setFlows(nextFlows);
+    setActiveFlowId(newFlow.id);
+    setIsNewFlowModalOpen(false);
+    setNewFlowName('');
+    setPan({ x: 40, y: 30 });
+    setZoom(1);
+  };
+
+  // Duplicar Fluxo
+  const handleDuplicateFlow = (flowToDup: ChatbotFlow) => {
+    const duplicated: ChatbotFlow = {
+      ...JSON.parse(JSON.stringify(flowToDup)),
+      id: `flow-${Date.now()}`,
+      name: `${flowToDup.name} (Cópia)`,
+      updatedAt: new Date().toISOString()
+    };
+    setFlows([duplicated, ...flows]);
+    setActiveFlowId(duplicated.id);
+  };
+
+  // Excluir Fluxo
+  const handleDeleteFlow = (flowId: string) => {
+    if (flows.length <= 1) {
+      alert('Você precisa manter pelo menos 1 fluxo ativo.');
+      return;
+    }
+    if (confirm('Tem certeza que deseja excluir este fluxo?')) {
+      const remaining = flows.filter(f => f.id !== flowId);
+      setFlows(remaining);
+      setActiveFlowId(remaining[0].id);
+    }
+  };
+
+  // Canvas Pan Handlers - Permite arrastar o fluxo infinitamente independente do tamanho
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
-    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).classList.contains('canvas-background')) {
+    if (e.button !== 0) return; // Apenas botão esquerdo
+    const target = e.target as HTMLElement;
+
+    // Se clicar no fundo, grid dots ou no SVG, inicia o arraste livre do canvas (pan)
+    if (
+      target === containerRef.current ||
+      target.tagName === 'svg' ||
+      target.tagName === 'path' ||
+      target.classList.contains('canvas-background')
+    ) {
       setIsPanning(true);
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-      setSelectedNodeId(null);
+      const startX = e.clientX - pan.x;
+      const startY = e.clientY - pan.y;
+
+      const onWindowPanMove = (moveEv: MouseEvent) => {
+        setPan({
+          x: moveEv.clientX - startX,
+          y: moveEv.clientY - startY
+        });
+      };
+
+      const onWindowPanUp = () => {
+        window.removeEventListener('mousemove', onWindowPanMove);
+        window.removeEventListener('mouseup', onWindowPanUp);
+        setIsPanning(false);
+      };
+
+      window.addEventListener('mousemove', onWindowPanMove);
+      window.addEventListener('mouseup', onWindowPanUp);
     }
   };
 
@@ -327,47 +535,92 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y
       });
-    } else if (draggingNodeId) {
-      const newX = Math.round((e.clientX - pan.x) / zoom - dragOffset.x);
-      const newY = Math.round((e.clientY - pan.y) / zoom - dragOffset.y);
-
-      updateNodes(
-        currentFlow.nodes.map(n => n.id === draggingNodeId ? { ...n, x: Math.max(10, newX), y: Math.max(10, newY) } : n),
-        false
-      );
     }
   };
 
   const handleMouseUpCanvas = () => {
     if (isPanning) setIsPanning(false);
-    if (draggingNodeId) {
-      setDraggingNodeId(null);
-      // Registrar no histórico ao soltar
-      const nextHistory = history.slice(0, historyIndex + 1);
-      nextHistory.push(currentFlow.nodes);
-      setHistory(nextHistory);
-      setHistoryIndex(nextHistory.length - 1);
+  };
+
+  // Suporte a Wheel (Scroll para pan ou Ctrl+Scroll para zoom)
+  const handleWheelCanvas = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      const newZoom = Math.min(Math.max(zoom * zoomFactor, 0.15), 3.0);
+      setZoom(newZoom);
+    } else {
+      // Pan com scroll
+      setPan(prev => ({
+        x: prev.x - e.deltaX * 0.8,
+        y: prev.y - e.deltaY * 0.8
+      }));
     }
   };
 
-  // Iniciar arrasto de nó
+  // -------------------------------------------------------------
+  // UX SOLICITADA:
+  // "quando clicar e segurar um bloco é para arrastar e ao soltar o botao do mouse, solta o bloco e quando clicar 2 vezes, abre as propriedades"
+  // -------------------------------------------------------------
   const handleNodeMouseDown = (e: React.MouseEvent, node: ChatbotFlowNode) => {
+    if (e.button !== 0) return; // Apenas botão esquerdo
+    e.stopPropagation();
+
+    setSelectedNodeId(node.id);
+
+    const startClientX = e.clientX;
+    const startClientY = e.clientY;
+    const startNodeX = node.x;
+    const startNodeY = node.y;
+    let moved = false;
+    let finalNodes = currentFlow.nodes;
+
+    // Window listeners garantem que ao mover rápido ou soltar fora, o nó nunca fica grudado
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startClientX) / zoom;
+      const dy = (moveEvent.clientY - startClientY) / zoom;
+
+      if (!moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        moved = true;
+        setDraggingNodeId(node.id);
+      }
+
+      if (moved) {
+        finalNodes = currentFlow.nodes.map(n =>
+          n.id === node.id
+            ? { ...n, x: Math.round(startNodeX + dx), y: Math.round(startNodeY + dy) }
+            : n
+        );
+        updateNodes(finalNodes, false);
+      }
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      setDraggingNodeId(null);
+
+      if (moved) {
+        pushHistory(finalNodes);
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  // DUPLO CLIQUE ABRE O PAINEL DE PROPRIEDADES
+  const handleNodeDoubleClick = (e: React.MouseEvent, node: ChatbotFlowNode) => {
     e.stopPropagation();
     setSelectedNodeId(node.id);
-    setDraggingNodeId(node.id);
-    const mouseX = (e.clientX - pan.x) / zoom;
-    const mouseY = (e.clientY - pan.y) / zoom;
-    setDragOffset({
-      x: mouseX - node.x,
-      y: mouseY - node.y
-    });
+    setIsInspectorOpen(true);
   };
 
   // Adicionar novo bloco
   const handleAddBlock = (type: ChatbotFlowNode['type']) => {
     const id = `node-${type}-${Date.now().toString().slice(-4)}`;
-    const x = Math.round((-pan.x + 350) / zoom);
-    const y = Math.round((-pan.y + 200) / zoom);
+    const x = Math.round((-pan.x + 380) / zoom);
+    const y = Math.round((-pan.y + 220) / zoom);
 
     let title = 'Novo Bloco';
     let content = 'Conteúdo do bloco...';
@@ -379,8 +632,12 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       case 'message':
         title = 'Mensagem';
         badge = 'Sugestão no chat';
-        content = 'Olá! Como posso ajudar você hoje?';
-        config = { messageType: 'suggestion' as const };
+        content = 'Olá! Segue o link com todas as informações completas:';
+        config = {
+          messageType: 'suggestion' as const,
+          linkUrl: 'https://mudadigital.com.br',
+          linkText: 'Acessar Link Externo 🔗'
+        };
         break;
       case 'ai_reply':
         title = 'IA responde';
@@ -445,15 +702,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
 
     updateNodes([...currentFlow.nodes, newNode]);
     setSelectedNodeId(id);
+    setIsInspectorOpen(true);
   };
 
-  // Auto-organizar nós em colunas verticais
+  // Auto-organizar nós
   const handleAutoOrganize = () => {
-    const colWidth = 320;
-    const rowHeight = 120;
-    const startNode = currentFlow.nodes.find(n => n.type === 'start') || currentFlow.nodes[0];
-    if (!startNode) return;
-
     const organized = currentFlow.nodes.map(n => {
       if (n.type === 'start') return { ...n, x: 60, y: 260 };
       if (n.type === 'condition') return { ...n, x: 360, y: 190 };
@@ -474,9 +727,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     setZoom(1);
   };
 
-  // Ajustar visualização
   const handleFitView = () => {
-    setPan({ x: 30, y: 20 });
+    setPan({ x: 20, y: 20 });
     setZoom(0.85);
   };
 
@@ -492,7 +744,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           nodeId: start.id
         }
       ]);
-      // Se conecta diretamente com a condição
+
       if (start.targetNodeId) {
         const next = currentFlow.nodes.find(n => n.id === start.targetNodeId);
         if (next && next.type === 'condition') {
@@ -503,7 +755,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     setIsTestSimulatorOpen(true);
   };
 
-  // Avançar opção no simulador
   const handleSimOptionSelect = (opt: ChatbotFlowNodeOption) => {
     setSimHistory(prev => [
       ...prev,
@@ -519,12 +770,13 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             {
               sender: target.type === 'crm_action' ? 'system' : 'bot',
               text: target.type === 'crm_action' ? `⚡ ${target.title}: ${target.content}` : (target.content || ''),
+              linkUrl: target.config?.linkUrl,
+              linkText: target.config?.linkText,
               nodeId: target.id
             }
           ]);
           setSimStepNodeId(target.id);
 
-          // Se tiver próximo nó conectado
           if (target.targetNodeId) {
             const nextTarget = currentFlow.nodes.find(n => n.id === target.targetNodeId);
             if (nextTarget) {
@@ -534,6 +786,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   {
                     sender: nextTarget.type === 'crm_action' ? 'system' : 'bot',
                     text: nextTarget.type === 'crm_action' ? `⚡ ${nextTarget.title}: ${nextTarget.content}` : (nextTarget.content || ''),
+                    linkUrl: nextTarget.config?.linkUrl,
+                    linkText: nextTarget.config?.linkText,
                     nodeId: nextTarget.id
                   }
                 ]);
@@ -546,79 +800,48 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     }
   };
 
-  // Renderizar Linhas de Conexão SVG (Curvas de Bezier com cores correspondentes)
+  // Conexões SVG
   const renderConnections = () => {
     const lines: React.ReactNode[] = [];
 
     currentFlow.nodes.forEach(node => {
-      // 1. Conexão direta de nó simples (start, message, etc.)
       if (node.targetNodeId) {
         const target = currentFlow.nodes.find(n => n.id === node.targetNodeId);
         if (target) {
-          const x1 = node.x + 240; // Saída da direita do nó
+          const x1 = node.x + 240;
           const y1 = node.y + 40;
-          const x2 = target.x; // Entrada da esquerda do nó alvo
+          const x2 = target.x;
           const y2 = target.y + 35;
           const dx = Math.abs(x2 - x1) * 0.55;
-
           const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
           lines.push(
             <g key={`conn-${node.id}-${target.id}`}>
-              <path
-                d={pathData}
-                fill="none"
-                stroke="#334155"
-                strokeWidth={4}
-                className="opacity-40"
-              />
-              <path
-                d={pathData}
-                fill="none"
-                stroke="#64748b"
-                strokeWidth={2}
-                className="hover:stroke-indigo-400 transition cursor-pointer"
-              />
+              <path d={pathData} fill="none" stroke="#334155" strokeWidth={4} className="opacity-40" />
+              <path d={pathData} fill="none" stroke="#64748b" strokeWidth={2} />
               <circle cx={x2} cy={y2} r={3} fill="#94a3b8" />
             </g>
           );
         }
       }
 
-      // 2. Conexões de ramos de opções (Se o lead responder)
       if (node.options && node.options.length > 0) {
         node.options.forEach((opt, idx) => {
           if (opt.targetNodeId) {
             const target = currentFlow.nodes.find(n => n.id === opt.targetNodeId);
             if (target) {
               const x1 = node.x + 240;
-              const y1 = node.y + 70 + (idx * 28); // Altura precisa de cada ponto da opção
+              const y1 = node.y + 70 + (idx * 28);
               const x2 = target.x;
               const y2 = target.y + 35;
               const dx = Math.abs(x2 - x1) * 0.55;
-
               const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
               const strokeColor = opt.color || '#3b82f6';
 
               lines.push(
                 <g key={`opt-conn-${node.id}-${opt.id}-${target.id}`}>
-                  {/* Sombra da linha */}
-                  <path
-                    d={pathData}
-                    fill="none"
-                    stroke="#0f172a"
-                    strokeWidth={5}
-                    className="opacity-70"
-                  />
-                  {/* Linha colorida correspondente à cor da opção */}
-                  <path
-                    d={pathData}
-                    fill="none"
-                    stroke={strokeColor}
-                    strokeWidth={2}
-                    className="hover:stroke-white transition cursor-pointer"
-                  />
-                  {/* Círculo conector no alvo */}
+                  <path d={pathData} fill="none" stroke="#0f172a" strokeWidth={5} className="opacity-70" />
+                  <path d={pathData} fill="none" stroke={strokeColor} strokeWidth={2} />
                   <circle cx={x2} cy={y2} r={3.5} fill={strokeColor} />
                 </g>
               );
@@ -634,68 +857,114 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const selectedNode = currentFlow.nodes.find(n => n.id === selectedNodeId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-130px)] bg-[#090d16] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative select-none">
+    <div className={`w-full h-full flex flex-col bg-[#070b12] text-slate-100 overflow-hidden select-none relative ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       
-      {/* 1. TOP HEADER (IDÊNTICO AO DO PRINT) */}
+      {/* 1. HEADER SUPERIOR COM SELETOR DE MÚLTIPLOS FLUXOS */}
       <div className="h-14 bg-[#0d131f] border-b border-slate-800 px-4 flex items-center justify-between z-20 shrink-0">
         
-        {/* Esquerda: Voltar & Título do Fluxo */}
+        {/* Esquerda: Seletor de Fluxos & Título */}
         <div className="flex items-center gap-3">
-          {onBackToModeSelect ? (
+          {onBackToModeSelect && (
             <button
               onClick={onBackToModeSelect}
-              className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-slate-800/80 transition"
-              title="Voltar para seleção de modo"
+              className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition"
+              title="Voltar"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Abordagens</span>
             </button>
-          ) : (
-            <div className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-              <span>‹ Abordagens</span>
-            </div>
           )}
 
           <div className="h-4 w-[1px] bg-slate-800"></div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-400">Fluxo /</span>
-              <input
-                type="text"
-                value={currentFlow.name}
-                onChange={e => {
-                  const val = e.target.value;
-                  setFlows(flows.map(f => f.id === currentFlow.id ? { ...f, name: val } : f));
-                }}
-                className="text-sm font-bold text-white bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none transition px-1 py-0.5"
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 hidden md:block">
-              {currentFlow.subtitle || `O que acontece depois da primeira mensagem de "${currentFlow.name}"`}
-            </p>
+          {/* DROPDOWN DE MÚLTIPLOS FLUXOS */}
+          <div className="relative">
+            <button
+              onClick={() => setIsFlowSelectorOpen(!isFlowSelectorOpen)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-white transition"
+            >
+              <span className="text-slate-400 font-normal">Fluxo /</span>
+              <span className="truncate max-w-[200px] sm:max-w-[260px]">{currentFlow.name}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            </button>
+
+            {/* Menu Dropdown de Fluxos */}
+            {isFlowSelectorOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-80 bg-[#0f172a] border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Meus Fluxos ({flows.length})</span>
+                  <button
+                    onClick={() => {
+                      setIsFlowSelectorOpen(false);
+                      setIsNewFlowModalOpen(true);
+                    }}
+                    className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Novo Fluxo</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1 mt-1 max-h-64 overflow-y-auto">
+                  {flows.map(f => (
+                    <div
+                      key={f.id}
+                      onClick={() => {
+                        setActiveFlowId(f.id);
+                        setIsFlowSelectorOpen(false);
+                        setHistory([f.nodes]);
+                        setHistoryIndex(0);
+                      }}
+                      className={`p-2 rounded-xl flex items-center justify-between cursor-pointer transition ${
+                        f.id === currentFlow.id
+                          ? 'bg-indigo-600/20 border border-indigo-500/40 text-white'
+                          : 'hover:bg-slate-800/60 text-slate-300'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs font-bold truncate">{f.name}</p>
+                        <p className="text-[10px] text-slate-400">{f.nodes?.length || 0} blocos</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {f.active ? (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" title="Fluxo Ativo" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-slate-600" title="Fluxo Pausado" />
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDuplicateFlow(f); }}
+                          className="p-1 hover:text-white text-slate-500"
+                          title="Duplicar"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </button>
+                        {flows.length > 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteFlow(f.id); }}
+                            className="p-1 hover:text-rose-400 text-slate-500"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Direita: Ações Rápidas (Prontos, IA monta, Testar, Analisar, Salvar) */}
+        {/* Direita: Ações Rápidas */}
         <div className="flex items-center gap-2">
           
           <button
             onClick={() => setIsTemplatesModalOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition"
           >
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
             <span>Prontos</span>
-          </button>
-
-          <button
-            onClick={() => {
-              alert('A IA analisou sua abordagem e os nós foram refinados com sucesso!');
-            }}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 transition"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>IA monta</span>
           </button>
 
           <button
@@ -706,31 +975,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             <span>Testar</span>
           </button>
 
-          <button
-            onClick={() => alert(`Métricas do Fluxo:\n- Leads que iniciaram: 142\n- Respostas recebidas: 68%\n- Ações CRM disparadas: 84\n- Rota mais navegada: "Tem interesse"`)}
-            className="hidden lg:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-300 transition"
-          >
-            <Info className="w-3.5 h-3.5 text-slate-400" />
-            <span>Analisar</span>
-          </button>
-
-          <button
-            onClick={() => setIsVersionsModalOpen(true)}
-            className="hidden lg:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-300 transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-            <span>Versões</span>
-          </button>
-
-          <div className="h-4 w-[1px] bg-slate-800 hidden md:block"></div>
-
-          {/* Badge Salvo */}
-          <span className="text-[11px] text-emerald-400 font-medium hidden md:flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            <span>Tudo salvo</span>
-          </span>
-
-          {/* Switch Fluxo Ligado / Desligado */}
+          {/* Toggle Ativo */}
           <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
             <span className="text-[11px] font-semibold text-slate-300 hidden sm:inline">
               {flowActiveToggle ? 'Fluxo ligado' : 'Fluxo desligado'}
@@ -766,25 +1011,33 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             ) : null}
             <span>{saveSuccess ? 'Salvo!' : 'Salvar'}</span>
           </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            title={isFullscreen ? 'Sair da tela cheia' : 'Expandir tela cheia'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
-      {/* 2. CORPO PRINCIPAL (SIDEBAR DE BLOCOS + CANVAS WORKSPACE) */}
+      {/* 2. ÁREA DE TRABALHO (SIDEBAR DE BLOCOS + CANVAS INFINITO) */}
       <div className="flex-1 flex overflow-hidden relative">
         
-        {/* SIDEBAR ESQUERDA - BLOCOS (IDÊNTICA AO PRINT) */}
+        {/* SIDEBAR ESQUERDA - BLOCOS */}
         <div className="w-64 bg-[#0b101b] border-r border-slate-800 p-3.5 flex flex-col gap-4 overflow-y-auto shrink-0 z-10 custom-scrollbar">
           
           <div>
             <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Blocos</h3>
-            <p className="text-[10px] text-slate-500">Arraste pro quadro ou clique pra adicionar:</p>
+            <p className="text-[10px] text-slate-500">Clique para adicionar no quadro:</p>
           </div>
 
           {/* GRUPO 1: FALAR COM O LEAD */}
           <div className="space-y-1.5">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Falar com o lead</span>
             
-            {/* Bloco: Mensagem */}
             <button
               onClick={() => handleAddBlock('message')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-cyan-500/40 transition group flex items-start gap-2.5"
@@ -794,11 +1047,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white group-hover:text-cyan-300">Mensagem</p>
-                <p className="text-[10px] text-slate-400 truncate">Manda ou sugere uma mensagem</p>
+                <p className="text-[10px] text-slate-400 truncate">Manda mensagem ou links externos</p>
               </div>
             </button>
 
-            {/* Bloco: IA responde */}
             <button
               onClick={() => handleAddBlock('ai_reply')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-purple-500/40 transition group flex items-start gap-2.5"
@@ -807,14 +1059,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white group-hover:text-purple-300 flex items-center gap-1.5">
-                  IA responde
-                </p>
+                <p className="text-xs font-bold text-white group-hover:text-purple-300">IA responde</p>
                 <p className="text-[10px] text-slate-400 truncate">A IA lê a conversa e escreve a resposta</p>
               </div>
             </button>
 
-            {/* Bloco: Perguntar e guardar */}
             <button
               onClick={() => handleAddBlock('ask_input')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-teal-500/40 transition group flex items-start gap-2.5"
@@ -828,7 +1077,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             </button>
 
-            {/* Bloco: Marcar reunião */}
             <button
               onClick={() => handleAddBlock('appointment')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-emerald-500/40 transition group flex items-start gap-2.5"
@@ -847,7 +1095,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           <div className="space-y-1.5">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Caminhos</span>
 
-            {/* Bloco: Se o lead responder */}
             <button
               onClick={() => handleAddBlock('condition')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-blue-500/40 transition group flex items-start gap-2.5"
@@ -861,7 +1108,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             </button>
 
-            {/* Bloco: Se (Condição) */}
             <button
               onClick={() => handleAddBlock('condition')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-emerald-500/40 transition group flex items-start gap-2.5"
@@ -870,12 +1116,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 <Filter className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white group-hover:text-emerald-300">Se</p>
+                <p className="text-xs font-bold text-white group-hover:text-emerald-300">Se (Condição)</p>
                 <p className="text-[10px] text-slate-400 truncate">Separa pelo que se sabe do lead</p>
               </div>
             </button>
 
-            {/* Bloco: Divisão A/B */}
             <button
               onClick={() => handleAddBlock('ab_split')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-purple-500/40 transition group flex items-start gap-2.5"
@@ -894,7 +1139,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           <div className="space-y-1.5">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Tempo e Ações</span>
 
-            {/* Bloco: Esperar */}
             <button
               onClick={() => handleAddBlock('wait')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-amber-500/40 transition group flex items-start gap-2.5"
@@ -908,7 +1152,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             </button>
 
-            {/* Bloco: Ação no CRM */}
             <button
               onClick={() => handleAddBlock('crm_action')}
               className="w-full text-left p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800/80 hover:border-pink-500/40 transition group flex items-start gap-2.5"
@@ -918,18 +1161,29 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white group-hover:text-pink-300">Ação no CRM</p>
-                <p className="text-[10px] text-slate-400 truncate">Move o card, cria tarefa, avisa a equipe</p>
+                <p className="text-[10px] text-slate-400 truncate">Move o card, cria tarefa, notifica</p>
               </div>
             </button>
           </div>
+
+          <div className="mt-auto p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+            <p className="font-bold text-slate-300 flex items-center gap-1">
+              <MousePointer className="w-3 h-3 text-indigo-400" />
+              <span>Dica de Uso:</span>
+            </p>
+            <p>• <strong>Clique e segure</strong> para arrastar.</p>
+            <p>• <strong>Solte o mouse</strong> para soltar o bloco.</p>
+            <p>• <strong>Clique 2x</strong> para abrir as propriedades.</p>
+          </div>
         </div>
 
-        {/* 3. ÁREA DO CANVAS (QUADRO INTERATIVO DE FLUXOS) */}
+        {/* 3. CANVAS WORKSPACE (ARRASTE INFINITO & ZOOM DE 0.15 A 3.0) */}
         <div
           ref={containerRef}
           onMouseDown={handleMouseDownCanvas}
           onMouseMove={handleMouseMoveCanvas}
           onMouseUp={handleMouseUpCanvas}
+          onWheel={handleWheelCanvas}
           className="flex-1 relative overflow-hidden canvas-background cursor-grab active:cursor-grabbing bg-[#080c14]"
           style={{
             backgroundImage: `radial-gradient(#1e293b 1px, transparent 1px)`,
@@ -938,7 +1192,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           }}
         >
           {/* BARRA SUPERIOR DE FERRAMENTAS DO CANVAS */}
-          <div className="absolute top-3 left-4 z-10 flex items-center gap-1.5 bg-[#0f172a]/90 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg text-xs font-medium text-slate-300">
+          <div className="absolute top-3 left-4 z-10 flex items-center gap-1.5 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg text-xs font-medium text-slate-300">
             
             <button
               onClick={handleFitView}
@@ -962,7 +1216,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               onClick={handleUndo}
               disabled={historyIndex <= 0}
               className="p-1.5 hover:bg-slate-800 rounded-lg transition disabled:opacity-30"
-              title="Desfazer (Undo)"
+              title="Desfazer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -971,7 +1225,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
               className="p-1.5 hover:bg-slate-800 rounded-lg transition disabled:opacity-30 scale-x-[-1]"
-              title="Refazer (Redo)"
+              title="Refazer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -979,19 +1233,11 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             <div className="h-3.5 w-[1px] bg-slate-700/80 mx-0.5"></div>
 
             <button
-              onClick={() => alert('Como o fluxo anda:\n1. O fluxo inicia no "Começo do fluxo"\n2. A pergunta aguarda a resposta do lead\n3. Conforme o que o lead responder (Sim, Preço, Dúvida), a ramificação correspondente é seguida\n4. Mensagens e Ações no CRM são disparadas automaticamente!')}
-              className="px-2 py-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1"
-            >
-              <HelpCircle className="w-3 h-3 text-slate-400" />
-              <span>Como o fluxo anda</span>
-            </button>
-
-            <button
               onClick={() => {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentFlow, null, 2));
                 const a = document.createElement('a');
                 a.href = dataStr;
-                a.download = `${currentFlow.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-fluxo.json`;
+                a.download = `${currentFlow.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
                 a.click();
               }}
               className="px-2 py-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1"
@@ -999,38 +1245,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               <Download className="w-3 h-3 text-slate-400" />
               <span>Baixar</span>
             </button>
-
-            <button
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json';
-                input.onchange = (e: any) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      try {
-                        const parsed = JSON.parse(event.target?.result as string);
-                        if (parsed.nodes) {
-                          setFlows([parsed, ...flows]);
-                          setActiveFlowId(parsed.id);
-                        }
-                      } catch {}
-                    };
-                    reader.readAsText(file);
-                  }
-                };
-                input.click();
-              }}
-              className="px-2 py-1.5 hover:bg-slate-800 rounded-lg transition flex items-center gap-1"
-            >
-              <Upload className="w-3 h-3 text-slate-400" />
-              <span>Importar</span>
-            </button>
           </div>
 
-          {/* ÁREA DE RENDERIZAÇÃO SVG E ELEMENTOS TRANSFORMADOS */}
+          {/* ÁREA TRANSFORMADA DO CANVAS (ZOOM & PAN) */}
           <div
             className="absolute top-0 left-0 w-full h-full pointer-events-none"
             style={{
@@ -1038,9 +1255,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               transformOrigin: '0 0'
             }}
           >
-            {/* SVG DAS CONEXÕES ENTRE NÓS */}
+            {/* SVG DAS CONEXÕES */}
             <svg
-              className="absolute top-0 left-0 w-[5000px] h-[5000px] pointer-events-auto overflow-visible"
+              className="absolute top-0 left-0 w-[8000px] h-[8000px] pointer-events-auto overflow-visible"
               style={{ zIndex: 1 }}
             >
               {renderConnections()}
@@ -1050,18 +1267,26 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             <div className="absolute top-0 left-0 w-full h-full pointer-events-auto" style={{ zIndex: 2 }}>
               {currentFlow.nodes.map(node => {
                 const isSelected = selectedNodeId === node.id;
+                const isDragging = draggingNodeId === node.id;
 
-                // Estilo customizado por tipo de nó (identico ao print)
+                // NÓ: COMEÇO DO FLUXO (COM SUPORTE A GATILHO PROATIVO POR TEMPO)
                 if (node.type === 'start') {
+                  const trigger = node.config?.triggerConfig;
+                  const isProactive = trigger?.type === 'proactive_time';
+                  const triggerBadge = isProactive 
+                    ? `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${trigger?.delayUnit === 'hours' ? 'horas' : 'dias'}`
+                    : '⚡ Resposta Imediata';
+
                   return (
                     <div
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#101726]/95 border transition-shadow shadow-xl select-none ${
+                      onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      className={`absolute w-64 rounded-2xl bg-[#101726]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
                         isSelected 
                           ? 'border-orange-500 ring-2 ring-orange-500/20 shadow-orange-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
-                      }`}
+                      } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
                       <div className="p-3 border-b border-slate-800/80 flex items-center justify-between">
@@ -1071,38 +1296,49 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                           </div>
                           <span className="text-xs font-bold text-white">{node.title}</span>
                         </div>
-                        {node.badge && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30">
-                            {node.badge}
-                          </span>
-                        )}
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                          {node.badge || 'Início'}
+                        </span>
                       </div>
+
+                      {/* BADGE VISUAL DE TEMPO DE INÍCIO / PROATIVO */}
+                      <div className="px-3 pt-2">
+                        <div className={`text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center gap-1.5 ${
+                          isProactive 
+                            ? 'bg-amber-950/40 text-amber-300 border-amber-600/40' 
+                            : 'bg-emerald-950/40 text-emerald-300 border-emerald-600/40'
+                        }`}>
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{triggerBadge}</span>
+                        </div>
+                      </div>
+
                       <div className="p-3 text-[11px] text-slate-300 leading-relaxed font-normal whitespace-pre-wrap">
                         {node.content}
                       </div>
 
-                      {/* Conector de Saída Direito */}
-                      <div className="absolute -right-2 top-10 w-4 h-4 rounded-full bg-orange-500 border-2 border-slate-900 cursor-crosshair shadow-md flex items-center justify-center hover:scale-125 transition" />
+                      {/* Conector Saída */}
+                      <div className="absolute -right-2 top-10 w-4 h-4 rounded-full bg-orange-500 border-2 border-slate-900 cursor-crosshair shadow-md" />
                     </div>
                   );
                 }
 
+                // NÓ: SE O LEAD RESPONDER (CONDIÇÃO / ROTEADOR)
                 if (node.type === 'condition') {
                   return (
                     <div
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
-                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-2xl select-none ${
+                      onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      className={`absolute w-64 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-2xl cursor-grab active:cursor-grabbing select-none ${
                         isSelected 
                           ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-blue-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
-                      }`}
+                      } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      {/* Entrada Esquerda */}
                       <div className="absolute -left-2 top-9 w-4 h-4 rounded-full bg-blue-500 border-2 border-slate-900" />
 
-                      {/* Header do Roteador */}
                       <div className="p-3 border-b border-slate-800/80 flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
                           <GitFork className="w-3.5 h-3.5" />
@@ -1110,9 +1346,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         <span className="text-xs font-bold text-white">{node.title}</span>
                       </div>
 
-                      {/* Lista de Opções de Resposta do Lead */}
                       <div className="p-2 space-y-1">
-                        {(node.options || []).map((opt, idx) => (
+                        {(node.options || []).map((opt) => (
                           <div
                             key={opt.id}
                             className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/60 transition group relative"
@@ -1127,7 +1362,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                               </span>
                             </div>
 
-                            {/* Ponto Conector de Saída individual para este caminho */}
                             <div
                               className="w-3.5 h-3.5 rounded-full border-2 border-slate-900 cursor-crosshair shrink-0 hover:scale-125 transition"
                               style={{ backgroundColor: opt.color || '#3b82f6' }}
@@ -1137,7 +1371,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         ))}
                       </div>
 
-                      {/* Rodapé: Pediu pra parar */}
                       <div className="p-2.5 border-t border-slate-800/60 text-[10px] text-slate-500 flex items-center gap-1">
                         <span className="text-rose-400 font-bold">✕</span>
                         <span>Pediu pra parar: sai do fluxo</span>
@@ -1146,19 +1379,20 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   );
                 }
 
+                // NÓ: MENSAGEM (COM SUPORTE A LINKS / CONTEÚDO EXTERNO)
                 if (node.type === 'message') {
                   return (
                     <div
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl select-none ${
+                      onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      className={`absolute w-60 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
                         isSelected 
                           ? 'border-cyan-500 ring-2 ring-cyan-500/20 shadow-cyan-500/10' 
                           : 'border-slate-800 hover:border-slate-700'
-                      }`}
+                      } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      {/* Entrada Esquerda */}
                       <div className="absolute -left-2 top-8 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900" />
 
                       <div className="p-2.5 border-b border-slate-800/80 flex items-center justify-between">
@@ -1179,7 +1413,22 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         {node.content}
                       </div>
 
-                      {/* Saída Direita se tiver próximo */}
+                      {/* EXIBIÇÃO DE LINK DE CONTEÚDO EXTERNO NO CARD */}
+                      {node.config?.linkUrl && (
+                        <div className="px-2.5 pb-2.5">
+                          <a
+                            href={node.config.linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-700/40 px-2 py-1 rounded-lg transition truncate"
+                          >
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{node.config.linkText || 'Acessar Link Externo 🔗'}</span>
+                          </a>
+                        </div>
+                      )}
+
                       {node.targetNodeId && (
                         <div className="absolute -right-2 top-8 w-4 h-4 rounded-full bg-cyan-500 border-2 border-slate-900 cursor-crosshair" />
                       )}
@@ -1187,19 +1436,20 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   );
                 }
 
+                // NÓ: AÇÃO NO CRM
                 if (node.type === 'crm_action') {
                   return (
                     <div
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
-                      className={`absolute w-60 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl select-none ${
+                      onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      className={`absolute w-60 rounded-2xl bg-[#141224]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
                         isSelected 
                           ? 'border-pink-500 ring-2 ring-pink-500/20 shadow-pink-500/10' 
                           : 'border-pink-900/40 hover:border-pink-600/60'
-                      }`}
+                      } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      {/* Entrada Esquerda */}
                       <div className="absolute -left-2 top-6 w-4 h-4 rounded-full bg-pink-500 border-2 border-slate-900" />
 
                       <div className="p-2.5 flex items-center gap-2.5">
@@ -1215,21 +1465,19 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   );
                 }
 
+                // NÓ: FIM
                 if (node.type === 'end') {
                   return (
                     <div
                       key={node.id}
                       onMouseDown={e => handleNodeMouseDown(e, node)}
-                      className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl select-none ${
-                        isSelected 
-                          ? 'border-slate-400 ring-2 ring-slate-500/20' 
-                          : 'border-slate-800 hover:border-slate-700'
-                      }`}
+                      onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                      className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border transition-shadow shadow-xl cursor-grab active:cursor-grabbing select-none ${
+                        isSelected ? 'border-slate-400 ring-2 ring-slate-500/20' : 'border-slate-800'
+                      } ${isDragging ? 'opacity-80 scale-102 z-30' : ''}`}
                       style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                     >
-                      {/* Entrada Esquerda */}
                       <div className="absolute -left-2 top-6 w-4 h-4 rounded-full bg-slate-500 border-2 border-slate-900" />
-
                       <div className="p-2.5 flex items-center gap-2">
                         <div className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
                           <Flag className="w-3 h-3" />
@@ -1243,19 +1491,17 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   );
                 }
 
-                // Genérico / Outros
                 return (
                   <div
                     key={node.id}
                     onMouseDown={e => handleNodeMouseDown(e, node)}
-                    className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border p-3 select-none ${
+                    onDoubleClick={e => handleNodeDoubleClick(e, node)}
+                    className={`absolute w-56 rounded-2xl bg-[#0f172a]/95 border p-3 cursor-grab select-none ${
                       isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-800'
                     }`}
                     style={{ transform: `translate(${node.x}px, ${node.y}px)` }}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{node.title}</span>
-                    </div>
+                    <span className="text-xs font-bold text-white">{node.title}</span>
                     <p className="text-[11px] text-slate-300 mt-1">{node.content}</p>
                   </div>
                 );
@@ -1263,32 +1509,38 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             </div>
           </div>
 
-          {/* CONTROLES DE ZOOM NO CANTO INFERIOR ESQUERDO */}
-          <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 bg-[#0f172a]/90 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg">
+          {/* CONTROLES DE ZOOM NO CANTO INFERIOR ESQUERDO (AMPLIADO DE 15% A 300%) */}
+          <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1 bg-[#0f172a]/95 backdrop-blur-md border border-slate-800 p-1 rounded-xl shadow-lg">
             <button
-              onClick={() => setZoom(Math.min(zoom + 0.15, 2))}
+              onClick={() => setZoom(prev => Math.min(prev + 0.15, 3.0))}
               className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
-              title="Aumentar Zoom"
+              title="Aumentar Zoom (Máx 300%)"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
+            
+            {/* Porcentagem Atual de Zoom */}
+            <div className="text-[9px] font-bold text-center text-slate-400 py-0.5 select-none">
+              {Math.round(zoom * 100)}%
+            </div>
+
             <button
-              onClick={() => setZoom(Math.max(zoom - 0.15, 0.4))}
+              onClick={() => setZoom(prev => Math.max(prev - 0.15, 0.15))}
               className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
-              title="Diminuir Zoom"
+              title="Diminuir Zoom (Mín 15%)"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
             <button
               onClick={() => { setZoom(1); setPan({ x: 30, y: 20 }); }}
               className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition"
-              title="Resetar Zoom"
+              title="Resetar Zoom (100%)"
             >
               <Maximize2 className="w-4 h-4" />
             </button>
           </div>
 
-          {/* MINIMAP NO CANTO INFERIOR DIREITO (IDÊNTICO AO DO PRINT) */}
+          {/* MINIMAP NO CANTO INFERIOR DIREITO */}
           <div className="absolute bottom-4 right-4 z-10 w-36 h-24 bg-[#0a0f1d]/90 backdrop-blur-md border border-slate-800 rounded-xl p-2 hidden sm:flex flex-col justify-between shadow-2xl">
             <div className="relative w-full h-full overflow-hidden">
               {currentFlow.nodes.map(n => (
@@ -1316,22 +1568,109 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           </div>
         </div>
 
-        {/* 4. PAINEL LATERAL DIREITO - INSPECTOR DO NÓ SELECIONADO */}
-        {selectedNode && (
-          <div className="w-80 bg-[#0c121e] border-l border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 z-20 custom-scrollbar animate-in slide-in-from-right duration-200">
+        {/* 4. PAINEL INSPETOR (ABRE AO CLICAR 2X NO BLOCO) */}
+        {isInspectorOpen && selectedNode && (
+          <div className="w-80 bg-[#0c121e] border-l border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 z-20 custom-scrollbar animate-in slide-in-from-right duration-200 shadow-2xl">
             
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Configurar Bloco</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">Propriedades do Bloco</span>
               </div>
               <button
-                onClick={() => setSelectedNodeId(null)}
+                onClick={() => setIsInspectorOpen(false)}
                 className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* CONFIGURAÇÃO ESPECIAL PARA NÓ 'START' (GATILHO / TEMPO / PROATIVO) */}
+            {selectedNode.type === 'start' && (
+              <div className="space-y-3 p-3 rounded-2xl bg-slate-900 border border-orange-500/30">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-400" />
+                  <span className="text-xs font-bold text-white">Gatilho de Início do Fluxo</span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Quando este fluxo deve iniciar?</label>
+                  <select
+                    value={selectedNode.config?.triggerConfig?.type || 'instant_reply'}
+                    onChange={e => {
+                      const type = e.target.value as FlowTriggerType;
+                      updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                        ...n,
+                        config: {
+                          ...n.config,
+                          triggerConfig: {
+                            ...(n.config?.triggerConfig || {}),
+                            type
+                          }
+                        }
+                      } : n));
+                    }}
+                    className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  >
+                    <option value="instant_reply">⚡ Imediato: Responde assim que o lead chamar</option>
+                    <option value="proactive_time">⏰ Proativo: O bot chama sozinho após X tempo</option>
+                    <option value="keyword_match">🏷️ Palavra-chave: Dispara com termos específicos</option>
+                  </select>
+                </div>
+
+                {/* Se for Proativo por Tempo (ex: 2 dias depois) */}
+                {selectedNode.config?.triggerConfig?.type === 'proactive_time' && (
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <label className="text-[10px] font-bold text-amber-300 uppercase">Tempo de Espera para Chamar Sozinho:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        value={selectedNode.config?.triggerConfig?.delayAmount || 2}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                            ...n,
+                            config: {
+                              ...n.config,
+                              triggerConfig: {
+                                ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                delayAmount: val
+                              }
+                            }
+                          } : n));
+                        }}
+                        className="w-20 bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
+                      />
+                      <select
+                        value={selectedNode.config?.triggerConfig?.delayUnit || 'days'}
+                        onChange={e => {
+                          const unit = e.target.value as any;
+                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                            ...n,
+                            config: {
+                              ...n.config,
+                              triggerConfig: {
+                                ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                delayUnit: unit
+                              }
+                            }
+                          } : n));
+                        }}
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"
+                      >
+                        <option value="minutes">Minutos</option>
+                        <option value="hours">Horas</option>
+                        <option value="days">Dias</option>
+                      </select>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      Exemplo: 2 dias depois de enviar proposta ou após a última mensagem sem resposta.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Título do Bloco */}
             <div>
@@ -1347,24 +1686,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               />
             </div>
 
-            {/* Badge / Tag */}
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Etiqueta (Badge)</label>
-              <input
-                type="text"
-                value={selectedNode.badge || ''}
-                placeholder="Ex: Sugestão no chat, Sai sozinha"
-                onChange={e => {
-                  const val = e.target.value;
-                  updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, badge: val } : n));
-                }}
-                className="mt-1 w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
             {/* Conteúdo / Mensagem */}
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Texto / Instrução</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase">Texto da Mensagem</label>
               <textarea
                 rows={4}
                 value={selectedNode.content || ''}
@@ -1375,6 +1699,64 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 className="mt-1 w-full bg-slate-900 border border-slate-700/80 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 leading-relaxed font-sans"
               />
             </div>
+
+            {/* CONFIGURAÇÃO DE LINKS EXTERNOS (SOLICITADO PELO USUÁRIO) */}
+            {(selectedNode.type === 'message' || selectedNode.type === 'start') && (
+              <div className="space-y-2 p-3 rounded-2xl bg-cyan-950/20 border border-cyan-800/40">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300">
+                  <Link2 className="w-3.5 h-3.5" />
+                  <span>Link de Conteúdo Externo</span>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">URL do Link</label>
+                  <input
+                    type="url"
+                    placeholder="https://exemplo.com.br/artigo"
+                    value={selectedNode.config?.linkUrl || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                        ...n,
+                        config: { ...n.config, linkUrl: val }
+                      } : n));
+                    }}
+                    className="mt-1 w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Texto do Botão / Link</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Acessar Material Exclusivo 🔗"
+                    value={selectedNode.config?.linkText || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                        ...n,
+                        config: { ...n.config, linkText: val }
+                      } : n));
+                    }}
+                    className="mt-1 w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                {selectedNode.config?.linkUrl && (
+                  <div className="pt-1">
+                    <a
+                      href={selectedNode.config.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Testar link no navegador</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Opções de Ramificação (se for Condition / Roteador) */}
             {selectedNode.type === 'condition' && (
@@ -1399,7 +1781,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 </div>
 
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  {(selectedNode.options || []).map((opt, idx) => (
+                  {(selectedNode.options || []).map((opt) => (
                     <div key={opt.id} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2">
                       <input
                         type="color"
@@ -1459,6 +1841,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 onClick={() => {
                   updateNodes(currentFlow.nodes.filter(n => n.id !== selectedNode.id));
                   setSelectedNodeId(null);
+                  setIsInspectorOpen(false);
                 }}
                 className="py-2 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-xs font-semibold text-rose-300 transition"
                 title="Excluir Bloco"
@@ -1470,12 +1853,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         )}
       </div>
 
-      {/* 5. MODAL: SIMULADOR INTERATIVO (TESTAR O FLUXO) */}
+      {/* 5. MODAL: SIMULADOR INTERATIVO */}
       {isTestSimulatorOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[650px] animate-in zoom-in-95 duration-150">
-            
-            {/* Header do Simulador */}
             <div className="p-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -1509,7 +1890,6 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             </div>
 
-            {/* Área de Mensagens da Conversa */}
             <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#080d17]">
               {simHistory.map((item, idx) => (
                 <div
@@ -1535,13 +1915,25 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       }`}
                     >
                       <p className="whitespace-pre-wrap">{item.text}</p>
+                      {item.linkUrl && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-700/60">
+                          <a
+                            href={item.linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 rounded-xl transition shadow-xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>{item.linkText || 'Acessar Conteúdo Externo 🔗'}</span>
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Área de Resposta Interativa (Botões do Se o Lead Responder) */}
             <div className="p-3.5 bg-[#0d1424] border-t border-slate-800">
               {(() => {
                 const activeNode = currentFlow.nodes.find(n => n.id === simStepNodeId);
@@ -1602,7 +1994,91 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         </div>
       )}
 
-      {/* 6. MODAL DE TEMPLATES PRONTOS */}
+      {/* 6. MODAL: CRIAR NOVO FLUXO */}
+      {isNewFlowModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold text-white">Criar Novo Fluxo</h3>
+              </div>
+              <button onClick={() => setIsNewFlowModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300">Nome do Fluxo</label>
+              <input
+                type="text"
+                placeholder="Ex: Recuperação de Carrinho 2 Dias, Proposta..."
+                value={newFlowName}
+                onChange={e => setNewFlowName(e.target.value)}
+                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300">Modelo Inicial</label>
+              <div className="grid grid-cols-1 gap-2 mt-1.5">
+                <div
+                  onClick={() => setNewFlowTemplate('diagnostico')}
+                  className={`p-3 rounded-xl border cursor-pointer transition ${
+                    newFlowTemplate === 'diagnostico' 
+                      ? 'bg-indigo-950/40 border-indigo-500 text-white' 
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Diagnóstico + Roteador de Intenções (Print)</p>
+                  <p className="text-[10px] text-slate-400">7 ramificações automáticas de interesse e ações no CRM.</p>
+                </div>
+
+                <div
+                  onClick={() => setNewFlowTemplate('followup')}
+                  className={`p-3 rounded-xl border cursor-pointer transition ${
+                    newFlowTemplate === 'followup' 
+                      ? 'bg-indigo-950/40 border-indigo-500 text-white' 
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Follow-up Proativo (2 Dias Depois)</p>
+                  <p className="text-[10px] text-slate-400">Chama o lead sozinho 2 dias depois para verificar decisão.</p>
+                </div>
+
+                <div
+                  onClick={() => setNewFlowTemplate('blank')}
+                  className={`p-3 rounded-xl border cursor-pointer transition ${
+                    newFlowTemplate === 'blank' 
+                      ? 'bg-indigo-950/40 border-indigo-500 text-white' 
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Em Branco</p>
+                  <p className="text-[10px] text-slate-400">Inicia apenas com o bloco inicial para montar do zero.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setIsNewFlowModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateNewFlow}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-indigo-600/30"
+              >
+                Criar Fluxo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. MODAL DE TEMPLATES PRONTOS */}
       {isTemplatesModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-[#0f172a] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
@@ -1619,15 +2095,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             <div className="space-y-2.5 max-h-96 overflow-y-auto">
               <div
                 onClick={() => {
-                  setFlows([INITIAL_DEFAULT_FLOW]);
-                  setActiveFlowId(INITIAL_DEFAULT_FLOW.id);
+                  setFlows([DEFAULT_FLOW_DIAGNOSTICO, ...flows.filter(f => f.id !== DEFAULT_FLOW_DIAGNOSTICO.id)]);
+                  setActiveFlowId(DEFAULT_FLOW_DIAGNOSTICO.id);
                   setIsTemplatesModalOpen(false);
                 }}
                 className="p-3.5 rounded-2xl bg-slate-900 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition flex items-center justify-between group"
               >
                 <div>
                   <h4 className="text-sm font-bold text-white group-hover:text-indigo-300">
-                    Diagnóstico + Google → WhatsApp
+                    Diagnóstico + Google → WhatsApp (Print)
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Modelo completo com 7 ramificações de intenção, mensagens e automação no CRM.
@@ -1638,52 +2114,21 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
 
               <div
                 onClick={() => {
-                  alert('Modelo de Qualificação B2B carregado com sucesso!');
+                  setFlows([DEFAULT_FLOW_FOLLOWUP, ...flows.filter(f => f.id !== DEFAULT_FLOW_FOLLOWUP.id)]);
+                  setActiveFlowId(DEFAULT_FLOW_FOLLOWUP.id);
                   setIsTemplatesModalOpen(false);
                 }}
                 className="p-3.5 rounded-2xl bg-slate-900 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition flex items-center justify-between group"
               >
                 <div>
                   <h4 className="text-sm font-bold text-white group-hover:text-indigo-300">
-                    Qualificação Rápida de Leads Comerciais
+                    Follow-up Proativo 2 Dias Depois
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Filtra porte da empresa, orçamento e transfere leads quentes diretamente para o closer.
+                    O bot chama sozinho o cliente 2 dias após a proposta para saber se decidiu.
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. MODAL DE VERSÕES */}
-      {isVersionsModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0f172a] border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-indigo-400" />
-                <span>Histórico de Versões</span>
-              </h3>
-              <button onClick={() => setIsVersionsModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="space-y-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-emerald-500/30 text-white flex justify-between items-center">
-                <div>
-                  <p className="font-bold">Versão Atual (Ativa)</p>
-                  <p className="text-[10px] text-slate-400">Modificado há poucos instantes</p>
-                </div>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full">Atual</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 flex justify-between items-center">
-                <div>
-                  <p className="font-semibold">Versão 1.0 (Publicação Original)</p>
-                  <p className="text-[10px] text-slate-500">Ontem às 18:30</p>
-                </div>
               </div>
             </div>
           </div>

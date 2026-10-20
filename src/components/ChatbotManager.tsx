@@ -242,8 +242,57 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
     }
   };
 
+  // Se estiver no MODO 2: FLUXO VISUAL, renderiza 100% da tela (Full Bleed, sem margens brancas)
+  if (activeMode === 'visual_flow') {
+    return (
+      <div className="w-full h-full flex flex-col bg-[#070b12] text-slate-100 overflow-hidden">
+        {/* Barra Compacta de Navegação / Alternância de Modo */}
+        <div className="bg-[#0b101b] border-b border-slate-800/90 px-4 py-2 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white tracking-wide">
+                Configuração 2: Construtor de Fluxo Visual
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hidden md:inline">
+                Árvore de Decisão & Ações WhatsApp
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setActiveMode('prompt');
+                setConfig(prev => ({ ...prev, mode: 'prompt' }));
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/80 transition shadow-xs"
+              title="Alternar para o Atendente com IA (Configuração 1)"
+            >
+              <Bot className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Config 1: Atendente com IA (Prompts)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Workspace do Fluxo Visual - 100% Full-bleed */}
+        <div className="flex-1 w-full min-h-0 relative overflow-hidden">
+          <ChatbotVisualFlowBuilder
+            currentCompany={currentCompany}
+            settings={settings}
+            onSaveFlows={handleSaveFlows}
+            onBackToModeSelect={() => setActiveMode('prompt')}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="w-full h-full overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-12">
       
       {/* 0. SELETOR DE MODO DO CHATBOT (MODO 1: PROMPTS VS MODO 2: FLUXO VISUAL) */}
       <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-2 flex flex-col sm:flex-row items-center gap-2 shadow-xl">
@@ -302,18 +351,8 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
         </button>
       </div>
 
-      {/* RENDERIZAÇÃO DO MODO SELECIONADO */}
-      {activeMode === 'visual_flow' ? (
-        <ChatbotVisualFlowBuilder
-          currentCompany={currentCompany}
-          settings={settings}
-          onSaveFlows={handleSaveFlows}
-          onBackToModeSelect={() => setActiveMode('prompt')}
-        />
-      ) : (
-        <>
-          {/* 1. Hero Header */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+      {/* 1. Hero Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
@@ -844,9 +883,6 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
         </div>
 
       </div>
-    </>
-  )}
-
     </div>
   );
 };
