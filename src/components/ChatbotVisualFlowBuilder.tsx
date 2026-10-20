@@ -36,7 +36,8 @@ import {
   ExternalLink,
   Link2,
   Flame,
-  MousePointer
+  MousePointer,
+  Tag
 } from 'lucide-react';
 import {
   ChatbotFlow,
@@ -322,6 +323,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [newTriggerKeyword, setNewTriggerKeyword] = useState('');
 
   // Modais
   const [isTestSimulatorOpen, setIsTestSimulatorOpen] = useState(false);
@@ -610,6 +612,62 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     e.stopPropagation();
     setSelectedNodeId(node.id);
     setIsInspectorOpen(true);
+  };
+
+  // Gerenciamento de Palavras-Chave de Ativação do Fluxo
+  const handleAddTriggerKeyword = () => {
+    if (!newTriggerKeyword.trim() || !selectedNodeId) return;
+    const parts = newTriggerKeyword
+      .split(',')
+      .map(k => k.trim().toLowerCase())
+      .filter(k => k.length > 0);
+
+    const currentNode = currentFlow.nodes.find(n => n.id === selectedNodeId);
+    const currentKeywords = currentNode?.config?.triggerConfig?.keywords || [];
+    const merged = Array.from(new Set([...currentKeywords, ...parts]));
+
+    updateNodes(
+      currentFlow.nodes.map(n =>
+        n.id === selectedNodeId
+          ? {
+              ...n,
+              config: {
+                ...n.config,
+                triggerConfig: {
+                  ...(n.config?.triggerConfig || { type: 'keyword_match' }),
+                  type: 'keyword_match',
+                  keywords: merged
+                }
+              }
+            }
+          : n
+      )
+    );
+    setNewTriggerKeyword('');
+  };
+
+  const handleRemoveTriggerKeyword = (kwToRemove: string) => {
+    if (!selectedNodeId) return;
+    const currentNode = currentFlow.nodes.find(n => n.id === selectedNodeId);
+    const currentKeywords = currentNode?.config?.triggerConfig?.keywords || [];
+    const updated = currentKeywords.filter(k => k !== kwToRemove);
+
+    updateNodes(
+      currentFlow.nodes.map(n =>
+        n.id === selectedNodeId
+          ? {
+              ...n,
+              config: {
+                ...n.config,
+                triggerConfig: {
+                  ...(n.config?.triggerConfig || { type: 'keyword_match' }),
+                  keywords: updated
+                }
+              }
+            }
+          : n
+      )
+    );
   };
 
   // Adicionar novo bloco
@@ -1285,7 +1343,13 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                       triggerBadge = `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${unitLabel}`;
                     }
                   } else if (trigger?.type === 'keyword_match') {
-                    triggerBadge = '🏷️ Palavras-chave';
+                    const kws = trigger?.keywords || [];
+                    if (kws.length > 0) {
+                      const preview = kws.slice(0, 2).join(', ');
+                      triggerBadge = `🏷️ ${preview}${kws.length > 2 ? ` (+${kws.length - 2})` : ''}`;
+                    } else {
+                      triggerBadge = '🏷️ Palavras-chave (definir)';
+                    }
                   }
 
                   return (
@@ -1781,6 +1845,83 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                           ⏰ O bot chamará o lead sozinho após <strong>{selectedNode.config?.triggerConfig?.delayAmount || 2} {selectedNode.config?.triggerConfig?.delayUnit === 'hours' ? 'horas' : selectedNode.config?.triggerConfig?.delayUnit === 'minutes' ? 'minutos' : 'dias'}</strong> da última mensagem sem resposta.
                         </span>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Se for Disparo por Palavras-Chave (Termos Específicos) */}
+                {selectedNode.config?.triggerConfig?.type === 'keyword_match' && (
+                  <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Termos e Palavras-Chave:</span>
+                        </label>
+                        <span className="text-[9px] text-cyan-400 font-semibold lowercase">
+                          {(selectedNode.config?.triggerConfig?.keywords || []).length} termos
+                        </span>
+                      </div>
+
+                      {/* Input para adicionar nova palavra-chave */}
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <input
+                          type="text"
+                          placeholder="Ex: preço, quanto custa, comprar, orçamento..."
+                          value={newTriggerKeyword}
+                          onChange={e => setNewTriggerKeyword(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddTriggerKeyword();
+                            }
+                          }}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddTriggerKeyword}
+                          className="px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-sm shrink-0"
+                          title="Adicionar palavra-chave"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar</span>
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        Dica: Digite palavras separadas por vírgula e aperte Enter ou clique em Adicionar.
+                      </p>
+
+                      {/* Lista de tags das palavras-chave adicionadas */}
+                      <div className="flex flex-wrap gap-1.5 mt-2.5 max-h-40 overflow-y-auto">
+                        {(selectedNode.config?.triggerConfig?.keywords || []).length === 0 ? (
+                          <div className="p-2.5 w-full rounded-xl bg-slate-800/50 border border-dashed border-slate-700 text-center text-[11px] text-slate-400">
+                            Nenhum termo cadastrado ainda. Adicione palavras como <em>preço</em>, <em>orçamento</em>, <em>proposta</em>, etc.
+                          </div>
+                        ) : (
+                          (selectedNode.config?.triggerConfig?.keywords || []).map((kw, idx) => (
+                            <span
+                              key={`${kw}-${idx}`}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 text-xs font-semibold animate-in fade-in"
+                            >
+                              <span>{kw}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTriggerKeyword(kw)}
+                                className="text-cyan-400 hover:text-rose-400 p-0.5 rounded transition"
+                                title="Remover termo"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Card explicativo dinâmico */}
+                    <div className="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-600/30 text-[10px] text-cyan-200/90 leading-relaxed">
+                      🎯 <strong>Ativação Automática:</strong> Quando o lead enviar qualquer mensagem no WhatsApp ou Direct contendo um desses termos, este fluxo iniciará imediatamente para conduzir o atendimento.
                     </div>
                   </div>
                 )}
