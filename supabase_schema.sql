@@ -521,3 +521,15 @@ ALTER TABLE public.broadcast_campaigns
 -- Histórico de conversão e cliques nos leads
 ALTER TABLE public.leads
   ADD COLUMN IF NOT EXISTS conversion_events JSONB DEFAULT '[]'::jsonb;
+
+-- Follow-Gate & Conexão Instagram Oficial
+ALTER TABLE public.instagram_comment_automations
+  ADD COLUMN IF NOT EXISTS follow_gate_enabled BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS follow_gate_config JSONB,
+  ADD COLUMN IF NOT EXISTS related_post_promotion JSONB;
+
+ALTER TABLE public.settings
+  ADD COLUMN IF NOT EXISTS instagram_config JSONB;
+
+ALTER TABLE public.instagram_comment_logs
+  ADD COLUMN IF NOT EXISTS error_message TEXT;

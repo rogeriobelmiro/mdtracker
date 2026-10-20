@@ -336,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <Icon 
                           className={`w-4 h-4 shrink-0 transition-colors ${
                             isActive 
@@ -344,14 +344,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               : 'text-slate-400 group-hover:text-blue-400'
                           }`} 
                         />
-                        <span className="truncate">{item.label}</span>
+                        <span className="line-clamp-2 leading-snug text-left break-words">{item.label}</span>
                       </div>
 
                       {/* Optional Badge or Arrow */}
-                      <div className="flex items-center gap-1 shrink-0 ml-1">
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
                         {item.badge && (
                           <span 
-                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
                               isActive 
                                 ? 'bg-white/20 text-white' 
                                 : getBadgeStyle(item.badge.variant)
@@ -361,7 +361,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           </span>
                         )}
                         {isActive && !item.badge && (
-                          <ChevronRight className="w-3.5 h-3.5 text-white/70" />
+                          <ChevronRight className="w-3.5 h-3.5 text-white/70 shrink-0" />
                         )}
                       </div>
                     </button>

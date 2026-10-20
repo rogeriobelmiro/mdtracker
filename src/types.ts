@@ -633,6 +633,20 @@ export interface InstagramCommentAutomation {
     url: string;
   };
   createLeadInCrm: boolean;
+  followGateEnabled?: boolean;
+  followGateConfig?: {
+    askFollowMessage: string;
+    notFollowingMessage: string;
+    verifyFailMessage?: string;
+    confirmFollowMessage: string;
+    strictMetaCheck?: boolean;
+  };
+  relatedPostPromotion?: {
+    enabled: boolean;
+    message: string;
+    postUrl: string;
+    postTitle?: string;
+  };
   stats: {
     commentsProcessed: number;
     dmsSent: number;
@@ -655,6 +669,7 @@ export interface InstagramCommentLog {
   dmSentText: string;
   leadId?: string;
   status: 'delivered' | 'failed' | 'ignored_keyword';
+  errorMessage?: string;
   timestamp: string;
 }
 
@@ -669,6 +684,14 @@ export interface InstagramSimulateResult {
   autoLiked?: boolean;
   dmSentText?: string;
   ctaButton?: { text: string; url: string };
+  followGateTriggered?: boolean;
+  followGateStage?: 'ask_follow' | 'not_following' | 'verify_failed' | 'verified_unlocked';
+  isFollower?: boolean;
+  relatedPostSent?: {
+    message: string;
+    postUrl: string;
+    postTitle?: string;
+  };
   lead?: Partial<Lead>;
   log?: InstagramCommentLog;
 }

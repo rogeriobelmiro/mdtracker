@@ -8,3 +8,4 @@ coverage/
 !.env.example
 ._*
 baileys_auth_info/
+instagram_settings.json

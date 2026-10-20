@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { CampaignLink, Lead, WebhookLog, IntegrationSettings, FunnelStage, ConversionEventLog } from './src/types.js';
 import { supabase } from './src/lib/supabase.js';
 import bcrypt from 'bcryptjs';
@@ -5418,6 +5419,20 @@ let inMemoryInstagramAutomations: any[] = [
             url: 'https://mdtracker.app/r/ebook-gratis'
         },
         createLeadInCrm: true,
+        followGateEnabled: true,
+        followGateConfig: {
+            askFollowMessage: 'Olá {{username}}! 🎁 Para eu te liberar esse e-book exclusivo, você já segue o nosso perfil? Responda aqui com "SIM" ou "NÃO" 👇',
+            notFollowingMessage: 'Poxa, esse material é 100% exclusivo para quem segue nossa página! ✨ Siga nosso perfil @mudadigital e depois me responda "SEGUI" aqui que te envio na hora!',
+            verifyFailMessage: 'Ops! O sistema Meta ainda não identificou o seu follow no perfil @mudadigital. Clica lá em "Seguir" e depois me manda "SEGUI" de novo! 😉',
+            confirmFollowMessage: 'Oba, confirmado! Muito obrigado por nos seguir! 🎉 Aqui está o seu acesso exclusivo:',
+            strictMetaCheck: true
+        },
+        relatedPostPromotion: {
+            enabled: true,
+            message: 'Aproveitando, você já viu nosso Reels recente mostrando 5 automações que triplicam o faturamento? Veja aqui:',
+            postUrl: 'https://www.instagram.com/reel/C8xyz123456/',
+            postTitle: '🔥 5 Automações que Triplicam o Faturamento'
+        },
         stats: {
             commentsProcessed: 142,
             dmsSent: 139,
@@ -5532,6 +5547,22 @@ let inMemoryInstagramCommentLogs: any[] = [
     }
 ];
 
+// Helper configurations for Follow-Gate and Related Post Cross-Promotion
+export const DEFAULT_FOLLOW_GATE_CONFIG = {
+    askFollowMessage: 'Olá {{username}}! 🎁 Para eu te liberar esse material exclusivo, você já segue o nosso perfil? Responda aqui com "SIM" ou "NÃO" 👇',
+    notFollowingMessage: 'Poxa, esse conteúdo é exclusivo para quem faz parte da nossa comunidade! ✨ Siga nosso perfil @mudadigital e depois me responda "SEGUI" aqui que te envio na hora!',
+    verifyFailMessage: 'Ops! Ainda não identifiquei o seu follow no perfil @mudadigital. Clica lá em "Seguir" e depois me manda "SEGUI" de novo! 😉',
+    confirmFollowMessage: 'Oba, confirmado! Muito obrigado por nos seguir! 🎉 Aqui está o seu acesso exclusivo:',
+    strictMetaCheck: true
+};
+
+export const DEFAULT_RELATED_POST_PROMOTION = {
+    enabled: false,
+    message: 'Já que você se interessou por esse tema, você vai adorar essa outra publicação complementar que postamos no feed:',
+    postUrl: '',
+    postTitle: ''
+};
+
 // Helper to map DB row to InstagramCommentAutomation
 function mapInstagramAutomationFromDB(row: any): any {
     return {
@@ -5550,18 +5581,28 @@ function mapInstagramAutomationFromDB(row: any): any {
         autoLikeComment: row.auto_like_comment !== false,
         publicReplies: Array.isArray(row.public_replies) ? row.public_replies : [],
         directMessage: row.direct_message || '',
-        ctaButton: row.cta_button,
+        ctaButton: row.cta_button ? { text: row.cta_button.text, url: row.cta_button.url } : undefined,
         createLeadInCrm: row.create_lead_in_crm !== false,
+        followGateEnabled: row.follow_gate_enabled !== undefined 
+            ? row.follow_gate_enabled 
+            : (row.cta_button?.followGateEnabled || false),
+        followGateConfig: row.follow_gate_config 
+            || row.cta_button?.followGateConfig 
+            || DEFAULT_FOLLOW_GATE_CONFIG,
+        relatedPostPromotion: row.related_post_promotion 
+            || row.cta_button?.relatedPostPromotion 
+            || DEFAULT_RELATED_POST_PROMOTION,
         stats: row.stats || { commentsProcessed: 0, dmsSent: 0, leadsCaptured: 0 },
         createdAt: row.created_at,
         updatedAt: row.updated_at
     };
 }
 
-// GET all automations for company
+// GET all automations for company (with auto-sync of execution stats from logs)
 app.get('/api/instagram/automations', async (req: Request, res: Response) => {
     try {
         const companyId = (req.query.companyId as string) || 'comp-alfa';
+        let rules: any[] = [];
         try {
             const { data, error } = await supabase
                 .from('instagram_comment_automations')
@@ -5570,12 +5611,77 @@ app.get('/api/instagram/automations', async (req: Request, res: Response) => {
                 .order('created_at', { ascending: false });
 
             if (!error && data && data.length > 0) {
-                return res.json(data.map(mapInstagramAutomationFromDB));
+                rules = data.map(mapInstagramAutomationFromDB);
             }
         } catch {}
 
-        const filtered = inMemoryInstagramAutomations.filter(a => a.companyId === companyId);
-        res.json(filtered);
+        if (rules.length === 0) {
+            let filtered = inMemoryInstagramAutomations.filter(a => a.companyId === companyId);
+            if (filtered.length === 0) {
+                filtered = inMemoryInstagramAutomations.map(a => ({
+                    ...a,
+                    companyId
+                }));
+            }
+            rules = filtered;
+        }
+
+        // Recuperar logs para auditar e sincronizar as estatísticas de cada regra
+        let allLogs: any[] = inMemoryInstagramCommentLogs.filter(l => l.companyId === companyId);
+        try {
+            if (supabase) {
+                const { data: dbLogs } = await supabase
+                    .from('instagram_comment_logs')
+                    .select('*')
+                    .eq('company_id', companyId);
+                if (dbLogs && dbLogs.length > 0) {
+                    for (const dl of dbLogs) {
+                        if (!allLogs.some(l => l.id === dl.id)) {
+                            allLogs.push(dl);
+                        }
+                    }
+                }
+            }
+        } catch {}
+
+        // Atualizar estatísticas de cada regra com base nos logs reais
+        for (const rule of rules) {
+            const ruleLogs = allLogs.filter(l => 
+                l.ruleId === rule.id || 
+                l.rule_id === rule.id || 
+                (l.ruleName && l.ruleName === rule.name) || 
+                (l.rule_name && l.rule_name === rule.name)
+            );
+            const commentsCount = ruleLogs.length;
+            const dmsCount = ruleLogs.filter(l => l.status === 'delivered').length;
+            const leadsCount = ruleLogs.filter(l => Boolean(l.leadId || l.lead_id)).length;
+
+            const finalComments = Math.max(rule.stats?.commentsProcessed || 0, commentsCount);
+            const finalDms = ruleLogs.length > 0 ? dmsCount : (rule.stats?.dmsSent || 0);
+            const finalLeads = Math.max(rule.stats?.leadsCaptured || 0, leadsCount);
+
+            const needUpdate = finalComments !== rule.stats?.commentsProcessed || 
+                               finalDms !== rule.stats?.dmsSent || 
+                               finalLeads !== rule.stats?.leadsCaptured;
+
+            rule.stats = {
+                commentsProcessed: finalComments,
+                dmsSent: finalDms,
+                leadsCaptured: finalLeads
+            };
+
+            // Se as estatísticas no banco estavam desatualizadas, salva no Supabase
+            if (needUpdate && supabase) {
+                Promise.resolve(
+                    supabase
+                        .from('instagram_comment_automations')
+                        .update({ stats: rule.stats, updated_at: new Date().toISOString() })
+                        .eq('id', rule.id)
+                ).catch(() => {});
+            }
+        }
+
+        res.json(rules);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -5600,7 +5706,10 @@ app.post('/api/instagram/automations', async (req: Request, res: Response) => {
             publicReplies = [],
             directMessage,
             ctaButton,
-            createLeadInCrm = true
+            createLeadInCrm = true,
+            followGateEnabled = false,
+            followGateConfig = DEFAULT_FOLLOW_GATE_CONFIG,
+            relatedPostPromotion = DEFAULT_RELATED_POST_PROMOTION
         } = req.body;
 
         if (!name || !directMessage) {
@@ -5626,12 +5735,26 @@ app.post('/api/instagram/automations', async (req: Request, res: Response) => {
             directMessage,
             ctaButton,
             createLeadInCrm,
+            followGateEnabled,
+            followGateConfig,
+            relatedPostPromotion,
             stats: { commentsProcessed: 0, dmsSent: 0, leadsCaptured: 0 },
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         try {
+            const ctaPayload = ctaButton ? {
+                ...ctaButton,
+                followGateEnabled,
+                followGateConfig,
+                relatedPostPromotion
+            } : {
+                followGateEnabled,
+                followGateConfig,
+                relatedPostPromotion
+            };
+
             await supabase.from('instagram_comment_automations').insert([{
                 id: newRule.id,
                 company_id: newRule.companyId,
@@ -5648,8 +5771,11 @@ app.post('/api/instagram/automations', async (req: Request, res: Response) => {
                 auto_like_comment: newRule.autoLikeComment,
                 public_replies: newRule.publicReplies,
                 direct_message: newRule.directMessage,
-                cta_button: newRule.ctaButton,
+                cta_button: ctaPayload,
                 create_lead_in_crm: newRule.createLeadInCrm,
+                follow_gate_enabled: newRule.followGateEnabled || false,
+                follow_gate_config: newRule.followGateConfig || null,
+                related_post_promotion: newRule.relatedPostPromotion || null,
                 stats: newRule.stats,
                 created_at: newRule.createdAt,
                 updated_at: newRule.updatedAt
@@ -5690,8 +5816,35 @@ app.put('/api/instagram/automations/:id', async (req: Request, res: Response) =>
             if (updates.autoLikeComment !== undefined) dbPayload.auto_like_comment = updates.autoLikeComment;
             if (updates.publicReplies !== undefined) dbPayload.public_replies = updates.publicReplies;
             if (updates.directMessage !== undefined) dbPayload.direct_message = updates.directMessage;
-            if (updates.ctaButton !== undefined) dbPayload.cta_button = updates.ctaButton;
             if (updates.createLeadInCrm !== undefined) dbPayload.create_lead_in_crm = updates.createLeadInCrm;
+            if (updates.followGateEnabled !== undefined) dbPayload.follow_gate_enabled = updates.followGateEnabled;
+            if (updates.followGateConfig !== undefined) dbPayload.follow_gate_config = updates.followGateConfig;
+            if (updates.relatedPostPromotion !== undefined) dbPayload.related_post_promotion = updates.relatedPostPromotion;
+            if (updates.stats !== undefined) dbPayload.stats = updates.stats;
+
+            // Buscar dados existentes da regra para não perder text/url do botão CTA
+            let existingRule: any = inMemoryInstagramAutomations.find(a => a.id === id);
+            if (supabase) {
+                try {
+                    const { data: dbData } = await supabase.from('instagram_comment_automations').select('*').eq('id', id).maybeSingle();
+                    if (dbData) existingRule = mapInstagramAutomationFromDB(dbData);
+                } catch {}
+            }
+
+            const existingCta = existingRule?.ctaButton || {};
+            const incomingCta = updates.ctaButton || {};
+
+            const finalCtaText = incomingCta.text !== undefined ? incomingCta.text : (updates.ctaText !== undefined ? updates.ctaText : (existingCta.text || ''));
+            const finalCtaUrl = incomingCta.url !== undefined ? incomingCta.url : (updates.ctaUrl !== undefined ? updates.ctaUrl : (existingCta.url || ''));
+
+            const ctaPayload: any = {
+                text: finalCtaText,
+                url: finalCtaUrl,
+                followGateEnabled: updates.followGateEnabled !== undefined ? updates.followGateEnabled : (existingRule?.followGateEnabled ?? false),
+                followGateConfig: updates.followGateConfig !== undefined ? updates.followGateConfig : (existingRule?.followGateConfig ?? DEFAULT_FOLLOW_GATE_CONFIG),
+                relatedPostPromotion: updates.relatedPostPromotion !== undefined ? updates.relatedPostPromotion : (existingRule?.relatedPostPromotion ?? DEFAULT_RELATED_POST_PROMOTION)
+            };
+            dbPayload.cta_button = ctaPayload;
 
             await supabase.from('instagram_comment_automations').update(dbPayload).eq('id', id);
         } catch {}
@@ -5743,6 +5896,7 @@ app.get('/api/instagram/automations/logs', async (req: Request, res: Response) =
                     dmSentText: row.dm_sent_text,
                     leadId: row.lead_id,
                     status: row.status,
+                    errorMessage: row.error_message || row.errorMessage || (row.status === 'failed' ? 'Falha na entrega na Meta Graph API' : undefined),
                     timestamp: row.timestamp
                 })));
             }
@@ -5755,6 +5909,208 @@ app.get('/api/instagram/automations/logs', async (req: Request, res: Response) =
     }
 });
 
+// Session map for ongoing follow-gate conversations: key = `${companyId}:${username}`
+interface FollowGateSession {
+    companyId: string;
+    ruleId: string;
+    username: string;
+    senderId?: string;
+    commentId?: string;
+    step: 'awaiting_follow_answer' | 'awaiting_follow_action';
+    createdAt: number;
+}
+const instagramFollowGateSessions = new Map<string, FollowGateSession>();
+
+// Helper to check if a user actually follows the Instagram account via Meta Graph API
+async function checkInstagramFollowStatus(userIgsid: string, accessToken: string): Promise<boolean> {
+    if (!accessToken || !userIgsid) return true; // Fallback se credenciais não estiverem ativas
+    try {
+        const url = `https://graph.facebook.com/v19.0/${encodeURIComponent(userIgsid)}?fields=is_user_follow_business&access_token=${encodeURIComponent(accessToken.trim())}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && typeof data.is_user_follow_business === 'boolean') {
+            return data.is_user_follow_business;
+        }
+        return false;
+    } catch (err: any) {
+        console.error('[checkInstagramFollowStatus error]', err.message);
+        return false;
+    }
+}
+
+// Helper to send Direct Message via Meta Graph API
+async function sendInstagramDirectMessage(
+    recipientId: string, 
+    text: string, 
+    accessToken: string,
+    pageId?: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+    if (!accessToken || !recipientId) return { success: false, error: 'Token ou identificador de destinatário ausente' };
+    try {
+        const cleanPageId = (pageId && pageId.trim() && !pageId.startsWith('100000000000')) ? pageId.trim() : null;
+        const targetEndpoint = cleanPageId ? `${cleanPageId}/messages` : 'me/messages';
+        const url = `https://graph.facebook.com/v19.0/${targetEndpoint}?access_token=${encodeURIComponent(accessToken.trim())}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recipient: { id: recipientId },
+                message: { text }
+            })
+        });
+        const json = await res.json();
+        console.log('[Instagram Meta] Direct enviado:', json);
+        if (json.message_id || json.recipient_id || !json.error) {
+            return { success: true, data: json };
+        }
+        return { success: false, error: json.error?.message || JSON.stringify(json.error) };
+    } catch (err: any) {
+        console.error('[sendInstagramDirectMessage error]', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+// Helper to reply publicly to an Instagram comment
+async function sendInstagramPublicReply(commentId: string, message: string, accessToken: string) {
+    if (!accessToken || !commentId || !message) return null;
+    try {
+        const url = `https://graph.facebook.com/v19.0/${commentId}/replies?access_token=${encodeURIComponent(accessToken.trim())}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        const json = await res.json();
+        console.log('[Instagram Meta] Resposta pública enviada:', json);
+        return json;
+    } catch (err: any) {
+        console.error('[sendInstagramPublicReply error]', err.message);
+        return null;
+    }
+}
+
+// Helper to send a private DM in response to an Instagram comment (Private Reply)
+async function sendInstagramPrivateCommentReply(
+    commentId: string, 
+    text: string, 
+    accessToken: string, 
+    recipientId?: string,
+    pageId?: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+    if (!accessToken || (!commentId && !recipientId) || !text) {
+        return { success: false, error: 'Token ou identificadores ausentes' };
+    }
+    try {
+        const cleanPageId = (pageId && pageId.trim() && !pageId.startsWith('100000000000')) ? pageId.trim() : null;
+        const targetEndpoint = cleanPageId ? `${cleanPageId}/messages` : 'me/messages';
+        const url = `https://graph.facebook.com/v19.0/${targetEndpoint}?access_token=${encodeURIComponent(accessToken.trim())}`;
+        let lastError = '';
+        
+        // 1. Tentar via comment_id (endpoint oficial de private reply da Meta)
+        if (commentId) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient: { comment_id: commentId }, message: { text } })
+                });
+                const json = await res.json();
+                console.log('[Instagram Meta] Resposta privada Direct (comment_id):', json);
+                if (json.message_id || json.recipient_id || (!json.error && !json.errors)) {
+                    return { success: true, data: json };
+                }
+                lastError = json.error?.message || JSON.stringify(json.error);
+                console.warn('[Instagram Meta] Aviso comment_id:', lastError);
+            } catch (err: any) {
+                console.warn('[Instagram Meta] Erro envio comment_id:', err.message);
+                lastError = err.message;
+            }
+        }
+
+        // 2. Fallback via recipientId (IGSID direto do seguidor)
+        if (recipientId) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient: { id: recipientId }, message: { text } })
+                });
+                const json = await res.json();
+                console.log('[Instagram Meta] Resposta privada Direct (recipientId):', json);
+                if (json.message_id || json.recipient_id || (!json.error && !json.errors)) {
+                    return { success: true, data: json };
+                }
+                lastError = json.error?.message || JSON.stringify(json.error);
+                console.warn('[Instagram Meta] Aviso recipientId:', lastError);
+                return { success: false, error: lastError };
+            } catch (err: any) {
+                return { success: false, error: err.message };
+            }
+        }
+
+        return { success: false, error: lastError || 'Falha ao entregar direct na Meta' };
+    } catch (err: any) {
+        console.error('[sendInstagramPrivateCommentReply error]', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+// Helper to like a comment automatically on Instagram
+async function likeInstagramComment(commentId: string, accessToken: string) {
+    if (!accessToken || !commentId) return null;
+    try {
+        const url = `https://graph.facebook.com/v19.0/${commentId}/likes?access_token=${encodeURIComponent(accessToken.trim())}`;
+        const res = await fetch(url, { method: 'POST' });
+        return await res.json();
+    } catch (err: any) {
+        console.error('[likeInstagramComment error]', err.message);
+        return null;
+    }
+}
+
+function normalizeTriggerText(str: string): string {
+    return (str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function checkKeywordMatch(comment: string, keyword: string): boolean {
+    const normComment = normalizeTriggerText(comment);
+    const normKw = normalizeTriggerText(keyword);
+    if (!normKw || !normComment) return false;
+
+    // 1. Substring match direto (ex: "quero o power up" contém "power up")
+    if (normComment.includes(normKw)) return true;
+
+    // 2. Correspondência sem espaços, hífens ou pontuações
+    // Trata perfeitamente "power up" vs "powerup", "e-book" vs "ebook", "power_up" vs "powerup"
+    const compactComment = normComment.replace(/[^a-z0-9]/g, '');
+    const compactKw = normKw.replace(/[^a-z0-9]/g, '');
+    if (compactKw && compactComment.includes(compactKw)) return true;
+    if (compactComment && compactKw.includes(compactComment)) return true;
+
+    // 3. Variações de Plural e Singular (Português/Inglês: -s, -es, -is)
+    const singularKw = normKw.replace(/(es|s)$/, '');
+    const singularComment = normComment.replace(/(es|s)$/, '');
+    if (singularKw.length >= 3 && normComment.includes(singularKw)) return true;
+    if (singularComment.length >= 3 && normKw.includes(singularComment)) return true;
+
+    if (compactKw.length >= 3 && compactComment.length >= 3) {
+        const compactSingularKw = compactKw.replace(/(es|s)$/, '');
+        const compactSingularComment = compactComment.replace(/(es|s)$/, '');
+        if (compactSingularKw.length >= 3 && compactComment.includes(compactSingularKw)) return true;
+        if (compactSingularComment.length >= 3 && compactKw.includes(compactSingularComment)) return true;
+    }
+
+    // 4. Token-level matching: todas as palavras da palavra-chave presentes no comentário
+    const kwWords = normKw.split(/\s+/).filter(w => w.length > 1);
+    if (kwWords.length > 1 && kwWords.every(w => normComment.includes(w))) return true;
+
+    return false;
+}
+
 // SIMULATE / EXECUTE Instagram Comment Action (Interactive ManyChat Simulator)
 app.post('/api/instagram/automations/simulate', async (req: Request, res: Response) => {
     try {
@@ -5763,7 +6119,9 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
             ruleId,
             instagramUsername = '@usuario_teste',
             commentText = '',
-            postTitle = 'Publicação no Feed'
+            postTitle = 'Publicação no Feed',
+            isFollowerSimulated = false,
+            simulatedFollowReply = ''
         } = req.body;
 
         if (!commentText.trim()) {
@@ -5773,15 +6131,40 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
         const normalizedUsername = instagramUsername.startsWith('@') ? instagramUsername : `@${instagramUsername}`;
         const cleanComment = commentText.trim().toLowerCase();
 
-        // Find candidate rules
-        const rules = inMemoryInstagramAutomations.filter(r => r.companyId === companyId && r.status === 'active');
-        let matchedRule = ruleId ? rules.find(r => r.id === ruleId) : null;
+        // 1. Buscar regras no Supabase e em memória
+        let rules: any[] = [];
+        try {
+            if (supabase) {
+                const { data, error } = await supabase
+                    .from('instagram_comment_automations')
+                    .select('*')
+                    .eq('company_id', companyId)
+                    .eq('status', 'active');
+                if (!error && data && data.length > 0) {
+                    rules = data.map(mapInstagramAutomationFromDB);
+                }
+            }
+        } catch {}
+
+        const inMemRules = inMemoryInstagramAutomations.filter(r => r.companyId === companyId && r.status === 'active');
+        for (const item of inMemRules) {
+            if (!rules.some(r => r.id === item.id)) {
+                rules.push(item);
+            }
+        }
+
+        // Se a empresa ainda não tiver regras ativas específicas, utilizar os modelos de exemplo como fallback imediato
+        if (rules.length === 0) {
+            rules = inMemoryInstagramAutomations.filter(r => r.status === 'active').map(r => ({ ...r, companyId }));
+        }
+
+        let matchedRule = ruleId && ruleId !== 'auto' ? rules.find(r => r.id === ruleId) : null;
 
         if (!matchedRule) {
             // Find first matching rule by keywords
             for (const rule of rules) {
                 // Check exclusions
-                const hasExcluded = (rule.excludedKeywords || []).some((ex: string) => cleanComment.includes(ex.toLowerCase()));
+                const hasExcluded = (rule.excludedKeywords || []).some((ex: string) => checkKeywordMatch(cleanComment, ex));
                 if (hasExcluded) continue;
 
                 if (rule.triggerType === 'all_comments') {
@@ -5789,7 +6172,8 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
                     break;
                 }
 
-                const hasKeyword = (rule.keywords || []).some((kw: string) => cleanComment.includes(kw.toLowerCase()));
+                const hasKeyword = (rule.keywords || []).some((kw: string) => checkKeywordMatch(cleanComment, kw)) ||
+                    checkKeywordMatch(cleanComment, rule.name);
                 if (hasKeyword) {
                     matchedRule = rule;
                     break;
@@ -5807,6 +6191,11 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
             });
         }
 
+        // Safe stats initialization
+        if (!matchedRule.stats) {
+            matchedRule.stats = { commentsProcessed: 0, dmsSent: 0, leadsCaptured: 0 };
+        }
+
         // Pick random public reply
         const publicReplies = matchedRule.publicReplies && matchedRule.publicReplies.length > 0
             ? matchedRule.publicReplies
@@ -5814,18 +6203,112 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
         const publicReply = publicReplies[Math.floor(Math.random() * publicReplies.length)];
 
         // Format direct message
-        const formattedDM = matchedRule.directMessage
+        let formattedDM = (matchedRule.directMessage || '')
             .replace(/\{\{username\}\}/gi, normalizedUsername)
             .replace(/\{username\}/gi, normalizedUsername)
             .replace(/\{\{nome\}\}/gi, normalizedUsername)
             .replace(/\{nome\}/gi, normalizedUsername);
 
+        // Garantir que o link do botão CTA esteja presente no corpo da mensagem quando desbloqueado
+        if (matchedRule.ctaButton?.url && !formattedDM.includes(matchedRule.ctaButton.url)) {
+            const btnLabel = matchedRule.ctaButton.text ? `\n\n👉 ${matchedRule.ctaButton.text}:\n` : '\n\n👉 Link de Acesso:\n';
+            formattedDM = `${formattedDM}${btnLabel}${matchedRule.ctaButton.url}`;
+        }
+
+        // ==========================================
+        // LÓGICA DO FOLLOW-GATE (PORTÃO DE SEGUIDOR)
+        // ==========================================
+        const isFollowGateActive = Boolean(matchedRule.followGateEnabled);
+        let followGateStage: 'ask_follow' | 'not_following' | 'verify_failed' | 'verified_unlocked' | undefined = undefined;
+        let outgoingDM = formattedDM;
+        let ctaButtonUnlocked: { text: string; url: string } | undefined = matchedRule.ctaButton;
+        let isFollowerVerified = Boolean(isFollowerSimulated);
+        let relatedPostToSend: { message: string; postUrl: string; postTitle?: string } | undefined = undefined;
+
+        if (isFollowGateActive) {
+            const replyClean = (simulatedFollowReply || '').trim().toLowerCase();
+
+            if (!replyClean) {
+                // Estágio 1: Usuário acabou de comentar. Sistema pergunta se ele já segue
+                followGateStage = 'ask_follow';
+                const template = matchedRule.followGateConfig?.askFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.askFollowMessage;
+                outgoingDM = template
+                    .replace(/\{\{username\}\}/gi, normalizedUsername)
+                    .replace(/\{username\}/gi, normalizedUsername);
+                ctaButtonUnlocked = undefined; // CTA bloqueado
+            } else if (
+                replyClean === 'não' || 
+                replyClean === 'nao' || 
+                replyClean === 'n' || 
+                replyClean.includes('não sigo') || 
+                replyClean.includes('nao sigo') || 
+                replyClean.includes('ainda não') || 
+                replyClean.includes('ainda nao')
+            ) {
+                // Estágio 2A: Usuário respondeu que NÃO segue
+                followGateStage = 'not_following';
+                const template = matchedRule.followGateConfig?.notFollowingMessage || DEFAULT_FOLLOW_GATE_CONFIG.notFollowingMessage;
+                outgoingDM = template
+                    .replace(/\{\{username\}\}/gi, normalizedUsername)
+                    .replace(/\{username\}/gi, normalizedUsername);
+                ctaButtonUnlocked = undefined;
+                isFollowerVerified = false;
+            } else {
+                // Estágio 2B: Usuário respondeu que "SIM" ou "SEGUI"
+                // O sistema checa se ele realmente segue
+                if (!isFollowerSimulated) {
+                    // Checagem falhou: o usuário afirmou que segue mas o sistema detectou que NÃO segue
+                    followGateStage = 'verify_failed';
+                    const template = matchedRule.followGateConfig?.verifyFailMessage || DEFAULT_FOLLOW_GATE_CONFIG.verifyFailMessage;
+                    outgoingDM = template
+                        .replace(/\{\{username\}\}/gi, normalizedUsername)
+                        .replace(/\{username\}/gi, normalizedUsername);
+                    ctaButtonUnlocked = undefined;
+                    isFollowerVerified = false;
+                } else {
+                    // Checagem confirmada: Usuário é seguidor verificado!
+                    followGateStage = 'verified_unlocked';
+                    const confirmTemplate = matchedRule.followGateConfig?.confirmFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.confirmFollowMessage;
+                    const confirmText = confirmTemplate
+                        .replace(/\{\{username\}\}/gi, normalizedUsername)
+                        .replace(/\{username\}/gi, normalizedUsername);
+
+                    outgoingDM = `${confirmText}\n\n${formattedDM}`;
+                    ctaButtonUnlocked = matchedRule.ctaButton;
+                    isFollowerVerified = true;
+
+                    // Post Relacionado Cross-Promotion
+                    if (matchedRule.relatedPostPromotion?.enabled && matchedRule.relatedPostPromotion?.postUrl) {
+                        relatedPostToSend = {
+                            message: matchedRule.relatedPostPromotion.message || DEFAULT_RELATED_POST_PROMOTION.message,
+                            postUrl: matchedRule.relatedPostPromotion.postUrl,
+                            postTitle: matchedRule.relatedPostPromotion.postTitle
+                        };
+                    }
+                }
+            }
+        } else {
+            // Follow-Gate desativado: envio imediato com CTA liberado
+            outgoingDM = formattedDM;
+            ctaButtonUnlocked = matchedRule.ctaButton;
+
+            if (matchedRule.relatedPostPromotion?.enabled && matchedRule.relatedPostPromotion?.postUrl) {
+                relatedPostToSend = {
+                    message: matchedRule.relatedPostPromotion.message || DEFAULT_RELATED_POST_PROMOTION.message,
+                    postUrl: matchedRule.relatedPostPromotion.postUrl,
+                    postTitle: matchedRule.relatedPostPromotion.postTitle
+                };
+            }
+        }
+
         // Update stats
         matchedRule.stats.commentsProcessed = (matchedRule.stats.commentsProcessed || 0) + 1;
-        matchedRule.stats.dmsSent = (matchedRule.stats.dmsSent || 0) + 1;
+        if (!isFollowGateActive || followGateStage === 'verified_unlocked') {
+            matchedRule.stats.dmsSent = (matchedRule.stats.dmsSent || 0) + 1;
+        }
 
         let createdLead: any = null;
-        if (matchedRule.createLeadInCrm) {
+        if (matchedRule.createLeadInCrm && (!isFollowGateActive || followGateStage === 'verified_unlocked')) {
             matchedRule.stats.leadsCaptured = (matchedRule.stats.leadsCaptured || 0) + 1;
 
             const leadName = normalizedUsername.replace('@', '');
@@ -5841,13 +6324,14 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
                 utmCampaign: matchedRule.name,
                 utmContent: commentText,
                 stage: 'Novo Lead',
-                notes: `Comentou "${commentText}" no post do Instagram. Regra disparada: ${matchedRule.name}. Resposta e Direct entregues automaticamente.`,
-                score: 55,
-                qualificationLevel: 'MQL',
+                notes: `${isFollowGateActive ? '✅ Seguidor verificado via Follow-Gate! ' : ''}Comentou "${commentText}" no post do Instagram. Regra disparada: ${matchedRule.name}. Resposta e Direct entregues automaticamente.`,
+                score: isFollowGateActive ? 70 : 55,
+                qualificationLevel: isFollowGateActive ? 'SQL' : 'MQL',
                 fitGrade: 'A',
                 scoreBreakdown: [
                     { reason: 'Comentário em Post do Instagram', points: 25 },
                     { reason: 'Auto-DM ManyChat Disparado', points: 20 },
+                    ...(isFollowGateActive ? [{ reason: 'Seguidor Verificado do Instagram (Follow-Gate)', points: 15 }] : []),
                     { reason: 'Interesse Manifesto em Campanha', points: 10 }
                 ],
                 createdAt: new Date().toISOString(),
@@ -5888,13 +6372,20 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
             commentText,
             postSnippet: postTitle,
             publicReplyGiven: publicReply,
-            dmSentText: formattedDM,
+            dmSentText: outgoingDM,
             leadId: createdLead ? createdLead.id : undefined,
             status: 'delivered' as const,
             timestamp: new Date().toISOString()
         };
 
         inMemoryInstagramCommentLogs.unshift(logEntry);
+
+        // Atualizar stats em memória
+        const inMemRuleIdx = inMemoryInstagramAutomations.findIndex(r => r.id === matchedRule.id);
+        if (inMemRuleIdx !== -1) {
+            inMemoryInstagramAutomations[inMemRuleIdx].stats = matchedRule.stats;
+        }
+
         try {
             await supabase.from('instagram_comment_logs').insert([{
                 id: logEntry.id,
@@ -5910,6 +6401,15 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
                 status: logEntry.status,
                 timestamp: logEntry.timestamp
             }]);
+
+            // Persistir stats atualizadas na tabela da regra no Supabase
+            await supabase
+                .from('instagram_comment_automations')
+                .update({ 
+                    stats: matchedRule.stats,
+                    updated_at: new Date().toISOString() 
+                })
+                .eq('id', matchedRule.id);
         } catch {}
 
         res.json({
@@ -5920,8 +6420,12 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
             commentText,
             publicReplyGiven: publicReply,
             autoLiked: matchedRule.autoLikeComment,
-            dmSentText: formattedDM,
-            ctaButton: matchedRule.ctaButton,
+            dmSentText: outgoingDM,
+            ctaButton: ctaButtonUnlocked,
+            followGateTriggered: isFollowGateActive,
+            followGateStage,
+            isFollower: isFollowerVerified,
+            relatedPostSent: relatedPostToSend,
             lead: createdLead,
             log: logEntry
         });
@@ -5952,30 +6456,127 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
         const body = req.body;
         console.log('[Instagram Webhook] Evento recebido:', JSON.stringify(body).slice(0, 300));
 
-        if (body.object === 'instagram' && Array.isArray(body.entry)) {
+        if ((body.object === 'instagram' || body.object === 'page') && Array.isArray(body.entry)) {
             for (const entry of body.entry) {
+                // 1. Tratar comentários em posts (changes)
                 if (Array.isArray(entry.changes)) {
                     for (const change of entry.changes) {
-                        if (change.field === 'comments' && change.value) {
+                        if ((change.field === 'comments' || change.field === 'feed') && change.value) {
                             const val = change.value;
-                            const commentText = val.text || '';
-                            const username = val.from?.username ? `@${val.from.username}` : '@usuario_instagram';
+                            const commentText = val.text || val.message || '';
+                            const username = val.from?.username ? `@${val.from.username}` : (val.from?.name ? `@${val.from.name.replace(/\s+/g, '').toLowerCase()}` : '@usuario_instagram');
+                            const commentId = val.id || val.comment_id;
 
                             // Execute matching rule in background
                             const cleanComment = commentText.trim().toLowerCase();
-                            const matched = inMemoryInstagramAutomations.find(r => 
+
+                            // Load active rules from Supabase and inMemory
+                            let activeRules = [...inMemoryInstagramAutomations];
+                            if (supabase) {
+                                try {
+                                    const { data: dbRules } = await supabase
+                                        .from('instagram_comment_automations')
+                                        .select('*')
+                                        .eq('status', 'active');
+                                    if (dbRules && dbRules.length > 0) {
+                                        for (const dbr of dbRules) {
+                                            const mapped = mapInstagramAutomationFromDB(dbr);
+                                            const existingIdx = activeRules.findIndex(r => r.id === mapped.id);
+                                            if (existingIdx !== -1) {
+                                                activeRules[existingIdx] = mapped;
+                                            } else {
+                                                activeRules.unshift(mapped);
+                                            }
+                                        }
+                                    }
+                                } catch {}
+                            }
+
+                            const matched = activeRules.find(r => 
                                 r.status === 'active' && 
-                                (r.triggerType === 'all_comments' || (r.keywords || []).some((kw: string) => cleanComment.includes(kw.toLowerCase())))
+                                (
+                                    r.triggerType === 'all_comments' || 
+                                    (r.keywords || []).some((kw: string) => checkKeywordMatch(cleanComment, kw)) ||
+                                    checkKeywordMatch(cleanComment, r.name)
+                                )
                             );
 
                             if (matched) {
                                 matched.stats.commentsProcessed = (matched.stats.commentsProcessed || 0) + 1;
-                                matched.stats.dmsSent = (matched.stats.dmsSent || 0) + 1;
                                 const replies = matched.publicReplies || ['Enviado no direct! 🚀'];
                                 const reply = replies[Math.floor(Math.random() * replies.length)];
-                                const dm = matched.directMessage.replace(/\{\{username\}\}/gi, username);
 
-                                inMemoryInstagramCommentLogs.unshift({
+                                let outgoingDM = '';
+                                if (matched.followGateEnabled) {
+                                    // Inicia sessão de Follow-Gate
+                                    const sessionKey = `${matched.companyId}:${username.toLowerCase()}`;
+                                    const sessionData: FollowGateSession = {
+                                        companyId: matched.companyId,
+                                        ruleId: matched.id,
+                                        username,
+                                        commentId,
+                                        senderId: val.from?.id,
+                                        step: 'awaiting_follow_answer',
+                                        createdAt: Date.now()
+                                    };
+                                    instagramFollowGateSessions.set(sessionKey, sessionData);
+                                    if (val.from?.id) {
+                                        instagramFollowGateSessions.set(val.from.id, sessionData);
+                                    }
+
+                                    const template = matched.followGateConfig?.askFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.askFollowMessage;
+                                    outgoingDM = template.replace(/\{\{username\}\}/gi, username).replace(/\{username\}/gi, username);
+                                } else {
+                                    let dm = matched.directMessage.replace(/\{\{username\}\}/gi, username);
+                                    if (matched.ctaButton?.url && !dm.includes(matched.ctaButton.url)) {
+                                        const btnLabel = matched.ctaButton.text ? `\n\n👉 ${matched.ctaButton.text}:\n` : '\n\n👉 Link de Acesso:\n';
+                                        dm = `${dm}${btnLabel}${matched.ctaButton.url}`;
+                                    }
+                                    outgoingDM = dm;
+                                }
+
+                                // 3. DISPARO REAL NA META GRAPH API (SE CONFIGURADO)
+                                let compSettings = inMemoryInstagramSettings[matched.companyId];
+                                if (!compSettings?.accessToken) {
+                                    const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
+                                    if (anyActive) compSettings = anyActive;
+                                }
+                                const accessToken = compSettings?.accessToken;
+                                const autoReplyReal = compSettings?.autoReplyReal !== false;
+                                const cleanPageId = (compSettings?.pageId && !compSettings.pageId.startsWith('100000000000')) ? compSettings.pageId : undefined;
+
+                                let dmDeliveryStatus: 'delivered' | 'failed' = 'delivered';
+                                let metaErrorMessage = '';
+
+                                if (autoReplyReal && accessToken) {
+                                    if (matched.autoLikeComment && commentId) {
+                                        likeInstagramComment(commentId, accessToken).catch(e => console.warn('[Meta like error]', e.message));
+                                    }
+                                    if (commentId && reply) {
+                                        sendInstagramPublicReply(commentId, reply, accessToken).catch(e => console.warn('[Meta reply error]', e.message));
+                                    }
+                                    if (outgoingDM) {
+                                        const recipientId = val.from?.id;
+                                        const dmRes = await sendInstagramPrivateCommentReply(commentId, outgoingDM, accessToken, recipientId, cleanPageId);
+                                        if (dmRes.success) {
+                                            dmDeliveryStatus = 'delivered';
+                                            if (!matched.enableFollowGate) {
+                                                matched.stats.dmsSent = (matched.stats.dmsSent || 0) + 1;
+                                            }
+                                        } else {
+                                            dmDeliveryStatus = 'failed';
+                                            metaErrorMessage = dmRes.error || 'Falha de entrega na Meta';
+                                            console.error(`[Instagram Webhook] Direct FALHOU na Meta para @${username}:`, metaErrorMessage);
+                                        }
+                                    }
+                                } else {
+                                    // Modo simulado / local
+                                    if (!matched.enableFollowGate) {
+                                        matched.stats.dmsSent = (matched.stats.dmsSent || 0) + 1;
+                                    }
+                                }
+
+                                const newLog = {
                                     id: `log-inst-${Date.now()}`,
                                     companyId: matched.companyId,
                                     ruleId: matched.id,
@@ -5983,10 +6584,132 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                     instagramUsername: username,
                                     commentText,
                                     publicReplyGiven: reply,
-                                    dmSentText: dm,
-                                    status: 'delivered',
+                                    dmSentText: outgoingDM,
+                                    status: dmDeliveryStatus,
+                                    errorMessage: metaErrorMessage || undefined,
                                     timestamp: new Date().toISOString()
-                                });
+                                };
+                                inMemoryInstagramCommentLogs.unshift(newLog);
+
+                                if (supabase) {
+                                    try {
+                                        await supabase.from('instagram_comment_logs').insert([{
+                                            id: newLog.id,
+                                            company_id: newLog.companyId,
+                                            rule_id: newLog.ruleId,
+                                            rule_name: newLog.ruleName,
+                                            instagram_username: newLog.instagramUsername,
+                                            comment_text: newLog.commentText,
+                                            public_reply_given: newLog.publicReplyGiven,
+                                            dm_sent_text: newLog.dmSentText,
+                                            status: newLog.status,
+                                            timestamp: newLog.timestamp
+                                        }]);
+
+                                        await supabase.from('instagram_comment_automations').update({
+                                            stats: matched.stats,
+                                            updated_at: new Date().toISOString()
+                                        }).eq('id', matched.id);
+                                    } catch (e: any) {
+                                        console.error('[Instagram Webhook] Erro ao persistir no Supabase:', e.message);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Tratar mensagens diretas recebidas (messaging) - Respostas do Follow-Gate
+                if (Array.isArray(entry.messaging)) {
+                    for (const msgEvent of entry.messaging) {
+                        const senderId = msgEvent.sender?.id;
+                        const msgText = msgEvent.message?.text?.trim().toLowerCase();
+                        if (!senderId || !msgText) continue;
+
+                        // Buscar sessão ativa por senderId ou varrer sessões existentes
+                        let targetSession: any = instagramFollowGateSessions.get(senderId);
+                        if (!targetSession) {
+                            for (const [k, s] of instagramFollowGateSessions.entries()) {
+                                if (s.senderId === senderId) {
+                                    targetSession = s;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Fallback: se houver sessão recente no Map
+                        if (!targetSession && instagramFollowGateSessions.size > 0) {
+                            const latest = Array.from(instagramFollowGateSessions.values()).pop();
+                            targetSession = latest;
+                        }
+
+                        if (!targetSession) continue;
+
+                        // Buscar a regra no Supabase e em memória
+                        let rule: any = inMemoryInstagramAutomations.find(r => r.id === targetSession.ruleId);
+                        if (!rule && supabase) {
+                            try {
+                                const { data: dbRule } = await supabase
+                                    .from('instagram_comment_automations')
+                                    .select('*')
+                                    .eq('id', targetSession.ruleId)
+                                    .maybeSingle();
+                                if (dbRule) rule = mapInstagramAutomationFromDB(dbRule);
+                            } catch {}
+                        }
+
+                        if (!rule) continue;
+
+                        let compSettings = inMemoryInstagramSettings[targetSession.companyId];
+                        if (!compSettings?.accessToken) {
+                            const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
+                            if (anyActive) compSettings = anyActive;
+                        }
+                        const accessToken = compSettings?.accessToken;
+
+                        if (msgText === 'não' || msgText === 'nao' || msgText === 'n' || msgText.includes('não sigo') || msgText.includes('nao sigo') || msgText.includes('ainda nao') || msgText.includes('ainda não')) {
+                            targetSession.step = 'awaiting_follow_action';
+                            const template = rule.followGateConfig?.notFollowingMessage || DEFAULT_FOLLOW_GATE_CONFIG.notFollowingMessage;
+                            const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
+                            await sendInstagramDirectMessage(senderId, msgToSend, accessToken);
+                        } else if (msgText === 'sim' || msgText === 'segui' || msgText.includes('sigo') || msgText.includes('já sigo') || msgText.includes('ja sigo') || msgText === 's') {
+                            // Verificar se realmente segue via Graph API
+                            let isFollowing = true;
+                            if (accessToken) {
+                                isFollowing = await checkInstagramFollowStatus(senderId, accessToken);
+                            }
+                            if (!isFollowing && rule.followGateConfig?.strictMetaCheck !== false && accessToken) {
+                                const template = rule.followGateConfig?.verifyFailMessage || DEFAULT_FOLLOW_GATE_CONFIG.verifyFailMessage;
+                                const msgToSend = template.replace(/\{\{username\}\}/gi, targetSession.username);
+                                await sendInstagramDirectMessage(senderId, msgToSend, accessToken);
+                            } else {
+                                // Seguidor confirmado: envia DM final com link de acesso e post relacionado
+                                const confirmTemplate = rule.followGateConfig?.confirmFollowMessage || DEFAULT_FOLLOW_GATE_CONFIG.confirmFollowMessage;
+                                let dm = rule.directMessage.replace(/\{\{username\}\}/gi, targetSession.username);
+                                if (rule.ctaButton?.url && !dm.includes(rule.ctaButton.url)) {
+                                    const btnLabel = rule.ctaButton.text ? `\n\n👉 ${rule.ctaButton.text}:\n` : '\n\n👉 Link de Acesso:\n';
+                                    dm = `${dm}${btnLabel}${rule.ctaButton.url}`;
+                                }
+                                const fullMsg = `${confirmTemplate.replace(/\{\{username\}\}/gi, targetSession.username)}\n\n${dm}`;
+                                await sendInstagramDirectMessage(senderId, fullMsg, accessToken);
+
+                                // Envio de post relacionado complementar
+                                if (rule.relatedPostPromotion?.enabled && rule.relatedPostPromotion?.postUrl) {
+                                    const relMsg = `${rule.relatedPostPromotion.message || DEFAULT_RELATED_POST_PROMOTION.message}\n👉 ${rule.relatedPostPromotion.postUrl}`;
+                                    await sendInstagramDirectMessage(senderId, relMsg, accessToken);
+                                }
+
+                                rule.stats.dmsSent = (rule.stats.dmsSent || 0) + 1;
+                                instagramFollowGateSessions.delete(senderId);
+
+                                if (supabase) {
+                                    Promise.resolve(
+                                        supabase
+                                            .from('instagram_comment_automations')
+                                            .update({ stats: rule.stats, updated_at: new Date().toISOString() })
+                                            .eq('id', rule.id)
+                                    ).catch(() => {});
+                                }
                             }
                         }
                     }
@@ -5998,6 +6721,212 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
     } catch (err: any) {
         console.error('[Instagram Webhook] Erro:', err.message);
         res.status(200).json({ status: 'ERROR_HANDLED' });
+    }
+});
+
+// INSTAGRAM ACCOUNT / GRAPH API SETTINGS
+const INSTAGRAM_SETTINGS_FILE = path.join(process.cwd(), 'instagram_settings.json');
+let inMemoryInstagramSettings: Record<string, any> = {};
+
+// Load saved settings from disk on startup
+try {
+    if (fs.existsSync(INSTAGRAM_SETTINGS_FILE)) {
+        inMemoryInstagramSettings = JSON.parse(fs.readFileSync(INSTAGRAM_SETTINGS_FILE, 'utf-8'));
+    }
+} catch (e: any) {
+    console.error('[Instagram Settings] Erro ao carregar arquivo local:', e.message);
+}
+
+app.get('/api/instagram/settings', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        let foundConfig = inMemoryInstagramSettings[companyId];
+
+        try {
+            if (supabase) {
+                const { data } = await supabase
+                    .from('settings')
+                    .select('instagram_config, global_meta_token')
+                    .eq('company_id', companyId)
+                    .maybeSingle();
+
+                if (data?.instagram_config) {
+                    foundConfig = {
+                        ...(foundConfig || {}),
+                        ...data.instagram_config
+                    };
+                } else if (data?.global_meta_token && !foundConfig?.accessToken) {
+                    foundConfig = {
+                        ...(foundConfig || {}),
+                        accessToken: data.global_meta_token,
+                        status: 'connected'
+                    };
+                }
+            }
+        } catch {}
+
+        const s = foundConfig || {
+            accessToken: '',
+            instagramAccountId: '',
+            pageId: '',
+            verifyToken: process.env.INSTAGRAM_VERIFY_TOKEN || 'mdtracker_instagram_token',
+            autoReplyReal: false,
+            connectedAccountName: '',
+            status: 'disconnected'
+        };
+        res.json(s);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/instagram/settings', async (req: Request, res: Response) => {
+    try {
+        const { companyId, settings } = req.body;
+        const targetComp = companyId || 'comp-alfa';
+
+        inMemoryInstagramSettings[targetComp] = {
+            ...(inMemoryInstagramSettings[targetComp] || {}),
+            ...settings
+        };
+
+        // Salvar em arquivo local para persistência garantida
+        try {
+            fs.writeFileSync(INSTAGRAM_SETTINGS_FILE, JSON.stringify(inMemoryInstagramSettings, null, 2), 'utf-8');
+        } catch (fileErr: any) {
+            console.error('[Instagram Settings] Erro ao salvar arquivo local:', fileErr.message);
+        }
+
+        // Tentar salvar no Supabase (se coluna instagram_config existir)
+        try {
+            if (supabase) {
+                const { error } = await supabase.from('settings').update({
+                    instagram_config: inMemoryInstagramSettings[targetComp],
+                    global_meta_token: settings.accessToken || undefined,
+                    updated_at: new Date().toISOString()
+                }).eq('company_id', targetComp);
+
+                if (error) {
+                    console.warn('[Instagram Settings] Aviso Supabase (pode requerer ALTER TABLE settings ADD COLUMN instagram_config JSONB):', error.message);
+                    // Tentar salvar ao menos o global_meta_token se instagram_config ainda não existir na tabela
+                    if (settings.accessToken) {
+                        await supabase.from('settings').update({
+                            global_meta_token: settings.accessToken,
+                            updated_at: new Date().toISOString()
+                        }).eq('company_id', targetComp);
+                    }
+                }
+            }
+        } catch (dbErr: any) {
+            console.warn('[Instagram Settings] Erro ao sincronizar com Supabase:', dbErr.message);
+        }
+
+        res.json(inMemoryInstagramSettings[targetComp]);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/instagram/test-token', async (req: Request, res: Response) => {
+    try {
+        const { accessToken, instagramAccountId } = req.body;
+        if (!accessToken || !accessToken.trim()) {
+            return res.status(400).json({ success: false, message: 'Access Token da Meta é obrigatório' });
+        }
+
+        const token = accessToken.trim();
+
+        // 1. Inspecionar o Token com debug_token oficial da Meta
+        let tokenDebugData: any = null;
+        try {
+            const debugUrl = `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}`;
+            const debugRes = await fetch(debugUrl);
+            const debugJson = await debugRes.json();
+            if (debugJson.data) {
+                tokenDebugData = debugJson.data;
+            }
+        } catch (e: any) {
+            console.warn('[test-token] Erro ao consultar debug_token:', e.message);
+        }
+
+        // 2. Se debug_token identificou o aplicativo ou permissões (scopes)
+        if (tokenDebugData) {
+            const appName = tokenDebugData.application || '';
+            const scopes: string[] = tokenDebugData.scopes || [];
+
+            // Se for Token do Gerenciador de Eventos / Pixel (CAPI)
+            const isCapi = appName.toLowerCase().includes('conversions api') || 
+                           (scopes.length > 0 && !scopes.some(s => s.includes('manage_messages') || s.includes('messaging') || s.includes('manage_comments')));
+
+            if (isCapi) {
+                return res.status(400).json({
+                    success: false,
+                    isCapiToken: true,
+                    application: appName,
+                    scopes,
+                    message: `⚠️ Este Token pertence ao Pixel / Conversions API ("${appName}"), permissões: [${scopes.join(', ')}]. Ele NÃO possui permissões para enviar Directs nem gerenciar comentários no Instagram! Para enviar mensagens no Instagram, você DEVE gerar um Token no Meta for Developers com 'instagram_manage_messages' e 'instagram_manage_comments'.`
+                });
+            }
+        }
+
+        // 3. Tentar descobrir Páginas e Contas Comerciais do Instagram vinculadas
+        let discoveredPageId = '';
+        let discoveredInstagramId = '';
+        let discoveredName = '';
+
+        try {
+            const accountsUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${encodeURIComponent(token)}`;
+            const accRes = await fetch(accountsUrl);
+            const accJson = await accRes.json();
+            if (accJson.data && Array.isArray(accJson.data) && accJson.data.length > 0) {
+                const firstPage = accJson.data[0];
+                discoveredPageId = firstPage.id;
+                discoveredName = firstPage.name;
+                if (firstPage.instagram_business_account) {
+                    discoveredInstagramId = firstPage.instagram_business_account.id;
+                    discoveredName = `@${firstPage.instagram_business_account.username} (${firstPage.name})`;
+                }
+            }
+        } catch {}
+
+        // Fallback: se não encontrou em /me/accounts, tentar endpoint direto
+        if (!discoveredName) {
+            const target = instagramAccountId ? instagramAccountId.trim() : 'me';
+            const graphUrl = `https://graph.facebook.com/v19.0/${target}?fields=id,name,username,instagram_business_account{id,username}&access_token=${encodeURIComponent(token)}`;
+            try {
+                const metaRes = await fetch(graphUrl);
+                const metaData = await metaRes.json();
+
+                if (metaData.error) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: metaData.error.message || 'Token inválido ou sem permissões da Meta' 
+                    });
+                }
+
+                discoveredName = metaData.username || metaData.name || 'Conta Meta Conectada';
+                if (metaData.instagram_business_account) {
+                    discoveredInstagramId = metaData.instagram_business_account.id;
+                    discoveredName = `@${metaData.instagram_business_account.username}`;
+                }
+            } catch (fetchErr: any) {
+                return res.status(500).json({
+                    success: false,
+                    message: `Falha na requisição à Meta: ${fetchErr.message}`
+                });
+            }
+        }
+
+        return res.json({
+            success: true,
+            accountName: discoveredName || 'Conta Meta Conectada',
+            id: tokenDebugData?.user_id || 'OK',
+            pageId: discoveredPageId || undefined,
+            instagramAccountId: discoveredInstagramId || undefined,
+            scopes: tokenDebugData?.scopes || []
+        });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

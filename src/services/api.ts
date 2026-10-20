@@ -887,6 +887,8 @@ export async function simulateInstagramComment(payload: {
   instagramUsername: string;
   commentText: string;
   postTitle?: string;
+  isFollowerSimulated?: boolean;
+  simulatedFollowReply?: string;
 }): Promise<InstagramSimulateResult> {
   const res = await fetch('/api/instagram/automations/simulate', {
     method: 'POST',
@@ -899,3 +901,57 @@ export async function simulateInstagramComment(payload: {
   }
   return res.json();
 }
+
+export async function fetchInstagramSettings(companyId?: string): Promise<{
+  accessToken?: string;
+  instagramAccountId?: string;
+  pageId?: string;
+  verifyToken?: string;
+  autoReplyReal?: boolean;
+  connectedAccountName?: string;
+  status?: string;
+}> {
+  const params = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/instagram/settings${params}`);
+  if (!res.ok) return {};
+  return res.json();
+}
+
+export async function updateInstagramSettings(companyId: string, settings: any): Promise<any> {
+  const res = await fetch('/api/instagram/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId, settings })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao salvar configurações do Instagram');
+  }
+  return res.json();
+}
+
+export async function testInstagramToken(
+  accessToken: string, 
+  instagramAccountId?: string
+): Promise<{ 
+  success: boolean; 
+  accountName?: string; 
+  id?: string; 
+  pageId?: string; 
+  instagramAccountId?: string; 
+  scopes?: string[]; 
+  isCapiToken?: boolean;
+  message?: string;
+}> {
+  const res = await fetch('/api/instagram/test-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken, instagramAccountId })
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Falha ao validar token da Meta');
+  }
+  return data;
+}
+

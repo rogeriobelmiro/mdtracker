@@ -631,6 +631,10 @@ export default function App() {
                 currentCompany={currentCompany}
                 currentUser={currentUser}
                 onNavigateToTab={(tab) => setActiveTab(tab as any)}
+                onFilterLeadsByRule={(ruleOrQuery) => {
+                  setLeadSearchQuery(ruleOrQuery);
+                  setActiveTab('leads');
+                }}
               />
             )}
 
