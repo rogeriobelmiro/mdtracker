@@ -37,7 +37,8 @@ import {
   Link2,
   Flame,
   MousePointer,
-  Tag
+  Tag,
+  Send
 } from 'lucide-react';
 import {
   ChatbotFlow,
@@ -46,14 +47,25 @@ import {
   Company,
   IntegrationSettings,
   FlowTriggerType,
-  FlowProactiveTimingMode
+  FlowProactiveTimingMode,
+  ChatbotProject,
+  Lead,
+  FunnelStage,
+  ConversionEventLog
 } from '../types';
 
 interface ChatbotVisualFlowBuilderProps {
   currentCompany: Company;
   settings: IntegrationSettings;
+  projects?: ChatbotProject[];
+  activeProjectId?: string;
+  initialFlowId?: string;
+  leads?: Lead[];
+  onUpdateLead?: (id: string, data: Partial<Lead>) => Promise<void>;
+  onCreateLead?: (data: Partial<Lead>) => Promise<Lead>;
   onSaveFlows: (flows: ChatbotFlow[], activeFlowId?: string) => Promise<void>;
   onBackToModeSelect?: () => void;
+  onBackToProjects?: () => void;
 }
 
 // 1. Fluxo padrão 1: Idêntico ao print do usuário
@@ -292,24 +304,127 @@ export const DEFAULT_FLOW_FOLLOWUP: ChatbotFlow = {
   ]
 };
 
+// 3. Fluxo padrão 3: Upsell Pós-Venda (5 Dias Após Fechamento de Venda)
+export const DEFAULT_FLOW_UPSELL_5_DAYS: ChatbotFlow = {
+  id: 'flow-upsell-pos-venda-5d',
+  name: 'Upsell Pós-Venda (5 Dias Após Venda)',
+  subtitle: 'Inicia 5 dias após fechamento de venda no projeto principal para ofertar produto complementar',
+  active: true,
+  projectId: 'proj-upsell',
+  updatedAt: new Date().toISOString(),
+  connections: [],
+  nodes: [
+    {
+      id: 'node-start',
+      type: 'start',
+      title: 'Começo do fluxo',
+      badge: 'Upsell 5 Dias',
+      content: 'Chamar sozinho o cliente 5 dias após a venda:\n\n"Olá {{nome}}! Tudo bem por aí? Espero que esteja gostando do nosso produto. Como você é nosso cliente, liberamos uma condição especial exclusiva de upgrade..."',
+      x: 60,
+      y: 200,
+      targetNodeId: 'node-decision-upsell',
+      config: {
+        triggerConfig: {
+          type: 'proactive_time',
+          previousProjectId: 'proj-sales',
+          previousProjectName: 'Vendas & Atendimento Principal',
+          previousFlowId: 'flow-diagnostico-google-wpp',
+          previousFlowName: 'Diagnóstico + Google → WhatsApp',
+          timingMode: 'delay',
+          delayAmount: 5,
+          delayUnit: 'days',
+          proactiveCondition: 'after_last_message'
+        }
+      }
+    },
+    {
+      id: 'node-decision-upsell',
+      type: 'condition',
+      title: 'Se o lead responder',
+      content: 'Separa o interesse na oferta de upsell',
+      x: 420,
+      y: 160,
+      options: [
+        { id: 'u-opt-1', label: 'Quero aproveitar a oferta especial!', color: '#10b981', targetNodeId: 'node-crm-upsell-won' },
+        { id: 'u-opt-2', label: 'Como funciona o upgrade?', color: '#3b82f6', targetNodeId: 'node-msg-upsell-info' },
+        { id: 'u-opt-3', label: 'Agora não, obrigado', color: '#94a3b8', targetNodeId: 'node-crm-upsell-later' }
+      ]
+    },
+    {
+      id: 'node-crm-upsell-won',
+      type: 'crm_action',
+      title: 'Ação no CRM',
+      content: 'Mover para Em Negociação (Upsell VIP)',
+      x: 780,
+      y: 60,
+      config: { crmActionType: 'move_stage', crmActionValue: 'Em Negociação' }
+    },
+    {
+      id: 'node-msg-upsell-info',
+      type: 'message',
+      title: 'Mensagem',
+      badge: 'Oferta Especial',
+      content: 'Esse upgrade inclui mentoria dedicada e acesso a recursos premium com 35% de desconto de fidelidade!',
+      x: 780,
+      y: 200,
+      config: {
+        linkUrl: 'https://mudadigital.com.br/upsell-vip',
+        linkText: 'Ver Detalhes do Upgrade VIP 🎁'
+      }
+    },
+    {
+      id: 'node-crm-upsell-later',
+      type: 'crm_action',
+      title: 'Ação no CRM',
+      content: 'Registrar no histórico do lead: Não teve interesse em upsell imediato',
+      x: 780,
+      y: 350,
+      config: { crmActionType: 'notify_team' }
+    }
+  ]
+};
+
 export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> = ({
   currentCompany,
   settings,
+  projects,
+  activeProjectId,
+  initialFlowId,
+  leads,
+  onUpdateLead,
+  onCreateLead,
   onSaveFlows,
-  onBackToModeSelect
+  onBackToModeSelect,
+  onBackToProjects
 }) => {
-  // Lista de Fluxos
+  // Projeto Ativo
+  const activeProject = useMemo(() => {
+    if (!projects || projects.length === 0) return undefined;
+    return projects.find(p => p.id === activeProjectId) || projects[0];
+  }, [projects, activeProjectId]);
+
+  // Lista de Fluxos (prioriza os fluxos do projeto ativo se fornecido)
   const initialFlows = useMemo(() => {
+    if (activeProject && activeProject.flows && activeProject.flows.length > 0) {
+      return activeProject.flows;
+    }
     if (settings.chatbotConfig?.flows && settings.chatbotConfig.flows.length > 0) {
       return settings.chatbotConfig.flows;
     }
-    return [DEFAULT_FLOW_DIAGNOSTICO, DEFAULT_FLOW_FOLLOWUP];
-  }, [settings.chatbotConfig?.flows]);
+    return [DEFAULT_FLOW_DIAGNOSTICO, DEFAULT_FLOW_FOLLOWUP, DEFAULT_FLOW_UPSELL_5_DAYS];
+  }, [activeProject, settings.chatbotConfig?.flows]);
 
   const [flows, setFlows] = useState<ChatbotFlow[]>(initialFlows);
   const [activeFlowId, setActiveFlowId] = useState<string>(
-    settings.chatbotConfig?.activeFlowId || initialFlows[0]?.id || DEFAULT_FLOW_DIAGNOSTICO.id
+    initialFlowId || settings.chatbotConfig?.activeFlowId || initialFlows[0]?.id || DEFAULT_FLOW_DIAGNOSTICO.id
   );
+
+  // Sincroniza se mudar initialFlowId externamente
+  useEffect(() => {
+    if (initialFlowId && flows.some(f => f.id === initialFlowId)) {
+      setActiveFlowId(initialFlowId);
+    }
+  }, [initialFlowId, flows]);
 
   const currentFlow = flows.find(f => f.id === activeFlowId) || flows[0] || DEFAULT_FLOW_DIAGNOSTICO;
 
@@ -331,7 +446,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const [isFlowSelectorOpen, setIsFlowSelectorOpen] = useState(false);
   const [isNewFlowModalOpen, setIsNewFlowModalOpen] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
-  const [newFlowTemplate, setNewFlowTemplate] = useState<'diagnostico' | 'followup' | 'blank'>('diagnostico');
+  const [newFlowTemplate, setNewFlowTemplate] = useState<'diagnostico' | 'followup' | 'upsell' | 'blank'>('diagnostico');
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
@@ -343,7 +458,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
   const [history, setHistory] = useState<ChatbotFlowNode[][]>([currentFlow.nodes]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Simulador de Teste
+  // Simulador de Teste & Sincronização em Tempo Real com o CRM
   const [simStepNodeId, setSimStepNodeId] = useState<string>('node-start');
   const [simHistory, setSimHistory] = useState<Array<{
     sender: 'bot' | 'user' | 'system';
@@ -352,6 +467,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     linkText?: string;
     nodeId: string;
   }>>([]);
+  const [simInput, setSimInput] = useState('');
+  const [simCurrentLead, setSimCurrentLead] = useState<Lead | null>(null);
+  const [simCrmStatusMessage, setSimCrmStatusMessage] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -433,6 +551,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       nodes = JSON.parse(JSON.stringify(DEFAULT_FLOW_DIAGNOSTICO.nodes));
     } else if (newFlowTemplate === 'followup') {
       nodes = JSON.parse(JSON.stringify(DEFAULT_FLOW_FOLLOWUP.nodes));
+    } else if (newFlowTemplate === 'upsell') {
+      nodes = JSON.parse(JSON.stringify(DEFAULT_FLOW_UPSELL_5_DAYS.nodes));
     } else {
       nodes = [
         {
@@ -786,8 +906,137 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     setZoom(0.85);
   };
 
+  // Sincronização em Tempo Real com o CRM: Criação de Card e Registro de cada Etapa no Histórico
+  const recordCrmStep = async (
+    flow: ChatbotFlow,
+    node: ChatbotFlowNode,
+    lead: Lead | null,
+    optionChosen?: string
+  ): Promise<Lead | null> => {
+    const now = new Date();
+    const timeFormatted = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR')}`;
+    const cleanContent = node.content?.replace(/\n+/g, ' ').slice(0, 100) || '';
+    
+    // Texto descritivo para alimentar o campo de histórico (lead.notes)
+    const stepHistoryLine = `[${timeFormatted}] 🤖 [Fluxo: ${flow.name}] ➔ Etapa: "${node.title}"${optionChosen ? ` (Opção escolhida: "${optionChosen}")` : ''}${cleanContent ? ` | ${cleanContent}` : ''}`;
+
+    const eventLog: ConversionEventLog = {
+      id: `evt-step-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      type: 'chatbot_flow',
+      eventName: `Etapa: ${node.title}`,
+      status: 'sucesso',
+      timestamp: now.toISOString(),
+      details: `Fluxo: ${flow.name} | ${stepHistoryLine}`
+    };
+
+    // 1. Se o lead ainda não existe no CRM, cria o Card imediatamente
+    if (!lead) {
+      let initialStage: FunnelStage = 'Novo Lead';
+      if (node.type === 'crm_action' && node.config?.crmActionType === 'move_stage' && node.config?.crmActionValue) {
+        initialStage = node.config.crmActionValue as FunnelStage;
+      }
+
+      const randomPhone = `55119${Math.floor(10000000 + Math.random() * 90000000)}`;
+      const newLeadPayload: Partial<Lead> = {
+        name: `Lead WhatsApp (${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})`,
+        phone: randomPhone,
+        stage: initialStage,
+        source: `Chatbot: ${flow.name}`,
+        score: 45,
+        qualificationLevel: 'Lead',
+        notes: `=== HISTÓRICO DO CHATBOT ===\n${stepHistoryLine}`,
+        conversionEvents: [eventLog]
+      };
+
+      if (onCreateLead) {
+        try {
+          const created = await onCreateLead(newLeadPayload);
+          setSimCurrentLead(created);
+          setSimCrmStatusMessage(`📇 Card criado no CRM: "${created.name}" (${created.stage})`);
+          return created;
+        } catch (err) {
+          console.warn('Erro ao chamar onCreateLead:', err);
+        }
+      }
+
+      // Mock local fallback
+      const mockLead: Lead = {
+        id: `lead-sim-${Date.now()}`,
+        name: newLeadPayload.name || 'Lead WhatsApp',
+        phone: newLeadPayload.phone || randomPhone,
+        stage: initialStage,
+        source: newLeadPayload.source || 'Chatbot',
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        notes: newLeadPayload.notes,
+        conversionEvents: [eventLog],
+        location: { city: 'São Paulo', state: 'SP', country: 'BR', ip: '127.0.0.1' },
+        utmSource: 'chatbot',
+        utmMedium: 'fluxo_visual',
+        utmCampaign: flow.name,
+        linkId: flow.id,
+        linkTitle: flow.name,
+        device: 'Smartphone',
+        browser: 'WhatsApp'
+      };
+      setSimCurrentLead(mockLead);
+      setSimCrmStatusMessage(`📇 Card criado no CRM: "${mockLead.name}" (${mockLead.stage})`);
+      return mockLead;
+    }
+
+    // 2. Se o lead já existe, executa as Ações no CRM e alimenta o Histórico
+    let updatedStage = lead.stage;
+    let actionNotice = '';
+
+    if (node.type === 'crm_action' || node.config?.crmActionType) {
+      const actType = node.config?.crmActionType;
+      if (actType === 'move_stage' && node.config?.crmActionValue) {
+        updatedStage = node.config.crmActionValue as FunnelStage;
+        actionNotice = `Mover funil para "${updatedStage}"`;
+      } else if (actType === 'notify_team') {
+        actionNotice = 'Notificar equipe de atendimento';
+      } else if (actType === 'create_task') {
+        actionNotice = 'Criar tarefa no CRM';
+      }
+    }
+
+    const existingNotes = lead.notes || '';
+    const newNotes = existingNotes ? `${existingNotes}\n${stepHistoryLine}` : stepHistoryLine;
+    const newEvents = [eventLog, ...(lead.conversionEvents || [])];
+
+    const updatedLead: Lead = {
+      ...lead,
+      stage: updatedStage,
+      notes: newNotes,
+      conversionEvents: newEvents,
+      updatedAt: now.toISOString()
+    };
+
+    setSimCurrentLead(updatedLead);
+    setSimCrmStatusMessage(
+      actionNotice
+        ? `⚡ Ação CRM: ${actionNotice} | Histórico atualizado!`
+        : `✅ Etapa "${node.title}" salva no histórico do Card do CRM!`
+    );
+
+    if (onUpdateLead) {
+      try {
+        await onUpdateLead(lead.id, {
+          stage: updatedStage,
+          notes: newNotes,
+          conversionEvents: newEvents,
+          updatedAt: now.toISOString()
+        });
+      } catch (err) {
+        console.warn('Erro ao chamar onUpdateLead:', err);
+      }
+    }
+
+    return updatedLead;
+  };
+
   // Iniciar Simulador
-  const handleStartSimulation = () => {
+  const handleStartSimulation = async () => {
     const start = currentFlow.nodes.find(n => n.type === 'start') || currentFlow.nodes[0];
     if (start) {
       setSimStepNodeId(start.id);
@@ -799,17 +1048,23 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         }
       ]);
 
+      // Cria o Card no CRM e grava a primeira etapa no Histórico!
+      const initialLead = await recordCrmStep(currentFlow, start, null);
+
       if (start.targetNodeId) {
         const next = currentFlow.nodes.find(n => n.id === start.targetNodeId);
-        if (next && next.type === 'condition') {
-          setSimStepNodeId(next.id);
+        if (next) {
+          if (next.type === 'condition') {
+            setSimStepNodeId(next.id);
+          }
+          await recordCrmStep(currentFlow, next, initialLead);
         }
       }
     }
     setIsTestSimulatorOpen(true);
   };
 
-  const handleSimOptionSelect = (opt: ChatbotFlowNodeOption) => {
+  const handleSimOptionSelect = async (opt: ChatbotFlowNodeOption) => {
     setSimHistory(prev => [
       ...prev,
       { sender: 'user', text: opt.label, nodeId: simStepNodeId }
@@ -818,6 +1073,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     if (opt.targetNodeId) {
       const target = currentFlow.nodes.find(n => n.id === opt.targetNodeId);
       if (target) {
+        // Alimenta o histórico do lead no CRM com a escolha da opção e o nó de destino!
+        const updatedLead = await recordCrmStep(currentFlow, target, simCurrentLead, opt.label);
+
         setTimeout(() => {
           setSimHistory(prev => [
             ...prev,
@@ -834,7 +1092,8 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
           if (target.targetNodeId) {
             const nextTarget = currentFlow.nodes.find(n => n.id === target.targetNodeId);
             if (nextTarget) {
-              setTimeout(() => {
+              setTimeout(async () => {
+                await recordCrmStep(currentFlow, nextTarget, updatedLead);
                 setSimHistory(prev => [
                   ...prev,
                   {
@@ -850,6 +1109,41 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             }
           }
         }, 400);
+      }
+    }
+  };
+
+  const handleSimSend = async () => {
+    if (!simInput.trim()) return;
+    const text = simInput.trim();
+    setSimHistory(prev => [
+      ...prev,
+      { sender: 'user', text, nodeId: simStepNodeId }
+    ]);
+    setSimInput('');
+
+    const activeNode = currentFlow.nodes.find(n => n.id === simStepNodeId);
+    if (activeNode) {
+      if (activeNode.targetNodeId) {
+        const next = currentFlow.nodes.find(n => n.id === activeNode.targetNodeId);
+        if (next) {
+          setTimeout(async () => {
+            await recordCrmStep(currentFlow, next, simCurrentLead, text);
+            setSimHistory(prev => [
+              ...prev,
+              {
+                sender: next.type === 'crm_action' ? 'system' : 'bot',
+                text: next.type === 'crm_action' ? `⚡ ${next.title}: ${next.content}` : (next.content || ''),
+                linkUrl: next.config?.linkUrl,
+                linkText: next.config?.linkText,
+                nodeId: next.id
+              }
+            ]);
+            setSimStepNodeId(next.id);
+          }, 500);
+        }
+      } else {
+        await recordCrmStep(currentFlow, activeNode, simCurrentLead, text);
       }
     }
   };
@@ -917,15 +1211,31 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       <div className="h-14 bg-[#0d131f] border-b border-slate-800 px-4 flex items-center justify-between z-20 shrink-0">
         
         {/* Esquerda: Seletor de Fluxos & Título */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onBackToProjects && (
+            <button
+              onClick={onBackToProjects}
+              className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 transition shadow-xs"
+              title="Voltar para a Lista de Projetos e Fluxos"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Projetos</span>
+              {activeProject && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 max-w-[130px] truncate hidden sm:inline">
+                  {activeProject.name}
+                </span>
+              )}
+            </button>
+          )}
+
           {onBackToModeSelect && (
             <button
               onClick={onBackToModeSelect}
-              className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition"
-              title="Voltar"
+              className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition"
+              title="Voltar para a Configuração 1 (Atendente com IA)"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Abordagens</span>
+              <Bot className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden md:inline">Atendente IA</span>
             </button>
           )}
 
@@ -1333,11 +1643,13 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   if (isProactive) {
                     const unitLabel = trigger?.delayUnit === 'minutes' ? 'min' : trigger?.delayUnit === 'hours' ? 'horas' : 'dias';
                     const prevName = trigger?.previousFlowName;
+                    const prevProject = trigger?.previousProjectName;
                     if (prevName) {
+                      const originLabel = prevProject ? `[${prevProject}] ${prevName}` : `"${prevName}"`;
                       if (trigger?.timingMode === 'immediate') {
-                        triggerBadge = `⚡ Imediato após "${prevName}"`;
+                        triggerBadge = `⚡ Imediato após ${originLabel}`;
                       } else {
-                        triggerBadge = `⏰ ${trigger?.delayAmount || 2} ${unitLabel} após "${prevName}"`;
+                        triggerBadge = `⏰ ${trigger?.delayAmount || 2} ${unitLabel} após ${originLabel}`;
                       }
                     } else {
                       triggerBadge = `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${unitLabel}`;
@@ -1703,7 +2015,49 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 {selectedNode.config?.triggerConfig?.type === 'proactive_time' && (
                   <div className="space-y-3 pt-2 border-t border-slate-800">
                     
-                    {/* 1. SELEÇÃO DO FLUXO ANTERIOR */}
+                    {/* 1. SELEÇÃO DO PROJETO ANTERIOR DE ORIGEM */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                        <span>Projeto de Origem:</span>
+                        <span className="text-[9px] text-cyan-400 font-semibold lowercase">cross-projeto</span>
+                      </label>
+                      <select
+                        value={selectedNode.config?.triggerConfig?.previousProjectId || ''}
+                        onChange={e => {
+                          const projId = e.target.value;
+                          const targetProj = (projects || []).find(p => p.id === projId);
+                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                            ...n,
+                            config: {
+                              ...n.config,
+                              triggerConfig: {
+                                ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                previousProjectId: projId || undefined,
+                                previousProjectName: targetProj ? targetProj.name : undefined,
+                                previousFlowId: undefined,
+                                previousFlowName: undefined
+                              }
+                            }
+                          } : n));
+                        }}
+                        className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      >
+                        <option value="">Mesmo Projeto (ou Sem vínculo de projeto)</option>
+                        {(projects || []).map(p => (
+                          <option key={p.id} value={p.id}>
+                            📁 {p.name} ({p.flows?.length || 0} fluxos)
+                          </option>
+                        ))}
+                      </select>
+                      {selectedNode.config?.triggerConfig?.previousProjectName && (
+                        <p className="text-[10px] text-cyan-400 mt-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span>
+                          <span>Projeto de Origem: <strong>{selectedNode.config.triggerConfig.previousProjectName}</strong></span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 2. SELEÇÃO DO FLUXO ANTERIOR DO PROJETO */}
                     <div>
                       <label className="text-[10px] font-bold text-slate-300 uppercase flex items-center justify-between">
                         <span>Fluxo Anterior de Origem:</span>
@@ -1713,7 +2067,12 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         value={selectedNode.config?.triggerConfig?.previousFlowId || ''}
                         onChange={e => {
                           const flowId = e.target.value;
-                          const targetFlow = flows.find(f => f.id === flowId);
+                          const selectedProjId = selectedNode.config?.triggerConfig?.previousProjectId;
+                          const candidateFlows = selectedProjId
+                            ? ((projects || []).find(p => p.id === selectedProjId)?.flows || [])
+                            : flows.filter(f => f.id !== currentFlow.id);
+                          const targetFlow = candidateFlows.find(f => f.id === flowId);
+
                           updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
                             ...n,
                             config: {
@@ -1730,18 +2089,23 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                       >
                         <option value="">Nenhum (Disparar por tempo após lead entrar / última msg)</option>
-                        {flows
-                          .filter(f => f.id !== currentFlow.id)
-                          .map(f => (
+                        {(() => {
+                          const selectedProjId = selectedNode.config?.triggerConfig?.previousProjectId;
+                          const candidateFlows = selectedProjId
+                            ? ((projects || []).find(p => p.id === selectedProjId)?.flows || [])
+                            : flows.filter(f => f.id !== currentFlow.id);
+
+                          return candidateFlows.map(f => (
                             <option key={f.id} value={f.id}>
                               {f.name}
                             </option>
-                          ))}
+                          ));
+                        })()}
                       </select>
                       {selectedNode.config?.triggerConfig?.previousFlowName && (
                         <p className="text-[10px] text-amber-400 mt-1 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
-                          <span>Inicia a partir do fluxo: <strong>{selectedNode.config.triggerConfig.previousFlowName}</strong></span>
+                          <span>Inicia a partir do fluxo: <strong>{selectedNode.config.triggerConfig.previousProjectName ? `[${selectedNode.config.triggerConfig.previousProjectName}] ` : ''}{selectedNode.config.triggerConfig.previousFlowName}</strong></span>
                         </p>
                       )}
                     </div>
@@ -2146,6 +2510,32 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             </div>
 
+            {/* BARRA DE SINCRONIZAÇÃO EM TEMPO REAL COM O CRM */}
+            <div className="bg-[#0b1322] border-b border-slate-800/80 px-4 py-2.5 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                  <span className="text-[11px] font-bold text-white truncate">
+                    Card CRM: {simCurrentLead?.name || 'Iniciando Card no CRM...'}
+                  </span>
+                </div>
+                {simCurrentLead?.stage && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0">
+                    {simCurrentLead.stage}
+                  </span>
+                )}
+              </div>
+
+              {simCrmStatusMessage && (
+                <div className="flex items-center justify-between text-[10px] text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-600/30">
+                  <span className="truncate">{simCrmStatusMessage}</span>
+                  <span className="text-[9px] text-slate-400 font-mono ml-2 shrink-0">
+                    {(simCurrentLead?.conversionEvents || []).length} eventos
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#080d17]">
               {simHistory.map((item, idx) => (
                 <div
@@ -2231,16 +2621,21 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                     <input
                       type="text"
                       placeholder="Digite como o lead responderia..."
-                      className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      value={simInput}
+                      onChange={e => setSimInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          handleSimSend();
+                        }
+                      }}
+                      className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                     />
                     <button
-                      onClick={() => {
-                        const next = currentFlow.nodes.find(n => n.type === 'condition');
-                        if (next) setSimStepNodeId(next.id);
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-xl text-xs font-bold transition"
+                      onClick={handleSimSend}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
                     >
-                      Enviar
+                      <span>Enviar</span>
+                      <Send className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 );
@@ -2300,6 +2695,18 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 >
                   <p className="text-xs font-bold">Follow-up Proativo (2 Dias Depois)</p>
                   <p className="text-[10px] text-slate-400">Chama o lead sozinho 2 dias depois para verificar decisão.</p>
+                </div>
+
+                <div
+                  onClick={() => setNewFlowTemplate('upsell')}
+                  className={`p-3 rounded-xl border cursor-pointer transition ${
+                    newFlowTemplate === 'upsell' 
+                      ? 'bg-indigo-950/40 border-indigo-500 text-white' 
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <p className="text-xs font-bold">Upsell Pós-Venda (5 Dias Após Venda)</p>
+                  <p className="text-[10px] text-slate-400">Gatilho proativo disparado 5 dias após fechamento de venda no projeto principal.</p>
                 </div>
 
                 <div

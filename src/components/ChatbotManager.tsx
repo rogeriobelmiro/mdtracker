@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Bot, 
   Sparkles, 
@@ -22,15 +22,19 @@ import {
   Settings,
   GitFork
 } from 'lucide-react';
-import { IntegrationSettings, ChatbotConfig, Product, Company, ChatbotMode, ChatbotFlow } from '../types';
+import { IntegrationSettings, ChatbotConfig, Product, Company, ChatbotMode, ChatbotFlow, ChatbotProject, Lead } from '../types';
 import { simulateChatbot, sendDirectMessage } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
-import { ChatbotVisualFlowBuilder } from './ChatbotVisualFlowBuilder';
+import { ChatbotVisualFlowBuilder, DEFAULT_FLOW_DIAGNOSTICO, DEFAULT_FLOW_FOLLOWUP, DEFAULT_FLOW_UPSELL_5_DAYS } from './ChatbotVisualFlowBuilder';
+import { ChatbotProjectHub } from './ChatbotProjectHub';
 
 interface ChatbotManagerProps {
   settings: IntegrationSettings;
   products: Product[];
   currentCompany: Company;
+  leads?: Lead[];
+  onUpdateLead?: (id: string, data: Partial<Lead>) => Promise<void>;
+  onCreateLead?: (data: Partial<Lead>) => Promise<Lead>;
   onUpdateSettings: (newSettings: IntegrationSettings) => Promise<void>;
   onNavigateToTab?: (tab: 'dashboard' | 'links' | 'leads' | 'events' | 'broadcast' | 'chat' | 'users' | 'company' | 'products' | 'popups' | 'ai') => void;
 }
@@ -54,6 +58,9 @@ export const ChatbotManager: React.FC<ChatbotManagerProps> = ({
   settings,
   products,
   currentCompany,
+  leads,
+  onUpdateLead,
+  onCreateLead,
   onUpdateSettings,
   onNavigateToTab
 }) => {
@@ -67,15 +74,70 @@ export const ChatbotManager: React.FC<ChatbotManagerProps> = ({
     config.mode || 'prompt'
   );
 
+  // Inicialização de Projetos (retrocompatível com fluxos legados)
+  const defaultProjects: ChatbotProject[] = useMemo(() => {
+    if (config.projects && config.projects.length > 0) {
+      return config.projects;
+    }
+
+    const legacySalesFlows: ChatbotFlow[] = config.flows && config.flows.length > 0
+      ? config.flows.map(f => ({ ...f, projectId: 'proj-sales' }))
+      : [
+          { ...DEFAULT_FLOW_DIAGNOSTICO, projectId: 'proj-sales' },
+          { ...DEFAULT_FLOW_FOLLOWUP, projectId: 'proj-sales' }
+        ];
+
+    const upsellFlows: ChatbotFlow[] = [
+      { ...DEFAULT_FLOW_UPSELL_5_DAYS, projectId: 'proj-upsell' }
+    ];
+
+    return [
+      {
+        id: 'proj-sales',
+        name: 'Vendas & Atendimento Principal',
+        description: 'Captação pelo Google e WhatsApp, qualificação de leads e fechamento comercial',
+        color: 'blue',
+        active: true,
+        flows: legacySalesFlows,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'proj-upsell',
+        name: 'Upsell & Pós-Venda',
+        description: 'Fluxos proativos iniciados após o fechamento para oferta de produtos complementares',
+        color: 'emerald',
+        active: true,
+        flows: upsellFlows,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+  }, [config.projects, config.flows]);
+
+  const [projects, setProjects] = useState<ChatbotProject[]>(defaultProjects);
+  const [activeProjectId, setActiveProjectId] = useState<string>(
+    config.activeProjectId || defaultProjects[0]?.id || 'proj-sales'
+  );
+  const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
 
-  const handleSaveFlows = async (flows: ChatbotFlow[], activeFlowId?: string) => {
+  const handleSaveProjects = async (
+    newProjects: ChatbotProject[],
+    activeProjId?: string,
+    activeFlowId?: string
+  ) => {
+    setProjects(newProjects);
+    const allFlows = newProjects.flatMap(p => p.flows || []);
     const updatedConfig: ChatbotConfig = {
       ...config,
       mode: 'visual_flow',
-      flows,
+      projects: newProjects,
+      flows: allFlows,
+      activeProjectId: activeProjId || activeProjectId,
       activeFlowId: activeFlowId || config.activeFlowId
     };
     setConfig(updatedConfig);
@@ -83,6 +145,21 @@ export const ChatbotManager: React.FC<ChatbotManagerProps> = ({
       ...settings,
       chatbotConfig: updatedConfig
     });
+  };
+
+  const handleSaveFlowsFromBuilder = async (updatedFlows: ChatbotFlow[], activeFlowId?: string) => {
+    const updatedProjects = projects.map(proj => {
+      if (proj.id === activeProjectId) {
+        return {
+          ...proj,
+          flows: updatedFlows,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return proj;
+    });
+
+    await handleSaveProjects(updatedProjects, activeProjectId, activeFlowId);
   };
 
   // Simulator state
@@ -242,52 +319,51 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
     }
   };
 
-  // Se estiver no MODO 2: FLUXO VISUAL, renderiza 100% da tela (Full Bleed, sem margens brancas)
+  // Se estiver no MODO 2: FLUXO VISUAL, renderiza o Hub de Projetos ou o Construtor Visual
   if (activeMode === 'visual_flow') {
-    return (
-      <div className="w-full h-full flex flex-col bg-[#070b12] text-slate-100 overflow-hidden">
-        {/* Barra Compacta de Navegação / Alternância de Modo */}
-        <div className="bg-[#0b101b] border-b border-slate-800/90 px-4 py-2 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white tracking-wide">
-                Configuração 2: Construtor de Fluxo Visual
-              </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hidden md:inline">
-                Árvore de Decisão & Ações WhatsApp
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
+    // Se o usuário clicou para editar ou abrir um fluxo específico:
+    if (editingFlowId) {
+      return (
+        <div className="w-full h-full flex flex-col bg-[#070b12] text-slate-100 overflow-hidden">
+          <div className="flex-1 w-full min-h-0 relative overflow-hidden">
+            <ChatbotVisualFlowBuilder
+              currentCompany={currentCompany}
+              settings={settings}
+              projects={projects}
+              activeProjectId={activeProjectId}
+              initialFlowId={editingFlowId}
+              leads={leads}
+              onUpdateLead={onUpdateLead}
+              onCreateLead={onCreateLead}
+              onSaveFlows={handleSaveFlowsFromBuilder}
+              onBackToProjects={() => setEditingFlowId(null)}
+              onBackToModeSelect={() => {
+                setEditingFlowId(null);
                 setActiveMode('prompt');
                 setConfig(prev => ({ ...prev, mode: 'prompt' }));
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/80 transition shadow-xs"
-              title="Alternar para o Atendente com IA (Configuração 1)"
-            >
-              <Bot className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Config 1: Atendente com IA (Prompts)</span>
-            </button>
+            />
           </div>
         </div>
+      );
+    }
 
-        {/* Workspace do Fluxo Visual - 100% Full-bleed */}
-        <div className="flex-1 w-full min-h-0 relative overflow-hidden">
-          <ChatbotVisualFlowBuilder
-            currentCompany={currentCompany}
-            settings={settings}
-            onSaveFlows={handleSaveFlows}
-            onBackToModeSelect={() => setActiveMode('prompt')}
-          />
-        </div>
-      </div>
+    // Caso contrário, mostra a Lista de Fluxos organizada por PROJETOS
+    return (
+      <ChatbotProjectHub
+        currentCompany={currentCompany}
+        settings={settings}
+        projects={projects}
+        onSaveProjects={handleSaveProjects}
+        onOpenFlow={(projectId, flowId) => {
+          setActiveProjectId(projectId);
+          setEditingFlowId(flowId);
+        }}
+        onBackToPromptMode={() => {
+          setActiveMode('prompt');
+          setConfig(prev => ({ ...prev, mode: 'prompt' }));
+        }}
+      />
     );
   }
 

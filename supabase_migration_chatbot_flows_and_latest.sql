@@ -99,7 +99,32 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- 6. ÍNDICES DE DESEMPENHO
+-- 6. PROJETOS DE CHATBOT (AGRUPAMENTO DE MÚLTIPLOS FLUXOS POR PROJETO)
+-- Permite organizar fluxos por objetivo comercial (ex: "Vendas", "Upsell", "Suporte")
+ALTER TABLE public.chatbot_flows
+ADD COLUMN IF NOT EXISTS project_id TEXT;
+
+CREATE TABLE IF NOT EXISTS public.chatbot_projects (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT 'blue',
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.chatbot_projects ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Permitir leitura e escrita em chatbot_projects" 
+  ON public.chatbot_projects FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+
+-- 7. ÍNDICES DE DESEMPENHO
 CREATE INDEX IF NOT EXISTS idx_leads_proactive_scheduled 
 ON public.leads(proactive_scheduled_at) 
 WHERE proactive_scheduled_at IS NOT NULL;
@@ -109,3 +134,6 @@ ON public.leads(company_id, bot_active);
 
 CREATE INDEX IF NOT EXISTS idx_chatbot_flows_company 
 ON public.chatbot_flows(company_id, active);
+
+CREATE INDEX IF NOT EXISTS idx_chatbot_flows_project 
+ON public.chatbot_flows(project_id);

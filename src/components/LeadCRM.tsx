@@ -1121,13 +1121,14 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                         <div className="flex items-center gap-1.5">
                           <span className={`font-black uppercase text-[9px] px-2 py-0.5 rounded-full ${
                             evt.type === 'popup' || evt.type === 'popup_capture' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                            evt.type === 'chatbot_flow' ? 'bg-cyan-100 text-cyan-800 border border-cyan-200' :
                             evt.type === 'landing_page' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                             evt.type === 'webhook' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                             evt.type === 'meta_capi' || evt.type === 'meta_pixel' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
                             evt.type === 'google_ads' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                             'bg-slate-200 text-slate-800'
                           }`}>
-                            {evt.type === 'popup' || evt.type === 'popup_capture' ? 'POP-UP' : evt.type?.replace('_', ' ')}
+                            {evt.type === 'popup' || evt.type === 'popup_capture' ? 'POP-UP' : evt.type === 'chatbot_flow' ? '🤖 FLUXO CRM' : evt.type?.replace('_', ' ')}
                           </span>
                           <span className="text-slate-900 font-bold">{evt.eventName}</span>
                         </div>

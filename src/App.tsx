@@ -33,6 +33,7 @@ import {
   updateLink,
   deleteLink,
   fetchLeads,
+  createLead,
   updateLead,
   deleteLead,
   deleteLeadsBatch,
@@ -307,6 +308,13 @@ export default function App() {
       await deleteLink(id);
       await loadData();
     }
+  };
+
+  const handleCreateLead = async (data: Partial<Lead>): Promise<Lead> => {
+    const payload = currentCompany ? { ...data, companyId: currentCompany.id } : data;
+    const newLead = await createLead(payload);
+    await loadData();
+    return newLead;
   };
 
   const handleUpdateLead = async (id: string, data: Partial<Lead>) => {
@@ -621,6 +629,9 @@ export default function App() {
                 settings={settings}
                 products={products}
                 currentCompany={currentCompany}
+                leads={companyLeads}
+                onUpdateLead={handleUpdateLead}
+                onCreateLead={handleCreateLead}
                 onUpdateSettings={handleUpdateSettings}
                 onNavigateToTab={(tab) => setActiveTab(tab)}
               />

@@ -69,7 +69,7 @@ export interface LeadLocation {
 
 export interface ConversionEventLog {
   id: string;
-  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook' | 'organic' | 'landing_page' | 'popup';
+  type: 'meta_pixel' | 'meta_capi' | 'google_ads' | 'webhook' | 'organic' | 'landing_page' | 'popup' | 'popup_capture' | 'lead_cadastrado' | 'chatbot_flow';
   eventName: string;
   status: 'sucesso' | 'simulado' | 'falha';
   timestamp: string;
@@ -189,12 +189,14 @@ export type FlowProactiveTimingMode = 'immediate' | 'delay';
 
 export interface FlowTriggerConfig {
   type: FlowTriggerType;
-  previousFlowId?: string;
-  previousFlowName?: string;
+  previousProjectId?: string; // ID do projeto anterior de origem (ex: Venda de Produto)
+  previousProjectName?: string; // Nome do projeto anterior
+  previousFlowId?: string; // ID do fluxo anterior
+  previousFlowName?: string; // Nome do fluxo anterior
   timingMode?: FlowProactiveTimingMode; // 'immediate' (logo após finalizar o outro) ou 'delay' (após X tempo)
   delayAmount?: number;
   delayUnit?: 'seconds' | 'minutes' | 'hours' | 'days';
-  proactiveCondition?: 'after_lead_created' | 'after_last_message' | 'after_previous_flow' | 'on_stage_change';
+  proactiveCondition?: 'after_lead_created' | 'after_last_message' | 'after_previous_flow' | 'after_previous_project' | 'on_stage_change';
   keywords?: string[];
   targetStage?: string;
 }
@@ -234,8 +236,20 @@ export interface ChatbotFlowConnection {
   color?: string;
 }
 
+export interface ChatbotProject {
+  id: string;
+  name: string;
+  description?: string;
+  color?: 'blue' | 'emerald' | 'purple' | 'amber' | 'rose' | 'cyan';
+  active: boolean;
+  flows: ChatbotFlow[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ChatbotFlow {
   id: string;
+  projectId?: string;
   name: string;
   subtitle?: string;
   active: boolean;
@@ -256,6 +270,8 @@ export interface ChatbotConfig {
   directEnabled?: boolean;
   directWelcomeMessage?: string;
   flows?: ChatbotFlow[];
+  projects?: ChatbotProject[];
+  activeProjectId?: string;
   activeFlowId?: string;
 }
 
