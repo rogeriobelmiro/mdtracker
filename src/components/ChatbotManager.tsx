@@ -19,11 +19,13 @@ import {
   RotateCcw,
   Smartphone,
   Instagram,
-  Settings
+  Settings,
+  GitFork
 } from 'lucide-react';
-import { IntegrationSettings, ChatbotConfig, Product, Company } from '../types';
+import { IntegrationSettings, ChatbotConfig, Product, Company, ChatbotMode, ChatbotFlow } from '../types';
 import { simulateChatbot, sendDirectMessage } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
+import { ChatbotVisualFlowBuilder } from './ChatbotVisualFlowBuilder';
 
 interface ChatbotManagerProps {
   settings: IntegrationSettings;
@@ -61,9 +63,27 @@ export const ChatbotManager: React.FC<ChatbotManagerProps> = ({
     ...(settings.chatbotConfig || {})
   });
 
+  const [activeMode, setActiveMode] = useState<ChatbotMode>(
+    config.mode || 'prompt'
+  );
+
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
+
+  const handleSaveFlows = async (flows: ChatbotFlow[], activeFlowId?: string) => {
+    const updatedConfig: ChatbotConfig = {
+      ...config,
+      mode: 'visual_flow',
+      flows,
+      activeFlowId: activeFlowId || config.activeFlowId
+    };
+    setConfig(updatedConfig);
+    await onUpdateSettings({
+      ...settings,
+      chatbotConfig: updatedConfig
+    });
+  };
 
   // Simulator state
   const [simChannel, setSimChannel] = useState<'whatsapp' | 'direct'>('whatsapp');
@@ -225,8 +245,75 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
   return (
     <div className="space-y-6 pb-12">
       
-      {/* 1. Hero Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+      {/* 0. SELETOR DE MODO DO CHATBOT (MODO 1: PROMPTS VS MODO 2: FLUXO VISUAL) */}
+      <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-2 flex flex-col sm:flex-row items-center gap-2 shadow-xl">
+        <button
+          onClick={() => {
+            setActiveMode('prompt');
+            setConfig(prev => ({ ...prev, mode: 'prompt' }));
+          }}
+          className={`flex-1 w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition ${
+            activeMode === 'prompt'
+              ? 'bg-gradient-to-r from-indigo-900/90 to-indigo-800/90 text-white shadow-lg border border-indigo-500/40 ring-1 ring-indigo-500/30'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+          }`}
+        >
+          <div className={`p-2 rounded-xl shrink-0 ${activeMode === 'prompt' ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-800 text-indigo-400'}`}>
+            <Bot className="w-5 h-5" />
+          </div>
+          <div className="text-left min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">Configuração 1: Atendente com IA</span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${activeMode === 'prompt' ? 'bg-indigo-400/20 text-indigo-200 border border-indigo-400/30' : 'bg-slate-800 text-slate-500'}`}>
+                Prompts & Personas
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
+              Atendimento natural via IA generativa, personas, produtos e transbordo humano
+            </p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveMode('visual_flow');
+            setConfig(prev => ({ ...prev, mode: 'visual_flow' }));
+          }}
+          className={`flex-1 w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition ${
+            activeMode === 'visual_flow'
+              ? 'bg-gradient-to-r from-blue-950/90 to-cyan-950/90 text-white shadow-lg border border-cyan-500/40 ring-1 ring-cyan-500/30'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+          }`}
+        >
+          <div className={`p-2 rounded-xl shrink-0 ${activeMode === 'visual_flow' ? 'bg-cyan-500 text-white shadow-md' : 'bg-slate-800 text-cyan-400'}`}>
+            <GitFork className="w-5 h-5" />
+          </div>
+          <div className="text-left min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">Configuração 2: Construtor de Fluxo Visual</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30 animate-pulse">
+                Árvore de Decisão
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
+              Blocos conectados, ramificações conforme resposta do lead e ações no CRM
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* RENDERIZAÇÃO DO MODO SELECIONADO */}
+      {activeMode === 'visual_flow' ? (
+        <ChatbotVisualFlowBuilder
+          currentCompany={currentCompany}
+          settings={settings}
+          onSaveFlows={handleSaveFlows}
+          onBackToModeSelect={() => setActiveMode('prompt')}
+        />
+      ) : (
+        <>
+          {/* 1. Hero Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
@@ -757,6 +844,8 @@ Mantenha suas respostas curtas (máximo 2 a 3 parágrafos curtos), sem rodeios, 
         </div>
 
       </div>
+    </>
+  )}
 
     </div>
   );

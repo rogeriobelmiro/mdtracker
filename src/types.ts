@@ -175,7 +175,59 @@ export interface IntegrationSettings {
   chatbotConfig?: ChatbotConfig;
 }
 
+export type ChatbotMode = 'prompt' | 'visual_flow';
+
+export interface ChatbotFlowNodeOption {
+  id: string;
+  label: string;
+  color?: string; // green, blue, cyan, orange, red, purple, gray
+  targetNodeId?: string;
+}
+
+export interface ChatbotFlowNodeConfig {
+  crmActionType?: 'notify_team' | 'move_stage' | 'create_task' | 'add_tag';
+  crmActionValue?: string;
+  delayValue?: number;
+  delayUnit?: 'seconds' | 'minutes' | 'hours' | 'days';
+  messageType?: 'suggestion' | 'auto_send';
+  variableName?: string;
+  abSplitPercentage?: number;
+  promptInstructions?: string;
+}
+
+export interface ChatbotFlowNode {
+  id: string;
+  type: 'start' | 'message' | 'condition' | 'crm_action' | 'wait' | 'ai_reply' | 'ask_input' | 'appointment' | 'ab_split' | 'end';
+  title: string;
+  badge?: string;
+  content?: string;
+  x: number;
+  y: number;
+  options?: ChatbotFlowNodeOption[];
+  targetNodeId?: string;
+  config?: ChatbotFlowNodeConfig;
+}
+
+export interface ChatbotFlowConnection {
+  id: string;
+  sourceNodeId: string;
+  sourceOptionId?: string;
+  targetNodeId: string;
+  color?: string;
+}
+
+export interface ChatbotFlow {
+  id: string;
+  name: string;
+  subtitle?: string;
+  active: boolean;
+  nodes: ChatbotFlowNode[];
+  connections: ChatbotFlowConnection[];
+  updatedAt?: string;
+}
+
 export interface ChatbotConfig {
+  mode?: ChatbotMode;
   enabled: boolean;
   botName: string;
   personaPrompt: string;
@@ -185,6 +237,8 @@ export interface ChatbotConfig {
   includeProductsKnowledge: boolean;
   directEnabled?: boolean;
   directWelcomeMessage?: string;
+  flows?: ChatbotFlow[];
+  activeFlowId?: string;
 }
 
 export type BroadcastChannel = 'email' | 'sms' | 'whatsapp' | 'multichannel';
