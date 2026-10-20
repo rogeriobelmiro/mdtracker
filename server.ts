@@ -6623,7 +6623,8 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                 if (Array.isArray(entry.messaging)) {
                     for (const msgEvent of entry.messaging) {
                         const senderId = msgEvent.sender?.id;
-                        const msgText = msgEvent.message?.text?.trim().toLowerCase();
+                        const rawMsg = msgEvent.message?.text || msgEvent.message?.quick_reply?.payload || msgEvent.postback?.payload || msgEvent.postback?.title || '';
+                        const msgText = rawMsg.trim().toLowerCase();
                         if (!senderId || !msgText) continue;
 
                         // Buscar sessão ativa por senderId ou varrer sessões existentes
