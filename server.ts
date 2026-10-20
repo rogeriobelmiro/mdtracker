@@ -6434,6 +6434,85 @@ app.post('/api/instagram/automations/simulate', async (req: Request, res: Respon
     }
 });
 
+// INSTAGRAM ACCOUNT / GRAPH API SETTINGS & PERSISTENCE
+const INSTAGRAM_SETTINGS_FILE = path.join(process.cwd(), 'instagram_settings.json');
+let inMemoryInstagramSettings: Record<string, any> = {};
+
+try {
+    if (fs.existsSync(INSTAGRAM_SETTINGS_FILE)) {
+        inMemoryInstagramSettings = JSON.parse(fs.readFileSync(INSTAGRAM_SETTINGS_FILE, 'utf-8'));
+    }
+} catch (e: any) {
+    console.error('[Instagram Settings] Erro ao carregar arquivo local:', e.message);
+}
+
+// Helper para garantir que a Conta Comercial do Instagram e a Página recebam webhooks da Meta
+async function subscribeInstagramAndPage(instagramAccountId?: string, pageId?: string, accessToken?: string) {
+    if (!accessToken) return;
+    const cleanToken = accessToken.trim();
+    if (instagramAccountId && !instagramAccountId.startsWith('178414000000')) {
+        try {
+            const url = `https://graph.facebook.com/v20.0/${instagramAccountId.trim()}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,comments,mentions&access_token=${encodeURIComponent(cleanToken)}`;
+            const res = await fetch(url, { method: 'POST' });
+            const json = await res.json();
+            console.log('[Meta subscribed_apps] Inscrição Instagram ID', instagramAccountId, json);
+        } catch (e: any) {
+            console.warn('[Meta subscribed_apps] Erro ao inscrever Instagram:', e.message);
+        }
+    }
+    if (pageId && !pageId.startsWith('100000000000')) {
+        try {
+            const url = `https://graph.facebook.com/v20.0/${pageId.trim()}/subscribed_apps?subscribed_fields=feed,conversations,messages,messaging_postbacks&access_token=${encodeURIComponent(cleanToken)}`;
+            const res = await fetch(url, { method: 'POST' });
+            const json = await res.json();
+            console.log('[Meta subscribed_apps] Inscrição Page ID', pageId, json);
+        } catch (e: any) {
+            console.warn('[Meta subscribed_apps] Erro ao inscrever Página:', e.message);
+        }
+    }
+}
+
+// Helper para resolver credenciais do Instagram (Memória -> Supabase -> Arquivo)
+async function resolveInstagramSettings(companyId?: string): Promise<any> {
+    let settings = companyId ? inMemoryInstagramSettings[companyId] : null;
+    if (!settings?.accessToken) {
+        const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
+        if (anyActive) settings = anyActive;
+    }
+    if (!settings?.accessToken && supabase) {
+        try {
+            if (companyId) {
+                const { data } = await supabase
+                    .from('settings')
+                    .select('instagram_config, global_meta_token')
+                    .eq('company_id', companyId)
+                    .maybeSingle();
+                if (data?.instagram_config?.accessToken) {
+                    settings = data.instagram_config;
+                    inMemoryInstagramSettings[companyId] = settings;
+                } else if (data?.global_meta_token) {
+                    settings = { accessToken: data.global_meta_token, autoReplyReal: true };
+                }
+            }
+            if (!settings?.accessToken) {
+                const { data: allSet } = await supabase
+                    .from('settings')
+                    .select('instagram_config, company_id')
+                    .not('instagram_config', 'is', null)
+                    .limit(5);
+                const found = allSet?.find((s: any) => s.instagram_config?.accessToken);
+                if (found) {
+                    settings = found.instagram_config;
+                    if (companyId) inMemoryInstagramSettings[companyId] = settings;
+                }
+            }
+        } catch (e: any) {
+            console.warn('[resolveInstagramSettings] Erro ao buscar no Supabase:', e.message);
+        }
+    }
+    return settings || {};
+}
+
 // META / INSTAGRAM GRAPH API WEBHOOKS
 app.get('/api/webhooks/instagram', (req: Request, res: Response) => {
     const mode = req.query['hub.mode'];
@@ -6536,11 +6615,7 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
                                 }
 
                                 // 3. DISPARO REAL NA META GRAPH API (SE CONFIGURADO)
-                                let compSettings = inMemoryInstagramSettings[matched.companyId];
-                                if (!compSettings?.accessToken) {
-                                    const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
-                                    if (anyActive) compSettings = anyActive;
-                                }
+                                let compSettings = await resolveInstagramSettings(matched.companyId);
                                 const accessToken = compSettings?.accessToken;
                                 const autoReplyReal = compSettings?.autoReplyReal !== false;
                                 const cleanPageId = (compSettings?.pageId && !compSettings.pageId.startsWith('100000000000')) ? compSettings.pageId : undefined;
@@ -6661,11 +6736,7 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
 
                         if (!rule) continue;
 
-                        let compSettings = inMemoryInstagramSettings[targetSession.companyId];
-                        if (!compSettings?.accessToken) {
-                            const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
-                            if (anyActive) compSettings = anyActive;
-                        }
+                        let compSettings = await resolveInstagramSettings(targetSession.companyId);
                         const accessToken = compSettings?.accessToken;
 
                         if (msgText === 'não' || msgText === 'nao' || msgText === 'n' || msgText.includes('não sigo') || msgText.includes('nao sigo') || msgText.includes('ainda nao') || msgText.includes('ainda não')) {
@@ -6725,19 +6796,6 @@ app.post('/api/webhooks/instagram', async (req: Request, res: Response) => {
     }
 });
 
-// INSTAGRAM ACCOUNT / GRAPH API SETTINGS
-const INSTAGRAM_SETTINGS_FILE = path.join(process.cwd(), 'instagram_settings.json');
-let inMemoryInstagramSettings: Record<string, any> = {};
-
-// Load saved settings from disk on startup
-try {
-    if (fs.existsSync(INSTAGRAM_SETTINGS_FILE)) {
-        inMemoryInstagramSettings = JSON.parse(fs.readFileSync(INSTAGRAM_SETTINGS_FILE, 'utf-8'));
-    }
-} catch (e: any) {
-    console.error('[Instagram Settings] Erro ao carregar arquivo local:', e.message);
-}
-
 app.get('/api/instagram/settings', async (req: Request, res: Response) => {
     try {
         const companyId = req.query.companyId as string || 'comp-alfa';
@@ -6786,9 +6844,38 @@ app.put('/api/instagram/settings', async (req: Request, res: Response) => {
         const { companyId, settings } = req.body;
         const targetComp = companyId || 'comp-alfa';
 
+        let finalSettings = { ...(settings || {}) };
+        const rawToken = (finalSettings.accessToken || '').trim();
+
+        // Se foi enviado um Token, verificar se em /me/accounts existe um Page Access Token perpétuo
+        if (rawToken) {
+            try {
+                const accRes = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,name}&access_token=${encodeURIComponent(rawToken)}`);
+                const accJson = await accRes.json();
+                if (accJson.data && Array.isArray(accJson.data) && accJson.data.length > 0) {
+                    const pageObj = accJson.data[0];
+                    if (pageObj.access_token) {
+                        finalSettings.accessToken = pageObj.access_token;
+                    }
+                    if (pageObj.id && (!finalSettings.pageId || finalSettings.pageId.startsWith('100000000000'))) {
+                        finalSettings.pageId = pageObj.id;
+                    }
+                    if (pageObj.instagram_business_account?.id && (!finalSettings.instagramAccountId || finalSettings.instagramAccountId.startsWith('178414000000'))) {
+                        finalSettings.instagramAccountId = pageObj.instagram_business_account.id;
+                        finalSettings.connectedAccountName = `@${pageObj.instagram_business_account.username} (${pageObj.name})`;
+                    }
+                }
+            } catch {}
+
+            // Auto-inscrever o app no Instagram Business Account e na Página
+            if (finalSettings.instagramAccountId || finalSettings.pageId) {
+                subscribeInstagramAndPage(finalSettings.instagramAccountId, finalSettings.pageId, finalSettings.accessToken).catch(() => {});
+            }
+        }
+
         inMemoryInstagramSettings[targetComp] = {
             ...(inMemoryInstagramSettings[targetComp] || {}),
-            ...settings
+            ...finalSettings
         };
 
         // Salvar em arquivo local para persistência garantida
@@ -6803,16 +6890,15 @@ app.put('/api/instagram/settings', async (req: Request, res: Response) => {
             if (supabase) {
                 const { error } = await supabase.from('settings').update({
                     instagram_config: inMemoryInstagramSettings[targetComp],
-                    global_meta_token: settings.accessToken || undefined,
+                    global_meta_token: finalSettings.accessToken || undefined,
                     updated_at: new Date().toISOString()
                 }).eq('company_id', targetComp);
 
                 if (error) {
-                    console.warn('[Instagram Settings] Aviso Supabase (pode requerer ALTER TABLE settings ADD COLUMN instagram_config JSONB):', error.message);
-                    // Tentar salvar ao menos o global_meta_token se instagram_config ainda não existir na tabela
-                    if (settings.accessToken) {
+                    console.warn('[Instagram Settings] Aviso Supabase:', error.message);
+                    if (finalSettings.accessToken) {
                         await supabase.from('settings').update({
-                            global_meta_token: settings.accessToken,
+                            global_meta_token: finalSettings.accessToken,
                             updated_at: new Date().toISOString()
                         }).eq('company_id', targetComp);
                     }
