@@ -185,12 +185,16 @@ export interface ChatbotFlowNodeOption {
 }
 
 export type FlowTriggerType = 'instant_reply' | 'proactive_time' | 'keyword_match';
+export type FlowProactiveTimingMode = 'immediate' | 'delay';
 
 export interface FlowTriggerConfig {
   type: FlowTriggerType;
+  previousFlowId?: string;
+  previousFlowName?: string;
+  timingMode?: FlowProactiveTimingMode; // 'immediate' (logo após finalizar o outro) ou 'delay' (após X tempo)
   delayAmount?: number;
   delayUnit?: 'seconds' | 'minutes' | 'hours' | 'days';
-  proactiveCondition?: 'after_lead_created' | 'after_last_message' | 'on_stage_change';
+  proactiveCondition?: 'after_lead_created' | 'after_last_message' | 'after_previous_flow' | 'on_stage_change';
   keywords?: string[];
   targetStage?: string;
 }

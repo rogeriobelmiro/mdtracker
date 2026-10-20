@@ -44,7 +44,8 @@ import {
   ChatbotFlowNodeOption,
   Company,
   IntegrationSettings,
-  FlowTriggerType
+  FlowTriggerType,
+  FlowProactiveTimingMode
 } from '../types';
 
 interface ChatbotVisualFlowBuilderProps {
@@ -1269,9 +1270,23 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 if (node.type === 'start') {
                   const trigger = node.config?.triggerConfig;
                   const isProactive = trigger?.type === 'proactive_time';
-                  const triggerBadge = isProactive 
-                    ? `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${trigger?.delayUnit === 'hours' ? 'horas' : 'dias'}`
-                    : '⚡ Resposta Imediata';
+                  let triggerBadge = '⚡ Resposta Imediata';
+
+                  if (isProactive) {
+                    const unitLabel = trigger?.delayUnit === 'minutes' ? 'min' : trigger?.delayUnit === 'hours' ? 'horas' : 'dias';
+                    const prevName = trigger?.previousFlowName;
+                    if (prevName) {
+                      if (trigger?.timingMode === 'immediate') {
+                        triggerBadge = `⚡ Imediato após "${prevName}"`;
+                      } else {
+                        triggerBadge = `⏰ ${trigger?.delayAmount || 2} ${unitLabel} após "${prevName}"`;
+                      }
+                    } else {
+                      triggerBadge = `⏰ Chama sozinho em ${trigger?.delayAmount || 2} ${unitLabel}`;
+                    }
+                  } else if (trigger?.type === 'keyword_match') {
+                    triggerBadge = '🏷️ Palavras-chave';
+                  }
 
                   return (
                     <div
@@ -1620,55 +1635,153 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   </select>
                 </div>
 
-                {/* Se for Proativo por Tempo (ex: 2 dias depois) */}
+                {/* Se for Proativo por Tempo / Vinculado a Outro Fluxo */}
                 {selectedNode.config?.triggerConfig?.type === 'proactive_time' && (
-                  <div className="space-y-2 pt-2 border-t border-slate-800">
-                    <label className="text-[10px] font-bold text-amber-300 uppercase">Tempo de Espera para Chamar Sozinho:</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={selectedNode.config?.triggerConfig?.delayAmount || 2}
-                        onChange={e => {
-                          const val = Number(e.target.value);
-                          updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
-                            ...n,
-                            config: {
-                              ...n.config,
-                              triggerConfig: {
-                                ...(n.config?.triggerConfig || { type: 'proactive_time' }),
-                                delayAmount: val
-                              }
-                            }
-                          } : n));
-                        }}
-                        className="w-20 bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
-                      />
+                  <div className="space-y-3 pt-2 border-t border-slate-800">
+                    
+                    {/* 1. SELEÇÃO DO FLUXO ANTERIOR */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                        <span>Fluxo Anterior de Origem:</span>
+                        <span className="text-[9px] text-amber-400 font-semibold lowercase">sequenciamento</span>
+                      </label>
                       <select
-                        value={selectedNode.config?.triggerConfig?.delayUnit || 'days'}
+                        value={selectedNode.config?.triggerConfig?.previousFlowId || ''}
                         onChange={e => {
-                          const unit = e.target.value as any;
+                          const flowId = e.target.value;
+                          const targetFlow = flows.find(f => f.id === flowId);
                           updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
                             ...n,
                             config: {
                               ...n.config,
                               triggerConfig: {
                                 ...(n.config?.triggerConfig || { type: 'proactive_time' }),
-                                delayUnit: unit
+                                previousFlowId: flowId || undefined,
+                                previousFlowName: targetFlow ? targetFlow.name : undefined,
+                                timingMode: n.config?.triggerConfig?.timingMode || (flowId ? 'delay' : 'delay')
                               }
                             }
                           } : n));
                         }}
-                        className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-white"
+                        className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                       >
-                        <option value="minutes">Minutos</option>
-                        <option value="hours">Horas</option>
-                        <option value="days">Dias</option>
+                        <option value="">Nenhum (Disparar por tempo após lead entrar / última msg)</option>
+                        {flows
+                          .filter(f => f.id !== currentFlow.id)
+                          .map(f => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
                       </select>
+                      {selectedNode.config?.triggerConfig?.previousFlowName && (
+                        <p className="text-[10px] text-amber-400 mt-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+                          <span>Inicia a partir do fluxo: <strong>{selectedNode.config.triggerConfig.previousFlowName}</strong></span>
+                        </p>
+                      )}
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-tight">
-                      Exemplo: 2 dias depois de enviar proposta ou após a última mensagem sem resposta.
-                    </p>
+
+                    {/* 2. QUANDO INICIAR EM RELAÇÃO AO FLUXO ANTERIOR */}
+                    {selectedNode.config?.triggerConfig?.previousFlowId && (
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-300 uppercase">
+                          Quando iniciar após o fluxo anterior?
+                        </label>
+                        <select
+                          value={selectedNode.config?.triggerConfig?.timingMode || 'delay'}
+                          onChange={e => {
+                            const mode = e.target.value as FlowProactiveTimingMode;
+                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                              ...n,
+                              config: {
+                                ...n.config,
+                                triggerConfig: {
+                                  ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                  timingMode: mode
+                                }
+                              }
+                            } : n));
+                          }}
+                          className="mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="immediate">⚡ Imediatamente após finalizar o outro fluxo</option>
+                          <option value="delay">⏰ Aguardar um tempo após finalizar o outro fluxo</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* 3. TEMPO DE ESPERA (SE FOR DELAY OU SEM FLUXO ANTERIOR) */}
+                    {(selectedNode.config?.triggerConfig?.timingMode !== 'immediate' || !selectedNode.config?.triggerConfig?.previousFlowId) && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-amber-300 uppercase">
+                          {selectedNode.config?.triggerConfig?.previousFlowId 
+                            ? 'Tempo de Espera após o Fluxo Anterior:' 
+                            : 'Tempo de Espera para Chamar Sozinho:'}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={selectedNode.config?.triggerConfig?.delayAmount || 2}
+                            onChange={e => {
+                              const val = Number(e.target.value);
+                              updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                                ...n,
+                                config: {
+                                  ...n.config,
+                                  triggerConfig: {
+                                    ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                    delayAmount: val
+                                  }
+                                }
+                              } : n));
+                            }}
+                            className="w-20 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-bold"
+                          />
+                          <select
+                            value={selectedNode.config?.triggerConfig?.delayUnit || 'days'}
+                            onChange={e => {
+                              const unit = e.target.value as any;
+                              updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? {
+                                ...n,
+                                config: {
+                                  ...n.config,
+                                  triggerConfig: {
+                                    ...(n.config?.triggerConfig || { type: 'proactive_time' }),
+                                    delayUnit: unit
+                                  }
+                                }
+                              } : n));
+                            }}
+                            className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                          >
+                            <option value="minutes">Minutos</option>
+                            <option value="hours">Horas</option>
+                            <option value="days">Dias</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 4. CARD EXPLICATIVO DINÂMICO */}
+                    <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-600/30 text-[10px] text-amber-200/90 leading-relaxed">
+                      {selectedNode.config?.triggerConfig?.previousFlowName ? (
+                        selectedNode.config?.triggerConfig?.timingMode === 'immediate' ? (
+                          <span>
+                            ⚡ <strong>Sequência Imediata:</strong> O lead finaliza o fluxo <em>"{selectedNode.config.triggerConfig.previousFlowName}"</em> e este fluxo inicia <strong>imediatamente em seguida</strong>.
+                          </span>
+                        ) : (
+                          <span>
+                            ⏰ <strong>Follow-up Proativo:</strong> O bot aguardará <strong>{selectedNode.config?.triggerConfig?.delayAmount || 2} {selectedNode.config?.triggerConfig?.delayUnit === 'hours' ? 'horas' : selectedNode.config?.triggerConfig?.delayUnit === 'minutes' ? 'minutos' : 'dias'}</strong> após o término de <em>"{selectedNode.config.triggerConfig.previousFlowName}"</em> para chamar o lead sozinho (ex: perguntar se já se decidiu pelo produto ou serviço).
+                          </span>
+                        )
+                      ) : (
+                        <span>
+                          ⏰ O bot chamará o lead sozinho após <strong>{selectedNode.config?.triggerConfig?.delayAmount || 2} {selectedNode.config?.triggerConfig?.delayUnit === 'hours' ? 'horas' : selectedNode.config?.triggerConfig?.delayUnit === 'minutes' ? 'minutos' : 'dias'}</strong> da última mensagem sem resposta.
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
