@@ -182,6 +182,7 @@ export interface ChatbotFlowNodeOption {
   label: string;
   color?: string; // green, blue, cyan, orange, red, purple, gray
   targetNodeId?: string;
+  targetNodeIds?: string[];
 }
 
 export type FlowTriggerType = 'instant_reply' | 'proactive_time' | 'keyword_match';
@@ -225,6 +226,7 @@ export interface ChatbotFlowNode {
   y: number;
   options?: ChatbotFlowNodeOption[];
   targetNodeId?: string;
+  targetNodeIds?: string[];
   config?: ChatbotFlowNodeConfig;
 }
 

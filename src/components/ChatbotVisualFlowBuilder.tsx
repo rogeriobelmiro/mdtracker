@@ -649,6 +649,32 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     window.addEventListener('mouseup', onWindowMouseUp);
   };
 
+  const getNodeTargetIds = (node: ChatbotFlowNode): string[] => {
+    const ids: string[] = [];
+    if (Array.isArray(node.targetNodeIds)) {
+      node.targetNodeIds.forEach(id => {
+        if (id && !ids.includes(id)) ids.push(id);
+      });
+    }
+    if (node.targetNodeId && !ids.includes(node.targetNodeId)) {
+      ids.push(node.targetNodeId);
+    }
+    return ids;
+  };
+
+  const getOptionTargetIds = (opt: ChatbotFlowNodeOption): string[] => {
+    const ids: string[] = [];
+    if (Array.isArray(opt.targetNodeIds)) {
+      opt.targetNodeIds.forEach(id => {
+        if (id && !ids.includes(id)) ids.push(id);
+      });
+    }
+    if (opt.targetNodeId && !ids.includes(opt.targetNodeId)) {
+      ids.push(opt.targetNodeId);
+    }
+    return ids;
+  };
+
   const handleFinishConnect = (targetNodeId: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -662,14 +688,30 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
         if (connecting.fromOptionId) {
           return {
             ...n,
-            options: (n.options || []).map(opt =>
-              opt.id === connecting.fromOptionId ? { ...opt, targetNodeId } : opt
-            )
+            options: (n.options || []).map(opt => {
+              if (opt.id === connecting.fromOptionId) {
+                const currentTargets = getOptionTargetIds(opt);
+                const nextTargets = currentTargets.includes(targetNodeId)
+                  ? currentTargets
+                  : [...currentTargets, targetNodeId];
+                return {
+                  ...opt,
+                  targetNodeId: nextTargets[0],
+                  targetNodeIds: nextTargets
+                };
+              }
+              return opt;
+            })
           };
         } else {
+          const currentTargets = getNodeTargetIds(n);
+          const nextTargets = currentTargets.includes(targetNodeId)
+            ? currentTargets
+            : [...currentTargets, targetNodeId];
           return {
             ...n,
-            targetNodeId
+            targetNodeId: nextTargets[0],
+            targetNodeIds: nextTargets
           };
         }
       }
@@ -686,20 +728,31 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     setConnectingMouse(null);
   };
 
-  const handleDisconnect = (fromNodeId: string, fromOptionId?: string) => {
+  // Desconectar um destino específico (permite ter múltiplos e desconectar só 1)
+  const handleDisconnectTarget = (fromNodeId: string, fromOptionId: string | undefined, targetNodeIdToRemove: string) => {
     const updatedNodes = currentFlow.nodes.map(n => {
       if (n.id === fromNodeId) {
         if (fromOptionId) {
           return {
             ...n,
-            options: (n.options || []).map(opt =>
-              opt.id === fromOptionId ? { ...opt, targetNodeId: undefined } : opt
-            )
+            options: (n.options || []).map(opt => {
+              if (opt.id === fromOptionId) {
+                const nextTargets = getOptionTargetIds(opt).filter(id => id !== targetNodeIdToRemove);
+                return {
+                  ...opt,
+                  targetNodeId: nextTargets[0] || undefined,
+                  targetNodeIds: nextTargets
+                };
+              }
+              return opt;
+            })
           };
         } else {
+          const nextTargets = getNodeTargetIds(n).filter(id => id !== targetNodeIdToRemove);
           return {
             ...n,
-            targetNodeId: undefined
+            targetNodeId: nextTargets[0] || undefined,
+            targetNodeIds: nextTargets
           };
         }
       }
@@ -708,20 +761,62 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     updateNodes(updatedNodes);
   };
 
-  const handleConnectDirect = (fromNodeId: string, fromOptionId: string | undefined, targetNodeId: string | undefined) => {
+  // Desconectar todas as conexões saindo deste nó ou opção
+  const handleDisconnect = (fromNodeId: string, fromOptionId?: string) => {
     const updatedNodes = currentFlow.nodes.map(n => {
       if (n.id === fromNodeId) {
         if (fromOptionId) {
           return {
             ...n,
             options: (n.options || []).map(opt =>
-              opt.id === fromOptionId ? { ...opt, targetNodeId } : opt
+              opt.id === fromOptionId ? { ...opt, targetNodeId: undefined, targetNodeIds: [] } : opt
             )
           };
         } else {
           return {
             ...n,
-            targetNodeId
+            targetNodeId: undefined,
+            targetNodeIds: []
+          };
+        }
+      }
+      return n;
+    });
+    updateNodes(updatedNodes);
+  };
+
+  // Adicionar conexão direta pelo painel inspetor
+  const handleConnectDirect = (fromNodeId: string, fromOptionId: string | undefined, targetNodeId: string) => {
+    if (!targetNodeId) return;
+    const updatedNodes = currentFlow.nodes.map(n => {
+      if (n.id === fromNodeId) {
+        if (fromOptionId) {
+          return {
+            ...n,
+            options: (n.options || []).map(opt => {
+              if (opt.id === fromOptionId) {
+                const currentTargets = getOptionTargetIds(opt);
+                const nextTargets = currentTargets.includes(targetNodeId)
+                  ? currentTargets
+                  : [...currentTargets, targetNodeId];
+                return {
+                  ...opt,
+                  targetNodeId: nextTargets[0],
+                  targetNodeIds: nextTargets
+                };
+              }
+              return opt;
+            })
+          };
+        } else {
+          const currentTargets = getNodeTargetIds(n);
+          const nextTargets = currentTargets.includes(targetNodeId)
+            ? currentTargets
+            : [...currentTargets, targetNodeId];
+          return {
+            ...n,
+            targetNodeId: nextTargets[0],
+            targetNodeIds: nextTargets
           };
         }
       }
@@ -1271,6 +1366,86 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
     return updatedLead;
   };
 
+  // Executor de múltiplos destinos para o simulador
+  const executeSimTargets = (targetIds: string[], baseLead: Lead | null, delayStart = 400) => {
+    let currentLead = baseLead;
+    let accumulatedDelay = delayStart;
+
+    targetIds.forEach(targetId => {
+      const target = currentFlow.nodes.find(n => n.id === targetId);
+      if (!target) return;
+
+      const runDelay = accumulatedDelay;
+      accumulatedDelay += 600;
+
+      setTimeout(async () => {
+        currentLead = await recordCrmStep(currentFlow, target, currentLead);
+
+        if (target.type === 'crm_action') {
+          setSimHistory(prev => [
+            ...prev,
+            {
+              sender: 'system',
+              text: `⚡ ${target.title}: ${target.content || 'Ação executada no CRM'}`,
+              nodeId: target.id
+            }
+          ]);
+          setSimStepNodeId(target.id);
+
+          // Se a ação CRM tiver seus próprios próximos nós conectados, executa-os também!
+          const nextTargets = getNodeTargetIds(target);
+          if (nextTargets.length > 0) {
+            executeSimTargets(nextTargets, currentLead, 400);
+          }
+        } else if (target.type === 'message') {
+          setSimHistory(prev => [
+            ...prev,
+            {
+              sender: 'bot',
+              text: target.content || '',
+              linkUrl: target.config?.linkUrl,
+              linkText: target.config?.linkText,
+              nodeId: target.id
+            }
+          ]);
+          setSimStepNodeId(target.id);
+
+          // Auto-encaminha para ações CRM ou Fim imediatas
+          const nextTargets = getNodeTargetIds(target);
+          const autoNext = nextTargets.filter(id => {
+            const nextNode = currentFlow.nodes.find(n => n.id === id);
+            return nextNode?.type === 'crm_action' || nextNode?.type === 'end';
+          });
+          if (autoNext.length > 0) {
+            executeSimTargets(autoNext, currentLead, 500);
+          }
+        } else if (target.type === 'condition') {
+          if (target.content) {
+            setSimHistory(prev => [
+              ...prev,
+              {
+                sender: 'bot',
+                text: target.content || '',
+                nodeId: target.id
+              }
+            ]);
+          }
+          setSimStepNodeId(target.id);
+        } else if (target.type === 'end') {
+          setSimHistory(prev => [
+            ...prev,
+            {
+              sender: 'system',
+              text: `🏁 ${target.title}${target.content ? `: ${target.content}` : ' (Fluxo finalizado)'}`,
+              nodeId: target.id
+            }
+          ]);
+          setSimStepNodeId(target.id);
+        }
+      }, runDelay);
+    });
+  };
+
   // Iniciar Simulador
   const handleStartSimulation = async () => {
     const start = currentFlow.nodes.find(n => n.type === 'start') || currentFlow.nodes[0];
@@ -1287,14 +1462,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       // Cria o Card no CRM e grava a primeira etapa no Histórico!
       const initialLead = await recordCrmStep(currentFlow, start, null);
 
-      if (start.targetNodeId) {
-        const next = currentFlow.nodes.find(n => n.id === start.targetNodeId);
-        if (next) {
-          if (next.type === 'condition') {
-            setSimStepNodeId(next.id);
-          }
-          await recordCrmStep(currentFlow, next, initialLead);
-        }
+      const targetIds = getNodeTargetIds(start);
+      if (targetIds.length > 0) {
+        executeSimTargets(targetIds, initialLead, 500);
       }
     }
     setIsTestSimulatorOpen(true);
@@ -1306,46 +1476,9 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
       { sender: 'user', text: opt.label, nodeId: simStepNodeId }
     ]);
 
-    if (opt.targetNodeId) {
-      const target = currentFlow.nodes.find(n => n.id === opt.targetNodeId);
-      if (target) {
-        // Alimenta o histórico do lead no CRM com a escolha da opção e o nó de destino!
-        const updatedLead = await recordCrmStep(currentFlow, target, simCurrentLead, opt.label);
-
-        setTimeout(() => {
-          setSimHistory(prev => [
-            ...prev,
-            {
-              sender: target.type === 'crm_action' ? 'system' : 'bot',
-              text: target.type === 'crm_action' ? `⚡ ${target.title}: ${target.content}` : (target.content || ''),
-              linkUrl: target.config?.linkUrl,
-              linkText: target.config?.linkText,
-              nodeId: target.id
-            }
-          ]);
-          setSimStepNodeId(target.id);
-
-          if (target.targetNodeId) {
-            const nextTarget = currentFlow.nodes.find(n => n.id === target.targetNodeId);
-            if (nextTarget) {
-              setTimeout(async () => {
-                await recordCrmStep(currentFlow, nextTarget, updatedLead);
-                setSimHistory(prev => [
-                  ...prev,
-                  {
-                    sender: nextTarget.type === 'crm_action' ? 'system' : 'bot',
-                    text: nextTarget.type === 'crm_action' ? `⚡ ${nextTarget.title}: ${nextTarget.content}` : (nextTarget.content || ''),
-                    linkUrl: nextTarget.config?.linkUrl,
-                    linkText: nextTarget.config?.linkText,
-                    nodeId: nextTarget.id
-                  }
-                ]);
-                setSimStepNodeId(nextTarget.id);
-              }, 600);
-            }
-          }
-        }, 400);
-      }
+    const targetIds = getOptionTargetIds(opt);
+    if (targetIds.length > 0) {
+      executeSimTargets(targetIds, simCurrentLead, 400);
     }
   };
 
@@ -1360,37 +1493,23 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
 
     const activeNode = currentFlow.nodes.find(n => n.id === simStepNodeId);
     if (activeNode) {
-      if (activeNode.targetNodeId) {
-        const next = currentFlow.nodes.find(n => n.id === activeNode.targetNodeId);
-        if (next) {
-          setTimeout(async () => {
-            await recordCrmStep(currentFlow, next, simCurrentLead, text);
-            setSimHistory(prev => [
-              ...prev,
-              {
-                sender: next.type === 'crm_action' ? 'system' : 'bot',
-                text: next.type === 'crm_action' ? `⚡ ${next.title}: ${next.content}` : (next.content || ''),
-                linkUrl: next.config?.linkUrl,
-                linkText: next.config?.linkText,
-                nodeId: next.id
-              }
-            ]);
-            setSimStepNodeId(next.id);
-          }, 500);
-        }
+      const targetIds = getNodeTargetIds(activeNode);
+      if (targetIds.length > 0) {
+        executeSimTargets(targetIds, simCurrentLead, 400);
       } else {
         await recordCrmStep(currentFlow, activeNode, simCurrentLead, text);
       }
     }
   };
 
-  // Conexões SVG
+  // Conexões SVG (Suporta conexões múltiplas saindo de cada bloco)
   const renderConnections = () => {
     const lines: React.ReactNode[] = [];
 
     currentFlow.nodes.forEach(node => {
-      if (node.targetNodeId) {
-        const target = currentFlow.nodes.find(n => n.id === node.targetNodeId);
+      const targetIds = getNodeTargetIds(node);
+      targetIds.forEach(targetId => {
+        const target = currentFlow.nodes.find(n => n.id === targetId);
         if (target) {
           const sourcePort = getNodePorts(node).output;
           const targetPort = getNodePorts(target).input;
@@ -1424,10 +1543,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 <g
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDisconnect(node.id);
+                    handleDisconnectTarget(node.id, undefined, target.id);
                   }}
                   className="opacity-0 group-hover/conn:opacity-100 transition-opacity cursor-pointer"
-                  title="Desconectar este fio"
+                  title={`Desconectar ligação para "${target.title}"`}
                 >
                   <circle cx={midX} cy={midY} r={11} fill="#ef4444" stroke="#0f172a" strokeWidth={2} />
                   <text
@@ -1447,12 +1566,13 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
             );
           }
         }
-      }
+      });
 
       if (node.options && node.options.length > 0) {
         node.options.forEach((opt) => {
-          if (opt.targetNodeId) {
-            const target = currentFlow.nodes.find(n => n.id === opt.targetNodeId);
+          const optTargetIds = getOptionTargetIds(opt);
+          optTargetIds.forEach(targetId => {
+            const target = currentFlow.nodes.find(n => n.id === targetId);
             if (target) {
               const sourcePorts = getNodePorts(node);
               const optPort = sourcePorts.optionsOutputs?.find(o => o.optionId === opt.id);
@@ -1483,10 +1603,10 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                     <g
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDisconnect(node.id, opt.id);
+                        handleDisconnectTarget(node.id, opt.id, target.id);
                       }}
                       className="opacity-0 group-hover/conn:opacity-100 transition-opacity cursor-pointer"
-                      title="Desconectar este caminho"
+                      title={`Desconectar ligação para "${target.title}"`}
                     >
                       <circle cx={midX} cy={midY} r={11} fill="#ef4444" stroke="#0f172a" strokeWidth={2} />
                       <text
@@ -1506,7 +1626,7 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                 );
               }
             }
-          }
+          });
         });
       }
     });
@@ -2091,9 +2211,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         className={`absolute -right-2.5 top-9 w-5 h-5 rounded-full bg-orange-500 border-2 border-slate-900 cursor-crosshair shadow-lg transition-transform hover:scale-130 flex items-center justify-center ${
                           connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
                         }`}
-                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco (suporta múltiplos)"
                       >
-                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        {getNodeTargetIds(node).length > 1 ? (
+                          <span className="text-[9px] font-black text-white leading-none">
+                            {getNodeTargetIds(node).length}
+                          </span>
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        )}
                       </div>
                     </div>
                   );
@@ -2180,9 +2306,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                                   : ''
                               }`}
                               style={{ backgroundColor: opt.color || '#3b82f6' }}
-                              title={`Ligar: ${opt.label} (arrastar ou clicar na bolinha)`}
+                              title={`Ligar: ${opt.label} (arrastar ou clicar na bolinha - suporta múltiplos)`}
                             >
-                              <div className="w-1 h-1 rounded-full bg-white pointer-events-none" />
+                              {getOptionTargetIds(opt).length > 1 ? (
+                                <span className="text-[8px] font-black text-white leading-none">
+                                  {getOptionTargetIds(opt).length}
+                                </span>
+                              ) : (
+                                <div className="w-1 h-1 rounded-full bg-white pointer-events-none" />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -2285,9 +2417,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         className={`absolute -right-2.5 top-8 w-5 h-5 rounded-full bg-cyan-500 border-2 border-slate-900 cursor-crosshair shadow-md transition-transform hover:scale-130 flex items-center justify-center ${
                           connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
                         }`}
-                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco (suporta múltiplos)"
                       >
-                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        {getNodeTargetIds(node).length > 1 ? (
+                          <span className="text-[9px] font-black text-white leading-none">
+                            {getNodeTargetIds(node).length}
+                          </span>
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        )}
                       </div>
                     </div>
                   );
@@ -2358,9 +2496,15 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                         className={`absolute -right-2.5 top-5 w-5 h-5 rounded-full bg-pink-500 border-2 border-slate-900 cursor-crosshair shadow-md transition-transform hover:scale-130 flex items-center justify-center ${
                           connecting?.fromNodeId === node.id ? 'ring-4 ring-white scale-125' : ''
                         }`}
-                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco"
+                        title="Puxar ou clicar na bolinha para ligar ao próximo bloco (suporta múltiplos)"
                       >
-                        <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        {getNodeTargetIds(node).length > 1 ? (
+                          <span className="text-[9px] font-black text-white leading-none">
+                            {getNodeTargetIds(node).length}
+                          </span>
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white pointer-events-none" />
+                        )}
                       </div>
                     </div>
                   );
@@ -2920,44 +3064,103 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
               </div>
             )}
 
-            {/* PRÓXIMO PASSO / DESTINO DA CONEXÃO NO FLUXO */}
-            {selectedNode.type !== 'condition' && selectedNode.type !== 'end' && (
-              <div className="space-y-2 p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <GitFork className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Ligar ao Próximo Bloco</span>
-                  </label>
-                  {selectedNode.targetNodeId && (
-                    <button
-                      onClick={() => handleDisconnect(selectedNode.id)}
-                      className="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1 transition"
-                    >
-                      <X className="w-3 h-3" />
-                      <span>Desconectar</span>
-                    </button>
-                  )}
-                </div>
+            {/* PRÓXIMO PASSO / DESTINO DA CONEXÃO NO FLUXO (SUPORTA MÚLTIPLAS CONEXÕES) */}
+            {selectedNode.type !== 'condition' && selectedNode.type !== 'end' && (() => {
+              const connectedTargetIds = getNodeTargetIds(selectedNode);
+              return (
+                <div className="space-y-3 p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <GitFork className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Conexões de Saída ({connectedTargetIds.length})</span>
+                    </label>
+                    {connectedTargetIds.length > 0 && (
+                      <button
+                        onClick={() => handleDisconnect(selectedNode.id)}
+                        className="text-rose-400 hover:text-rose-300 text-[10px] font-bold flex items-center gap-1 transition"
+                      >
+                        <X className="w-3 h-3" />
+                        <span>Desconectar todos</span>
+                      </button>
+                    )}
+                  </div>
 
-                <select
-                  value={selectedNode.targetNodeId || ''}
-                  onChange={e => handleConnectDirect(selectedNode.id, undefined, e.target.value || undefined)}
-                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium"
-                >
-                  <option value="">Nenhum (Finaliza aqui ou aguarda resposta)</option>
-                  {currentFlow.nodes
-                    .filter(n => n.id !== selectedNode.id && n.type !== 'start')
-                    .map(n => (
-                      <option key={n.id} value={n.id}>
-                        → {n.title} ({n.type === 'condition' ? 'Condição/Roteador' : n.type === 'message' ? 'Mensagem' : n.type === 'crm_action' ? 'Ação CRM' : 'Fim'})
-                      </option>
-                    ))}
-                </select>
-                <p className="text-[10px] text-slate-400">
-                  Dica: Você também pode ligar arrastando ou clicando nas bolinhas do bloco no canvas.
-                </p>
-              </div>
-            )}
+                  {/* Lista de destinos conectados */}
+                  {connectedTargetIds.length > 0 && (
+                    <div className="space-y-1.5">
+                      {connectedTargetIds.map(targetId => {
+                        const targetNode = currentFlow.nodes.find(n => n.id === targetId);
+                        if (!targetNode) return null;
+                        const isCrm = targetNode.type === 'crm_action';
+                        const isCond = targetNode.type === 'condition';
+                        const isEnd = targetNode.type === 'end';
+                        return (
+                          <div
+                            key={targetId}
+                            className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800/80 group hover:border-slate-700 transition"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isCrm ? (
+                                <Zap className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                              ) : isCond ? (
+                                <GitFork className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              ) : isEnd ? (
+                                <Flag className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              ) : (
+                                <MessageSquare className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              )}
+                              <span className="font-semibold text-white truncate text-xs">
+                                {targetNode.title}
+                              </span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold shrink-0 ${
+                                isCrm ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20' :
+                                isCond ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                isEnd ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                              }`}>
+                                {isCrm ? 'Ação CRM' : isCond ? 'Roteador' : isEnd ? 'Fim' : 'Mensagem'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDisconnectTarget(selectedNode.id, undefined, targetId)}
+                              className="text-slate-500 hover:text-rose-400 p-1 rounded transition"
+                              title={`Desconectar ligação para "${targetNode.title}"`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Seletor para adicionar mais uma conexão */}
+                  <div className="space-y-1">
+                    <select
+                      value=""
+                      onChange={e => {
+                        if (e.target.value) {
+                          handleConnectDirect(selectedNode.id, undefined, e.target.value);
+                        }
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-medium cursor-pointer"
+                    >
+                      <option value="">+ Conectar a mais um bloco...</option>
+                      {currentFlow.nodes
+                        .filter(n => n.id !== selectedNode.id && n.type !== 'start' && !connectedTargetIds.includes(n.id))
+                        .map(n => (
+                          <option key={n.id} value={n.id}>
+                            → {n.title} ({n.type === 'condition' ? 'Condição/Roteador' : n.type === 'message' ? 'Mensagem' : n.type === 'crm_action' ? 'Ação CRM' : 'Fim'})
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      💡 <strong>Múltiplas conexões:</strong> este bloco pode disparar vários blocos ao mesmo tempo (ex: Atualiza CRM e Envia link).
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Opções de Ramificação (se for Condition / Roteador) */}
             {selectedNode.type === 'condition' && (
@@ -2981,70 +3184,104 @@ export const ChatbotVisualFlowBuilder: React.FC<ChatbotVisualFlowBuilderProps> =
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-                  {(selectedNode.options || []).map((opt) => (
-                    <div key={opt.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={opt.color || '#3b82f6'}
-                          onChange={e => {
-                            const col = e.target.value;
-                            const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, color: col } : o);
-                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                          }}
-                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent shrink-0"
-                        />
-                        <input
-                          type="text"
-                          value={opt.label}
-                          onChange={e => {
-                            const val = e.target.value;
-                            const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, label: val } : o);
-                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                          }}
-                          className="flex-1 bg-transparent text-xs text-white focus:outline-none"
-                        />
-                        <button
-                          onClick={() => {
-                            const updated = (selectedNode.options || []).filter(o => o.id !== opt.id);
-                            updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
-                          }}
-                          className="text-slate-500 hover:text-rose-400 p-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Destino desta opção/caminho */}
-                      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/60">
-                        <span className="text-[10px] text-slate-400 shrink-0 font-semibold">Leva para:</span>
-                        <select
-                          value={opt.targetNodeId || ''}
-                          onChange={e => handleConnectDirect(selectedNode.id, opt.id, e.target.value || undefined)}
-                          className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500"
-                        >
-                          <option value="">Sem conexão (solto)</option>
-                          {currentFlow.nodes
-                            .filter(n => n.id !== selectedNode.id && n.type !== 'start')
-                            .map(n => (
-                              <option key={n.id} value={n.id}>
-                                → {n.title}
-                              </option>
-                            ))}
-                        </select>
-                        {opt.targetNodeId && (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  {(selectedNode.options || []).map((opt) => {
+                    const optTargetIds = getOptionTargetIds(opt);
+                    return (
+                      <div key={opt.id} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={opt.color || '#3b82f6'}
+                            onChange={e => {
+                              const col = e.target.value;
+                              const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, color: col } : o);
+                              updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                            }}
+                            className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent shrink-0"
+                          />
+                          <input
+                            type="text"
+                            value={opt.label}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const updated = (selectedNode.options || []).map(o => o.id === opt.id ? { ...o, label: val } : o);
+                              updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                            }}
+                            className="flex-1 bg-transparent text-xs text-white focus:outline-none"
+                          />
                           <button
-                            onClick={() => handleDisconnect(selectedNode.id, opt.id)}
-                            className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-950/40"
-                            title="Desconectar este caminho"
+                            onClick={() => {
+                              const updated = (selectedNode.options || []).filter(o => o.id !== opt.id);
+                              updateNodes(currentFlow.nodes.map(n => n.id === selectedNode.id ? { ...n, options: updated } : n));
+                            }}
+                            className="text-slate-500 hover:text-rose-400 p-1"
                           >
-                            <X className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                        </div>
+
+                        {/* Destinos desta opção/caminho (Suporta múltiplos!) */}
+                        <div className="space-y-1.5 pt-1 border-t border-slate-800/60">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-slate-400 font-semibold">Leva para ({optTargetIds.length}):</span>
+                            {optTargetIds.length > 0 && (
+                              <button
+                                onClick={() => handleDisconnect(selectedNode.id, opt.id)}
+                                className="text-rose-400 hover:text-rose-300 text-[9px] font-bold"
+                              >
+                                Limpar
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Chips dos blocos conectados */}
+                          {optTargetIds.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {optTargetIds.map(tId => {
+                                const targetNode = currentFlow.nodes.find(n => n.id === tId);
+                                if (!targetNode) return null;
+                                return (
+                                  <span
+                                    key={tId}
+                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] text-white"
+                                  >
+                                    <span className="truncate max-w-[130px] font-medium">{targetNode.title}</span>
+                                    <button
+                                      onClick={() => handleDisconnectTarget(selectedNode.id, opt.id, tId)}
+                                      className="text-slate-400 hover:text-rose-400 transition"
+                                      title={`Remover ligação para ${targetNode.title}`}
+                                    >
+                                      <X className="w-2.5 h-2.5" />
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          <select
+                            value=""
+                            onChange={e => {
+                              if (e.target.value) {
+                                handleConnectDirect(selectedNode.id, opt.id, e.target.value);
+                              }
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                          >
+                            <option value="">+ Ligar a outro bloco...</option>
+                            {currentFlow.nodes
+                              .filter(n => n.id !== selectedNode.id && n.type !== 'start' && !optTargetIds.includes(n.id))
+                              .map(n => (
+                                <option key={n.id} value={n.id}>
+                                  → {n.title} ({n.type === 'crm_action' ? 'Ação CRM' : n.type === 'message' ? 'Mensagem' : 'Outro'})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
