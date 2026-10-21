@@ -2541,8 +2541,16 @@ app.post('/api/popups/:id/submit', async (req: Request, res: Response) => {
 
 // Standalone Embeddable JavaScript Tracker & Popup Engine
 app.get('/tracker/popup.js', async (req: Request, res: Response) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.type('application/javascript');
     const popupId = (req.query.id as string) || '';
+
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'mdtracker.mudadigital.com.br';
+    const serverOrigin = `${proto}://${host}`;
 
     // Fetch popup if ID provided in query
     let initialConfig: any = null;
@@ -2559,18 +2567,12 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
 
     const scriptCode = `
 (function() {
-  if (window.__MDTrackerPopupInitialized) return;
-  window.__MDTrackerPopupInitialized = true;
+  window.__MDTrackerPopups = window.__MDTrackerPopups || {};
+  if (window.__MDTrackerPopups['${popupId}']) return;
+  window.__MDTrackerPopups['${popupId}'] = true;
 
-  const currentScript = document.currentScript || (function() {
-    const scripts = document.getElementsByTagName('script');
-    return scripts[scripts.length - 1];
-  })();
-
-  const scriptSrc = currentScript ? currentScript.src : '';
-  const urlObj = new URL(scriptSrc, window.location.href);
-  const serverBase = urlObj.origin;
-  const scriptPopupId = urlObj.searchParams.get('id') || (currentScript ? currentScript.getAttribute('data-popup-id') : '') || '${popupId}';
+  const serverBase = '${serverOrigin}';
+  const scriptPopupId = '${popupId}';
 
   let config = ${initialConfig ? JSON.stringify(initialConfig) : 'null'};
 
@@ -2588,10 +2590,13 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
 
     if (!config || !config.active) return;
 
-    // Check frequency
+    // Check frequency - uses sessionStorage so it resets per session as described in UI
     const seenKey = 'mdt_seen_' + config.id;
-    if (config.showOncePerUser && localStorage.getItem(seenKey)) {
-      if (config.triggerType !== 'floating_button') return;
+    const isDebugOrPreview = window.location.search.indexOf('mdt_preview') !== -1 || window.location.search.indexOf('gtm_debug') !== -1;
+    if (!isDebugOrPreview && config.showOncePerUser) {
+      if (sessionStorage.getItem(seenKey) || localStorage.getItem(seenKey)) {
+        if (config.triggerType !== 'floating_button') return;
+      }
     }
 
     injectStyles(config);
@@ -2876,6 +2881,7 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
         }
 
         // Mark as seen
+        sessionStorage.setItem('mdt_seen_' + cfg.id, '1');
         localStorage.setItem('mdt_seen_' + cfg.id, '1');
 
         // Post submit action
@@ -2930,25 +2936,44 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
 
   function setupTriggers(cfg) {
     if (cfg.triggerType === 'exit_intent') {
+      const onMouseOut = function(e) {
+        if (!e.relatedTarget && (e.clientY <= 15 || e.clientY < 0)) {
+          showPopup(cfg.id);
+        }
+      };
+      document.addEventListener('mouseout', onMouseOut);
       document.addEventListener('mouseleave', function(e) {
-        if (e.clientY <= 5) {
+        if (e.clientY <= 15) {
           showPopup(cfg.id);
         }
       });
-    } else if (cfg.triggerType === 'scroll') {
-      const targetPercent = cfg.triggerValue || 50;
+      // Mobile exit intent: scrolling back up rapidly after viewing content
+      let maxScrollY = 0;
       window.addEventListener('scroll', function() {
         if (hasTriggered) return;
-        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const currentY = window.scrollY || window.pageYOffset || 0;
+        if (currentY > maxScrollY) maxScrollY = currentY;
+        if (maxScrollY > 400 && currentY < maxScrollY - 200) {
+          showPopup(cfg.id);
+        }
+      }, { passive: true });
+    } else if (cfg.triggerType === 'scroll') {
+      const targetPercent = Number(cfg.triggerValue) || 50;
+      const checkScroll = function() {
+        if (hasTriggered) return;
+        const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        const totalHeight = (document.documentElement.scrollHeight || document.body.scrollHeight || 0) - window.innerHeight;
         if (totalHeight > 0) {
-          const current = (window.scrollY / totalHeight) * 100;
+          const current = (scrollY / totalHeight) * 100;
           if (current >= targetPercent) {
             showPopup(cfg.id);
           }
         }
-      });
+      };
+      window.addEventListener('scroll', checkScroll, { passive: true });
+      setTimeout(checkScroll, 600);
     } else if (cfg.triggerType === 'timed_delay') {
-      const delay = (cfg.triggerValue || 5) * 1000;
+      const delay = Math.max(1, Number(cfg.triggerValue) || 5) * 1000;
       setTimeout(() => {
         showPopup(cfg.id);
       }, delay);
@@ -2957,7 +2982,7 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
       btn.className = 'mdt-floating-trigger';
       btn.innerHTML = \`
         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
-        <span>\${cfg.badgeText || cfg.ctaText || 'Oferta Especial'}</span>
+        <span>\${(cfg.badgeText || cfg.ctaText || 'Oferta Especial').replace(/<[^>]*>/g, '')}</span>
       \`;
       btn.onclick = () => {
         hasTriggered = false; // allow re-opening from button

@@ -230,7 +230,9 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
 
   // Copy Snippet
   const getEmbedCode = (popup: SmartPopup) => {
-    const origin = window.location.origin;
+    const origin = (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
+      ? 'https://mdtracker.mudadigital.com.br'
+      : window.location.origin;
     return `<!-- Início Pop-up Inteligente MDTracker -->\n<script src="${origin}/tracker/popup.js?id=${popup.id}" async></script>\n<!-- Fim Pop-up Inteligente MDTracker -->`;
   };
 
