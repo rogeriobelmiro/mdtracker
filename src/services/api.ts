@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -32,8 +32,9 @@ export async function updateCompany(id: string, data: Partial<Company>): Promise
   return res.json();
 }
 
-export async function fetchUsers(): Promise<User[]> {
-  const res = await fetch('/api/users');
+export async function fetchUsers(companyId?: string): Promise<User[]> {
+  const url = companyId ? `/api/users?companyId=${encodeURIComponent(companyId)}` : '/api/users';
+  const res = await fetch(url);
   if (!res.ok) return [];
   return res.json();
 }
@@ -953,5 +954,361 @@ export async function testInstagramToken(
     throw new Error(data.message || 'Falha ao validar token da Meta');
   }
   return data;
+}
+
+// ==============================================================================
+// PASSO 6: MULTI-ATENDIMENTO, EQUIPES E MONITORAMENTO DE SUPERVISÃO
+// ==============================================================================
+
+export async function fetchTeams(companyId: string): Promise<Team[]> {
+  const res = await fetch(`/api/teams?companyId=${encodeURIComponent(companyId)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createTeam(data: Partial<Team>): Promise<Team> {
+  const res = await fetch('/api/teams', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar equipe');
+  }
+  return res.json();
+}
+
+export async function updateTeam(id: string, data: Partial<Team>): Promise<Team> {
+  const res = await fetch(`/api/teams/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar equipe');
+  }
+  return res.json();
+}
+
+export async function deleteTeam(id: string): Promise<void> {
+  const res = await fetch(`/api/teams/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao excluir equipe');
+  }
+}
+
+export async function fetchTeamMembers(companyId: string, teamId?: string): Promise<TeamMember[]> {
+  const url = teamId 
+    ? `/api/team-members?companyId=${encodeURIComponent(companyId)}&teamId=${encodeURIComponent(teamId)}`
+    : `/api/team-members?companyId=${encodeURIComponent(companyId)}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createTeamMember(data: Partial<TeamMember>): Promise<TeamMember> {
+  const res = await fetch('/api/team-members', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao adicionar membro à equipe');
+  }
+  return res.json();
+}
+
+export async function updateTeamMember(id: string, data: Partial<TeamMember>): Promise<TeamMember> {
+  const res = await fetch(`/api/team-members/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar membro da equipe');
+  }
+  return res.json();
+}
+
+export async function deleteTeamMember(id: string): Promise<void> {
+  const res = await fetch(`/api/team-members/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao remover membro da equipe');
+  }
+}
+
+export async function reassignLead(leadId: string, assignedUserId?: string, assignedTeamId?: string): Promise<Lead> {
+  const res = await fetch(`/api/leads/${leadId}/reassign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assignedUserId, assignedTeamId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao reatribuir lead');
+  }
+  return res.json();
+}
+
+export async function fetchSupervisorStats(companyId: string): Promise<SupervisorMonitorStats> {
+  const res = await fetch(`/api/supervisor/live-monitor?companyId=${encodeURIComponent(companyId)}`);
+  if (!res.ok) {
+    return {
+      totalAgents: 0,
+      onlineAgents: 0,
+      inCallAgents: 0,
+      busyAgents: 0,
+      offlineAgents: 0,
+      activeChatsCount: 0,
+      todayCallsCount: 0,
+      averageCallDuration: 0,
+      positiveSentimentRate: 0
+    };
+  }
+  return res.json();
+}
+
+export async function fetchNextAttendant(companyId: string, teamId?: string): Promise<{ nextUser: User | null; team: Team | null; memberCount: number }> {
+  const url = teamId 
+    ? `/api/teams-next-attendant?companyId=${encodeURIComponent(companyId)}&teamId=${encodeURIComponent(teamId)}`
+    : `/api/teams-next-attendant?companyId=${encodeURIComponent(companyId)}`;
+  const res = await fetch(url);
+  if (!res.ok) return { nextUser: null, team: null, memberCount: 0 };
+  return res.json();
+}
+
+export async function autoAssignLead(leadId: string, companyId: string, teamId?: string): Promise<{ success: boolean; lead: Lead; assignedUser: { id: string; name: string }; team: { id: string; name: string } }> {
+  const res = await fetch(`/api/leads/${leadId}/auto-assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId, teamId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao direcionar lead automaticamente');
+  }
+  return res.json();
+}
+
+// ==========================================
+// Surveys & Qualificação API
+// ==========================================
+
+export async function fetchSurveys(companyId?: string): Promise<Survey[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/surveys${query}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchSurveyById(id: string): Promise<Survey> {
+  const res = await fetch(`/api/surveys/${id}`);
+  if (!res.ok) throw new Error('Pesquisa não encontrada');
+  return res.json();
+}
+
+export async function createSurvey(data: Partial<Survey>): Promise<Survey> {
+  const res = await fetch('/api/surveys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar pesquisa');
+  }
+  return res.json();
+}
+
+export async function updateSurvey(id: string, data: Partial<Survey>): Promise<Survey> {
+  const res = await fetch(`/api/surveys/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar pesquisa');
+  }
+  return res.json();
+}
+
+export async function deleteSurvey(id: string): Promise<void> {
+  const res = await fetch(`/api/surveys/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir pesquisa');
+}
+
+export async function fetchSurveyResponses(surveyId: string): Promise<SurveyResponse[]> {
+  const res = await fetch(`/api/surveys/${surveyId}/responses`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// ==========================================
+// Custom Domains & DNS API
+// ==========================================
+
+export async function fetchCustomDomains(companyId?: string): Promise<CustomDomain[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/domains${query}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createCustomDomain(data: Partial<CustomDomain>): Promise<CustomDomain> {
+  const res = await fetch('/api/domains', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao registrar domínio');
+  }
+  return res.json();
+}
+
+export async function verifyCustomDomain(id: string, simulate?: boolean): Promise<{ success: boolean; verified: boolean; domain: CustomDomain; message: string }> {
+  const url = simulate ? `/api/domains/${id}/verify?simulate=true` : `/api/domains/${id}/verify`;
+  const res = await fetch(url, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Falha ao verificar DNS');
+  }
+  return res.json();
+}
+
+export async function deleteCustomDomain(id: string): Promise<void> {
+  const res = await fetch(`/api/domains/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir domínio');
+}
+
+// ==========================================
+// Event Gamification & Live Presentation API
+// ==========================================
+
+export async function fetchGamificationEvents(companyId?: string): Promise<GamificationEvent[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/gamification-events${query}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchGamificationEventDetails(id: string): Promise<GamificationEvent & { activities: GamificationActivity[]; participants: GamificationParticipant[]; responses: GamificationResponse[] }> {
+  const res = await fetch(`/api/gamification-events/${id}/details`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao carregar detalhes do evento');
+  }
+  return res.json();
+}
+
+export async function createGamificationEvent(data: Partial<GamificationEvent>): Promise<GamificationEvent> {
+  const res = await fetch('/api/gamification-events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar evento');
+  }
+  return res.json();
+}
+
+export async function updateGamificationEvent(id: string, data: Partial<GamificationEvent>): Promise<GamificationEvent> {
+  const res = await fetch(`/api/gamification-events/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar evento');
+  }
+  return res.json();
+}
+
+export async function deleteGamificationEvent(id: string): Promise<void> {
+  const res = await fetch(`/api/gamification-events/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir evento');
+}
+
+export async function addGamificationActivity(eventId: string, data: Partial<GamificationActivity>): Promise<GamificationActivity> {
+  const res = await fetch(`/api/gamification-events/${eventId}/activities`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao adicionar dinâmica');
+  }
+  return res.json();
+}
+
+export async function updateGamificationActivity(eventId: string, activityId: string, data: Partial<GamificationActivity>): Promise<GamificationActivity> {
+  const res = await fetch(`/api/gamification-events/${eventId}/activities/${activityId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar dinâmica');
+  }
+  return res.json();
+}
+
+export async function deleteGamificationActivity(eventId: string, activityId: string): Promise<void> {
+  const res = await fetch(`/api/gamification-events/${eventId}/activities/${activityId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir dinâmica');
+}
+
+export async function setActiveGamificationActivity(eventId: string, activityId: string | null): Promise<any> {
+  const res = await fetch(`/api/gamification-events/${eventId}/set-active-activity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ activityId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao alterar dinâmica ativa');
+  }
+  return res.json();
+}
+
+export async function triggerLuckyDraw(eventId: string): Promise<{ winner: GamificationParticipant }> {
+  const res = await fetch(`/api/gamification-events/${eventId}/lucky-draw`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao realizar sorteio');
+  }
+  return res.json();
+}
+
+export async function resetGamificationResponses(eventId: string): Promise<any> {
+  const res = await fetch(`/api/gamification-events/${eventId}/reset-responses`, { method: 'POST' });
+  if (!res.ok) throw new Error('Erro ao resetar respostas');
+  return res.json();
+}
+
+export async function exportGamificationLeadsToCRM(eventId: string): Promise<{ importedCount: number; message: string }> {
+  const res = await fetch(`/api/gamification-events/${eventId}/export-leads-to-crm`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao exportar leads para o CRM');
+  }
+  return res.json();
 }
 

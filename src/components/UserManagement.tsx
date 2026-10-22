@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Users, UserPlus, Shield, UserCheck, Key, Mail, Lock, CheckCircle2, 
-  XCircle, Trash2, Edit3, Building2, ShieldAlert, Sparkles, AlertCircle
+  XCircle, Trash2, Edit3, Building2, ShieldAlert, Sparkles, AlertCircle,
+  Phone, Radio, Globe, Home
 } from 'lucide-react';
 import { User, UserRole, Company } from '../types';
 
@@ -28,7 +29,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     name: '',
     email: '',
     password: '',
-    role: 'attendant' as UserRole
+    role: 'attendant' as UserRole,
+    phone: '',
+    extension: '',
+    isExternal: false
   });
   const [formError, setFormError] = useState('');
 
@@ -58,6 +62,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: formData.role,
+        phone: formData.phone.trim() || undefined,
+        extension: formData.extension.trim() || undefined,
+        isExternal: formData.isExternal
       };
       if (formData.password) {
         updates.password = formData.password;
@@ -70,11 +77,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         email: formData.email.trim(),
         password: formData.password || '123',
         role: formData.role,
+        phone: formData.phone.trim() || undefined,
+        extension: formData.extension.trim() || undefined,
+        isExternal: formData.isExternal,
         active: true
       });
     }
 
-    setFormData({ name: '', email: '', password: '', role: 'attendant' });
+    setFormData({ name: '', email: '', password: '', role: 'attendant', phone: '', extension: '', isExternal: false });
     setEditingUserId(null);
     setIsModalOpen(false);
   };
@@ -85,7 +95,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      phone: user.phone || '',
+      extension: user.extension || '',
+      isExternal: user.isExternal || false
     });
     setFormError('');
     setIsModalOpen(true);
@@ -94,7 +107,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const closeAndResetModal = () => {
     setIsModalOpen(false);
     setEditingUserId(null);
-    setFormData({ name: '', email: '', password: '', role: 'attendant' });
+    setFormData({ name: '', email: '', password: '', role: 'attendant', phone: '', extension: '', isExternal: false });
     setFormError('');
   };
 
@@ -231,7 +244,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-4">Usuário / Nome</th>
                 <th className="py-3 px-4">E-mail de Acesso</th>
-                <th className="py-3 px-4">Categoria de Acesso</th>
+                <th className="py-3 px-4">Telefone / Ramal</th>
+                <th className="py-3 px-4">Categoria / Modelo</th>
                 <th className="py-3 px-4">Permissões Principais</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Ações</th>
@@ -260,9 +274,44 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                       {user.email}
                     </td>
 
-                    {/* Role Badge */}
+                    {/* Phone & Extension */}
                     <td className="py-3.5 px-4">
-                      {getRoleBadge(user.role)}
+                      <div className="flex flex-col gap-1">
+                        {user.phone ? (
+                          <span className="font-mono text-slate-800 text-[11px] flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-emerald-600" />
+                            {user.phone}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[10px] italic">Sem fone direto</span>
+                        )}
+                        {user.extension && (
+                          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold w-fit flex items-center gap-1">
+                            <Radio className="w-2.5 h-2.5 text-blue-600" />
+                            Ramal {user.extension}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Role & Model Badge */}
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-1">
+                        {getRoleBadge(user.role)}
+                        <div>
+                          {user.isExternal ? (
+                            <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <Globe className="w-2.5 h-2.5 text-amber-600" />
+                              Externo (Home Office)
+                            </span>
+                          ) : (
+                            <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                              <Home className="w-2.5 h-2.5 text-slate-500" />
+                              Interno (Escritório)
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     {/* Permissions Tooltip */}
@@ -328,7 +377,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
       {/* CREATE NEW USER MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 border border-slate-200 shadow-2xl relative space-y-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 border border-slate-200 shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -391,6 +440,55 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-emerald-600" />
+                    Telefone / WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 5511999998888"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center gap-1">
+                    <Radio className="w-3 h-3 text-blue-600" />
+                    Ramal VoIP
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 101, 204"
+                    value={formData.extension}
+                    onChange={(e) => setFormData({ ...formData, extension: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isExternal}
+                    onChange={(e) => setFormData({ ...formData, isExternal: e.target.checked })}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <Globe className="w-3 h-3 text-amber-600" />
+                      Colaborador Externo (Home Office / Remoto)
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      Marque se o atendente opera fora do escritório (receberá chamadas via web/celular).
+                    </span>
+                  </div>
+                </label>
               </div>
 
               <div>

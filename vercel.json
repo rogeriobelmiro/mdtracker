@@ -5,6 +5,22 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/p/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/lp/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/pesquisa/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/survey/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/r/(.*)",
       "destination": "/api/index.ts"
     },

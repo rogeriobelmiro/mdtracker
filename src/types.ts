@@ -3,6 +3,8 @@ export type FunnelStage = 'Novo Lead' | 'Contatado' | 'Em Negociação' | 'Conve
 export const FUNNEL_STAGES: FunnelStage[] = ['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'];
 
 export type UserRole = 'admin' | 'manager' | 'attendant';
+export type TeamMemberStatus = 'online' | 'busy' | 'in_call' | 'break' | 'offline';
+
 
 export interface Company {
   id: string;
@@ -26,6 +28,10 @@ export interface User {
   role: UserRole;
   avatarUrl?: string;
   active: boolean;
+  phone?: string;
+  extension?: string;
+  isExternal?: boolean;
+  status?: TeamMemberStatus;
   createdAt: string;
 }
 
@@ -56,6 +62,9 @@ export interface CampaignLink {
   clicksCount: number;
   leadsCount: number;
   conversionsCount: number;
+  assignedTeamId?: string;
+  phoneNumbers?: string[];
+  rotationMode?: 'single' | 'round_robin' | 'team_rotation';
   createdAt: string;
   updatedAt: string;
 }
@@ -109,6 +118,11 @@ export interface Lead {
   qualificationLevel?: 'Lead' | 'MQL' | 'SQL';
   fitGrade?: 'A' | 'B' | 'C' | 'D';
   scoreBreakdown?: Array<{ reason: string; points: number }>;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  assignedTeamId?: string;
+  assignedTeamName?: string;
+  assignedAt?: string;
 }
 
 export interface WebhookLog {
@@ -503,7 +517,34 @@ export interface WorkflowExecutionLog {
 // Landing Pages (RD Station style)
 export type LandingPageCategory = 'lead_magnet' | 'product_launch' | 'service_consulting' | 'event_webinar';
 export type LandingPageStatus = 'published' | 'draft' | 'archived';
-export type LandingPageActionType = 'redirect_whatsapp' | 'custom_url' | 'thank_you_message';
+export type LandingPageActionType = 'redirect_whatsapp' | 'custom_url' | 'thank_you_message' | 'thank_you_page';
+
+export type ThankYouActionType = 'whatsapp_group' | 'download_pdf' | 'survey' | 'custom_url';
+
+export interface ThankYouActionButton {
+  id: string;
+  type: ThankYouActionType;
+  title: string;
+  description?: string;
+  url: string;
+  buttonText: string;
+  icon?: 'whatsapp' | 'download' | 'survey' | 'external';
+  color?: string;
+  badge?: string;
+  surveyId?: string; // Links directly to a MDTracker internal survey
+}
+
+export interface LandingPageThankYouPage {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  showCheckmark: boolean;
+  messageCardTitle?: string;
+  messageCardText?: string;
+  videoUrl?: string;
+  buttons: ThankYouActionButton[];
+}
 
 export interface LandingPageFormField {
   id: string;
@@ -537,21 +578,137 @@ export interface LandingPageFAQItem {
   answer: string;
 }
 
+export type LandingPageFontFamily = 
+  | 'Inter' 
+  | 'Poppins' 
+  | 'Montserrat' 
+  | 'Roboto' 
+  | 'Playfair Display' 
+  | 'Plus Jakarta Sans' 
+  | 'Outfit' 
+  | 'Space Grotesk';
+
 export interface LandingPageTheme {
   primaryColor: string;
   accentColor: string;
   backgroundColor: 'white' | 'slate' | 'dark' | 'gradient';
-  fontFamily: 'Inter' | 'Poppins' | 'Montserrat' | 'Roboto';
+  fontFamily: LandingPageFontFamily;
+  titleSize?: 'normal' | 'large' | 'huge';
   buttonStyle: 'rounded-xl' | 'rounded-full' | 'rounded-md' | 'square';
 }
 
 export interface LandingPageHero {
+  enabled?: boolean;
   badge?: string;
   headline: string;
   subheadline: string;
   ctaText: string;
   imageUrl?: string;
   videoUrl?: string;
+  mediaType?: 'image' | 'video' | 'form' | 'none';
+  layout?: 'split_form' | 'centered' | 'split_media';
+  formPosition?: 'right' | 'left';
+  navbarEnabled?: boolean;
+  navbarCtaText?: string;
+  trustBadges?: string[];
+  formBadge?: string;
+}
+
+export type LandingPageBlockType = 
+  | 'hero' 
+  | 'header_form'
+  | 'video' 
+  | 'image' 
+  | 'text' 
+  | 'features' 
+  | 'socialProof' 
+  | 'pricing' 
+  | 'faq' 
+  | 'countdown' 
+  | 'cta_banner';
+
+export interface LandingPagePricingPlan {
+  id: string;
+  name: string;
+  price: string;
+  period?: string;
+  description?: string;
+  features: string[];
+  highlighted?: boolean;
+  buttonText: string;
+  buttonUrl?: string;
+  badge?: string;
+}
+
+export interface LandingPageCustomBlock {
+  id: string;
+  type: LandingPageBlockType;
+  title?: string;
+  subtitle?: string;
+  enabled: boolean;
+  backgroundColor?: 'white' | 'slate' | 'dark' | 'primary';
+  
+  // Header with Form block (Power UP style)
+  headerNavbarEnabled?: boolean;
+  headerLogoText?: string;
+  headerNavCtaText?: string;
+  headerBadge?: string;
+  headerHeadline?: string;
+  headerSubheadline?: string;
+  headerPrimaryCtaText?: string;
+  headerPrimaryCtaUrl?: string;
+  headerTrustBadges?: string[];
+  formCardBadge?: string;
+  formCardTitle?: string;
+  formCardSubtitle?: string;
+  formCardButtonText?: string;
+  formPosition?: 'right' | 'left' | 'bottom';
+  formLgpdNotice?: string;
+
+  // Video block
+  videoUrl?: string;
+  videoCaption?: string;
+  videoAspectRatio?: '16/9' | '4/3' | '1/1';
+
+  // Image block
+  imageUrl?: string;
+  imageAlt?: string;
+  imageCaption?: string;
+  imageWidth?: 'contained' | 'full' | 'small' | 'medium';
+  imageAlignment?: 'center' | 'left' | 'right';
+
+  // Text / Storytelling block
+  textContent?: string;
+  textAlignment?: 'left' | 'center' | 'right';
+
+  // Features block
+  features?: LandingPageFeature[];
+
+  // Social Proof block
+  testimonials?: LandingPageTestimonial[];
+  stats?: Array<{ label: string; value: string }>;
+
+  // Pricing block
+  pricingPlans?: LandingPagePricingPlan[];
+
+  // FAQ block
+  faqItems?: LandingPageFAQItem[];
+
+  // Countdown block
+  countdownEndDate?: string;
+  countdownTitle?: string;
+  countdownRedirectOnExpire?: boolean;
+  countdownRedirectType?: 'page' | 'custom_url';
+  countdownRedirectPageSlug?: string;
+  countdownRedirectUrl?: string;
+  countdownExpiredMessage?: string;
+
+  // CTA Banner block
+  ctaHeadline?: string;
+  ctaSubheadline?: string;
+  ctaButtonText?: string;
+  ctaButtonUrl?: string;
+  ctaBadge?: string;
 }
 
 export interface LandingPageForm {
@@ -568,6 +725,14 @@ export interface LandingPageForm {
   targetStage: FunnelStage;
   tags: string[];
   linkId?: string;
+  // Automação & Workflows de Nutrição
+  workflowId?: string; // Workflow de nutrição associado
+  additionalWorkflowIds?: string[];
+  autoTriggerWhatsApp?: boolean; // Disparo automático de WhatsApp
+  whatsappTemplate?: string; // Template da mensagem de WhatsApp
+  autoTriggerEmail?: boolean; // Disparo automático de E-mail
+  emailSubject?: string; // Assunto do e-mail
+  emailBody?: string; // Corpo do e-mail
 }
 
 export interface LandingPageSocialProof {
@@ -580,6 +745,12 @@ export interface LandingPageCountdown {
   enabled: boolean;
   title?: string;
   endDate?: string;
+  redirectOnExpire?: boolean;
+  redirectType?: 'page' | 'custom_url';
+  redirectPageSlug?: string;
+  redirectUrl?: string;
+  expiredMessage?: string;
+  serverRedirect?: boolean;
 }
 
 export interface LandingPageFAQ {
@@ -610,6 +781,9 @@ export interface LandingPage {
   form: LandingPageForm;
   faq: LandingPageFAQ;
   footer: LandingPageFooter;
+  thankYouPage?: LandingPageThankYouPage;
+  customDomain?: string;
+  blocks?: LandingPageCustomBlock[];
   viewsCount: number;
   conversionsCount: number;
   createdAt: string;
@@ -645,6 +819,8 @@ export interface LeadCall {
   sentiment?: 'positivo' | 'neutro' | 'negativo';
   nextSteps?: string;
   callerId?: string;
+  teamId?: string;
+  teamName?: string;
   createdAt: string;
 }
 
@@ -786,5 +962,247 @@ export interface InstagramSimulateResult {
   log?: InstagramCommentLog;
 }
 
+// ==============================================================================
+// PASSO 6: MULTI-ATENDIMENTO, EQUIPES E MONITORAMENTO DE SUPERVISÃO
+// ==============================================================================
 
+export type TeamType = 'active_sales' | 'inbound_sales' | 'recovery' | 'support' | 'custom';
+export type DistributionStrategy = 'round_robin' | 'workload' | 'manual';
+
+export interface Team {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  type: TeamType;
+  color: string;
+  distributionStrategy: DistributionStrategy;
+  active: boolean;
+  memberCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  companyId: string;
+  userName?: string;
+  userEmail?: string;
+  role: 'leader' | 'member';
+  isExternal: boolean; // Colaborador interno ou externo (remoto/home office)
+  phoneNumber?: string; // WhatsApp ou telefone direto
+  extension?: string; // Ramal virtual do WebRTC/VoIP
+  status: TeamMemberStatus;
+  maxConcurrentLeads: number;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SupervisorMonitorStats {
+  totalAgents: number;
+  onlineAgents: number;
+  inCallAgents: number;
+  busyAgents: number;
+  offlineAgents: number;
+  activeChatsCount: number;
+  todayCallsCount: number;
+  averageCallDuration: number;
+  positiveSentimentRate: number;
+}
+
+// ==============================================================================
+// PASSO 7: SISTEMA DE PESQUISAS, QUALIFICAÇÃO & NPS (Surveys)
+// ==============================================================================
+
+export type SurveyQuestionType = 'single_choice' | 'multiple_choice' | 'text' | 'rating_stars' | 'nps' | 'contact_info';
+
+export interface SurveyOption {
+  id: string;
+  label: string;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  title: string;
+  description?: string;
+  type: SurveyQuestionType;
+  required: boolean;
+  options?: SurveyOption[];
+  minScale?: number;
+  maxScale?: number;
+}
+
+export interface SurveyTheme {
+  primaryColor: string;
+  backgroundColor: 'white' | 'slate' | 'dark' | 'gradient';
+  fontFamily: string;
+  buttonStyle: 'rounded-xl' | 'rounded-full' | 'rounded-md';
+}
+
+export interface SurveyThankYou {
+  title: string;
+  subtitle: string;
+  whatsappGroupUrl?: string;
+  redirectUrl?: string;
+  ctaButtonText?: string;
+}
+
+export interface Survey {
+  id: string;
+  companyId: string;
+  title: string;
+  slug: string;
+  description?: string;
+  status: 'published' | 'draft' | 'archived';
+  theme: SurveyTheme;
+  questions: SurveyQuestion[];
+  thankYou: SurveyThankYou;
+  responsesCount?: number;
+  averageNps?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SurveyResponse {
+  id: string;
+  surveyId: string;
+  companyId: string;
+  leadId?: string;
+  leadName?: string;
+  leadPhone?: string;
+  leadEmail?: string;
+  answers: Record<string, any>; // questionId -> answer value
+  npsScore?: number;
+  createdAt: string;
+}
+
+// ==============================================================================
+// PASSO 8: CONFIGURAÇÃO DE DOMÍNIOS PRÓPRIOS & DNS (Custom Domains)
+// ==============================================================================
+
+export type CustomDomainType = 'landing_pages' | 'tracking_links' | 'all';
+export type CustomDomainStatus = 'active' | 'pending_verification' | 'dns_propagating' | 'error';
+
+export interface DnsRecord {
+  type: 'CNAME' | 'A' | 'TXT';
+  name: string;
+  expectedValue: string;
+  currentValue?: string;
+  verified: boolean;
+}
+
+export interface CustomDomain {
+  id: string;
+  companyId: string;
+  domain: string; // ex: lp.suaempresa.com.br
+  type: CustomDomainType;
+  status: CustomDomainStatus;
+  sslActive: boolean;
+  dnsRecords: DnsRecord[];
+  verifiedAt?: string;
+  defaultLandingPageId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==============================================================================
+// PASSO 9: GAMIFICAÇÃO, EVENTOS AO VIVO & CAPTURA DE LEADS (Live Stage & Mobile)
+// ==============================================================================
+
+export type GamificationActivityType = 
+  | 'word_cloud'       // Nuvem de palavras
+  | 'multiple_choice'  // Múltipla escolha / Enquete
+  | 'quiz'             // Quiz competitivo com pontuação e timer
+  | 'qa'               // Pergunte ao instrutor / Mural com upvotes
+  | 'lucky_draw'       // Sorteio de participantes / Roleta
+  | 'true_false'       // Verdadeiro ou Falso
+  | 'open_text'        // Texto aberto / Ideias
+  | 'ranking';         // Placar geral / Leaderboard
+
+export interface GamificationActivityOption {
+  id: string;
+  text: string;
+  isCorrect?: boolean;
+  color?: string;
+}
+
+export interface GamificationActivity {
+  id: string;
+  eventId: string;
+  type: GamificationActivityType;
+  title: string;
+  subtitle?: string;
+  options?: GamificationActivityOption[];
+  correctOptionId?: string;
+  timeLimitSeconds?: number;
+  points?: number;
+  orderIndex: number;
+  status: 'pending' | 'active' | 'revealed' | 'closed';
+  metadata?: Record<string, any>;
+  responsesCount?: number;
+  createdAt?: string;
+}
+
+export interface GamificationParticipant {
+  id: string;
+  eventId: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  company?: string;
+  role?: string;
+  avatar?: string;
+  score: number;
+  isWinner?: boolean;
+  deviceToken?: string;
+  createdAt?: string;
+  lastActiveAt?: string;
+}
+
+export interface GamificationResponse {
+  id: string;
+  activityId: string;
+  participantId: string;
+  participantName?: string;
+  participantAvatar?: string;
+  responseData: any; // { text: string } ou { selectedOptionId: string, isCorrect: boolean, timeMs: number }
+  upvotes?: number;
+  createdAt: string;
+}
+
+export interface GamificationEventTheme {
+  primaryColor: string;
+  backgroundColor: string;
+  accentColor: string;
+  fontFamily?: string;
+}
+
+export interface GamificationEvent {
+  id: string;
+  companyId: string;
+  title: string;
+  slug: string;
+  pinCode: string;
+  description?: string;
+  theme: GamificationEventTheme;
+  status: 'draft' | 'live' | 'finished';
+  currentActivityId?: string;
+  requirePhone: boolean;
+  requireEmail: boolean;
+  requireCompany: boolean;
+  requireRole?: boolean;
+  leadMagnetUrl?: string;
+  settings?: {
+    allowAnonymous?: boolean;
+    showLiveCount?: boolean;
+    enableSounds?: boolean;
+  };
+  activities?: GamificationActivity[];
+  participants?: GamificationParticipant[];
+  participantsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 

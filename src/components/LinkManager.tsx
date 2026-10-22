@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { CampaignLink, Company } from '../types';
-import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List, Zap, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CampaignLink, Company, Team } from '../types';
+import { Plus, Copy, ExternalLink, QrCode, Trash2, Edit3, Smartphone, Check, Sparkles, Filter, Globe, Share2, LayoutGrid, List, Zap, Loader2, Users, Shuffle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { fetchTeams } from '../services/api';
 
 interface LinkManagerProps {
   links: CampaignLink[];
@@ -47,6 +48,13 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   const companyPhone = currentCompany?.phone ? currentCompany.phone.replace(/\D/g, '') : '';
+  const [teams, setTeams] = useState<Team[]>([]);
+
+  useEffect(() => {
+    if (currentCompany?.id) {
+      fetchTeams(currentCompany.id).then(setTeams).catch(() => {});
+    }
+  }, [currentCompany?.id]);
 
   // Form State
   const [formData, setFormData] = useState<Partial<CampaignLink>>({
@@ -64,7 +72,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     metaEventName: '',
     googleAdsConversionId: '',
     googleAdsLabel: '',
-    webhookUrl: ''
+    webhookUrl: '',
+    assignedTeamId: '',
+    phoneNumbers: [],
+    rotationMode: 'single'
   });
 
   React.useEffect(() => {
@@ -76,7 +87,10 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
           ...link,
           phone: companyPhone,
           metaEventName: link.metaEventName || '',
-          metaPixelId: link.metaPixelId || ''
+          metaPixelId: link.metaPixelId || '',
+          assignedTeamId: link.assignedTeamId || '',
+          phoneNumbers: link.phoneNumbers || [],
+          rotationMode: link.rotationMode || 'single'
         });
         setIsModalOpen(true);
       }
@@ -370,6 +384,23 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                         <div className="text-[10px] text-slate-500 font-mono flex flex-wrap items-center gap-1.5">
                           <span>src: {link.utmSource}</span>
                           <span>cmp: {link.utmCampaign}</span>
+                          {link.assignedTeamId && (() => {
+                            const t = teams.find(team => team.id === link.assignedTeamId);
+                            return t ? (
+                              <span 
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-semibold text-[10px]"
+                                style={{ backgroundColor: `${t.color}15`, color: t.color, border: `1px solid ${t.color}40` }}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
+                                {t.name}
+                              </span>
+                            ) : null;
+                          })()}
+                          {link.rotationMode === 'round_robin' && (
+                            <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                              🔄 Roleta ({link.phoneNumbers?.length || 0} nums)
+                            </span>
+                          )}
                           {link.metaEventName && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200" title="Evento Meta específico desta campanha">
                               <Zap className="w-2.5 h-2.5 text-blue-600" /> {link.metaEventName}
@@ -477,6 +508,23 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 <span className="bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-200">
                   utm_campaign: {link.utmCampaign}
                 </span>
+                {link.assignedTeamId && (() => {
+                  const t = teams.find(team => team.id === link.assignedTeamId);
+                  return t ? (
+                    <span 
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[11px]"
+                      style={{ backgroundColor: `${t.color}15`, color: t.color, border: `1px solid ${t.color}40` }}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                      {t.name}
+                    </span>
+                  ) : null;
+                })()}
+                {link.rotationMode === 'round_robin' && (
+                  <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                    🔄 Roleta ({link.phoneNumbers?.length || 0} nums)
+                  </span>
+                )}
                 {link.utmContent && (
                   <span className="bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-200">
                     utm_content: {link.utmContent}
@@ -599,19 +647,108 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Número do WhatsApp (DDD + Número) *</label>
-                  <input
-                    type="text"
-                    required
-                    readOnly
-                    disabled
-                    placeholder="Ex: 5511999999999"
-                    value={formData.phone || ''}
-                    className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-500 cursor-not-allowed"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">Alterável apenas nas configurações da empresa.</p>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Equipe / Fila Responsável (Setor)</label>
+                  <select
+                    value={formData.assignedTeamId || ''}
+                    onChange={(e) => setFormData({ ...formData, assignedTeamId: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                  >
+                    <option value="">Sem Equipe Específica (Geral)</option>
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
+
+              {/* Multi-telefone e Roleta WhatsApp */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Shuffle className="w-3.5 h-3.5 text-blue-600" />
+                    Roleta & Números de WhatsApp de Atendimento
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">Distribuição justa de cliques</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <label className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex items-start gap-2 ${
+                    (formData.rotationMode === 'single' || !formData.rotationMode)
+                      ? 'bg-blue-50/50 border-blue-400 ring-1 ring-blue-300'
+                      : 'bg-white border-slate-200 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="rotationMode"
+                      checked={formData.rotationMode === 'single' || !formData.rotationMode}
+                      onChange={() => setFormData({ ...formData, rotationMode: 'single' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-900">Telefone Único</div>
+                      <div className="text-[10px] text-slate-500">Padrão da empresa: {formData.phone || 'Configurado'}</div>
+                    </div>
+                  </label>
+
+                  <label className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex items-start gap-2 ${
+                    formData.rotationMode === 'team_rotation'
+                      ? 'bg-blue-50/50 border-blue-400 ring-1 ring-blue-300'
+                      : 'bg-white border-slate-200 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="rotationMode"
+                      checked={formData.rotationMode === 'team_rotation'}
+                      onChange={() => setFormData({ ...formData, rotationMode: 'team_rotation' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-900">Roleta da Equipe</div>
+                      <div className="text-[10px] text-slate-500">Gira entre os WhatsApps dos vendedores da equipe</div>
+                    </div>
+                  </label>
+
+                  <label className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex items-start gap-2 ${
+                    formData.rotationMode === 'round_robin'
+                      ? 'bg-blue-50/50 border-blue-400 ring-1 ring-blue-300'
+                      : 'bg-white border-slate-200 hover:bg-slate-100'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="rotationMode"
+                      checked={formData.rotationMode === 'round_robin'}
+                      onChange={() => setFormData({ ...formData, rotationMode: 'round_robin' })}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-900">Múltiplos Telefones</div>
+                      <div className="text-[10px] text-slate-500">Alternar entre lista de números cadastrados</div>
+                    </div>
+                  </label>
+                </div>
+
+                {formData.rotationMode === 'round_robin' && (
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Telefones para a Roleta (separados por vírgula com DDD e código do país)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 5511999991111, 5511999992222, 5521988883333"
+                      value={(formData.phoneNumbers || []).join(', ')}
+                      onChange={(e) => {
+                        const arr = e.target.value.split(',').map(s => s.trim().replace(/\D/g, '')).filter(Boolean);
+                        setFormData({ ...formData, phoneNumbers: arr });
+                      }}
+                      className="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-blue-600 font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Cada novo clique na campanha será direcionado sequencialmente para o próximo número da lista.
+                    </p>
+                  </div>
+                )}
+              </div>
+
 
               {/* Slug Customizado */}
               <div>

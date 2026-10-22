@@ -31,7 +31,22 @@ import {
   Globe,
   Share2,
   Download,
-  AlertCircle
+  AlertCircle,
+  ClipboardList,
+  ShieldCheck,
+  FileDown,
+  Video,
+  Image as ImageIcon,
+  Type as TypeIcon,
+  CreditCard,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  Flame,
+  LayoutTemplate
 } from 'lucide-react';
 import { 
   LandingPage, 
@@ -41,11 +56,99 @@ import {
   LandingPageFeature, 
   LandingPageTestimonial, 
   LandingPageFAQItem, 
+  LandingPageCustomBlock,
+  LandingPageBlockType,
+  LandingPagePricingPlan,
+  LandingPageFontFamily,
   Company, 
   Product, 
   FunnelStage,
-  FUNNEL_STAGES 
+  FUNNEL_STAGES,
+  ThankYouActionType,
+  ThankYouActionButton,
+  LandingPageThankYouPage,
+  Survey
 } from '../types';
+
+// Curated High-Converting Stock Images for Non-Technical Users
+const PRESET_STOCK_IMAGES = [
+  {
+    title: 'Negócios & Reunião Comercial',
+    url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80',
+    category: 'Consultoria'
+  },
+  {
+    title: 'Equipe Tech & Startup',
+    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80',
+    category: 'Tecnologia'
+  },
+  {
+    title: 'Analytics & Gráficos de Vendas',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1000&q=80',
+    category: 'Resultados'
+  },
+  {
+    title: 'Apresentação no Escritório Moderno',
+    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1000&q=80',
+    category: 'Estratégia'
+  },
+  {
+    title: 'Atendimento & Relacionamento',
+    url: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=1000&q=80',
+    category: 'Suporte'
+  },
+  {
+    title: 'Workspace Criativo & Foco',
+    url: 'https://images.unsplash.com/photo-1581291518655-9523c932deb4?auto=format&fit=crop&w=1000&q=80',
+    category: 'Produtividade'
+  },
+  {
+    title: 'E-commerce & Pacote de Entrega',
+    url: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=1000&q=80',
+    category: 'Vendas'
+  },
+  {
+    title: 'Dispositivos Mobile & Aplicativo',
+    url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1000&q=80',
+    category: 'Mobile'
+  }
+];
+
+const FONT_OPTIONS: Array<{ id: LandingPageFontFamily; name: string; preview: string; description: string }> = [
+  { id: 'Inter', name: 'Inter', preview: 'A experiência de conversão moderna', description: 'Clean, neutra e amplamente usada em produtos digitais e SaaS' },
+  { id: 'Poppins', name: 'Poppins', preview: 'Geométrica e marcante para vendas', description: 'Arredondada, moderna e com excelente apelo comercial' },
+  { id: 'Montserrat', name: 'Montserrat', preview: 'Elegância e presença corporativa', description: 'Alta legibilidade, visual executivo e contemporâneo' },
+  { id: 'Roboto', name: 'Roboto', preview: 'Clássica, equilibrada e direta', description: 'Padrão global do ecossistema Google, rápida e confiável' },
+  { id: 'Playfair Display', name: 'Playfair Display', preview: 'Sofisticação, luxo e autoridade', description: 'Estilo editorial com serifas, perfeita para consultoria de alto ticket e estética premium' },
+  { id: 'Plus Jakarta Sans', name: 'Plus Jakarta Sans', preview: 'Design SaaS e inovação digital', description: 'Tipografia geométrica moderna criada para interfaces de alta conversão' },
+  { id: 'Outfit', name: 'Outfit', preview: 'Minimalista, moderna e arrojada', description: 'Visual vanguardista e contemporâneo' },
+  { id: 'Space Grotesk', name: 'Space Grotesk', preview: 'Tecnologia, IA e vanguarda', description: 'Personalidade marcante para tecnologia, inteligência artificial e inovação' },
+];
+
+const TITLE_SIZES: Array<{ id: 'normal' | 'large' | 'huge'; label: string; desc: string }> = [
+  { id: 'normal', label: 'Equilibrado (Normal)', desc: 'Headlines padrão e harmoniosas (36px a 48px)' },
+  { id: 'large', label: 'Impacto Comercial (Grande)', desc: 'Títulos mais destacados para atrair a atenção imediatamente (48px a 60px)' },
+  { id: 'huge', label: 'Impacto Máximo (Enorme)', desc: 'Headlines gigantes para ofertas agressivas (60px a 72px)' },
+];
+
+const normalizeEmbedUrl = (rawUrl?: string) => {
+  if (!rawUrl) return '';
+  const url = rawUrl.trim();
+  if (url.includes('youtube.com/watch?v=')) {
+    const id = url.split('watch?v=')[1]?.split('&')[0];
+    return `https://www.youtube.com/embed/${id}?rel=0`;
+  }
+  if (url.includes('youtu.be/')) {
+    const id = url.split('youtu.be/')[1]?.split('?')[0];
+    return `https://www.youtube.com/embed/${id}?rel=0`;
+  }
+  if (url.includes('vimeo.com/')) {
+    const id = url.split('vimeo.com/')[1]?.split('?')[0];
+    return `https://player.vimeo.com/video/${id}`;
+  }
+  return url;
+};
+
 import { 
   fetchLandingPages, 
   createLandingPage, 
@@ -53,10 +156,13 @@ import {
   deleteLandingPage, 
   toggleLandingPage, 
   generateLandingPageAI,
-  submitLandingPageLead
+  submitLandingPageLead,
+  fetchSurveys
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { NavTabId } from './Sidebar';
+import { SurveysManager } from './SurveysManager';
+import { CustomDomainsManager } from './CustomDomainsManager';
 
 interface LandingPagesManagerProps {
   currentCompany: Company;
@@ -75,6 +181,78 @@ const TEMPLATES: Array<{
   previewHeroTitle: string;
   pageData: Partial<LandingPage>;
 }> = [
+  {
+    id: 'tpl-powerup',
+    name: 'Power UP - Acelerador de Resultados (Alta Conversão)',
+    category: 'lead_magnet',
+    categoryLabel: 'Isca Digital & Vendas',
+    badge: 'Referência ⭐',
+    description: 'Cabeçalho integrado com marca e CTA + Hero Split com Headline, badges de confiança e formulário lateral flutuante com badge de gratuidade e LGPD.',
+    previewHeroTitle: 'Como Acelerar seus Resultados com Power UP',
+    pageData: {
+      title: 'Power UP - Acelerador de Resultados de Alta Performance',
+      slug: 'power-up-acelerador',
+      description: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida.',
+      category: 'lead_magnet',
+      status: 'published',
+      theme: {
+        primaryColor: '#059669',
+        accentColor: '#10b981',
+        backgroundColor: 'white',
+        fontFamily: 'Inter',
+        buttonStyle: 'rounded-xl'
+      },
+      hero: {
+        badge: '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP',
+        headline: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
+        subheadline: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
+        ctaText: 'Quero Meu Acesso Gratuito Agora →',
+        imageUrl: ''
+      },
+      blocks: [
+        {
+          id: 'blk-header-form-1',
+          type: 'header_form',
+          title: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
+          subtitle: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
+          headerNavbarEnabled: true,
+          headerLogoText: 'MDTracker Growth Suite',
+          headerNavCtaText: 'Quero Meu Acesso Gratuito Agora →',
+          headerBadge: '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP',
+          headerHeadline: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
+          headerSubheadline: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
+          headerPrimaryCtaText: 'Quero Meu Acesso Gratuito Agora →',
+          headerTrustBadges: ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'],
+          formCardBadge: 'CADASTRE-SE GRÁTIS',
+          formCardTitle: 'Garanta sua Condição Especial',
+          formCardSubtitle: 'Preencha os campos abaixo e receba atendimento exclusivo em minutos.',
+          formCardButtonText: 'Quero Começar Agora Mesmo 🚀',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        }
+      ],
+      form: {
+        title: 'Garanta sua Condição Especial',
+        subtitle: 'Preencha os campos abaixo e receba atendimento exclusivo em minutos.',
+        buttonText: 'Quero Começar Agora Mesmo 🚀',
+        buttonColor: '#059669',
+        fields: [
+          { id: 'f-name', name: 'name', label: 'SEU NOME', type: 'text', placeholder: 'Como podemos te chamar?', required: true },
+          { id: 'f-phone', name: 'phone', label: 'SEU WHATSAPP', type: 'tel', placeholder: '(11) 99999-9999', required: true },
+          { id: 'f-email', name: 'email', label: 'SEU MELHOR E-MAIL', type: 'email', placeholder: 'seu@email.com', required: true }
+        ],
+        actionType: 'thank_you_page',
+        targetStage: 'Novo Lead',
+        tags: ['power-up', 'alta-conversao', 'landing-page']
+      },
+      footer: {
+        companyName: 'MDTracker Growth Suite',
+        copyrightText: 'Todos os direitos reservados.'
+      }
+    }
+  },
   {
     id: 'tpl-consultoria',
     name: 'Agendamento de Consultoria / Vendas B2B',
@@ -384,6 +562,46 @@ const getButtonShapeClass = (shape?: string) => {
   return 'rounded-xl';
 };
 
+const getQuickDateTime = (type: 'today_midnight' | 'tomorrow_midnight' | 'plus_days', value: number = 0) => {
+  const d = new Date();
+  if (type === 'today_midnight') {
+    d.setHours(23, 59, 0, 0);
+  } else if (type === 'tomorrow_midnight') {
+    d.setDate(d.getDate() + 1);
+    d.setHours(23, 59, 0, 0);
+  } else if (type === 'plus_days') {
+    d.setDate(d.getDate() + value);
+    d.setHours(23, 59, 0, 0);
+  }
+  
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const getTimerRemaining = (endDateStr?: string) => {
+  if (!endDateStr) return { days: '03', hours: '14', mins: '45', secs: '22', isExpired: false };
+  const target = new Date(endDateStr).getTime();
+  const diff = target - Date.now();
+  if (isNaN(diff)) return { days: '00', hours: '00', mins: '00', secs: '00', isExpired: false };
+  if (diff <= 0) return { days: '00', hours: '00', mins: '00', secs: '00', isExpired: true };
+  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const s = Math.floor((diff % (1000 * 60)) / 1000);
+  return {
+    days: String(d).padStart(2, '0'),
+    hours: String(h).padStart(2, '0'),
+    mins: String(m).padStart(2, '0'),
+    secs: String(s).padStart(2, '0'),
+    isExpired: false
+  };
+};
+
 export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   currentCompany,
   products = [],
@@ -393,7 +611,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'list' | 'templates'>('list');
+  const [activeSubTab, setActiveSubTab] = useState<'list' | 'templates' | 'surveys' | 'domains'>('list');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -402,8 +620,14 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile' | 'iframe'>('desktop');
+  const [previewPageMode, setPreviewPageMode] = useState<'main' | 'thankyou'>('main');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [activeEditorTab, setActiveEditorTab] = useState<'general' | 'hero' | 'form' | 'features' | 'social' | 'scarcity' | 'theme'>('general');
+  const [previewOpenFaqKey, setPreviewOpenFaqKey] = useState<string | null>(null);
+  const [activeEditorTab, setActiveEditorTab] = useState<'blocks' | 'theme' | 'general' | 'hero' | 'form' | 'thankyou' | 'features' | 'social' | 'scarcity'>('blocks');
+  const [isAddBlockModalOpen, setIsAddBlockModalOpen] = useState(false);
+  const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
+  const [activeStockGalleryBlockId, setActiveStockGalleryBlockId] = useState<string | null>(null);
+  const [availableSurveys, setAvailableSurveys] = useState<Survey[]>([]);
 
   // Preview Interactive Form State
   const [previewFormValues, setPreviewFormValues] = useState<Record<string, string>>({});
@@ -418,11 +642,25 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
-  // Load landing pages
+  // Load landing pages and surveys
   const loadPages = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchLandingPages(currentCompany.id);
+      let data = await fetchLandingPages(currentCompany.id);
+      
+      // Merge with localStorage persistence backup
+      try {
+        const localSaved: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
+        if (localSaved && localSaved.length > 0) {
+          const map = new Map<string, LandingPage>();
+          data.forEach(p => map.set(p.id, p));
+          localSaved.forEach(p => {
+            if (!map.has(p.id)) map.set(p.id, p);
+          });
+          data = Array.from(map.values());
+        }
+      } catch(e) {}
+
       setLandingPages(data);
     } catch (err) {
       console.error('Erro ao carregar landing pages:', err);
@@ -431,8 +669,31 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     }
   };
 
+  const loadSurveys = async () => {
+    try {
+      const data = await fetchSurveys(currentCompany.id);
+      setAvailableSurveys(data);
+    } catch {}
+  };
+
   useEffect(() => {
     loadPages();
+    loadSurveys();
+
+    // Check if visitor profile is cached in browser
+    try {
+      const raw = localStorage.getItem('mdtracker_visitor_profile') || localStorage.getItem('mdtracker_lead_profile');
+      if (raw) {
+        const p = JSON.parse(raw);
+        setPreviewFormValues(prev => ({
+          ...prev,
+          name: p.name || prev.name || '',
+          phone: p.phone || prev.phone || '',
+          email: p.email || prev.email || '',
+          company: p.company || prev.company || ''
+        }));
+      }
+    } catch(e) {}
   }, [currentCompany.id]);
 
   // Aggregate Metrics
@@ -592,7 +853,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     };
 
     setEditingPage(newPage);
-    setActiveEditorTab('general');
+    setActiveEditorTab('blocks');
   };
 
   // Use Template
@@ -613,18 +874,362 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
     setEditingPage(newPage);
     setActiveSubTab('list');
-    setActiveEditorTab('general');
+    setActiveEditorTab('blocks');
   };
+
+  // Block Operations (RD Station modular builder)
+  const moveBlock = (index: number, direction: 'up' | 'down') => {
+    if (!editingPage) return;
+    const blocks = [...(editingPage.blocks || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= blocks.length) return;
+    const temp = blocks[index];
+    blocks[index] = blocks[targetIndex];
+    blocks[targetIndex] = temp;
+    setEditingPage({
+      ...editingPage,
+      blocks
+    });
+  };
+
+  const removeBlock = (index: number) => {
+    if (!editingPage) return;
+    const blocks = [...(editingPage.blocks || [])];
+    blocks.splice(index, 1);
+    setEditingPage({
+      ...editingPage,
+      blocks
+    });
+  };
+
+  const toggleBlockEnabled = (index: number) => {
+    if (!editingPage) return;
+    const blocks = [...(editingPage.blocks || [])];
+    blocks[index] = { ...blocks[index], enabled: blocks[index].enabled === false ? true : false };
+    setEditingPage({
+      ...editingPage,
+      blocks
+    });
+  };
+
+  const initializeDefaultBlocks = () => {
+    if (!editingPage) return;
+    const defaultBlocks: LandingPageCustomBlock[] = [
+      {
+        id: `blk-features-${Date.now()}`,
+        type: 'features',
+        title: 'Tudo que você precisa para acelerar seu negócio',
+        subtitle: 'Diferenciais validados para gerar mais resultados',
+        enabled: true,
+        backgroundColor: 'white',
+        features: (editingPage.features && editingPage.features.length > 0) ? editingPage.features : [
+          { id: 'f1', title: 'Atendimento Rápido 24/7', description: 'Sem filas de espera, contato direto no WhatsApp com nossa equipe.' },
+          { id: 'f2', title: 'Metodologia Validada', description: 'Centenas de clientes já comprovaram a eficiência do processo.' },
+          { id: 'f3', title: 'Suporte Consultivo Dedicado', description: 'Especialistas disponíveis para esclarecer dúvidas e personalizar sua solução.' }
+        ]
+      },
+      {
+        id: `blk-video-${Date.now() + 1}`,
+        type: 'video',
+        title: 'Conheça Como Funciona na Prática',
+        subtitle: 'Assista a uma demonstração rápida de 2 minutos sobre nossa plataforma',
+        enabled: true,
+        backgroundColor: 'slate',
+        videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        videoCaption: 'Demonstração em vídeo de alta qualidade'
+      },
+      {
+        id: `blk-image-${Date.now() + 2}`,
+        type: 'image',
+        title: 'Estrutura Moderna & Alta Conversão',
+        subtitle: 'Ambiente planejado para proporcionar a melhor experiência ao cliente',
+        imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80',
+        imageAlt: 'Equipe em consultoria comercial',
+        imageCaption: 'Equipe especializada pronta para atender sua demanda',
+        enabled: true,
+        backgroundColor: 'white'
+      },
+      {
+        id: `blk-social-${Date.now() + 3}`,
+        type: 'socialProof',
+        title: 'Resultados Comprovados por Quem Já Usa',
+        subtitle: 'Centenas de empresas já aceleraram seus resultados com nossa solução',
+        enabled: true,
+        backgroundColor: 'dark',
+        stats: (editingPage.socialProof?.stats && editingPage.socialProof.stats.length > 0) ? editingPage.socialProof.stats : [
+          { label: 'Empresas Atendidas', value: '+450' },
+          { label: 'Aumento de Vendas', value: '+42%' },
+          { label: 'Nota Média', value: '4.9 ⭐' }
+        ],
+        testimonials: (editingPage.socialProof?.testimonials && editingPage.socialProof.testimonials.length > 0) ? editingPage.socialProof.testimonials : [
+          { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+          { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+        ]
+      },
+      {
+        id: `blk-pricing-${Date.now() + 4}`,
+        type: 'pricing',
+        title: 'Planos e Condições Transparentes',
+        subtitle: 'Escolha a opção ideal para o momento da sua empresa',
+        enabled: true,
+        backgroundColor: 'white',
+        pricingPlans: [
+          {
+            id: 'p1',
+            name: 'Plano Essencial',
+            price: 'R$ 197',
+            period: 'mês',
+            description: 'Para autônomos e pequenos negócios',
+            features: ['Páginas responsivas', 'Formulário integrado', 'Página de obrigado', 'Suporte comercial'],
+            highlighted: false,
+            buttonText: 'Escolher Essencial',
+            buttonUrl: '#preview-capture-form'
+          },
+          {
+            id: 'p2',
+            name: 'Plano Pro Acelerador',
+            price: 'R$ 497',
+            period: 'mês',
+            description: 'A opção mais escolhida por empresas em escala',
+            features: ['Leads ilimitados', 'Vídeos e imagens sem limites', 'Pesquisas de qualificação completas', 'Domínio próprio ilimitado', 'Suporte prioritário no WhatsApp'],
+            highlighted: true,
+            badge: 'Mais Recomendado',
+            buttonText: 'Garantir Vaga Pro',
+            buttonUrl: '#preview-capture-form'
+          }
+        ]
+      },
+      {
+        id: `blk-faq-${Date.now() + 5}`,
+        type: 'faq',
+        title: 'Perguntas Frequentes',
+        subtitle: 'Respostas para as principais dúvidas sobre o processo',
+        enabled: true,
+        backgroundColor: 'slate',
+        faqItems: (editingPage.faq?.items && editingPage.faq.items.length > 0) ? editingPage.faq.items : [
+          { id: 'q1', question: 'Preciso de conhecimento técnico para usar?', answer: 'Não! O construtor é 100% visual. Você inclui blocos, vídeos e imagens clicando na tela.' },
+          { id: 'q2', question: 'Posso usar meu próprio domínio?', answer: 'Sim! É possível conectar domínios próprios (como suaempresa.com.br) com certificado SSL automático gratuito.' }
+        ]
+      },
+      {
+        id: `blk-cta-${Date.now() + 6}`,
+        type: 'cta_banner',
+        title: 'Pronto para Transformar seus Resultados Comerciais?',
+        subtitle: 'Cadastre-se agora mesmo e receba atendimento exclusivo da nossa equipe.',
+        enabled: true,
+        backgroundColor: 'primary',
+        ctaHeadline: 'Pronto para Transformar seus Resultados Comerciais?',
+        ctaSubheadline: 'Cadastre-se agora mesmo e receba atendimento exclusivo da nossa equipe.',
+        ctaButtonText: 'Quero Meu Acesso Agora',
+        ctaButtonUrl: '#preview-capture-form',
+        ctaBadge: 'Vagas Limitadas'
+      }
+    ];
+
+    setEditingPage({
+      ...editingPage,
+      blocks: defaultBlocks
+    });
+  };
+
+  const handleAddBlock = (type: LandingPageBlockType) => {
+    if (!editingPage) return;
+    const newBlockId = `blk-${type}-${Date.now()}`;
+    let newBlock: LandingPageCustomBlock;
+
+    switch (type) {
+      case 'header_form':
+        newBlock = {
+          id: newBlockId,
+          type: 'header_form',
+          title: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
+          subtitle: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
+          headerNavbarEnabled: true,
+          headerLogoText: currentCompany.name ? `${currentCompany.name} Growth Suite` : 'MDTracker Growth Suite',
+          headerNavCtaText: 'Quero Meu Acesso Gratuito Agora →',
+          headerBadge: '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP',
+          headerHeadline: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
+          headerSubheadline: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
+          headerPrimaryCtaText: 'Quero Meu Acesso Gratuito Agora →',
+          headerTrustBadges: ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'],
+          formCardBadge: 'CADASTRE-SE GRÁTIS',
+          formCardTitle: 'Garanta sua Condição Especial',
+          formCardSubtitle: 'Preencha os campos abaixo e receba atendimento exclusivo em minutos.',
+          formCardButtonText: 'Quero Começar Agora Mesmo 🚀',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'video':
+        newBlock = {
+          id: newBlockId,
+          type: 'video',
+          title: 'Assista à Apresentação em Vídeo',
+          subtitle: 'Veja como nossa tecnologia funciona na prática em apenas 2 minutos',
+          videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoCaption: 'Vídeo explicativo oficial em alta qualidade',
+          enabled: true,
+          backgroundColor: 'slate'
+        };
+        break;
+      case 'image':
+        newBlock = {
+          id: newBlockId,
+          type: 'image',
+          title: 'Conheça Nossa Estrutura & Solução',
+          subtitle: 'Ambiente planejado para proporcionar resultados consistentes',
+          imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80',
+          imageAlt: 'Ambiente de trabalho e reunião de consultoria',
+          imageCaption: 'Equipe especializada pronta para impulsionar seus resultados',
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'text':
+        newBlock = {
+          id: newBlockId,
+          type: 'text',
+          title: 'Nossa Metodologia & Propósito',
+          subtitle: 'Como desenvolvemos um processo de alta conversão',
+          textContent: 'Ao longo dos últimos anos, desenvolvemos uma metodologia validada por centenas de empresas.\\n\\nNosso compromisso é entregar clareza, transparência e agilidade para que você alcance resultados sólidos sem complicações técnicas.',
+          textAlignment: 'left',
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'features':
+        newBlock = {
+          id: newBlockId,
+          type: 'features',
+          title: 'Por que Nossa Solução é Diferente',
+          subtitle: 'Principais vantagens para acelerar seu negócio',
+          features: [
+            { id: 'f1', title: 'Velocidade de Carregamento', description: 'Páginas otimizadas para abrir instantaneamente em qualquer dispositivo móvel.' },
+            { id: 'f2', title: 'Integração Direta no WhatsApp', description: 'Receba leads qualificados diretamente na mão dos seus atendentes comerciais.' },
+            { id: 'f3', title: 'Controle Total Sem Código', description: 'Edite blocos, textos, imagens e vídeos sem depender de programadores.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'socialProof':
+        newBlock = {
+          id: newBlockId,
+          type: 'socialProof',
+          title: 'Resultados Comprovados por Nossos Clientes',
+          subtitle: 'Veja o que quem já usa nossa tecnologia tem a dizer',
+          stats: [
+            { label: 'Leads Gerados', value: '+50.000' },
+            { label: 'Taxa de Satisfação', value: '99.4%' },
+            { label: 'Empresas Ativas', value: '+450' }
+          ],
+          testimonials: [
+            { id: 't1', name: 'Rodrigo Mendonça', role: 'CEO - Mendonça Consultoria', text: 'A facilidade de criar páginas completas com vídeo e imagens aumentou nossa conversão em mais de 35% no primeiro mês.', rating: 5 },
+            { id: 't2', name: 'Juliana Costa', role: 'Diretora de Marketing', text: 'Sensacional! Qualquer pessoa na equipe consegue criar e alterar os blocos em minutos sem suporte de TI.', rating: 5 }
+          ],
+          enabled: true,
+          backgroundColor: 'dark'
+        };
+        break;
+      case 'pricing':
+        newBlock = {
+          id: newBlockId,
+          type: 'pricing',
+          title: 'Escolha a Opção Ideal para Você',
+          subtitle: 'Condições transparentes sem surpresas ou taxas escondidas',
+          pricingPlans: [
+            {
+              id: 'p1',
+              name: 'Plano Básico',
+              price: 'R$ 97',
+              period: 'mês',
+              description: 'Para quem está iniciando sua presença digital',
+              features: ['Páginas responsivas', 'Formulário integrado', 'Suporte por e-mail'],
+              highlighted: false,
+              buttonText: 'Escolher Básico',
+              buttonUrl: '#preview-capture-form'
+            },
+            {
+              id: 'p2',
+              name: 'Plano Pro Acelerador',
+              price: 'R$ 297',
+              period: 'mês',
+              description: 'Nossa melhor opção com todos os recursos liberados',
+              features: ['Leads ilimitados', 'Vídeos e imagens sem limite', 'Páginas de obrigado personalizadas', 'Pesquisas de qualificação', 'Domínio próprio ilimitado'],
+              highlighted: true,
+              badge: 'Mais Vendido',
+              buttonText: 'Quero o Plano Pro',
+              buttonUrl: '#preview-capture-form'
+            }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'faq':
+        newBlock = {
+          id: newBlockId,
+          type: 'faq',
+          title: 'Perguntas Frequentes',
+          subtitle: 'Tire todas as suas dúvidas antes de dar o próximo passo',
+          faqItems: [
+            { id: 'q1', question: 'Como funciona o acesso após o cadastro?', answer: 'Você receberá os dados de acesso imediatamente na página de obrigado e uma notificação por WhatsApp.' },
+            { id: 'q2', question: 'Posso alterar os vídeos e textos quando quiser?', answer: 'Sim, a qualquer momento pelo editor visual sem necessidade de nenhum código.' }
+          ],
+          enabled: true,
+          backgroundColor: 'slate'
+        };
+        break;
+      case 'countdown':
+        newBlock = {
+          id: newBlockId,
+          type: 'countdown',
+          title: 'Condição Especial Encerra Em Breve',
+          countdownTitle: 'Garanta sua condição exclusiva antes que o cronômetro zere:',
+          enabled: true,
+          backgroundColor: 'dark'
+        };
+        break;
+      case 'cta_banner':
+        newBlock = {
+          id: newBlockId,
+          type: 'cta_banner',
+          title: 'Pronto para Dar o Próximo Passo?',
+          subtitle: 'Cadastre-se agora e receba atendimento exclusivo da nossa equipe.',
+          ctaHeadline: 'Pronto para Dar o Próximo Passo?',
+          ctaSubheadline: 'Cadastre-se agora e receba atendimento exclusivo da nossa equipe.',
+          ctaButtonText: 'Quero Meu Acesso Agora',
+          ctaButtonUrl: '#preview-capture-form',
+          ctaBadge: 'Vagas Limitadas',
+          enabled: true,
+          backgroundColor: 'primary'
+        };
+        break;
+      default:
+        return;
+    }
+
+    const updatedBlocks = [...(editingPage.blocks || []), newBlock];
+    setEditingPage({
+      ...editingPage,
+      blocks: updatedBlocks
+    });
+    setIsAddBlockModalOpen(false);
+    setExpandedBlockId(newBlockId);
+  };
+
 
   // Save Page Changes
   const handleSavePage = async () => {
     if (!editingPage) return;
     if (!editingPage.title.trim()) {
-      await alert('Por favor, informe o título da página.');
+      alert('Por favor, informe o título da página.');
       return;
     }
     if (!editingPage.slug.trim()) {
-      await alert('Por favor, informe a URL (slug) da página.');
+      alert('Por favor, informe a URL (slug) da página.');
       return;
     }
 
@@ -633,16 +1238,29 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
       const exists = landingPages.some(p => p.id === editingPage.id);
       let saved: LandingPage;
       if (exists) {
-        saved = await updateLandingPage(editingPage.id, editingPage);
+        try {
+          saved = await updateLandingPage(editingPage.id, editingPage);
+        } catch (updateErr: any) {
+          // If update failed (e.g. 404 or backend session reset), fallback to create/upsert
+          saved = await createLandingPage(editingPage);
+        }
         setLandingPages(prev => prev.map(p => p.id === saved.id ? saved : p));
       } else {
         saved = await createLandingPage(editingPage);
         setLandingPages(prev => [saved, ...prev]);
       }
       setEditingPage(saved);
-      await alert(`Landing Page "${saved.title}" salva com sucesso! URL pública: /p/${saved.slug}`);
+
+      // Persist in localStorage backup so user never loses their changes
+      try {
+        const localSaved: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
+        const updatedLocal = [saved, ...localSaved.filter(p => p.id !== saved.id)];
+        localStorage.setItem('mdtracker_saved_landing_pages', JSON.stringify(updatedLocal));
+      } catch(e) {}
+
+      alert(`Landing Page "${saved.title}" salva com sucesso!\nURL pública: /p/${saved.slug}`);
     } catch (err: any) {
-      await alert(err.message || 'Erro ao salvar Landing Page');
+      alert(err.message || 'Erro ao salvar Landing Page');
     } finally {
       setIsSaving(false);
     }
@@ -842,6 +1460,31 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
               4 Modelos
             </span>
           </button>
+          <button
+            onClick={() => setActiveSubTab('surveys')}
+            className={`px-4 py-2 font-semibold text-sm rounded-xl transition flex items-center gap-2 ${
+              activeSubTab === 'surveys'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Pesquisas & Formulários</span>
+            <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">
+              NPS
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('domains')}
+            className={`px-4 py-2 font-semibold text-sm rounded-xl transition flex items-center gap-2 ${
+              activeSubTab === 'domains'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Domínios Próprios & DNS</span>
+          </button>
         </div>
       </div>
 
@@ -980,14 +1623,23 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           target="_blank"
                           rel="noreferrer"
                           className="p-2 text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition"
-                          title="Abrir página pública"
+                          title="Abrir página pública principal"
                         >
                           <ExternalLink className="w-4 h-4" />
+                        </a>
+                        <a
+                          href={`/p/${lp.slug}/obrigado`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition"
+                          title="Abrir página de obrigado (WhatsApp / PDFs / Pesquisa)"
+                        >
+                          <Sparkles className="w-4 h-4" />
                         </a>
                         <button
                           onClick={() => handleCopyLink(lp.slug)}
                           className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-lg transition"
-                          title="Copiar link"
+                          title="Copiar link da página principal"
                         >
                           {copiedSlug === lp.slug ? (
                             <Check className="w-4 h-4 text-emerald-600" />
@@ -1117,6 +1769,16 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
         </div>
       )}
 
+      {/* VIEW 3: SURVEYS & NPS */}
+      {activeSubTab === 'surveys' && (
+        <SurveysManager currentCompany={currentCompany} />
+      )}
+
+      {/* VIEW 4: CUSTOM DOMAINS & DNS */}
+      {activeSubTab === 'domains' && (
+        <CustomDomainsManager currentCompany={currentCompany} />
+      )}
+
       {/* ========================================================= */}
       {/* FULL VISUAL BUILDER / EDITOR MODAL                        */}
       {/* ========================================================= */}
@@ -1149,6 +1811,30 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Preview Page Switcher (Principal vs Obrigado) */}
+              <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setPreviewPageMode('main')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    previewPageMode === 'main' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Ver Página de Captura Principal"
+                >
+                  Principal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewPageMode('thankyou')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    previewPageMode === 'thankyou' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Ver Página de Obrigado Pós-Conversão"
+                >
+                  Obrigado 🎉
+                </button>
+              </div>
+
               {/* Device Preview Toggle */}
               <div className="hidden sm:flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
                 <button
@@ -1194,13 +1880,13 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
               {/* External Preview Link */}
               <a
-                href={`/p/${editingPage.slug}`}
+                href={previewPageMode === 'thankyou' ? `/p/${editingPage.slug}/obrigado` : `/p/${editingPage.slug}`}
                 target="_blank"
                 rel="noreferrer"
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 border border-slate-700"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>Abrir Página</span>
+                <span>{previewPageMode === 'thankyou' ? 'Abrir Obrigado' : 'Abrir Página'}</span>
               </a>
 
               {/* Save Button */}
@@ -1233,13 +1919,15 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
               {/* Settings Tab Selector */}
               <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center gap-1 overflow-x-auto">
                 {[
+                  { id: 'blocks', label: 'Blocos & Seções 🧱' },
+                  { id: 'theme', label: 'Tipografia & Cores 🎨' },
                   { id: 'general', label: 'Geral & SEO' },
                   { id: 'hero', label: 'Hero / Título' },
                   { id: 'form', label: 'Formulário' },
+                  { id: 'thankyou', label: 'Página de Obrigado 🎉' },
                   { id: 'features', label: 'Benefícios' },
                   { id: 'social', label: 'Prova Social' },
-                  { id: 'scarcity', label: 'FAQ & Timer' },
-                  { id: 'theme', label: 'Tema / Cores' }
+                  { id: 'scarcity', label: 'FAQ & Timer' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -1258,8 +1946,1037 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
               {/* Tab Content Fields */}
               <div className="p-6 overflow-y-auto flex-1 space-y-5 text-sm">
                 
+                {/* 0. BLOCOS & SEÇÕES (RD STATION BUILDER) */}
+                {activeEditorTab === 'blocks' && (
+                  <div className="space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                          <span>Estrutura Visual da Página</span>
+                          <span className="text-xs font-normal text-slate-500">
+                            ({(editingPage.blocks || []).length} blocos)
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Arraste, adicione vídeos, imagens e reordene as seções da página.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddBlockModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-500/20"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar Bloco</span>
+                      </button>
+                    </div>
+
+                    {(!editingPage.blocks || editingPage.blocks.length === 0) ? (
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                          <Layers className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">Nenhum bloco modular configurado</h4>
+                          <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 leading-relaxed">
+                            Inicialize com os blocos recomendados de alta conversão (Vídeo, Fotos, Diferenciais, Preços, Depoimentos e FAQ).
+                          </p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={initializeDefaultBlocks}
+                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Inserir Blocos Recomendados</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddBlockModalOpen(true)}
+                            className="w-full sm:w-auto bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Escolher Bloco</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {editingPage.blocks.map((block, idx) => {
+                          const isExpanded = expandedBlockId === block.id;
+                          const blockLabels: Record<LandingPageBlockType, { label: string; icon: any; color: string }> = {
+                            header_form: { label: 'Cabeçalho com Texto & Formulário', icon: LayoutTemplate, color: 'text-emerald-600 bg-emerald-50' },
+                            video: { label: 'Vídeo em Destaque', icon: Video, color: 'text-red-600 bg-red-50' },
+                            image: { label: 'Imagem / Banner', icon: ImageIcon, color: 'text-indigo-600 bg-indigo-50' },
+                            text: { label: 'Texto Narrativo', icon: TypeIcon, color: 'text-slate-700 bg-slate-100' },
+                            features: { label: 'Benefícios & Diferenciais', icon: Layers, color: 'text-blue-600 bg-blue-50' },
+                            socialProof: { label: 'Prova Social & Depoimentos', icon: Star, color: 'text-amber-600 bg-amber-50' },
+                            pricing: { label: 'Tabela de Preços / Planos', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50' },
+                            faq: { label: 'Perguntas Frequentes (FAQ)', icon: HelpCircle, color: 'text-purple-600 bg-purple-50' },
+                            countdown: { label: 'Timer de Escassez', icon: Clock, color: 'text-orange-600 bg-orange-50' },
+                            cta_banner: { label: 'Banner de Ação (CTA)', icon: Sparkles, color: 'text-cyan-600 bg-cyan-50' },
+                            hero: { label: 'Hero / Destaque', icon: Layout, color: 'text-blue-600 bg-blue-50' }
+                          };
+
+                          const meta = blockLabels[block.type] || { label: block.type, icon: Layers, color: 'text-slate-600 bg-slate-100' };
+                          const IconComp = meta.icon;
+
+                          return (
+                            <div 
+                              key={block.id || idx}
+                              className={`border rounded-2xl transition bg-white shadow-xs ${
+                                isExpanded ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              {/* Header Card */}
+                              <div className="p-3.5 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {/* Up / Down Controls */}
+                                  <div className="flex flex-col gap-0.5">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={() => moveBlock(idx, 'up')}
+                                      className="p-1 rounded-md hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent"
+                                      title="Mover para Cima"
+                                    >
+                                      <ChevronUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={idx === (editingPage.blocks?.length || 1) - 1}
+                                      onClick={() => moveBlock(idx, 'down')}
+                                      className="p-1 rounded-md hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:hover:bg-transparent"
+                                      title="Mover para Baixo"
+                                    >
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  {/* Block Type Badge */}
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${meta.color}`}>
+                                    <IconComp className="w-4 h-4" />
+                                  </div>
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-900 text-xs truncate">
+                                        {block.title || meta.label}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                                        #{idx + 1}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] text-slate-500 block truncate">
+                                      {meta.label}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Right Controls */}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleBlockEnabled(idx)}
+                                    className={`p-1.5 rounded-lg text-xs transition ${
+                                      block.enabled !== false 
+                                        ? 'text-emerald-600 hover:bg-emerald-50' 
+                                        : 'text-slate-400 hover:bg-slate-100'
+                                    }`}
+                                    title={block.enabled !== false ? 'Bloco Visível' : 'Bloco Oculto'}
+                                  >
+                                    {block.enabled !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedBlockId(isExpanded ? null : block.id)}
+                                    className={`p-1.5 rounded-lg text-xs font-semibold transition ${
+                                      isExpanded ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                    title="Editar Bloco"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeBlock(idx)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                                    title="Excluir Bloco"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Accordion Detail / Content Editor */}
+                              {isExpanded && (
+                                <div className="p-4 bg-slate-50/70 border-t border-slate-200/80 rounded-b-2xl space-y-4 text-xs">
+                                  {/* Common Block Appearance */}
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                        Cor de Fundo do Bloco
+                                      </label>
+                                      <select
+                                        value={block.backgroundColor || 'white'}
+                                        onChange={e => {
+                                          const blocks = [...(editingPage.blocks || [])];
+                                          blocks[idx] = { ...block, backgroundColor: e.target.value as any };
+                                          setEditingPage({ ...editingPage, blocks });
+                                        }}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                      >
+                                        <option value="white">⚪ Branco Puro</option>
+                                        <option value="slate">🔘 Cinza Suave (Slate)</option>
+                                        <option value="dark">🌑 Escuro Elegante (Dark)</option>
+                                        <option value="primary">🎨 Cor Primária da Marca</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                        Status de Exibição
+                                      </label>
+                                      <select
+                                        value={block.enabled !== false ? 'true' : 'false'}
+                                        onChange={e => {
+                                          const blocks = [...(editingPage.blocks || [])];
+                                          blocks[idx] = { ...block, enabled: e.target.value === 'true' };
+                                          setEditingPage({ ...editingPage, blocks });
+                                        }}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                      >
+                                        <option value="true">✅ Exibir no Site</option>
+                                        <option value="false">🚫 Ocultar Temporariamente</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  {/* Common Title & Subtitle */}
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                      Título do Bloco
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={block.title || ''}
+                                      onChange={e => {
+                                        const blocks = [...(editingPage.blocks || [])];
+                                        blocks[idx] = { ...block, title: e.target.value };
+                                        setEditingPage({ ...editingPage, blocks });
+                                      }}
+                                      placeholder="Ex: Conheça os diferenciais..."
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                      Subtítulo ou Texto de Apoio
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={block.subtitle || ''}
+                                      onChange={e => {
+                                        const blocks = [...(editingPage.blocks || [])];
+                                        blocks[idx] = { ...block, subtitle: e.target.value };
+                                        setEditingPage({ ...editingPage, blocks });
+                                      }}
+                                      placeholder="Ex: Assista ao vídeo de 2 minutos demonstrativo..."
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                    />
+                                  </div>
+
+                                  {/* Specific Fields: HEADER_FORM (Split Layout Power UP) */}
+                                  {block.type === 'header_form' && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-200">
+                                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                        <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs mb-1">
+                                          <LayoutTemplate className="w-4 h-4 text-emerald-600" />
+                                          <span>Cabeçalho Dividido (Hero + Formulário Integrado)</span>
+                                        </div>
+                                        <p className="text-[11px] text-emerald-700">
+                                          Este bloco une a proposta de valor e o formulário em tela dividida, exatamente como no layout de alta conversão Power UP.
+                                        </p>
+                                      </div>
+
+                                      {/* Form Position in Visual Structure */}
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Posição do Formulário
+                                          </label>
+                                          <select
+                                            value={block.formPosition || 'right'}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, formPosition: e.target.value as 'right' | 'left' };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-semibold"
+                                          >
+                                            <option value="right">👉 Formulário na Direita</option>
+                                            <option value="left">👈 Formulário na Esquerda</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Barra Superior de Marca
+                                          </label>
+                                          <select
+                                            value={block.headerNavbarEnabled !== false ? 'true' : 'false'}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, headerNavbarEnabled: e.target.value === 'true' };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          >
+                                            <option value="true">✅ Exibir Barra de Topo</option>
+                                            <option value="false">🚫 Ocultar Barra de Topo</option>
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      {block.headerNavbarEnabled !== false && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Nome / Marca no Topo
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.headerLogoText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, headerLogoText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: MDTracker Growth Suite"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Botão CTA da Barra
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.headerNavCtaText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, headerNavCtaText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Quero Meu Acesso Gratuito Agora →"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Hero / Copy fields */}
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Selo de Destaque Superior (Badge)
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.headerBadge || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, headerBadge: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Ex: 🚀 OPORTUNIDADE EXCLUSIVA: POWER UP"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Título Principal (Headline)
+                                        </label>
+                                        <textarea
+                                          value={block.headerHeadline || block.title || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, headerHeadline: e.target.value, title: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={2}
+                                          placeholder="Ex: Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Subtítulo / Descrição de Apoio
+                                        </label>
+                                        <textarea
+                                          value={block.headerSubheadline || block.subtitle || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, headerSubheadline: e.target.value, subtitle: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={2}
+                                          placeholder="Acesse o método prático e validado por centenas de clientes..."
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Texto do Botão Principal do Hero
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.headerPrimaryCtaText || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, headerPrimaryCtaText: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Ex: Quero Meu Acesso Gratuito Agora →"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Selos de Confiança (um por linha)
+                                        </label>
+                                        <textarea
+                                          value={(block.headerTrustBadges || ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida']).join('\n')}
+                                          onChange={e => {
+                                            const badges = e.target.value.split('\n').map(s => s.trim()).filter(Boolean);
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, headerTrustBadges: badges };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={3}
+                                          placeholder="Acesso Imediato&#10;Sem Spam ou Mensagens Indesejadas&#10;Privacidade Garantida"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                        />
+                                      </div>
+
+                                      {/* Form Card Configuration */}
+                                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                          Configurações do Card de Formulário
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Selo do Card (Badge)
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.formCardBadge || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, formCardBadge: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: CADASTRE-SE GRÁTIS"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Botão do Formulário
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.formCardButtonText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, formCardButtonText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Quero Começar Agora Mesmo 🚀"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Título do Card de Formulário
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.formCardTitle || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, formCardTitle: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Garanta sua Condição Especial"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Subtítulo do Card de Formulário
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.formCardSubtitle || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, formCardSubtitle: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Preencha os campos abaixo e receba atendimento exclusivo em minutos."
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Aviso de Privacidade / LGPD
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.formLgpdNotice || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, formLgpdNotice: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD)."
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: VIDEO */}
+                                  {block.type === 'video' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Link do Vídeo (YouTube, Vimeo ou MP4)
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.videoUrl || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, videoUrl: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="https://www.youtube.com/watch?v=..."
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                        />
+                                        <p className="text-[11px] text-slate-500 mt-1">
+                                          💡 Cole qualquer link do YouTube (inclusive <code>youtu.be</code>) ou Vimeo. Convertemos para player responsivo sem cortes.
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Legenda do Vídeo
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.videoCaption || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, videoCaption: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Ex: Vídeo gravado com nossa diretoria comercial"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: IMAGE */}
+                                  {block.type === 'image' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                          <label className="text-[11px] font-semibold text-slate-700 uppercase">
+                                            URL da Imagem
+                                          </label>
+                                          <button
+                                            type="button"
+                                            onClick={() => setActiveStockGalleryBlockId(activeStockGalleryBlockId === block.id ? null : block.id)}
+                                            className="text-blue-600 hover:text-blue-700 font-bold text-[11px] flex items-center gap-1"
+                                          >
+                                            <Sparkles className="w-3 h-3" />
+                                            <span>{activeStockGalleryBlockId === block.id ? 'Fechar Galeria' : 'Ver Galeria Pronta (8 Fotos)'}</span>
+                                          </button>
+                                        </div>
+                                        <input
+                                          type="text"
+                                          value={block.imageUrl || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, imageUrl: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="https://..."
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                        />
+                                      </div>
+
+                                      {/* Quick Stock Gallery Accordion */}
+                                      {activeStockGalleryBlockId === block.id && (
+                                        <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm space-y-2">
+                                          <div className="text-[11px] font-bold text-slate-800">
+                                            Clique em uma foto pronta para aplicar imediatamente:
+                                          </div>
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {PRESET_STOCK_IMAGES.map((img, sIdx) => (
+                                              <button
+                                                key={sIdx}
+                                                type="button"
+                                                onClick={() => {
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { 
+                                                    ...block, 
+                                                    imageUrl: img.url,
+                                                    imageAlt: img.title
+                                                  };
+                                                  setEditingPage({ ...editingPage, blocks });
+                                                  setActiveStockGalleryBlockId(null);
+                                                }}
+                                                className="group text-left border border-slate-200 rounded-lg overflow-hidden hover:border-blue-500 hover:ring-2 hover:ring-blue-100 transition"
+                                              >
+                                                <img src={img.url} alt={img.title} className="w-full h-16 object-cover group-hover:scale-105 transition" />
+                                                <div className="p-1.5 bg-slate-50">
+                                                  <span className="text-[10px] font-semibold text-slate-700 block truncate">{img.category}</span>
+                                                </div>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Texto Alternativo (Alt)
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.imageAlt || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, imageAlt: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Foto do escritório"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                            Legenda da Foto
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.imageCaption || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, imageCaption: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Sede em São Paulo"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: TEXT */}
+                                  {block.type === 'text' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Alinhamento do Texto
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {(['left', 'center', 'right'] as const).map(align => (
+                                            <button
+                                              key={align}
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, textAlignment: align };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className={`py-1.5 rounded-lg border text-xs font-semibold capitalize ${
+                                                (block.textAlignment || 'left') === align
+                                                  ? 'bg-blue-600 text-white border-blue-600'
+                                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                              }`}
+                                            >
+                                              {align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Conteúdo do Texto (Parágrafos)
+                                        </label>
+                                        <textarea
+                                          value={block.textContent || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, textContent: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={5}
+                                          placeholder="Digite seus parágrafos aqui. Dê duas quebras de linha para separar parágrafos..."
+                                          className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs leading-relaxed"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: PRICING */}
+                                  {block.type === 'pricing' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-semibold text-slate-700 uppercase">
+                                          Planos / Pacotes
+                                        </label>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const plans = [...(block.pricingPlans || [])];
+                                            plans.push({
+                                              id: `plan-${Date.now()}`,
+                                              name: `Novo Plano ${plans.length + 1}`,
+                                              price: 'R$ 197',
+                                              period: 'mês',
+                                              features: ['Acesso completo', 'Suporte prioritário'],
+                                              buttonText: 'Garantir Vaga',
+                                              buttonUrl: '#preview-capture-form'
+                                            });
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, pricingPlans: plans };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          className="text-blue-600 hover:text-blue-700 font-bold text-xs flex items-center gap-1"
+                                        >
+                                          <Plus className="w-3 h-3" />
+                                          <span>Adicionar Plano</span>
+                                        </button>
+                                      </div>
+
+                                      {(block.pricingPlans || []).map((plan, pIdx) => (
+                                        <div key={plan.id || pIdx} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <span className="font-bold text-xs text-slate-800">Plano #{pIdx + 1}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const plans = [...(block.pricingPlans || [])];
+                                                plans.splice(pIdx, 1);
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pricingPlans: plans };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="text-red-500 hover:text-red-700 p-1"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                              type="text"
+                                              value={plan.name}
+                                              onChange={e => {
+                                                const plans = [...(block.pricingPlans || [])];
+                                                plans[pIdx] = { ...plan, name: e.target.value };
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pricingPlans: plans };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Nome do Plano"
+                                              className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
+                                            />
+                                            <input
+                                              type="text"
+                                              value={plan.price}
+                                              onChange={e => {
+                                                const plans = [...(block.pricingPlans || [])];
+                                                plans[pIdx] = { ...plan, price: e.target.value };
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pricingPlans: plans };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Preço (ex: R$ 297)"
+                                              className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
+                                            />
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <label className="flex items-center gap-1.5 text-[11px] text-slate-700 cursor-pointer">
+                                              <input
+                                                type="checkbox"
+                                                checked={plan.highlighted || false}
+                                                onChange={e => {
+                                                  const plans = [...(block.pricingPlans || [])];
+                                                  plans[pIdx] = { ...plan, highlighted: e.target.checked };
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, pricingPlans: plans };
+                                                  setEditingPage({ ...editingPage, blocks });
+                                                }}
+                                                className="rounded text-blue-600"
+                                              />
+                                              <span>Destacar como "Mais Popular ⭐"</span>
+                                            </label>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: CTA BANNER */}
+                                  {block.type === 'cta_banner' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Texto do Botão de Ação
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.ctaButtonText || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, ctaButtonText: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Quero Meu Acesso Agora"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Selo Superior do Banner
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.ctaBadge || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, ctaBadge: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Vagas Limitadas"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: COUNTDOWN TIMER */}
+                                  {block.type === 'countdown' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Título do Contador de Escassez
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.countdownTitle || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, countdownTitle: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Garanta sua vaga antes que o cronômetro zere:"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Data e Hora de Encerramento (Prazo Limite)
+                                        </label>
+                                        <input
+                                          type="datetime-local"
+                                          value={block.countdownEndDate ? block.countdownEndDate.substring(0, 16) : ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, countdownEndDate: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                        />
+                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, countdownEndDate: getQuickDateTime('today_midnight') };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="px-2.5 py-1 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
+                                          >
+                                            Hoje 23:59
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, countdownEndDate: getQuickDateTime('tomorrow_midnight') };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="px-2.5 py-1 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
+                                          >
+                                            Amanhã 23:59
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, countdownEndDate: getQuickDateTime('plus_days', 3) };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="px-2.5 py-1 text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
+                                          >
+                                            +3 Dias
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, countdownEndDate: getQuickDateTime('plus_days', 7) };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="px-2.5 py-1 text-[10px] font-semibold bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg transition"
+                                          >
+                                            +7 Dias (Vendas)
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Redirection Options */}
+                                      <div className="pt-2 border-t border-slate-200/80">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer mb-2">
+                                          <input
+                                            type="checkbox"
+                                            checked={block.countdownRedirectOnExpire !== false}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, countdownRedirectOnExpire: e.target.checked };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                          />
+                                          <span>Redirecionar automaticamente quando o timer zerar</span>
+                                        </label>
+
+                                        {block.countdownRedirectOnExpire !== false && (
+                                          <div className="space-y-2.5 pl-6">
+                                            <div className="flex items-center gap-4 text-xs">
+                                              <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                                                <input
+                                                  type="radio"
+                                                  name={`block_countdown_redir_${block.id}`}
+                                                  checked={(block.countdownRedirectType || 'page') === 'page'}
+                                                  onChange={() => {
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, countdownRedirectType: 'page' };
+                                                    setEditingPage({ ...editingPage, blocks });
+                                                  }}
+                                                  className="text-blue-600"
+                                                />
+                                                <span>🏢 Outra Página do MDTracker</span>
+                                              </label>
+                                              <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                                                <input
+                                                  type="radio"
+                                                  name={`block_countdown_redir_${block.id}`}
+                                                  checked={block.countdownRedirectType === 'custom_url'}
+                                                  onChange={() => {
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, countdownRedirectType: 'custom_url' };
+                                                    setEditingPage({ ...editingPage, blocks });
+                                                  }}
+                                                  className="text-blue-600"
+                                                />
+                                                <span>🌐 Link Externo / Live</span>
+                                              </label>
+                                            </div>
+
+                                            {(block.countdownRedirectType || 'page') === 'page' ? (
+                                              <div>
+                                                <select
+                                                  value={block.countdownRedirectPageSlug || ''}
+                                                  onChange={e => {
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, countdownRedirectPageSlug: e.target.value };
+                                                    setEditingPage({ ...editingPage, blocks });
+                                                  }}
+                                                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                                >
+                                                  <option value="">-- Selecione a próxima página de destino --</option>
+                                                  {landingPages.filter(p => p.id !== editingPage.id).map(p => (
+                                                    <option key={p.id} value={p.slug}>
+                                                      {p.title} (/p/{p.slug})
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                              </div>
+                                            ) : (
+                                              <div>
+                                                <input
+                                                  type="url"
+                                                  value={block.countdownRedirectUrl || ''}
+                                                  onChange={e => {
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, countdownRedirectUrl: e.target.value };
+                                                    setEditingPage({ ...editingPage, blocks });
+                                                  }}
+                                                  placeholder="https://sua-empresa.com.br/checkout ou link do YouTube Live"
+                                                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                                />
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() => setIsAddBlockModalOpen(true)}
+                          className="w-full py-3 border-2 border-dashed border-blue-300 hover:border-blue-500 rounded-2xl text-blue-600 hover:bg-blue-50/50 transition font-bold text-xs flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Adicionar Outro Bloco à Página</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* 1. GERAL & SEO */}
                 {activeEditorTab === 'general' && (
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -1343,6 +3060,26 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                 {/* 2. HERO / TÍTULO */}
                 {activeEditorTab === 'hero' && (
                   <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Status de Exibição do Hero Padrão
+                      </label>
+                      <select
+                        value={editingPage.hero?.enabled !== false ? 'true' : 'false'}
+                        onChange={e => setEditingPage({
+                          ...editingPage,
+                          hero: { ...editingPage.hero, enabled: e.target.value === 'true' }
+                        })}
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl bg-white text-xs font-semibold"
+                      >
+                        <option value="true">✅ Exibir Hero Principal no Topo</option>
+                        <option value="false">🚫 Ocultar Hero Principal (Usar apenas Blocos Modulares)</option>
+                      </select>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        💡 Se você adicionar um bloco modular de "Cabeçalho com Formulário (Split)" na aba Blocos, o hero padrão é substituído automaticamente por ele.
+                      </p>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                         Badge de Destaque
@@ -1478,17 +3215,37 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                         Ação Após Envio do Formulário
                       </label>
                       <select
-                        value={editingPage.form?.actionType || 'redirect_whatsapp'}
+                        value={editingPage.form?.actionType || 'thank_you_page'}
                         onChange={e => setEditingPage({
                           ...editingPage,
                           form: { ...editingPage.form, actionType: e.target.value as any }
                         })}
                         className="w-full px-3.5 py-2 border border-slate-300 rounded-xl bg-white mb-3"
                       >
+                        <option value="thank_you_page">Redirecionar para Página de Obrigado Integrada (Recomendado)</option>
                         <option value="redirect_whatsapp">Abrir WhatsApp com Mensagem Predefinida</option>
                         <option value="thank_you_message">Exibir Mensagem de Sucesso na Tela</option>
                         <option value="custom_url">Redirecionar para URL Externa / Checkout</option>
                       </select>
+
+                      {editingPage.form?.actionType === 'thank_you_page' && (
+                        <div className="bg-purple-50 p-3.5 rounded-xl border border-purple-200 text-xs text-purple-900 space-y-1.5 mb-3">
+                          <div className="font-bold flex items-center gap-1.5 text-purple-700">
+                            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Página de Obrigado Ativada</span>
+                          </div>
+                          <p>
+                            O lead será direcionado para <code className="font-mono bg-purple-100 px-1 py-0.5 rounded text-purple-800 font-bold">/p/{editingPage.slug}/obrigado</code> com botões para entrar em grupos de WhatsApp, baixar PDFs ou responder à pesquisa.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setActiveEditorTab('thankyou')}
+                            className="mt-1 text-purple-700 hover:text-purple-900 font-extrabold underline text-[11px] block"
+                          >
+                            Personalizar Botões e Conteúdo da Página de Obrigado &rarr;
+                          </button>
+                        </div>
+                      )}
 
                       {editingPage.form?.actionType === 'redirect_whatsapp' && (
                         <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
@@ -1560,6 +3317,374 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           <option key={stage} value={stage}>{stage}</option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* PÁGINA DE OBRIGADO (Pós-Conversão) */}
+                {activeEditorTab === 'thankyou' && (
+                  <div className="space-y-5">
+                    <div className="bg-purple-50/70 p-4 rounded-2xl border border-purple-200/80 flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">Página de Obrigado Pós-Conversão</span>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                            Alta Conversão
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                          Página exibida aos leads logo após preencherem o formulário. Inclui botões para entrar no grupo VIP do WhatsApp, baixar PDFs ou responder a pesquisas.
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={editingPage.thankYouPage?.enabled ?? true}
+                          onChange={e => setEditingPage({
+                            ...editingPage,
+                            thankYouPage: {
+                              ...editingPage.thankYouPage,
+                              enabled: e.target.checked
+                            }
+                          })}
+                          className="w-4 h-4 rounded text-purple-600"
+                        />
+                        <span className="text-xs font-bold text-slate-700">Ativa</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Título Principal da Página de Obrigado
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPage.thankYouPage?.title || ''}
+                        onChange={e => setEditingPage({
+                          ...editingPage,
+                          thankYouPage: {
+                            ...editingPage.thankYouPage,
+                            title: e.target.value
+                          }
+                        })}
+                        placeholder="🎉 Falta Apenas Um Último Passo!"
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Subtítulo / Instruções para o Lead
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editingPage.thankYouPage?.subtitle || ''}
+                        onChange={e => setEditingPage({
+                          ...editingPage,
+                          thankYouPage: {
+                            ...editingPage.thankYouPage,
+                            subtitle: e.target.value
+                          }
+                        })}
+                        placeholder="Seus dados foram confirmados. Para não perder os avisos no WhatsApp, escolha as opções abaixo:"
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Vídeo de Agradecimento ou Instruções (Opcional - YouTube)
+                      </label>
+                      <input
+                        type="url"
+                        value={editingPage.thankYouPage?.videoUrl || ''}
+                        onChange={e => setEditingPage({
+                          ...editingPage,
+                          thankYouPage: {
+                            ...editingPage.thankYouPage,
+                            videoUrl: e.target.value
+                          }
+                        })}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-mono"
+                      />
+                    </div>
+
+                    {/* Action Buttons Section */}
+                    <div className="space-y-3 pt-3 border-t border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
+                            Botões de Ação na Página ({editingPage.thankYouPage?.actionButtons?.length || 0})
+                          </label>
+                          <span className="text-[11px] text-slate-500">
+                            Adicione botões para WhatsApp, PDF para download ou pesquisas
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = editingPage.thankYouPage?.actionButtons || [];
+                              const newBtn: ThankYouActionButton = {
+                                id: `btn-wa-${Date.now()}`,
+                                type: 'whatsapp_group',
+                                title: 'Entrar no Grupo VIP do WhatsApp',
+                                description: 'Avisos prioritários e networking sem spam.',
+                                buttonText: 'Entrar no Grupo VIP 📱',
+                                icon: 'whatsapp',
+                                color: '#10b981',
+                                url: 'https://chat.whatsapp.com/demo-mdtracker',
+                                badge: 'Recomendado'
+                              };
+                              setEditingPage({
+                                ...editingPage,
+                                thankYouPage: {
+                                  ...editingPage.thankYouPage,
+                                  actionButtons: [...curr, newBtn]
+                                }
+                              });
+                            }}
+                            className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> + Grupo WhatsApp
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = editingPage.thankYouPage?.actionButtons || [];
+                              const newBtn: ThankYouActionButton = {
+                                id: `btn-pdf-${Date.now()}`,
+                                type: 'download_pdf',
+                                title: 'Baixar Material Gratuito em PDF',
+                                description: 'Download imediato do e-book ou checklist completo.',
+                                buttonText: 'Baixar PDF Grátis 📥',
+                                icon: 'download',
+                                color: '#2563eb',
+                                url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+                                badge: 'Download Imediato'
+                              };
+                              setEditingPage({
+                                ...editingPage,
+                                thankYouPage: {
+                                  ...editingPage.thankYouPage,
+                                  actionButtons: [...curr, newBtn]
+                                }
+                              });
+                            }}
+                            className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> + Download PDF
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = editingPage.thankYouPage?.actionButtons || [];
+                              const firstSurvey = availableSurveys[0];
+                              const newBtn: ThankYouActionButton = {
+                                id: `btn-surv-${Date.now()}`,
+                                type: 'survey',
+                                title: 'Responder Pesquisa Rápida (1 Minuto)',
+                                description: 'Personalize seu diagnóstico respondendo 3 perguntas rápidas.',
+                                buttonText: 'Responder Pesquisa Agora 📝',
+                                icon: 'survey',
+                                color: '#7c3aed',
+                                url: firstSurvey ? `/pesquisa/${firstSurvey.slug}` : '/pesquisa/qualificacao-comercial',
+                                surveyId: firstSurvey?.id || 'survey-qualificacao-comercial',
+                                badge: '1 Minuto'
+                              };
+                              setEditingPage({
+                                ...editingPage,
+                                thankYouPage: {
+                                  ...editingPage.thankYouPage,
+                                  actionButtons: [...curr, newBtn]
+                                }
+                              });
+                            }}
+                            className="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> + Pesquisa
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        {(editingPage.thankYouPage?.actionButtons || []).map((btn, bIdx) => (
+                          <div key={btn.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                  btn.type === 'whatsapp_group' ? 'bg-emerald-100 text-emerald-800' :
+                                  btn.type === 'download_pdf' ? 'bg-blue-100 text-blue-800' :
+                                  btn.type === 'survey' ? 'bg-purple-100 text-purple-800' : 'bg-slate-200 text-slate-800'
+                                }`}>
+                                  {btn.type === 'whatsapp_group' && 'Grupo WhatsApp VIP'}
+                                  {btn.type === 'download_pdf' && 'Download de PDF'}
+                                  {btn.type === 'survey' && 'Pesquisa & Qualificação'}
+                                  {btn.type === 'external_link' && 'Link Externo'}
+                                </span>
+                                <input
+                                  type="text"
+                                  value={btn.badge || ''}
+                                  onChange={e => {
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { ...btn, badge: e.target.value };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  placeholder="Tag (ex: Recomendado)"
+                                  className="text-[10px] px-2 py-0.5 border border-slate-200 rounded bg-white w-28"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const arr = (editingPage.thankYouPage?.actionButtons || []).filter((_, i) => i !== bIdx);
+                                  setEditingPage({
+                                    ...editingPage,
+                                    thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                  });
+                                }}
+                                className="text-slate-400 hover:text-red-500 p-1"
+                                title="Remover Botão"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Título do Card</label>
+                                <input
+                                  type="text"
+                                  value={btn.title}
+                                  onChange={e => {
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { ...btn, title: e.target.value };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-bold"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Texto do Botão CTA</label>
+                                <input
+                                  type="text"
+                                  value={btn.buttonText || ''}
+                                  onChange={e => {
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { ...btn, buttonText: e.target.value };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">Descrição Curta</label>
+                              <input
+                                type="text"
+                                value={btn.description || ''}
+                                onChange={e => {
+                                  const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                  arr[bIdx] = { ...btn, description: e.target.value };
+                                  setEditingPage({
+                                    ...editingPage,
+                                    thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
+                              />
+                            </div>
+
+                            {/* Destination URL or Survey Selector */}
+                            {btn.type === 'survey' ? (
+                              <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-purple-200">
+                                <label className="block text-[11px] font-bold text-purple-700">
+                                  Vincular à Pesquisa do MDTracker:
+                                </label>
+                                <select
+                                  value={btn.surveyId || ''}
+                                  onChange={e => {
+                                    const selectedId = e.target.value;
+                                    const surv = availableSurveys.find(s => s.id === selectedId);
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { 
+                                      ...btn, 
+                                      surveyId: selectedId, 
+                                      url: surv ? `/pesquisa/${surv.slug}` : `/pesquisa/${selectedId}` 
+                                    };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
+                                >
+                                  <option value="">Selecione uma pesquisa existente...</option>
+                                  {availableSurveys.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.title} (/pesquisa/{s.slug})
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="text-[10px] text-slate-500">
+                                  Ou informe a URL direta abaixo caso seja externa:
+                                </p>
+                                <input
+                                  type="text"
+                                  value={btn.url}
+                                  onChange={e => {
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { ...btn, url: e.target.value };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  placeholder="/pesquisa/..."
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono"
+                                />
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                                  {btn.type === 'whatsapp_group' ? 'Link do Grupo do WhatsApp (https://chat.whatsapp.com/...)' :
+                                   btn.type === 'download_pdf' ? 'Link Direto para o PDF (URL completa)' : 'URL de Destino'}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={btn.url}
+                                  onChange={e => {
+                                    const arr = [...(editingPage.thankYouPage?.actionButtons || [])];
+                                    arr[bIdx] = { ...btn, url: e.target.value };
+                                    setEditingPage({
+                                      ...editingPage,
+                                      thankYouPage: { ...editingPage.thankYouPage, actionButtons: arr }
+                                    });
+                                  }}
+                                  placeholder="https://..."
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1709,37 +3834,278 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                 {activeEditorTab === 'scarcity' && (
                   <div className="space-y-5">
                     {/* Countdown Timer */}
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-semibold text-slate-800">Contador Regressivo (Timer)</div>
-                          <div className="text-xs text-slate-500">Cria urgência de vagas ou lote</div>
+                          <div className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-500" />
+                            <span>Contador Regressivo (Timer Dinâmico)</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            Cria urgência real e redireciona automaticamente ao zerar
+                          </div>
                         </div>
                         <input
                           type="checkbox"
                           checked={editingPage.countdown?.enabled || false}
-                          onChange={e => setEditingPage({
-                            ...editingPage,
-                            countdown: { ...editingPage.countdown, enabled: e.target.checked }
-                          })}
-                          className="w-5 h-5 text-blue-600 rounded"
+                          onChange={e => {
+                            const isChecked = e.target.checked;
+                            const defaultEnd = isChecked && !editingPage.countdown?.endDate 
+                              ? getQuickDateTime('plus_days', 3) 
+                              : editingPage.countdown?.endDate;
+                            setEditingPage({
+                              ...editingPage,
+                              countdown: { 
+                                ...editingPage.countdown, 
+                                enabled: isChecked,
+                                title: editingPage.countdown?.title || 'Tempo restante para garantir esta vaga:',
+                                endDate: defaultEnd,
+                                redirectOnExpire: editingPage.countdown?.redirectOnExpire !== false,
+                                redirectType: editingPage.countdown?.redirectType || 'page',
+                                serverRedirect: editingPage.countdown?.serverRedirect !== false,
+                                expiredMessage: editingPage.countdown?.expiredMessage || '⏰ Tempo esgotado! Redirecionando para a próxima etapa...'
+                              }
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 rounded cursor-pointer"
                         />
                       </div>
 
                       {editingPage.countdown?.enabled && (
-                        <div>
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">
-                            Título da Escassez
-                          </label>
-                          <input
-                            type="text"
-                            value={editingPage.countdown.title || ''}
-                            onChange={e => setEditingPage({
-                              ...editingPage,
-                              countdown: { ...editingPage.countdown, title: e.target.value }
-                            })}
-                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
-                          />
+                        <div className="space-y-4 pt-3 border-t border-slate-200">
+                          {/* Title of Urgency */}
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                              Título da Escassez
+                            </label>
+                            <input
+                              type="text"
+                              value={editingPage.countdown.title || ''}
+                              onChange={e => setEditingPage({
+                                ...editingPage,
+                                countdown: { ...editingPage.countdown, title: e.target.value }
+                              })}
+                              placeholder="Ex: Tempo restante para garantir esta condição:"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium"
+                            />
+                          </div>
+
+                          {/* Target Date and Time */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                                Data e Horário Limite (Expiração)
+                              </label>
+                              <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                Horário Local
+                              </span>
+                            </div>
+                            <input
+                              type="datetime-local"
+                              value={editingPage.countdown.endDate ? editingPage.countdown.endDate.substring(0, 16) : ''}
+                              onChange={e => setEditingPage({
+                                ...editingPage,
+                                countdown: { ...editingPage.countdown, endDate: e.target.value }
+                              })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono font-bold text-slate-800"
+                            />
+
+                            {/* Quick Shortcuts */}
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] text-slate-400 font-medium">Atalhos rápidos:</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingPage({
+                                  ...editingPage,
+                                  countdown: { ...editingPage.countdown, endDate: getQuickDateTime('today_midnight') }
+                                })}
+                                className="text-[11px] px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md font-medium text-slate-700 transition"
+                              >
+                                Hoje 23:59
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingPage({
+                                  ...editingPage,
+                                  countdown: { ...editingPage.countdown, endDate: getQuickDateTime('tomorrow_midnight') }
+                                })}
+                                className="text-[11px] px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md font-medium text-slate-700 transition"
+                              >
+                                Amanhã 23:59
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingPage({
+                                  ...editingPage,
+                                  countdown: { ...editingPage.countdown, endDate: getQuickDateTime('plus_days', 3) }
+                                })}
+                                className="text-[11px] px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md font-medium text-slate-700 transition"
+                              >
+                                +3 Dias
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingPage({
+                                  ...editingPage,
+                                  countdown: { ...editingPage.countdown, endDate: getQuickDateTime('plus_days', 7) }
+                                })}
+                                className="text-[11px] px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md font-medium text-slate-700 transition"
+                              >
+                                +7 Dias (Vendas)
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Dynamic Redirection Section */}
+                          <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <ExternalLink className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+                                  Redirecionamento Automático
+                                </span>
+                              </div>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingPage.countdown.redirectOnExpire !== false}
+                                  onChange={e => setEditingPage({
+                                    ...editingPage,
+                                    countdown: { ...editingPage.countdown, redirectOnExpire: e.target.checked }
+                                  })}
+                                  className="w-4 h-4 text-blue-600 rounded"
+                                />
+                                <span className="text-xs font-semibold text-blue-900">Ativado</span>
+                              </label>
+                            </div>
+
+                            <p className="text-[11px] text-blue-700 leading-snug">
+                              Quando o cronômetro zerar (ou se o visitante entrar após a data), ele é redirecionado instantaneamente para a próxima página do funil.
+                            </p>
+
+                            {editingPage.countdown.redirectOnExpire !== false && (
+                              <div className="space-y-3 pt-2">
+                                {/* Type selector */}
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingPage({
+                                      ...editingPage,
+                                      countdown: { ...editingPage.countdown, redirectType: 'page' }
+                                    })}
+                                    className={`py-2 px-3 text-xs font-bold rounded-lg border text-center transition ${
+                                      (editingPage.countdown.redirectType || 'page') === 'page'
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    🏢 Página do MDTracker
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingPage({
+                                      ...editingPage,
+                                      countdown: { ...editingPage.countdown, redirectType: 'custom_url' }
+                                    })}
+                                    className={`py-2 px-3 text-xs font-bold rounded-lg border text-center transition ${
+                                      editingPage.countdown.redirectType === 'custom_url'
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    🌐 Link Externo / Live
+                                  </button>
+                                </div>
+
+                                {/* Destination Selector */}
+                                {(editingPage.countdown.redirectType || 'page') === 'page' ? (
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                      Escolha a Próxima Landing Page
+                                    </label>
+                                    <select
+                                      value={editingPage.countdown.redirectPageSlug || ''}
+                                      onChange={e => {
+                                        const slug = e.target.value;
+                                        setEditingPage({
+                                          ...editingPage,
+                                          countdown: {
+                                            ...editingPage.countdown,
+                                            redirectPageSlug: slug,
+                                            redirectUrl: slug ? `/p/${slug}` : ''
+                                          }
+                                        });
+                                      }}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-medium text-slate-800"
+                                    >
+                                      <option value="">Selecione uma Landing Page cadastrada...</option>
+                                      {landingPages
+                                        .filter(p => p.id !== editingPage.id && p.slug !== editingPage.slug)
+                                        .map(p => (
+                                          <option key={p.id} value={p.slug}>
+                                            {p.title} (/p/{p.slug})
+                                          </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] text-slate-500 mt-1">
+                                      Ex: Página da Inscrição &rarr; redireciona para a Página da Live &rarr; redireciona para a Página de Vendas &rarr; redireciona para o Próximo Evento.
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                      URL Externa de Destino
+                                    </label>
+                                    <input
+                                      type="url"
+                                      value={editingPage.countdown.redirectUrl || ''}
+                                      onChange={e => setEditingPage({
+                                        ...editingPage,
+                                        countdown: { ...editingPage.countdown, redirectUrl: e.target.value }
+                                      })}
+                                      placeholder="https://youtube.com/live/... ou checkout"
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono text-slate-800"
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Transition message */}
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                    Mensagem de Redirecionamento
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingPage.countdown.expiredMessage || ''}
+                                    onChange={e => setEditingPage({
+                                      ...editingPage,
+                                      countdown: { ...editingPage.countdown, expiredMessage: e.target.value }
+                                    })}
+                                    placeholder="Ex: ⏰ As inscrições foram encerradas! Redirecionando para a sala da live..."
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                  />
+                                </div>
+
+                                {/* Server 302 Redirect Toggle */}
+                                <div className="pt-2 border-t border-blue-200/60">
+                                  <label className="flex items-start gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={editingPage.countdown.serverRedirect !== false}
+                                      onChange={e => setEditingPage({
+                                        ...editingPage,
+                                        countdown: { ...editingPage.countdown, serverRedirect: e.target.checked }
+                                      })}
+                                      className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                                    />
+                                    <div className="text-[11px] text-slate-700">
+                                      <span className="font-bold text-slate-900">Redirecionamento Inteligente no Servidor (302):</span> Quem abrir a página após a data/hora limite é encaminhado direto para a nova página, preservando tags e parâmetros de campanha (UTMs).
+                                    </div>
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1821,14 +4187,101 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   </div>
                 )}
 
-                {/* 7. TEMA & CORES */}
+                {/* 7. TIPOGRAFIA & CORES (RD STATION STYLE) */}
                 {activeEditorTab === 'theme' && (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
+                    {/* 1. Google Fonts Selector */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                        Cor Primária (Botões e Destaques)
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                          Tipografia & Fonte da Página
+                        </label>
+                        <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                          Google Fonts
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Selecione a fonte que melhor transmite a personalidade da sua oferta:
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {FONT_OPTIONS.map(font => {
+                          const isSelected = (editingPage.theme?.fontFamily || 'Inter') === font.id;
+                          return (
+                            <button
+                              key={font.id}
+                              type="button"
+                              onClick={() => setEditingPage({
+                                ...editingPage,
+                                theme: { ...editingPage.theme, fontFamily: font.id }
+                              })}
+                              className={`text-left p-3 rounded-2xl border transition relative ${
+                                isSelected 
+                                  ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-100 shadow-xs' 
+                                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-slate-900 text-xs">
+                                  {font.name}
+                                </span>
+                                {isSelected && (
+                                  <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              <div 
+                                className="text-sm font-semibold text-slate-800 my-1 truncate"
+                                style={{ fontFamily: font.id }}
+                              >
+                                {font.preview}
+                              </div>
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                {font.description}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2. Headline / Title Size Selector */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                        Tamanho dos Títulos Principais
                       </label>
-                      <div className="flex items-center gap-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {TITLE_SIZES.map(ts => {
+                          const isSelected = (editingPage.theme?.titleSize || 'normal') === ts.id;
+                          return (
+                            <button
+                              key={ts.id}
+                              type="button"
+                              onClick={() => setEditingPage({
+                                ...editingPage,
+                                theme: { ...editingPage.theme, titleSize: ts.id }
+                              })}
+                              className={`p-2.5 rounded-xl border text-center transition ${
+                                isSelected
+                                  ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-100 font-bold text-blue-700'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <div className="text-xs font-bold">{ts.label.split(' ')[0]}</div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">{ts.label.split(' ')[1] || ''}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 3. Primary Color & Presets */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                        Cor Primária (Botões de Ação e Destaques)
+                      </label>
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                         <input
                           type="color"
                           value={editingPage.theme?.primaryColor || '#2563eb'}
@@ -1836,14 +4289,27 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             ...editingPage,
                             theme: { ...editingPage.theme, primaryColor: e.target.value }
                           })}
-                          className="w-10 h-10 rounded-lg cursor-pointer border border-slate-300"
+                          className="w-10 h-10 rounded-xl cursor-pointer border border-slate-300 shrink-0"
                         />
-                        <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={editingPage.theme?.primaryColor || '#2563eb'}
+                            onChange={e => setEditingPage({
+                              ...editingPage,
+                              theme: { ...editingPage.theme, primaryColor: e.target.value }
+                            })}
+                            className="w-28 px-2 py-1 text-xs font-mono font-bold uppercase border border-slate-300 rounded-lg bg-white"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {[
                             { color: '#2563eb', label: 'Azul Real' },
                             { color: '#059669', label: 'Esmeralda' },
                             { color: '#7c3aed', label: 'Roxo Tech' },
-                            { color: '#ea580c', label: 'Laranja' }
+                            { color: '#ea580c', label: 'Laranja' },
+                            { color: '#dc2626', label: 'Vermelho' },
+                            { color: '#0f172a', label: 'Dark' }
                           ].map(c => (
                             <button
                               key={c.color}
@@ -1852,7 +4318,9 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                 ...editingPage,
                                 theme: { ...editingPage.theme, primaryColor: c.color }
                               })}
-                              className="w-7 h-7 rounded-full border-2 border-white shadow-sm"
+                              className={`w-6 h-6 rounded-full border-2 transition transform hover:scale-110 shadow-xs ${
+                                (editingPage.theme?.primaryColor || '#2563eb') === c.color ? 'border-slate-900 ring-2 ring-blue-300' : 'border-white'
+                              }`}
                               style={{ backgroundColor: c.color }}
                               title={c.label}
                             />
@@ -1861,45 +4329,48 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                       </div>
                     </div>
 
+                    {/* 4. Button Shape */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                        Família da Fonte
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                        Estilo e Arredondamento dos Botões
                       </label>
-                      <select
-                        value={editingPage.theme?.fontFamily || 'Inter'}
-                        onChange={e => setEditingPage({
-                          ...editingPage,
-                          theme: { ...editingPage.theme, fontFamily: e.target.value as any }
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'rounded-xl', label: 'Moderno (12px)', preview: 'rounded-xl' },
+                          { id: 'rounded-full', label: 'Pílula Redonda', preview: 'rounded-full' },
+                          { id: 'rounded-md', label: 'Suave (6px)', preview: 'rounded-md' },
+                          { id: 'square', label: 'Reto / Quadrado', preview: 'rounded-none' }
+                        ].map(shape => {
+                          const isSelected = (editingPage.theme?.buttonStyle || 'rounded-xl') === shape.id;
+                          return (
+                            <button
+                              key={shape.id}
+                              type="button"
+                              onClick={() => setEditingPage({
+                                ...editingPage,
+                                theme: { ...editingPage.theme, buttonStyle: shape.id as any }
+                              })}
+                              className={`p-3 rounded-xl border text-center transition ${
+                                isSelected
+                                  ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-100 font-bold text-blue-700'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <div className="text-xs font-bold mb-1.5">{shape.label}</div>
+                              <div 
+                                className={`w-full py-1.5 text-white text-[10px] font-bold ${shape.preview}`}
+                                style={{ backgroundColor: editingPage.theme?.primaryColor || '#2563eb' }}
+                              >
+                                Botão Exemplo
+                              </div>
+                            </button>
+                          );
                         })}
-                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl bg-white"
-                      >
-                        <option value="Inter">Inter (Moderna & Clean)</option>
-                        <option value="Poppins">Poppins (Geométrica & Amigável)</option>
-                        <option value="Montserrat">Montserrat (Marcante & Elegante)</option>
-                        <option value="Roboto">Roboto (Clássica & Confiável)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                        Estilo dos Botões
-                      </label>
-                      <select
-                        value={editingPage.theme?.buttonStyle || 'rounded-xl'}
-                        onChange={e => setEditingPage({
-                          ...editingPage,
-                          theme: { ...editingPage.theme, buttonStyle: e.target.value as any }
-                        })}
-                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl bg-white"
-                      >
-                        <option value="rounded-xl">Arredondamento Moderno (12px)</option>
-                        <option value="rounded-full">Estilo Pílula (Totalmente Redondo)</option>
-                        <option value="rounded-md">Suave (6px)</option>
-                        <option value="square">Quadrado / Reto</option>
-                      </select>
+                      </div>
                     </div>
                   </div>
                 )}
+
 
               </div>
             </div>
@@ -1909,9 +4380,19 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
               {(() => {
                 const primaryColor = editingPage.theme?.primaryColor || '#2563eb';
                 const companyName = editingPage.footer?.companyName || currentCompany.name || 'MDTracker Growth';
+                const hasHeaderFormBlock = Boolean(editingPage.blocks && editingPage.blocks.some(b => b.type === 'header_form' && b.enabled !== false));
+                const showDefaultHero = (editingPage.hero as any)?.enabled !== false && !hasHeaderFormBlock;
                 const buttonShapeClass = getButtonShapeClass(editingPage.theme?.buttonStyle);
+                const heroTitleSizeClass = editingPage.theme?.titleSize === 'huge'
+                  ? 'text-3xl sm:text-4xl lg:text-5xl'
+                  : editingPage.theme?.titleSize === 'normal'
+                  ? 'text-xl sm:text-2xl lg:text-3xl'
+                  : 'text-2xl sm:text-3xl lg:text-4xl';
 
                 if (previewDevice === 'iframe') {
+                  const currentPreviewUrl = previewPageMode === 'thankyou' 
+                    ? `/p/${editingPage.slug}/obrigado` 
+                    : `/p/${editingPage.slug}`;
                   return (
                     <div className="w-full h-full flex flex-col bg-white rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
                       {/* Browser simulated top header */}
@@ -1923,7 +4404,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
                           </div>
                           <span className="font-mono text-[11px] text-slate-400 ml-2 bg-slate-800 px-3 py-1 rounded-md border border-slate-700">
-                            /p/{editingPage.slug}
+                            {currentPreviewUrl}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1931,22 +4412,225 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             Servidor Web Express em Tempo Real
                           </span>
                           <a 
-                            href={`/p/${editingPage.slug}`} 
+                            href={currentPreviewUrl} 
                             target="_blank" 
                             rel="noreferrer"
                             className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold"
                           >
-                            <span>Abrir Página Externa</span>
+                            <span>{previewPageMode === 'thankyou' ? 'Abrir Obrigado Externo' : 'Abrir Página Externa'}</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                       </div>
                       <iframe
-                        key={editingPage.slug + (editingPage.updatedAt || '')}
-                        src={`/p/${editingPage.slug}`}
+                        key={editingPage.slug + previewPageMode + (editingPage.updatedAt || '')}
+                        src={currentPreviewUrl}
                         className="w-full flex-1 border-0"
                         title="Preview Web Oficial"
                       />
+                    </div>
+                  );
+                }
+
+                // SIMULATED THANK YOU PAGE PREVIEW (Desktop / Mobile)
+                if (previewPageMode === 'thankyou') {
+                  const ty = editingPage.thankYouPage || {};
+                  const tyTitle = ty.title || '🎉 Falta Apenas Um Último Passo!';
+                  const tySubtitle = ty.subtitle || 'Seus dados foram confirmados com sucesso. Complete as etapas recomendadas abaixo para garantir seu acesso e materiais:';
+                  const actionButtons = (ty.actionButtons && ty.actionButtons.length > 0) ? ty.actionButtons : [
+                    {
+                      id: 'wa-demo',
+                      type: 'whatsapp_group' as const,
+                      title: 'Entrar no Grupo VIP do WhatsApp',
+                      description: 'Avisos prioritários, materiais complementares e networking sem spam.',
+                      buttonText: 'Entrar no Grupo VIP do WhatsApp 📱',
+                      icon: 'whatsapp',
+                      color: '#10b981',
+                      url: ty.whatsappGroupUrl || 'https://chat.whatsapp.com/demo-mdtracker',
+                      badge: 'Recomendado'
+                    },
+                    {
+                      id: 'pdf-demo',
+                      type: 'download_pdf' as const,
+                      title: 'Baixar Material Gratuito em PDF',
+                      description: 'Faça o download imediato do seu guia e checklist exclusivo em PDF.',
+                      buttonText: 'Baixar PDF Grátis Imediatamente 📥',
+                      icon: 'download',
+                      color: '#2563eb',
+                      url: ty.pdfDownloadUrl || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                      badge: 'Download Imediato'
+                    },
+                    {
+                      id: 'survey-demo',
+                      type: 'survey' as const,
+                      title: 'Responder Pesquisa Rápida (1 Minuto)',
+                      description: 'Personalize seu diagnóstico respondendo 3 perguntas rápidas.',
+                      buttonText: 'Responder Pesquisa de Qualificação 📝',
+                      icon: 'survey',
+                      color: '#7c3aed',
+                      url: '/pesquisa/qualificacao-comercial',
+                      badge: '1 Minuto'
+                    }
+                  ];
+
+                  return (
+                    <div
+                      className={`bg-white transition-all duration-300 overflow-y-auto shadow-2xl relative ${
+                        previewDevice === 'mobile'
+                          ? 'w-[375px] h-[680px] rounded-[44px] border-[12px] border-slate-800 ring-1 ring-slate-700'
+                          : 'w-full h-full rounded-2xl border border-slate-800'
+                      }`}
+                      style={{ fontFamily: editingPage.theme?.fontFamily || 'Inter' }}
+                    >
+                      {/* Mobile Notch */}
+                      {previewDevice === 'mobile' && (
+                        <div className="sticky top-0 w-full h-6 bg-slate-800 flex items-center justify-center z-50">
+                          <div className="w-20 h-4 bg-slate-900 rounded-b-xl"></div>
+                        </div>
+                      )}
+
+                      {/* Desktop Browser Bar */}
+                      {previewDevice === 'desktop' && (
+                        <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 sticky top-0 z-50">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                            </div>
+                            <div className="bg-white border border-slate-200 px-3 py-1 rounded-md text-[11px] text-slate-500 font-mono flex items-center gap-1.5 shadow-xs">
+                              <Globe className="w-3 h-3 text-purple-600" />
+                              <span>https://mdtracker.app/p/{editingPage.slug}/obrigado</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-purple-700 font-semibold bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                              Preview: Página de Obrigado 🎉
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Top Nav Header */}
+                      <header className={`px-6 py-4 bg-white/95 border-b border-slate-200 flex items-center justify-between sticky z-40 backdrop-blur-md shadow-xs ${previewDevice === 'desktop' ? 'top-[37px]' : 'top-6'}`}>
+                        <div className="flex items-center gap-2.5">
+                          <div 
+                            className="w-9 h-9 rounded-xl text-white font-bold flex items-center justify-center text-sm shadow-md"
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            {(companyName || 'M').charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-bold text-slate-900 tracking-tight text-base">{companyName}</span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Inscrição Confirmada</span>
+                        </span>
+                      </header>
+
+                      {/* Celebration Hero */}
+                      <div className="pt-10 pb-12 px-6 sm:px-10 text-center bg-gradient-to-b from-purple-50/60 via-white to-slate-50 border-b border-slate-100">
+                        <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 border-4 border-emerald-200 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/10">
+                          <Check className="w-8 h-8 stroke-[3]" />
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-100 text-purple-700 mb-3 shadow-xs">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>{ty.badge || '🎉 Inscrição Confirmada com Sucesso!'}</span>
+                        </div>
+
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight mb-3">
+                          {tyTitle}
+                        </h1>
+
+                        <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed mb-6">
+                          {tySubtitle}
+                        </p>
+
+                        {/* Video if present */}
+                        {ty.videoUrl && (
+                          <div className="max-w-md mx-auto mb-6 rounded-2xl overflow-hidden shadow-xl aspect-video bg-black">
+                            <iframe
+                              src={ty.videoUrl}
+                              className="w-full h-full border-0"
+                              title="Vídeo de Boas-vindas"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        )}
+
+                        {/* Instructions Box if present */}
+                        {ty.instructions && (
+                          <div className="max-w-xl mx-auto mb-6 p-4 rounded-xl bg-amber-50/90 border border-amber-200 text-left">
+                            <div className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              <span>Orientações Importantes</span>
+                            </div>
+                            <p className="text-xs text-amber-800 whitespace-pre-line leading-relaxed">
+                              {ty.instructions}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Action Cards */}
+                        <div className="max-w-xl mx-auto space-y-3.5 text-left mt-6">
+                          {actionButtons.map((btn: any, idx: number) => {
+                            const btnColor = btn.color || (btn.type === 'whatsapp_group' ? '#10b981' : btn.type === 'download_pdf' ? '#2563eb' : '#7c3aed');
+                            return (
+                              <div
+                                key={btn.id || idx}
+                                className="p-4 sm:p-5 rounded-2xl border-2 bg-white transition shadow-sm hover:shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                                style={{ borderColor: `${btnColor}35` }}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 shadow-sm"
+                                    style={{ backgroundColor: btnColor }}
+                                  >
+                                    {btn.type === 'whatsapp_group' ? <MessageSquare className="w-5 h-5" /> :
+                                     btn.type === 'download_pdf' ? <Download className="w-5 h-5" /> :
+                                     btn.type === 'survey' ? <ClipboardList className="w-5 h-5" /> :
+                                     <ExternalLink className="w-5 h-5" />}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-slate-900 text-xs sm:text-sm">{btn.title}</span>
+                                      {btn.badge && (
+                                        <span
+                                          className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                                          style={{ backgroundColor: `${btnColor}20`, color: btnColor }}
+                                        >
+                                          {btn.badge}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {btn.description && (
+                                      <p className="text-xs text-slate-500 mt-0.5 leading-snug">{btn.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <a
+                                  href={btn.url || '#'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={`w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:brightness-95 transition flex items-center justify-center gap-1.5 shrink-0 ${buttonShapeClass}`}
+                                  style={{ backgroundColor: btnColor }}
+                                >
+                                  <span>{btn.buttonText || 'Acessar Agora'}</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <footer className="bg-slate-900 text-slate-400 py-8 px-6 text-center text-xs">
+                        <p>&copy; {new Date().getFullYear()} {companyName}. Todos os direitos reservados.</p>
+                        <p className="text-[11px] text-slate-500 mt-1">MDTracker Growth Suite • Página de Obrigado de Alta Conversão</p>
+                      </footer>
                     </div>
                   );
                 }
@@ -1987,294 +4671,922 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                       </div>
                     )}
 
-                    {/* Simulated Top Nav Header */}
-                    <header className={`px-6 py-4 bg-white/95 border-b border-slate-200 flex items-center justify-between sticky z-40 backdrop-blur-md shadow-xs ${previewDevice === 'desktop' ? 'top-[37px]' : 'top-6'}`}>
-                      <div className="flex items-center gap-2.5">
-                        <div 
-                          className="w-9 h-9 rounded-xl text-white font-bold flex items-center justify-center text-sm shadow-md"
-                          style={{ backgroundColor: primaryColor }}
-                        >
-                          {(companyName || 'M').charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-bold text-slate-900 tracking-tight text-base">{companyName}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const formEl = document.getElementById('preview-capture-form');
-                          formEl?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className={`text-xs sm:text-sm font-semibold text-white px-4 py-2 transition inline-flex items-center gap-1.5 shadow-xs hover:brightness-95 ${buttonShapeClass}`}
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        <span>{editingPage.hero?.ctaText || 'Acessar Agora'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </header>
-
-                    {/* Hero Section */}
-                    <section className="pt-10 pb-16 md:pt-14 md:pb-20 px-6 sm:px-10 bg-gradient-to-b from-white via-slate-50 to-slate-100 border-b border-slate-200/80">
-                      <div className={previewDevice === 'desktop' ? 'grid grid-cols-12 gap-8 lg:gap-10 items-start' : 'flex flex-col gap-6'}>
-                        
-                        {/* Left: Copy & Value Proposition */}
-                        <div className={previewDevice === 'desktop' ? 'col-span-7 text-left' : 'w-full text-center'}>
-                          {editingPage.hero?.badge && (
-                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 bg-blue-50 text-blue-700 border border-blue-200 shadow-xs">
-                              <span>{editingPage.hero.badge}</span>
-                            </div>
-                          )}
-
-                          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-4">
-                            {editingPage.hero?.headline || editingPage.title}
-                          </h1>
-
-                          <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-6 font-normal">
-                            {editingPage.hero?.subheadline || editingPage.description}
-                          </p>
-
-                          {/* Countdown Timer Preview */}
-                          {editingPage.countdown?.enabled && (
-                            <div className={`mb-6 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl max-w-lg ${previewDevice === 'desktop' ? '' : 'mx-auto'}`}>
-                              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
-                                {editingPage.countdown.title || 'Tempo restante para garantir esta condição:'}
-                              </div>
-                              <div className="grid grid-cols-4 gap-2 text-center font-bold">
-                                <div className="bg-slate-800 p-2 rounded-xl">
-                                  <span className="text-2xl font-black text-amber-400">03</span>
-                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
-                                </div>
-                                <div className="bg-slate-800 p-2 rounded-xl">
-                                  <span className="text-2xl font-black text-white">14</span>
-                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
-                                </div>
-                                <div className="bg-slate-800 p-2 rounded-xl">
-                                  <span className="text-2xl font-black text-white">45</span>
-                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
-                                </div>
-                                <div className="bg-slate-800 p-2 rounded-xl">
-                                  <span className="text-2xl font-black text-emerald-400">22</span>
-                                  <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Hero CTA Button */}
-                          <div className={`flex flex-col sm:flex-row items-center gap-4 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const formEl = document.getElementById('preview-capture-form');
-                                formEl?.scrollIntoView({ behavior: 'smooth' });
-                              }}
-                              className={`w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg shadow-blue-500/20 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 ${buttonShapeClass}`}
+                    {/* Simulated Top Nav Header & Hero Section */}
+                    {showDefaultHero && (
+                      <>
+                        <header className={`px-6 py-4 bg-white/95 border-b border-slate-200 flex items-center justify-between sticky z-40 backdrop-blur-md shadow-xs ${previewDevice === 'desktop' ? 'top-[37px]' : 'top-6'}`}>
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="w-9 h-9 rounded-xl text-white font-bold flex items-center justify-center text-sm shadow-md"
                               style={{ backgroundColor: primaryColor }}
                             >
-                              <span>{editingPage.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
-                              <ArrowRight className="w-5 h-5" />
-                            </button>
-                          </div>
-
-                          {/* Trust indicators */}
-                          <div className={`mt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                              Acesso Imediato
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                              Sem Spam ou Mensagens Indesejadas
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                              Privacidade Garantida
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Right: Capture Form Card */}
-                        <div className={previewDevice === 'desktop' ? 'col-span-5' : 'w-full'}>
-                          <div id="preview-capture-form" className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
-                            <div className="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                              Cadastre-se Grátis
+                              {(companyName || 'M').charAt(0).toUpperCase()}
                             </div>
+                            <span className="font-bold text-slate-900 tracking-tight text-base">{companyName}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const formEl = document.getElementById('preview-capture-form');
+                              formEl?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className={`text-xs sm:text-sm font-semibold text-white px-4 py-2 transition inline-flex items-center gap-1.5 shadow-xs hover:brightness-95 ${buttonShapeClass}`}
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            <span>{editingPage.hero?.ctaText || 'Acessar Agora'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </header>
 
-                            <div className="mb-5">
-                              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                                {editingPage.form?.title || 'Garanta sua Vaga'}
-                              </h2>
-                              {editingPage.form?.subtitle && (
-                                <p className="text-xs sm:text-sm text-slate-500 mt-1">{editingPage.form.subtitle}</p>
+                        {/* Hero Section */}
+                        <section className="pt-10 pb-16 md:pt-14 md:pb-20 px-6 sm:px-10 bg-gradient-to-b from-white via-slate-50 to-slate-100 border-b border-slate-200/80">
+                          <div className={previewDevice === 'desktop' ? 'grid grid-cols-12 gap-8 lg:gap-10 items-start' : 'flex flex-col gap-6'}>
+                            
+                            {/* Left: Copy & Value Proposition */}
+                            <div className={previewDevice === 'desktop' ? 'col-span-7 text-left' : 'w-full text-center'}>
+                              {editingPage.hero?.badge && (
+                                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 bg-blue-50 text-blue-700 border border-blue-200 shadow-xs">
+                                  <span>{editingPage.hero.badge}</span>
+                                </div>
                               )}
+
+                              <h1 className={`${heroTitleSizeClass} font-black text-slate-900 leading-tight tracking-tight mb-4`}>
+                                {editingPage.hero?.headline || editingPage.title}
+                              </h1>
+
+                              <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-6 font-normal">
+                                {editingPage.hero?.subheadline || editingPage.description}
+                              </p>
+
+                              {/* Countdown Timer Preview */}
+                              {editingPage.countdown?.enabled && (() => {
+                                const cd = getTimerRemaining(editingPage.countdown?.endDate);
+                                const targetPage = (editingPage.countdown?.redirectType || 'page') === 'page' && editingPage.countdown?.redirectPageSlug
+                                  ? landingPages.find(p => p.slug === editingPage.countdown?.redirectPageSlug)
+                                  : null;
+                                const targetLabel = editingPage.countdown?.redirectType === 'custom_url'
+                                  ? editingPage.countdown.redirectUrl
+                                  : targetPage ? targetPage.title : editingPage.countdown?.redirectPageSlug;
+
+                                return (
+                                  <div className={`mb-6 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl max-w-lg ${previewDevice === 'desktop' ? '' : 'mx-auto'}`}>
+                                    <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                                      <span>{editingPage.countdown.title || 'Tempo restante para garantir esta condição:'}</span>
+                                      {editingPage.countdown.endDate && (
+                                        <span className="text-[10px] text-amber-400 font-mono">
+                                          {new Date(editingPage.countdown.endDate).toLocaleDateString('pt-BR')} {new Date(editingPage.countdown.endDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-2 text-center font-bold">
+                                      <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                        <span className="text-2xl font-black text-amber-400">{cd.days}</span>
+                                        <span className="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                                      </div>
+                                      <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                        <span className="text-2xl font-black text-white">{cd.hours}</span>
+                                        <span className="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                                      </div>
+                                      <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                        <span className="text-2xl font-black text-white">{cd.mins}</span>
+                                        <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                                      </div>
+                                      <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                        <span className="text-2xl font-black text-emerald-400">{cd.secs}</span>
+                                        <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                                      </div>
+                                    </div>
+                                    {editingPage.countdown.redirectOnExpire !== false && targetLabel && (
+                                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                                        <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                          Ao zerar redireciona para:
+                                        </span>
+                                        <span className="font-semibold text-slate-200 truncate max-w-[200px]" title={targetLabel}>
+                                          {targetLabel}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {cd.isExpired && (
+                                      <div className="mt-2.5 p-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-center text-xs text-red-300 font-medium">
+                                        ⚠️ Timer expirado! Visitantes serão redirecionados automaticamente.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Hero CTA Button */}
+                              <div className={`flex flex-col sm:flex-row items-center gap-4 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const formEl = document.getElementById('preview-capture-form');
+                                    formEl?.scrollIntoView({ behavior: 'smooth' });
+                                  }}
+                                  className={`w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg shadow-blue-500/20 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 ${buttonShapeClass}`}
+                                  style={{ backgroundColor: primaryColor }}
+                                >
+                                  <span>{editingPage.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
+                                  <ArrowRight className="w-5 h-5" />
+                                </button>
+                              </div>
+
+                              {/* Trust indicators */}
+                              <div className={`mt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-500 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                  Acesso Imediato
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                  Sem Spam ou Mensagens Indesejadas
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                  Privacidade Garantida
+                                </span>
+                              </div>
                             </div>
 
-                            <form onSubmit={handleTestPreviewSubmit} className="space-y-3.5">
-                              {(editingPage.form?.fields || [
-                                { id: 'name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome', required: true, enabled: true },
-                                { id: 'phone', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true, enabled: true },
-                                { id: 'email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true, enabled: true }
-                              ]).map(f => (
-                                <div key={f.id}>
-                                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                                    {f.label} {f.required && <span className="text-red-500">*</span>}
-                                  </label>
-                                  {f.type === 'textarea' ? (
-                                    <textarea
-                                      value={previewFormValues[f.name || f.id] || ''}
-                                      onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
-                                      placeholder={f.placeholder}
-                                      rows={3}
-                                      required={f.required}
-                                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
-                                    />
-                                  ) : (
-                                    <input
-                                      type={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}
-                                      value={previewFormValues[f.name || f.id] || ''}
-                                      onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
-                                      placeholder={f.placeholder}
-                                      required={f.required}
-                                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
-                                    />
+                            {/* Right: Capture Form Card */}
+                            <div className={previewDevice === 'desktop' ? 'col-span-5' : 'w-full'}>
+                              <div id="preview-capture-form" className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
+                                <div className="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                                  Cadastre-se Grátis
+                                </div>
+
+                                <div className="mb-5">
+                                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                                    {editingPage.form?.title || 'Garanta sua Vaga'}
+                                  </h2>
+                                  {editingPage.form?.subtitle && (
+                                    <p className="text-xs sm:text-sm text-slate-500 mt-1">{editingPage.form.subtitle}</p>
                                   )}
                                 </div>
-                              ))}
 
-                              {previewSubmitStatus && (
-                                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium">
-                                  {previewSubmitStatus}
-                                </div>
-                              )}
+                                <form onSubmit={handleTestPreviewSubmit} className="space-y-3.5">
+                                  {(editingPage.form?.fields || [
+                                    { id: 'name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome', required: true, enabled: true },
+                                    { id: 'phone', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true, enabled: true },
+                                    { id: 'email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true, enabled: true }
+                                  ]).map(f => (
+                                    <div key={f.id}>
+                                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                                        {f.label} {f.required && <span className="text-red-500">*</span>}
+                                      </label>
+                                      {f.type === 'textarea' ? (
+                                        <textarea
+                                          value={previewFormValues[f.name || f.id] || ''}
+                                          onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
+                                          placeholder={f.placeholder}
+                                          rows={3}
+                                          required={f.required}
+                                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
+                                        />
+                                      ) : (
+                                        <input
+                                          type={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}
+                                          value={previewFormValues[f.name || f.id] || ''}
+                                          onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
+                                          placeholder={f.placeholder}
+                                          required={f.required}
+                                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-xs sm:text-sm transition bg-white"
+                                        />
+                                      )}
+                                    </div>
+                                  ))}
 
-                              <button
-                                type="submit"
-                                className={`w-full py-3.5 px-6 font-bold text-sm sm:text-base text-white shadow-md transition flex items-center justify-center gap-2 hover:brightness-95 ${buttonShapeClass}`}
-                                style={{ backgroundColor: primaryColor }}
-                              >
-                                <span>{editingPage.form?.buttonText || 'Enviar Dados Agora'}</span>
-                              </button>
+                                  {previewSubmitStatus && (
+                                    <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium">
+                                      {previewSubmitStatus}
+                                    </div>
+                                  )}
 
-                              <p className="text-[11px] text-slate-400 text-center mt-2.5">
-                                🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).
-                              </p>
-                            </form>
-                          </div>
-                        </div>
+                                  <button
+                                    type="submit"
+                                    className={`w-full py-3.5 px-6 font-bold text-sm sm:text-base text-white shadow-md transition flex items-center justify-center gap-2 hover:brightness-95 ${buttonShapeClass}`}
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    <span>{editingPage.form?.buttonText || 'Enviar Dados Agora'}</span>
+                                  </button>
 
-                      </div>
-                    </section>
-
-                    {/* Features & Benefits Section */}
-                    {editingPage.features && editingPage.features.length > 0 && (
-                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-b border-slate-200">
-                        <div className="text-center max-w-2xl mx-auto mb-10">
-                          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                            Por que escolher
-                          </span>
-                          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
-                            Tudo que você precisa para acelerar seu negócio
-                          </h2>
-                        </div>
-
-                        <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'}`}>
-                          {editingPage.features.map((feat, idx) => (
-                            <div key={feat.id || idx} className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
-                              <div 
-                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm text-sm sm:text-base"
-                                style={{ backgroundColor: primaryColor }}
-                              >
-                                {idx + 1}
+                                  <p className="text-[11px] text-slate-400 text-center mt-2.5">
+                                    🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).
+                                  </p>
+                                </form>
                               </div>
-                              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">{feat.title}</h3>
-                              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feat.description}</p>
                             </div>
-                          ))}
-                        </div>
-                      </section>
+
+                          </div>
+                        </section>
+                      </>
                     )}
 
-                    {/* Social Proof & Testimonials Section */}
-                    {editingPage.socialProof?.enabled && ((editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0) || (editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0)) && (
-                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-slate-900 text-white">
-                        {editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0 && (
-                          <div className={`grid gap-6 mb-12 text-center border-b border-slate-800 pb-10 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
-                            {editingPage.socialProof.stats.map((s, idx) => (
-                              <div key={idx}>
-                                <div className="text-3xl sm:text-4xl font-black text-amber-400 mb-1">{s.value}</div>
-                                <div className="text-xs sm:text-sm text-slate-400 font-medium">{s.label}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                    {/* Dynamic Modular Blocks or Legacy Sections Fallback */}
+                    {editingPage.blocks && editingPage.blocks.length > 0 ? (
+                      editingPage.blocks
+                        .filter(b => b.enabled !== false)
+                        .map((b, bIdx) => {
+                          const bgMap: Record<string, string> = {
+                            white: 'bg-white text-slate-800 border-b border-slate-200/80',
+                            slate: 'bg-slate-50 text-slate-800 border-b border-slate-200/80',
+                            dark: 'bg-slate-900 text-white border-b border-slate-800',
+                            primary: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-b border-blue-700'
+                          };
+                          const bgClass = bgMap[b.backgroundColor || 'white'] || bgMap.white;
 
-                        {editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0 && (
-                          <>
-                            <div className="text-center max-w-xl mx-auto mb-8">
-                              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
-                            </div>
-                            <div className={`grid gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                              {editingPage.socialProof.testimonials.map((t, idx) => (
-                                <div key={t.id || idx} className="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
-                                  <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
-                                    {'★'.repeat(t.rating || 5)}
-                                  </div>
-                                  <p className="text-xs sm:text-sm text-slate-300 italic mb-4">"{t.text}"</p>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs sm:text-sm shadow-sm">
-                                      {(t.name || 'C').charAt(0)}
+                          if (b.type === 'header_form') {
+                            const isLeft = b.formPosition === 'left';
+                            const trustBadges = b.headerTrustBadges || ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'];
+                            const navEnabled = b.headerNavbarEnabled !== false;
+                            const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
+                            const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
+                            const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
+                            const blockHeadline = b.headerHeadline || b.title || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
+                            const blockSubheadline = b.headerSubheadline || b.subtitle || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
+                            const blockPrimaryCta = b.headerPrimaryCtaText || 'Quero Meu Acesso Gratuito Agora →';
+                            const formBadge = b.formCardBadge || 'CADASTRE-SE GRÁTIS';
+                            const formTitle = b.formCardTitle || 'Garanta sua Condição Especial';
+                            const formSubtitle = b.formCardSubtitle || 'Preencha os campos abaixo e receba atendimento exclusivo em minutos.';
+                            const formBtnText = b.formCardButtonText || 'Quero Começar Agora Mesmo 🚀';
+                            const lgpdText = b.formLgpdNotice || '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).';
+
+                            return (
+                              <section key={b.id || bIdx} className={`py-8 md:py-16 ${bgClass}`}>
+                                {navEnabled && (
+                                  <div className="max-w-6xl mx-auto px-6 sm:px-10 mb-8 sm:mb-12 flex items-center justify-between pb-4 border-b border-slate-200/60">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                                        {blockLogo.charAt(0).toUpperCase()}
+                                      </div>
+                                      <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">{blockLogo}</span>
                                     </div>
                                     <div>
-                                      <div className="font-bold text-xs sm:text-sm text-white">{t.name}</div>
-                                      <div className="text-[11px] text-slate-400">{t.role}</div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const el = document.getElementById(`preview-block-form-${b.id}`);
+                                          el?.scrollIntoView({ behavior: 'smooth' });
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5"
+                                      >
+                                        <span>{blockNavCta}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="max-w-6xl mx-auto px-6 sm:px-10">
+                                  <div className={`grid grid-cols-1 ${previewDevice === 'desktop' ? 'lg:grid-cols-12 gap-8 lg:gap-12' : 'gap-8'} items-center`}>
+                                    
+                                    {/* Copy Column */}
+                                    <div className={`${previewDevice === 'desktop' ? `lg:col-span-7 ${isLeft ? 'lg:order-2' : 'lg:order-1'}` : ''} text-center lg:text-left`}>
+                                      {blockBadge && (
+                                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5 bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs">
+                                          <span>{blockBadge}</span>
+                                        </div>
+                                      )}
+
+                                      <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-5">
+                                        {blockHeadline}
+                                      </h1>
+
+                                      <p className="text-sm sm:text-base md:text-lg text-slate-600 leading-relaxed mb-8 max-w-2xl mx-auto lg:mx-0">
+                                        {blockSubheadline}
+                                      </p>
+
+                                      {/* Countdown Timer Preview in header_form (if enabled) */}
+                                      {editingPage.countdown?.enabled && (() => {
+                                        const cd = getTimerRemaining(editingPage.countdown?.endDate);
+                                        const targetPage = (editingPage.countdown?.redirectType || 'page') === 'page' && editingPage.countdown?.redirectPageSlug
+                                          ? landingPages.find(p => p.slug === editingPage.countdown?.redirectPageSlug)
+                                          : null;
+                                        const targetLabel = editingPage.countdown?.redirectType === 'custom_url'
+                                          ? editingPage.countdown.redirectUrl
+                                          : targetPage ? targetPage.title : editingPage.countdown?.redirectPageSlug;
+
+                                        return (
+                                          <div className="mb-8 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl max-w-lg mx-auto lg:mx-0">
+                                            <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                                              <span>{editingPage.countdown.title || 'Tempo restante para esta condição:'}</span>
+                                              {editingPage.countdown.endDate && (
+                                                <span className="text-[10px] text-amber-400 font-mono">
+                                                  {new Date(editingPage.countdown.endDate).toLocaleDateString('pt-BR')} {new Date(editingPage.countdown.endDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2 text-center font-bold">
+                                              <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                                <span className="text-2xl font-black text-amber-400">{cd.days}</span>
+                                                <span className="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                                              </div>
+                                              <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                                <span className="text-2xl font-black text-white">{cd.hours}</span>
+                                                <span className="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                                              </div>
+                                              <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                                <span className="text-2xl font-black text-white">{cd.mins}</span>
+                                                <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                                              </div>
+                                              <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
+                                                <span className="text-2xl font-black text-emerald-400">{cd.secs}</span>
+                                                <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                                              </div>
+                                            </div>
+                                            {editingPage.countdown.redirectOnExpire !== false && targetLabel && (
+                                              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                                                <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                                  Ao zerar redireciona para:
+                                                </span>
+                                                <span className="font-semibold text-slate-200 truncate max-w-[200px]" title={targetLabel}>
+                                                  {targetLabel}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {cd.isExpired && (
+                                              <div className="mt-2.5 p-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-center text-xs text-red-300 font-medium">
+                                                ⚠️ Timer expirado! Visitantes serão redirecionados automaticamente.
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+
+                                      <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const el = document.getElementById(`preview-block-form-${b.id}`);
+                                            el?.scrollIntoView({ behavior: 'smooth' });
+                                          }}
+                                          className="w-full sm:w-auto px-7 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                        >
+                                          <span>{blockPrimaryCta}</span>
+                                        </button>
+                                      </div>
+
+                                      {/* Trust Badges */}
+                                      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs text-slate-600">
+                                        {trustBadges.map((badge, bIndex) => (
+                                          <span key={bIndex} className="flex items-center gap-1.5 font-medium">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span>{badge}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Form Card Column */}
+                                    <div className={`${previewDevice === 'desktop' ? `lg:col-span-5 ${isLeft ? 'lg:order-1' : 'lg:order-2'}` : 'w-full'}`}>
+                                      <div id={`preview-block-form-${b.id}`} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-2xl relative">
+                                        {formBadge && (
+                                          <div className="absolute -top-3.5 right-6 bg-emerald-600 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+                                            {formBadge}
+                                          </div>
+                                        )}
+
+                                        <div className="mb-6">
+                                          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                                            {formTitle}
+                                          </h2>
+                                          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                                            {formSubtitle}
+                                          </p>
+                                        </div>
+
+                                        {/* Autofill recognition simulation */}
+                                        {previewFormValues.name && (
+                                          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800 transition shadow-xs">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-base">⚡</span>
+                                              <div>
+                                                <span className="font-bold">Olá, {previewFormValues.name}!</span>
+                                                <p className="text-[11px] text-emerald-600">Seus dados foram preenchidos automaticamente.</p>
+                                              </div>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => setPreviewFormValues({})}
+                                              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline px-2 py-1 rounded-md hover:bg-emerald-100 transition"
+                                            >
+                                              Limpar
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        <form onSubmit={handleTestPreviewSubmit} className="space-y-4">
+                                          {(editingPage.form?.fields || [
+                                            { id: 'name', name: 'name', label: 'Seu Nome', type: 'text', placeholder: 'Como podemos te chamar?', required: true, enabled: true },
+                                            { id: 'phone', name: 'phone', label: 'Seu WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true, enabled: true },
+                                            { id: 'email', name: 'email', label: 'Seu Melhor E-mail', type: 'email', placeholder: 'seu@email.com', required: true, enabled: true }
+                                          ]).map(f => (
+                                            <div key={f.id}>
+                                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                                {f.label} {f.required && <span className="text-red-500">*</span>}
+                                              </label>
+                                              <input
+                                                type={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}
+                                                value={previewFormValues[f.name || f.id] || ''}
+                                                onChange={e => setPreviewFormValues({ ...previewFormValues, [f.name || f.id]: e.target.value })}
+                                                placeholder={f.placeholder}
+                                                required={f.required}
+                                                autoComplete={f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'name'}
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-hidden text-xs sm:text-sm transition bg-slate-50/50 focus:bg-white"
+                                              />
+                                            </div>
+                                          ))}
+
+                                          {previewSubmitStatus && (
+                                            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium">
+                                              {previewSubmitStatus}
+                                            </div>
+                                          )}
+
+                                          <button
+                                            type="submit"
+                                            className="w-full py-4 px-6 font-black text-sm sm:text-base rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                          >
+                                            <span>{formBtnText}</span>
+                                          </button>
+
+                                          <p className="text-[11px] text-slate-400 text-center mt-3 leading-relaxed">
+                                            {lgpdText}
+                                          </p>
+                                        </form>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </section>
-                    )}
+                              </section>
+                            );
+                          }
 
-                    {/* FAQ Section */}
-                    {editingPage.faq?.enabled && editingPage.faq.items && editingPage.faq.items.length > 0 && (
-                      <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-t border-slate-200">
-                        <div className="max-w-4xl mx-auto">
-                          <div className="text-center mb-10">
-                            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                              Tire suas dúvidas
-                            </span>
-                            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
-                              Perguntas Frequentes
-                            </h2>
-                          </div>
+                          if (b.type === 'video') {
+                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-3xl mx-auto text-center">
+                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                  {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mb-6 max-w-xl mx-auto">{b.subtitle}</p>}
+                                  {embedUrl ? (
+                                    <div className="rounded-2xl overflow-hidden shadow-2xl border border-black/10 bg-black aspect-video max-w-2xl mx-auto">
+                                      <iframe
+                                        className="w-full h-full"
+                                        src={embedUrl}
+                                        title={b.title || 'Vídeo'}
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs">
+                                      <Video className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                      Insira o link do YouTube ou Vimeo para exibir o player
+                                    </div>
+                                  )}
+                                  {b.videoCaption && <p className="text-xs opacity-75 mt-3 italic">{b.videoCaption}</p>}
+                                </div>
+                              </section>
+                            );
+                          }
 
-                          <div className="space-y-3">
-                            {editingPage.faq.items.map((item, idx) => {
-                              const isOpen = openFaqIndex === idx;
-                              return (
-                                <div key={item.id || idx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                                    className="w-full p-4 sm:p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition"
-                                  >
-                                    <span className="text-xs sm:text-sm">{item.question}</span>
-                                    <span className="text-base sm:text-lg font-bold text-slate-400">
-                                      {isOpen ? '−' : '+'}
+                          if (b.type === 'image') {
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-4xl mx-auto text-center">
+                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                  {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mb-6 max-w-xl mx-auto">{b.subtitle}</p>}
+                                  {b.imageUrl ? (
+                                    <div className="inline-block rounded-2xl overflow-hidden shadow-xl border border-black/10 max-w-full">
+                                      <img
+                                        src={b.imageUrl}
+                                        alt={b.imageAlt || b.title || 'Imagem'}
+                                        className="max-h-[420px] w-auto max-w-full object-cover rounded-2xl mx-auto"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs">
+                                      <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                      Insira a URL da imagem ou escolha uma foto na galeria de banco de imagens
+                                    </div>
+                                  )}
+                                  {b.imageCaption && <p className="text-xs opacity-75 mt-3">{b.imageCaption}</p>}
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'text') {
+                            const alignClass = b.textAlignment === 'center' ? 'text-center' : b.textAlignment === 'right' ? 'text-right' : 'text-left';
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className={`max-w-3xl mx-auto ${alignClass}`}>
+                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                  {b.subtitle && <p className="text-xs sm:text-sm font-semibold text-blue-600 mb-4">{b.subtitle}</p>}
+                                  <div className="opacity-90 leading-relaxed space-y-3 text-xs sm:text-sm whitespace-pre-line">
+                                    {b.textContent || 'Texto narrativo de alta conversão. Apresente sua história e diferenciais com clareza.'}
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'features') {
+                            const feats = b.features || editingPage.features || [];
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-5xl mx-auto">
+                                  <div className="text-center max-w-xl mx-auto mb-8">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                      Diferenciais
                                     </span>
-                                  </button>
-                                  {isOpen && (
-                                    <div className="p-4 sm:p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
-                                      {item.answer}
+                                    <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mt-2.5">
+                                      {b.title || 'Tudo que você precisa para acelerar seu negócio'}
+                                    </h2>
+                                    {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mt-1">{b.subtitle}</p>}
+                                  </div>
+                                  <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                                    {feats.map((feat, fIdx) => (
+                                      <div key={feat.id || fIdx} className="p-5 rounded-2xl bg-white/95 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition text-slate-800">
+                                        <div
+                                          className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white mb-3 shadow-xs text-sm"
+                                          style={{ backgroundColor: primaryColor }}
+                                        >
+                                          {fIdx + 1}
+                                        </div>
+                                        <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-1">{feat.title}</h3>
+                                        <p className="text-xs text-slate-600 leading-relaxed">{feat.description}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'socialProof') {
+                            const testimonials = b.testimonials || editingPage.socialProof?.testimonials || [];
+                            const stats = b.stats || editingPage.socialProof?.stats || [];
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-5xl mx-auto">
+                                  {stats.length > 0 && (
+                                    <div className={`grid gap-6 mb-10 text-center border-b ${b.backgroundColor === 'dark' ? 'border-slate-800' : 'border-slate-200'} pb-8 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                                      {stats.map((s, sIdx) => (
+                                        <div key={sIdx}>
+                                          <div className="text-2xl sm:text-3xl font-black text-amber-400 mb-0.5">{s.value}</div>
+                                          <div className="text-xs opacity-80 font-medium">{s.label}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="text-center max-w-xl mx-auto mb-8">
+                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{b.title || 'O que dizem os nossos clientes'}</h2>
+                                    {b.subtitle && <p className="text-xs opacity-80 mt-1">{b.subtitle}</p>}
+                                  </div>
+                                  <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                    {testimonials.map((t, tIdx) => (
+                                      <div key={t.id || tIdx} className={`p-5 rounded-2xl border shadow-xs ${b.backgroundColor === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+                                        <div className="flex items-center gap-1 text-amber-400 mb-2 text-xs">
+                                          {'★'.repeat(t.rating || 5)}
+                                        </div>
+                                        <p className="text-xs italic mb-3 opacity-90">"{t.text}"</p>
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs shadow-xs">
+                                            {(t.name || 'C').charAt(0)}
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs">{t.name}</div>
+                                            <div className="text-[10px] opacity-70">{t.role}</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'pricing') {
+                            const plans = b.pricingPlans || [];
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-5xl mx-auto">
+                                  <div className="text-center max-w-xl mx-auto mb-10">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                      Planos & Condições
+                                    </span>
+                                    <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mt-2.5">
+                                      {b.title || 'Escolha o Plano Ideal'}
+                                    </h2>
+                                    <p className="text-xs sm:text-sm opacity-80 mt-1">{b.subtitle || 'Transparência total e sem taxas escondidas'}</p>
+                                  </div>
+                                  <div className={`grid gap-6 items-stretch ${previewDevice === 'desktop' ? (plans.length === 2 ? 'grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 md:grid-cols-3') : 'grid-cols-1'}`}>
+                                    {plans.map((plan, pIdx) => (
+                                      <div
+                                        key={plan.id || pIdx}
+                                        className={`p-6 rounded-2xl border flex flex-col justify-between transition text-slate-800 ${
+                                          plan.highlighted
+                                            ? 'border-2 border-blue-600 shadow-xl relative bg-white sm:-translate-y-2'
+                                            : 'border-slate-200 bg-white shadow-xs'
+                                        }`}
+                                      >
+                                        <div>
+                                          {plan.highlighted && (
+                                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-xs">
+                                              {plan.badge || 'Mais Vendido'}
+                                            </span>
+                                          )}
+                                          <h3 className="font-bold text-base text-slate-900 mb-1">{plan.name}</h3>
+                                          {plan.description && <p className="text-xs text-slate-500 mb-3">{plan.description}</p>}
+                                          <div className="my-3">
+                                            <span className="text-2xl sm:text-3xl font-black text-slate-900">{plan.price}</span>
+                                            {plan.period && <span className="text-xs text-slate-500 ml-1">/{plan.period}</span>}
+                                          </div>
+                                          <ul className="space-y-2 text-xs text-slate-600 my-5">
+                                            {(plan.features || []).map((feat, fIdx) => (
+                                              <li key={fIdx} className="flex items-center gap-2">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                <span>{feat}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const formEl = document.getElementById('preview-capture-form');
+                                            formEl?.scrollIntoView({ behavior: 'smooth' });
+                                          }}
+                                          className={`w-full py-2.5 px-4 text-center font-bold text-xs transition block ${buttonShapeClass} ${
+                                            plan.highlighted
+                                              ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-md'
+                                              : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                                          }`}
+                                        >
+                                          {plan.buttonText || 'Garantir Vaga'}
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'faq') {
+                            const faqItems = b.faqItems || editingPage.faq?.items || [];
+                            return (
+                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-3xl mx-auto">
+                                  <div className="text-center mb-8">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                      Tire suas dúvidas
+                                    </span>
+                                    <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mt-2.5">
+                                      {b.title || 'Perguntas Frequentes'}
+                                    </h2>
+                                    {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mt-1">{b.subtitle}</p>}
+                                  </div>
+                                  <div className="space-y-3">
+                                    {faqItems.map((item, fIdx) => {
+                                      const itemKey = `${b.id || bIdx}-${fIdx}`;
+                                      const isOpen = previewOpenFaqKey === itemKey;
+                                      return (
+                                        <div key={item.id || fIdx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 text-slate-800">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPreviewOpenFaqKey(isOpen ? null : itemKey)}
+                                            className="w-full p-4 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition"
+                                          >
+                                            <span className="text-xs sm:text-sm">{item.question}</span>
+                                            <span className="text-base font-bold text-slate-400">{isOpen ? '−' : '+'}</span>
+                                          </button>
+                                          {isOpen && (
+                                            <div className="p-4 pt-0 text-xs text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
+                                              {item.answer}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'countdown') {
+                            const cd = getTimerRemaining(b.countdownEndDate || editingPage.countdown?.endDate);
+                            const targetPage = (b.countdownRedirectType || 'page') === 'page' && b.countdownRedirectPageSlug
+                              ? landingPages.find(p => p.slug === b.countdownRedirectPageSlug)
+                              : null;
+                            const targetLabel = b.countdownRedirectType === 'custom_url'
+                              ? b.countdownRedirectUrl
+                              : targetPage ? targetPage.title : b.countdownRedirectPageSlug;
+
+                            return (
+                              <section key={b.id || bIdx} className="py-10 bg-slate-900 text-white text-center border-b border-slate-800 px-6">
+                                <div className="max-w-lg mx-auto">
+                                  <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                                    <span>{b.countdownTitle || b.title || 'Tempo restante para garantir esta condição:'}</span>
+                                    {(b.countdownEndDate || editingPage.countdown?.endDate) && (
+                                      <span className="text-[10px] text-amber-400 font-mono">
+                                        {new Date(b.countdownEndDate || editingPage.countdown?.endDate!).toLocaleDateString('pt-BR')} {new Date(b.countdownEndDate || editingPage.countdown?.endDate!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-2 text-center font-bold">
+                                    <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                                      <span className="text-xl sm:text-2xl font-black text-amber-400">{cd.days}</span>
+                                      <span className="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                                    </div>
+                                    <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                                      <span className="text-xl sm:text-2xl font-black text-white">{cd.hours}</span>
+                                      <span className="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                                    </div>
+                                    <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                                      <span className="text-xl sm:text-2xl font-black text-white">{cd.mins}</span>
+                                      <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                                    </div>
+                                    <div className="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+                                      <span className="text-xl sm:text-2xl font-black text-emerald-400">{cd.secs}</span>
+                                      <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                                    </div>
+                                  </div>
+                                  {(b.countdownRedirectOnExpire || editingPage.countdown?.redirectOnExpire) && targetLabel && (
+                                    <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                                      <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                                        Ao zerar redireciona para:
+                                      </span>
+                                      <span className="font-semibold text-slate-200 truncate max-w-[200px]" title={targetLabel}>
+                                        {targetLabel}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {cd.isExpired && (
+                                    <div className="mt-2.5 p-1.5 bg-red-500/20 border border-red-500/40 rounded-lg text-center text-xs text-red-300 font-medium">
+                                      ⚠️ Timer expirado! Visitantes serão redirecionados automaticamente.
                                     </div>
                                   )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </section>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'cta_banner') {
+                            return (
+                              <section key={b.id || bIdx} className="py-12 md:py-16 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-center px-6">
+                                <div className="max-w-3xl mx-auto">
+                                  {b.ctaBadge && (
+                                    <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase tracking-wider rounded-full mb-3">
+                                      {b.ctaBadge}
+                                    </span>
+                                  )}
+                                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-3">
+                                    {b.ctaHeadline || b.title || 'Pronto para Transformar seus Resultados?'}
+                                  </h2>
+                                  <p className="text-xs sm:text-base text-blue-100 max-w-xl mx-auto mb-6">
+                                    {b.ctaSubheadline || b.subtitle || 'Dê o próximo passo hoje mesmo e garanta sua vaga.'}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const formEl = document.getElementById('preview-capture-form');
+                                      formEl?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-700 font-extrabold text-xs sm:text-sm ${buttonShapeClass} shadow-xl hover:bg-slate-50 transition transform hover:-translate-y-0.5`}
+                                  >
+                                    <span>{b.ctaButtonText || 'Quero Garantir Minha Vaga Agora'}</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          return null;
+                        })
+                    ) : (
+                      <>
+                        {/* Features & Benefits Section Fallback */}
+                        {editingPage.features && editingPage.features.length > 0 && (
+                          <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-b border-slate-200">
+                            <div className="text-center max-w-2xl mx-auto mb-10">
+                              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                Por que escolher
+                              </span>
+                              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
+                                Tudo que você precisa para acelerar seu negócio
+                              </h2>
+                            </div>
+
+                            <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'}`}>
+                              {editingPage.features.map((feat, idx) => (
+                                <div key={feat.id || idx} className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
+                                  <div 
+                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm text-sm sm:text-base"
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    {idx + 1}
+                                  </div>
+                                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">{feat.title}</h3>
+                                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feat.description}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+
+                        {/* Social Proof & Testimonials Section Fallback */}
+                        {editingPage.socialProof?.enabled && ((editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0) || (editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0)) && (
+                          <section className="py-12 md:py-16 px-6 sm:px-10 bg-slate-900 text-white">
+                            {editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0 && (
+                              <div className={`grid gap-6 mb-12 text-center border-b border-slate-800 pb-10 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                                {editingPage.socialProof.stats.map((s, idx) => (
+                                  <div key={idx}>
+                                    <div className="text-3xl sm:text-4xl font-black text-amber-400 mb-1">{s.value}</div>
+                                    <div className="text-xs sm:text-sm text-slate-400 font-medium">{s.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0 && (
+                              <>
+                                <div className="text-center max-w-xl mx-auto mb-8">
+                                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
+                                </div>
+                                <div className={`grid gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                  {editingPage.socialProof.testimonials.map((t, idx) => (
+                                    <div key={t.id || idx} className="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
+                                      <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
+                                        {'★'.repeat(t.rating || 5)}
+                                      </div>
+                                      <p className="text-xs sm:text-sm text-slate-300 italic mb-4">"{t.text}"</p>
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs sm:text-sm shadow-sm">
+                                          {(t.name || 'C').charAt(0)}
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-xs sm:text-sm text-white">{t.name}</div>
+                                          <div className="text-[11px] text-slate-400">{t.role}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </section>
+                        )}
+
+                        {/* FAQ Section Fallback */}
+                        {editingPage.faq?.enabled && editingPage.faq.items && editingPage.faq.items.length > 0 && (
+                          <section className="py-12 md:py-16 px-6 sm:px-10 bg-white border-t border-slate-200">
+                            <div className="max-w-4xl mx-auto">
+                              <div className="text-center mb-10">
+                                <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                  Tire suas dúvidas
+                                </span>
+                                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
+                                  Perguntas Frequentes
+                                </h2>
+                              </div>
+
+                              <div className="space-y-3">
+                                {editingPage.faq.items.map((item, idx) => {
+                                  const isOpen = openFaqIndex === idx;
+                                  return (
+                                    <div key={item.id || idx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                                        className="w-full p-4 sm:p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition"
+                                      >
+                                        <span className="text-xs sm:text-sm">{item.question}</span>
+                                        <span className="text-base sm:text-lg font-bold text-slate-400">
+                                          {isOpen ? '−' : '+'}
+                                        </span>
+                                      </button>
+                                      {isOpen && (
+                                        <div className="p-4 sm:p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
+                                          {item.answer}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </section>
+                        )}
+                      </>
                     )}
 
                     {/* Footer Preview */}
@@ -2303,6 +5615,159 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
           </div>
 
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* ADD BLOCK SELECTION MODAL                                 */}
+      {/* ========================================================= */}
+      {isAddBlockModalOpen && (
+        <div className="fixed inset-0 z-60 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-scale-in max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Adicionar Novo Bloco de Conteúdo</h3>
+                  <p className="text-xs text-slate-500">Escolha o formato visual para enriquecer sua landing page sem precisar de código</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddBlockModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  type: 'header_form' as const,
+                  icon: LayoutTemplate,
+                  color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+                  title: 'Cabeçalho & Formulário (Split)',
+                  tag: 'Alta Conversão ⭐',
+                  description: 'Layout Power UP com proposta de valor, selos de confiança e formulário flutuante integrado.'
+                },
+                {
+                  type: 'video' as const,
+                  icon: Video,
+                  color: 'text-rose-600 bg-rose-50 border-rose-200',
+                  title: 'Vídeo em Destaque',
+                  tag: 'Engajamento',
+                  description: 'Incorpore vídeo do YouTube ou Vimeo em player responsivo de alta retenção.'
+                },
+                {
+                  type: 'image' as const,
+                  icon: ImageIcon,
+                  color: 'text-blue-600 bg-blue-50 border-blue-200',
+                  title: 'Imagem ou Banner',
+                  tag: 'Visual',
+                  description: 'Foto em alta resolução com galeria integrada do Unsplash ou URL personalizada.'
+                },
+                {
+                  type: 'text' as const,
+                  icon: TypeIcon,
+                  color: 'text-purple-600 bg-purple-50 border-purple-200',
+                  title: 'Texto & Storytelling',
+                  tag: 'Copywriting',
+                  description: 'Apresente sua história, explicação detalhada e proposta de valor com formatação.'
+                },
+                {
+                  type: 'features' as const,
+                  icon: CheckCircle2,
+                  color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+                  title: 'Grade de Benefícios',
+                  tag: 'Diferenciais',
+                  description: 'Destaque as principais vantagens e diferenciais em cards numerados modernos.'
+                },
+                {
+                  type: 'socialProof' as const,
+                  icon: Star,
+                  color: 'text-amber-600 bg-amber-50 border-amber-200',
+                  title: 'Prova Social & Avaliações',
+                  tag: 'Autoridade',
+                  description: 'Estatísticas de impacto e depoimentos de clientes reais com 5 estrelas.'
+                },
+                {
+                  type: 'pricing' as const,
+                  icon: CreditCard,
+                  color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+                  title: 'Tabela de Preços & Planos',
+                  tag: 'Conversão Direta',
+                  description: 'Comparativo de planos com destaque para a opção mais vendida e checklist.'
+                },
+                {
+                  type: 'faq' as const,
+                  icon: HelpCircle,
+                  color: 'text-sky-600 bg-sky-50 border-sky-200',
+                  title: 'Perguntas Frequentes (FAQ)',
+                  tag: 'Quebra de Objeções',
+                  description: 'Acordeão interativo para responder as dúvidas mais comuns dos seus clientes.'
+                },
+                {
+                  type: 'countdown' as const,
+                  icon: Clock,
+                  color: 'text-orange-600 bg-orange-50 border-orange-200',
+                  title: 'Timer de Escassez',
+                  tag: 'Urgência',
+                  description: 'Contador regressivo visual de dias, horas, minutos e segundos para acelerar decisões.'
+                },
+                {
+                  type: 'cta_banner' as const,
+                  icon: Flame,
+                  color: 'text-red-600 bg-red-50 border-red-200',
+                  title: 'Banner de Fechamento (CTA)',
+                  tag: 'Ação Imediata',
+                  description: 'Chamada chamativa com fundo gradiente e botão direto para o formulário.'
+                }
+              ].map(item => {
+                const ItemIcon = item.icon;
+                return (
+                  <button
+                    key={item.type}
+                    type="button"
+                    onClick={() => handleAddBlock(item.type)}
+                    className="p-4 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-lg transition text-left flex flex-col justify-between group bg-white hover:bg-slate-50/50"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${item.color}`}>
+                          <ItemIcon className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {item.tag}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition mb-1">
+                        {item.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-blue-600">
+                      <span>Adicionar à página</span>
+                      <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsAddBlockModalOpen(false)}
+                className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, FunnelStage, Product, LeadPurchase, CampaignLink, FUNNEL_STAGES } from '../types';
 import { useDialog } from '../contexts/DialogContext';
-import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X, Filter as FunnelIcon, Phone, PhoneCall, Target, Flame } from 'lucide-react';
+import { Search, Filter, Download, MessageSquare, MapPin, Calendar, Clock, DollarSign, Edit3, Trash2, CheckCircle, AlertCircle, ExternalLink, Activity, List, LayoutGrid, Columns, RefreshCw, ShoppingCart, TrendingUp, X, Filter as FunnelIcon, Phone, PhoneCall, Target, Flame, User } from 'lucide-react';
 import { FunnelView } from './FunnelView';
 
 interface LeadCRMProps {
@@ -692,6 +692,17 @@ export const LeadCRM: React.FC<LeadCRMProps> = ({
                       <div>
                         <div className="text-slate-900 font-bold">{lead.name || 'Lead Visitante'}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{lead.phone || 'Telefone indisponível'}</div>
+                        {lead.assignedUserName && (
+                          <div className="text-[10px] text-blue-600 font-medium flex items-center gap-1 mt-0.5">
+                            <User className="w-3 h-3 text-blue-500" />
+                            Resp: <strong>{lead.assignedUserName}</strong>
+                          </div>
+                        )}
+                        {lead.assignedTeamName && (
+                          <span className="bg-blue-50 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-200 w-fit inline-block mt-0.5">
+                            {lead.assignedTeamName}
+                          </span>
+                        )}
                         {checkPendingRenewal(lead.id) && (
                            <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit mt-1">
                              <RefreshCw className="w-3 h-3" /> Renovação Pendente

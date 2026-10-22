@@ -1,26 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   MessageSquare, Send, Search, Phone, MapPin, Tag, CheckCheck, Bot, Sparkles, 
   Paperclip, UserCheck, Zap, Clock, ShieldCheck, MoreVertical, RefreshCw, ExternalLink, ArrowLeft, Filter,
-  Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus, AlertTriangle
+  Smile, X, Image as ImageIcon, Video, File as FileIcon, Settings, Trash2, Plus, AlertTriangle,
+  Headphones, Users, ArrowRightLeft, Radio, CheckCircle2
 } from 'lucide-react';
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useDialog } from '../contexts/DialogContext';
-import { Lead, ChatMessage, FunnelStage, CampaignLink } from '../types';
-import { toggleLeadBotStatus, suggestReplyWithAI, simulateChatbot } from '../services/api';
+import { Lead, ChatMessage, FunnelStage, CampaignLink, User as UserType, Company, Team, TeamMember } from '../types';
+import { 
+  toggleLeadBotStatus, suggestReplyWithAI, simulateChatbot,
+  fetchTeams, fetchTeamMembers, fetchNextAttendant, autoAssignLead, reassignLead
+} from '../services/api';
 
 interface WhatsAppChatInboxProps {
   leads: Lead[];
   links: CampaignLink[];
   onUpdateLeadStage: (leadId: string, newStage: FunnelStage) => void;
   initialSelectedLeadId?: string | null;
+  currentUser?: UserType | null;
+  currentCompany?: Company | null;
+  users?: UserType[];
+  onUpdateLead?: (leadId: string, updates: Partial<Lead>) => void;
+  onRefreshLeads?: () => void;
 }
 
 export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({ 
   leads, 
   links, 
   onUpdateLeadStage,
-  initialSelectedLeadId
+  initialSelectedLeadId,
+  currentUser,
+  currentCompany,
+  users = [],
+  onUpdateLead,
+  onRefreshLeads
 }) => {
   const { alert } = useDialog();
   // Selected Lead for active conversation
@@ -34,6 +48,26 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStage, setFilterStage] = useState<string>('Todos');
+  const [leadFilterMode, setLeadFilterMode] = useState<'all' | 'my' | 'unassigned'>(
+    currentUser?.role === 'attendant' ? 'my' : 'all'
+  );
+
+  // Equipes, Radar de Fila e Próximo Atendente
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedQueueTeamId, setSelectedQueueTeamId] = useState<string>('');
+  const [nextAttendantData, setNextAttendantData] = useState<{
+    nextUser: UserType | null;
+    team: Team | null;
+    memberCount: number;
+  } | null>(null);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
+  const [isAutoAssigning, setIsAutoAssigning] = useState(false);
+
+  // Modal de Transferência de Lead
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferTargetUserId, setTransferTargetUserId] = useState('');
+  const [transferTargetTeamId, setTransferTargetTeamId] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
 
   // Input message state
   const [messageInput, setMessageInput] = useState('');
@@ -90,6 +124,130 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
   };
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || leads[0];
+
+  const loadTeams = async () => {
+    if (!currentCompany?.id) return;
+    try {
+      const data = await fetchTeams(currentCompany.id);
+      setTeams(data.filter(t => t.active));
+    } catch (e) {
+      console.error('Erro ao carregar equipes:', e);
+    }
+  };
+
+  const loadQueueRadar = async () => {
+    if (!currentCompany?.id) return;
+    try {
+      setIsLoadingQueue(true);
+      const res = await fetchNextAttendant(currentCompany.id, selectedQueueTeamId || undefined);
+      setNextAttendantData(res);
+    } catch (e) {
+      console.error('Erro ao buscar próximo atendente:', e);
+    } finally {
+      setIsLoadingQueue(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTeams();
+  }, [currentCompany?.id]);
+
+  useEffect(() => {
+    loadQueueRadar();
+    const interval = setInterval(loadQueueRadar, 8000);
+    return () => clearInterval(interval);
+  }, [currentCompany?.id, selectedQueueTeamId]);
+
+  const handleAutoAssignLead = async (leadId: string) => {
+    if (!currentCompany?.id || !leadId) return;
+    try {
+      setIsAutoAssigning(true);
+      const res = await autoAssignLead(leadId, currentCompany.id, selectedQueueTeamId || undefined);
+      if (res && res.success) {
+        if (onUpdateLead) {
+          onUpdateLead(leadId, {
+            assignedUserId: res.assignedUser.id,
+            assignedUserName: res.assignedUser.name,
+            assignedTeamId: res.team.id,
+            assignedTeamName: res.team.name
+          });
+        }
+        if (onRefreshLeads) onRefreshLeads();
+        loadQueueRadar();
+        alert(`Lead direcionado com sucesso para ${res.assignedUser.name} (${res.team.name}) via regra do sistema!`);
+      }
+    } catch (err: any) {
+      alert(`Não foi possível direcionar o lead automaticamente: ${err.message}`);
+    } finally {
+      setIsAutoAssigning(false);
+    }
+  };
+
+  const handleClaimLead = async (leadId: string) => {
+    if (!currentUser || !leadId) return;
+    try {
+      const userTeam = teams.find(t => t.id === selectedQueueTeamId) || teams[0];
+      await reassignLead(leadId, currentUser.id, userTeam?.id);
+      if (onUpdateLead) {
+        onUpdateLead(leadId, {
+          assignedUserId: currentUser.id,
+          assignedUserName: currentUser.name,
+          assignedTeamId: userTeam?.id,
+          assignedTeamName: userTeam?.name
+        });
+      }
+      if (onRefreshLeads) onRefreshLeads();
+      loadQueueRadar();
+      alert(`Você assumiu o atendimento deste lead com sucesso!`);
+    } catch (err: any) {
+      alert(`Erro ao assumir lead: ${err.message}`);
+    }
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!selectedLead) return;
+    if (!transferTargetUserId && !transferTargetTeamId) {
+      alert('Selecione um usuário ou uma equipe para transferir.');
+      return;
+    }
+    try {
+      setIsTransferring(true);
+      const targetUser = users.find(u => u.id === transferTargetUserId);
+      const targetTeam = teams.find(t => t.id === transferTargetTeamId);
+
+      await reassignLead(
+        selectedLead.id,
+        transferTargetUserId || undefined,
+        transferTargetTeamId || undefined
+      );
+
+      if (onUpdateLead) {
+        onUpdateLead(selectedLead.id, {
+          assignedUserId: targetUser?.id,
+          assignedUserName: targetUser?.name,
+          assignedTeamId: targetTeam?.id,
+          assignedTeamName: targetTeam?.name
+        });
+      }
+      if (onRefreshLeads) onRefreshLeads();
+      loadQueueRadar();
+      setIsTransferModalOpen(false);
+      alert(`Lead transferido com sucesso para ${targetUser ? targetUser.name : targetTeam?.name}!`);
+    } catch (err: any) {
+      alert(`Erro ao transferir lead: ${err.message}`);
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+  const unassignedLeads = useMemo(() => {
+    return leads.filter(l => !l.assignedUserId && l.stage !== 'Convertido' && l.stage !== 'Perdido');
+  }, [leads]);
+
+  const myLeads = useMemo(() => {
+    if (!currentUser) return [];
+    return leads.filter(l => l.assignedUserId === currentUser.id);
+  }, [leads, currentUser]);
 
   // Função para buscar mensagens reais do servidor
   const fetchMessages = async () => {
@@ -344,8 +502,15 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
       safeUtm.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStage = filterStage === 'Todos' || lead.stage === filterStage;
+    
+    let matchesFilterMode = true;
+    if (leadFilterMode === 'my') {
+      matchesFilterMode = Boolean(currentUser && lead.assignedUserId === currentUser.id);
+    } else if (leadFilterMode === 'unassigned') {
+      matchesFilterMode = !lead.assignedUserId;
+    }
 
-    return matchesSearch && matchesStage;
+    return matchesSearch && matchesStage && matchesFilterMode;
   });
 
   return (
@@ -384,6 +549,124 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
         </div>
       </div>
 
+      {/* Radar de Atendimento & Fila da Equipe */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 sm:p-4 rounded-xl border border-indigo-900/60 shadow-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Left: Queue / Team selection & Status */}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400">
+                <Radio className="w-5 h-5 animate-pulse" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900" />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  Radar de Fila & Equipes
+                </span>
+                
+                {/* Team Selector Dropdown */}
+                <select
+                  value={selectedQueueTeamId}
+                  onChange={(e) => setSelectedQueueTeamId(e.target.value)}
+                  className="bg-slate-800/90 text-white border border-indigo-500/40 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none focus:border-indigo-400"
+                >
+                  <option value="">🎯 Todas as Equipes de Vendas</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.distribution_strategy === 'workload' ? 'Menor Carga' : t.distribution_strategy === 'random' ? 'Aleatório' : 'Roleta'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 mt-1 text-xs text-slate-300 flex-wrap">
+                <span className="text-[11px]">Estratégia:</span>
+                <span className="bg-indigo-900/80 text-indigo-200 border border-indigo-700/50 px-2 py-0.5 rounded text-[10px] font-bold">
+                  {nextAttendantData?.team?.distribution_strategy === 'workload'
+                    ? '⚖️ Menor Carga de Trabalho'
+                    : nextAttendantData?.team?.distribution_strategy === 'random'
+                    ? '🎲 Distribuição Aleatória'
+                    : '🔄 Roleta Circular (Round-Robin)'}
+                </span>
+                <span className="text-slate-400 text-[11px]">•</span>
+                <span className="text-slate-300 text-[11px]">
+                  <strong>{nextAttendantData?.memberCount || users.length}</strong> atendentes ativos
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Center: Next Attendant in Line Card */}
+          <div className="bg-slate-800/80 border border-indigo-500/30 rounded-xl px-4 py-2 flex items-center gap-3 shadow-inner">
+            <div className="text-right">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                🎯 Próximo a Atender:
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-white block truncate max-w-[170px]">
+                {nextAttendantData?.nextUser?.name || 'Aguardando Atendente'}
+              </span>
+            </div>
+
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-bold text-xs flex items-center justify-center border-2 border-indigo-400 shadow-xs">
+                {nextAttendantData?.nextUser?.name ? nextAttendantData.nextUser.name.charAt(0).toUpperCase() : '?'}
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900" title="Online e Pronto" />
+            </div>
+
+            <div className="text-left text-[11px] leading-tight">
+              <span className="inline-flex items-center gap-1 text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.5 rounded text-[10px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Disponível na Fila
+              </span>
+              <div className="text-slate-400 text-[10px] mt-0.5 font-mono">
+                Ramal: <strong className="text-slate-200">{nextAttendantData?.nextUser?.extension || '101'}</strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadQueueRadar}
+              disabled={isLoadingQueue}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition ml-1"
+              title="Atualizar Fila"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingQueue ? 'animate-spin text-indigo-400' : ''}`} />
+            </button>
+          </div>
+
+          {/* Right: Unassigned Queue Action Button */}
+          <div className="flex items-center gap-2">
+            {unassignedLeads.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => handleAutoAssignLead(unassignedLeads[0].id)}
+                disabled={isAutoAssigning}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition transform active:scale-95 disabled:opacity-50"
+                title="Distribuir o próximo lead da fila para o atendente configurado"
+              >
+                <Zap className="w-4 h-4 fill-slate-950 animate-bounce" />
+                <div className="text-left leading-none">
+                  <div className="text-[11px] font-black uppercase">Distribuir Fila ({unassignedLeads.length})</div>
+                  <div className="text-[9px] font-medium text-slate-900/80">Direcionar para {nextAttendantData?.nextUser?.name?.split(' ')[0] || 'Próximo'}</div>
+                </div>
+              </button>
+            ) : (
+              <div className="bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 px-3.5 py-2 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="font-semibold text-[11px]">Todos os leads atendidos!</span>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
       {/* Main Chat Layout Container */}
       <div className="bg-white border border-slate-200 rounded-lg shadow-xs overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px]">
         
@@ -404,6 +687,47 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
             </div>
 
             <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setLeadFilterMode('all')}
+                className={`px-2 py-0.5 rounded font-bold whitespace-nowrap transition border ${
+                  leadFilterMode === 'all'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                Todos ({leads.length})
+              </button>
+
+              {currentUser && (
+                <button
+                  type="button"
+                  onClick={() => setLeadFilterMode('my')}
+                  className={`px-2 py-0.5 rounded font-bold whitespace-nowrap transition border ${
+                    leadFilterMode === 'my'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  👤 Meus Leads ({myLeads.length})
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setLeadFilterMode('unassigned')}
+                className={`px-2 py-0.5 rounded font-bold whitespace-nowrap transition border flex items-center gap-1 ${
+                  leadFilterMode === 'unassigned'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                    : unassignedLeads.length > 0
+                    ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 font-extrabold'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+                Aguardando ({unassignedLeads.length})
+              </button>
+
               {['Todos', 'Novo Lead', 'Em Negociação', 'Convertido'].map(stg => (
                 <button
                   key={stg}
@@ -459,6 +783,22 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                         }`}>
                           {lead.stage}
                         </span>
+                        {lead.assignedUserId ? (
+                          <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-semibold border border-indigo-200 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                            👤 {lead.assignedUserName || 'Atendente'}
+                          </span>
+                        ) : (
+                          <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[9px] font-extrabold border border-amber-300 flex items-center gap-1 animate-pulse">
+                            <Zap className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
+                            Aguardando Atendente
+                          </span>
+                        )}
+                        {lead.assignedTeamName && (
+                          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[9px] font-semibold border border-slate-200">
+                            🏷️ {lead.assignedTeamName}
+                          </span>
+                        )}
                         {lead.utmContent && (
                           <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[9px] font-bold border border-purple-200" title="Anúncio Criativo">
                             🎨 {lead.utmContent}
@@ -570,6 +910,82 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                 </a>
               </div>
             </div>
+
+            {/* Quem está atendendo o Lead / Alerta de Lead sem Atendente */}
+            {selectedLead.assignedUserId ? (
+              <div className="bg-indigo-50/90 border-b border-indigo-100 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-slate-600">Atendimento ativo com:</span>
+                  <span className="font-bold text-indigo-950 flex items-center gap-1 bg-white px-2.5 py-0.5 rounded border border-indigo-200 shadow-2xs">
+                    👤 {selectedLead.assignedUserName || 'Atendente Responsável'}
+                  </span>
+                  {selectedLead.assignedTeamName && (
+                    <span className="text-slate-500 text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      🏷️ Equipe: <strong className="text-slate-700">{selectedLead.assignedTeamName}</strong>
+                    </span>
+                  )}
+                  {selectedLead.assignedAt && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Atribuído às {new Date(selectedLead.assignedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTransferTargetUserId(selectedLead.assignedUserId || '');
+                    setTransferTargetTeamId(selectedLead.assignedTeamId || '');
+                    setIsTransferModalOpen(true);
+                  }}
+                  className="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-300 font-bold px-3 py-1 rounded-lg text-[11px] flex items-center gap-1.5 transition shadow-2xs shrink-0 self-start sm:self-auto"
+                  title="Transferir este lead para outro atendente ou equipe da empresa"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Transferir Lead</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-slate-950 px-4 py-2.5 border-b border-amber-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 fill-slate-950 text-amber-200 shrink-0" />
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wide">
+                      Lead Sem Atendente Atribuído!
+                    </span>
+                    <p className="text-[11px] text-slate-950/80 leading-tight">
+                      Próximo da fila para atendimento: <strong>{nextAttendantData?.nextUser?.name || 'Aguardando Atendente'}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleAutoAssignLead(selectedLead.id)}
+                    disabled={isAutoAssigning}
+                    className="bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-xs transition active:scale-95 disabled:opacity-50"
+                    title="Direcionar automaticamente conforme a estratégia da equipe"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span>{isAutoAssigning ? 'Direcionando...' : '⚡ Direcionar Automaticamente (Roleta)'}</span>
+                  </button>
+
+                  {currentUser && (
+                    <button
+                      type="button"
+                      onClick={() => handleClaimLead(selectedLead.id)}
+                      className="bg-white hover:bg-slate-50 text-slate-950 font-bold text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-xs transition active:scale-95 border border-amber-300"
+                      title="Assumir o atendimento deste lead agora"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-indigo-700" />
+                      <span>🙋 Atender Agora</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Full Ad Attribution Hierarchy Sub-bar */}
             <div className="bg-purple-50/80 px-4 py-2 border-b border-purple-200 text-[11px] text-slate-700 flex flex-wrap items-center justify-between gap-2">
@@ -974,6 +1390,110 @@ export const WhatsAppChatInbox: React.FC<WhatsAppChatInboxProps> = ({
                 <span>Enviar</span>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Transferência de Lead */}
+      {isTransferModalOpen && selectedLead && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+                  <ArrowRightLeft className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Transferir Atendimento de Lead</h3>
+                  <p className="text-[11px] text-slate-400">Cliente: {selectedLead.name} ({selectedLead.phone})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Atendente Atual:
+                </label>
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">
+                    {selectedLead.assignedUserName ? `👤 ${selectedLead.assignedUserName}` : '⚠️ Nenhum atendente atribuído'}
+                  </span>
+                  <span className="text-slate-500 text-[10px]">
+                    {selectedLead.assignedTeamName ? `🏷️ ${selectedLead.assignedTeamName}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Equipe de Destino */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  1. Selecione a Equipe de Destino:
+                </label>
+                <select
+                  value={transferTargetTeamId}
+                  onChange={(e) => setTransferTargetTeamId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-600"
+                >
+                  <option value="">Manter equipe atual / Nenhuma</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.type === 'inbound_sales' ? 'Vendas Receptivo' : t.type === 'outbound_sales' ? 'Vendas Ativo' : 'Suporte'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Colaborador de Destino (Multi-tenant isolado para currentCompany) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  2. Selecione o Novo Atendente Responsável:
+                </label>
+                <select
+                  value={transferTargetUserId}
+                  onChange={(e) => setTransferTargetUserId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-600"
+                >
+                  <option value="">Selecione um colaborador da empresa...</option>
+                  {users
+                    .filter(u => u.active !== false)
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role === 'admin' ? 'Administrador' : u.role === 'supervisor' ? 'Supervisor' : 'Vendedor/Atendente'}) {u.extension ? `• Ramal ${u.extension}` : ''}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Apenas colaboradores cadastrados nesta empresa ({currentCompany?.name}) são exibidos.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsTransferModalOpen(false)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmTransfer}
+                  disabled={isTransferring || (!transferTargetUserId && !transferTargetTeamId)}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-lg transition shadow-xs flex items-center gap-1.5"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>{isTransferring ? 'Transferindo...' : 'Confirmar Transferência'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

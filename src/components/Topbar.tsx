@@ -20,7 +20,9 @@ import {
   Send,
   PhoneCall,
   Target,
-  Instagram
+  Instagram,
+  Headphones,
+  ShieldCheck
 } from 'lucide-react';
 import { User, Company } from '../types';
 import { NavTabId } from './Sidebar';
@@ -141,6 +143,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           title: 'Integrações & CAPI',
           icon: Zap
         };
+      case 'teams':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Equipes & Filas de Vendas (Multi-Atendimento)',
+          icon: Headphones
+        };
+      case 'supervisor_monitor':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Torre de Supervisão & Monitoramento ao Vivo',
+          icon: ShieldCheck
+        };
       case 'users':
         return {
           section: 'Configurações & Gestão',
@@ -152,6 +166,12 @@ export const Topbar: React.FC<TopbarProps> = ({
           section: 'Configurações & Gestão',
           title: 'Minha Empresa & Perfil',
           icon: Building2
+        };
+      default:
+        return {
+          section: 'Visão Geral',
+          title: 'MD Tracker',
+          icon: BarChart3
         };
     }
   };

@@ -22,11 +22,16 @@ import {
   Send,
   PhoneCall,
   Target,
-  Instagram
+  Instagram,
+  Headphones,
+  Layers,
+  ClipboardList,
+  Globe,
+  Trophy
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
+export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -95,6 +100,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           allowedRoles: ['admin', 'manager']
         },
         {
+          id: 'surveys',
+          label: 'Pesquisas & NPS',
+          icon: ClipboardList,
+          badge: { text: 'Novo', variant: 'purple' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'custom_domains',
+          label: 'Domínios & DNS',
+          icon: Globe,
+          badge: { text: 'SSL', variant: 'emerald' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'event_gamification',
+          label: 'Eventos & Gamificação',
+          icon: Trophy,
+          badge: { text: 'Telão 🎮', variant: 'purple' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
           id: 'popups',
           label: 'Pop-ups & Captura',
           icon: Sliders,
@@ -139,6 +165,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: PhoneCall,
           badge: { text: 'WebRTC', variant: 'emerald' },
           allowedRoles: ['admin', 'manager', 'attendant']
+        },
+        {
+          id: 'teams',
+          label: 'Equipes & Filas de Vendas',
+          icon: Headphones,
+          badge: { text: 'Multi-Atend.', variant: 'blue' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'supervisor_monitor',
+          label: 'Torre de Supervisão',
+          icon: ShieldCheck,
+          badge: { text: 'Ao Vivo', variant: 'purple' },
+          allowedRoles: ['admin', 'manager']
         },
         {
           id: 'chatbot',

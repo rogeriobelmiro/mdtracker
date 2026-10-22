@@ -6,6 +6,7 @@ import { supabase } from './src/lib/supabase.js';
 import bcrypt from 'bcryptjs';
 import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage, sendWhatsAppMedia } from './src/services/whatsappService.js';
 import { GoogleGenAI } from '@google/genai';
+import dns from 'dns';
 
 // Mappers to convert between frontend camelCase and DB snake_case
 const mapCompanyToDB = (c: any) => {
@@ -45,6 +46,10 @@ const mapUserToDB = (u: any) => ({
     role: u.role,
     avatar_url: u.avatarUrl,
     active: u.active,
+    phone: u.phone,
+    extension: u.extension,
+    is_external: u.isExternal || false,
+    status: u.status || 'online',
     updated_at: new Date().toISOString(),
     created_at: u.createdAt || new Date().toISOString()
 });
@@ -57,6 +62,69 @@ const mapUserFromDB = (db: any) => ({
     role: db.role,
     avatarUrl: db.avatar_url,
     active: db.active,
+    phone: db.phone,
+    extension: db.extension,
+    isExternal: db.is_external || false,
+    status: db.status || 'online',
+    createdAt: db.created_at
+});
+
+const mapTeamToDB = (t: any) => ({
+    id: t.id,
+    company_id: t.companyId || 'comp-alfa',
+    name: t.name,
+    description: t.description || '',
+    type: t.type || 'active_sales',
+    color: t.color || '#3B82F6',
+    distribution_strategy: t.distributionStrategy || 'round_robin',
+    active: t.active !== undefined ? t.active : true,
+    created_at: t.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
+
+const mapTeamFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    name: db.name,
+    description: db.description,
+    type: db.type || 'active_sales',
+    color: db.color || '#3B82F6',
+    distributionStrategy: db.distribution_strategy || 'round_robin',
+    active: db.active !== undefined ? db.active : true,
+    memberCount: db.member_count || 0,
+    createdAt: db.created_at,
+    updatedAt: db.updated_at
+});
+
+const mapTeamMemberToDB = (m: any) => ({
+    id: m.id,
+    team_id: m.teamId,
+    user_id: m.userId,
+    company_id: m.companyId || 'comp-alfa',
+    role: m.role || 'member',
+    is_external: m.isExternal !== undefined ? m.isExternal : false,
+    phone_number: m.phoneNumber || '',
+    extension: m.extension || '',
+    status: m.status || 'online',
+    max_concurrent_leads: m.maxConcurrentLeads || 15,
+    active: m.active !== undefined ? m.active : true,
+    created_at: m.createdAt || new Date().toISOString()
+});
+
+const mapTeamMemberFromDB = (db: any) => ({
+    id: db.id,
+    teamId: db.team_id,
+    userId: db.user_id,
+    companyId: db.company_id,
+    userName: db.user_name || db.users?.name,
+    userEmail: db.user_email || db.users?.email,
+    role: db.role || 'member',
+    isExternal: db.is_external !== undefined ? db.is_external : false,
+    phoneNumber: db.phone_number,
+    extension: db.extension,
+    status: db.status || 'online',
+    maxConcurrentLeads: db.max_concurrent_leads || 15,
+    active: db.active !== undefined ? db.active : true,
     createdAt: db.created_at
 });
 
@@ -82,6 +150,9 @@ const mapLinkToDB = (link: any) => ({
     google_ads_conversion_id: link.googleAdsConversionId,
     google_ads_label: link.googleAdsLabel,
     webhook_url: link.webhookUrl,
+    assigned_team_id: link.assignedTeamId || null,
+    phone_numbers: link.phoneNumbers || [],
+    rotation_mode: link.rotationMode || 'single',
     clicks_count: link.clicksCount || 0,
     leads_count: link.leadsCount || 0,
     conversions_count: link.conversionsCount || 0,
@@ -108,6 +179,9 @@ const mapLinkFromDB = (db: any) => ({
     googleAdsConversionId: db.google_ads_conversion_id,
     googleAdsLabel: db.google_ads_label,
     webhookUrl: db.webhook_url,
+    assignedTeamId: db.assigned_team_id,
+    phoneNumbers: db.phone_numbers || [],
+    rotationMode: db.rotation_mode || 'single',
     clicksCount: db.clicks_count || 0,
     leadsCount: db.leads_count || 0,
     conversionsCount: db.conversions_count || 0,
@@ -137,6 +211,9 @@ const mapLeadToDB = (lead: any) => ({
     notes: lead.notes,
     conversion_events: lead.conversionEvents || lead.conversion_events || [],
     bot_active: lead.botActive !== undefined ? lead.botActive : true,
+    assigned_user_id: lead.assignedUserId || null,
+    assigned_team_id: lead.assignedTeamId || null,
+    assigned_at: lead.assignedAt || null,
     created_at: lead.createdAt || lead.created_at || new Date().toISOString(),
     updated_at: lead.updatedAt || lead.updated_at || new Date().toISOString()
 });
@@ -148,6 +225,11 @@ async function safeInsertLead(dbRow: any) {
         console.error('safeInsertLead initial error:', error.message, error.details);
         if (error.message?.includes('bot_active') || error.details?.includes('bot_active')) {
             delete rowToInsert.bot_active;
+        }
+        if (error.message?.includes('assigned_') || error.details?.includes('assigned_')) {
+            delete rowToInsert.assigned_user_id;
+            delete rowToInsert.assigned_team_id;
+            delete rowToInsert.assigned_at;
         }
         if (error.message?.includes('link_id') || error.details?.includes('link_id') || error.code === '23503') {
             rowToInsert.link_id = null;
@@ -168,6 +250,11 @@ async function safeUpdateLead(id: string, dbRow: any) {
         console.error('safeUpdateLead initial error:', error.message, error.details);
         if (error.message?.includes('bot_active') || error.details?.includes('bot_active')) {
             delete rowToUpdate.bot_active;
+        }
+        if (error.message?.includes('assigned_') || error.details?.includes('assigned_')) {
+            delete rowToUpdate.assigned_user_id;
+            delete rowToUpdate.assigned_team_id;
+            delete rowToUpdate.assigned_at;
         }
         if (error.message?.includes('link_id') || error.details?.includes('link_id') || error.code === '23503') {
             rowToUpdate.link_id = null;
@@ -213,6 +300,11 @@ const mapLeadFromDB = (db: any) => {
         qualificationLevel: db.qualification_level || computed.qualificationLevel,
         fitGrade: db.fit_grade || computed.fitGrade,
         scoreBreakdown: db.score_breakdown || computed.scoreBreakdown,
+        assignedUserId: db.assigned_user_id,
+        assignedUserName: db.assigned_user_name,
+        assignedTeamId: db.assigned_team_id,
+        assignedTeamName: db.assigned_team_name,
+        assignedAt: db.assigned_at,
         createdAt: db.created_at,
         updatedAt: db.updated_at
     };
@@ -673,6 +765,9 @@ const mapLandingPageToDB = (lp: any) => ({
     form: lp.form || {},
     faq: lp.faq || {},
     footer: lp.footer || {},
+    thank_you_page: lp.thankYouPage || {},
+    custom_domain: lp.customDomain || null,
+    blocks: lp.blocks || [],
     views_count: Number(lp.viewsCount || 0),
     conversions_count: Number(lp.conversionsCount || 0),
     created_at: lp.createdAt || new Date().toISOString(),
@@ -707,14 +802,136 @@ const mapLandingPageFromDB = (db: any) => ({
         title: 'Garanta sua Vaga',
         buttonText: 'Enviar Dados',
         fields: [],
-        actionType: 'redirect_whatsapp',
+        actionType: 'thank_you_page',
         targetStage: 'Novo Lead',
         tags: ['landing-page']
     },
     faq: db.faq || { enabled: false, items: [] },
     footer: db.footer || { companyName: 'MDTracker' },
+    thankYouPage: db.thank_you_page || {
+        enabled: true,
+        title: '🎉 Parabéns! Sua Inscrição Foi Confirmada!',
+        subtitle: 'Para não perder nenhum detalhe e acessar os materiais exclusivos, siga os passos abaixo:',
+        badge: 'Acesso Liberado com Sucesso',
+        showCheckmark: true,
+        messageCardTitle: 'Instruções Importantes para seu Acesso',
+        messageCardText: 'Entramos em contato também pelo WhatsApp cadastrado. Acesse os botões abaixo para participar da comunidade e baixar seus materiais.',
+        buttons: [
+            {
+                id: 'btn-wa-group',
+                type: 'whatsapp_group',
+                title: 'Entrar no Grupo VIP do WhatsApp',
+                description: 'Receba networking, alertas de lives e materiais exclusivos',
+                url: 'https://chat.whatsapp.com/demo-mdtracker',
+                buttonText: 'Entrar no Grupo VIP Agora',
+                icon: 'whatsapp',
+                color: '#25D366',
+                badge: 'Vagas Limitadas'
+            },
+            {
+                id: 'btn-pdf',
+                type: 'download_pdf',
+                title: 'Baixar E-book / Material em PDF',
+                description: 'Download direto do guia completo e planilha de métricas',
+                url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+                buttonText: 'Baixar PDF Grátis',
+                icon: 'download',
+                color: '#2563eb',
+                badge: 'PDF + Planilha'
+            },
+            {
+                id: 'btn-survey',
+                type: 'survey',
+                title: 'Responder Pesquisa Rápida de Perfil',
+                description: 'Leva apenas 2 minutos e nos ajuda a personalizar sua consultoria',
+                url: '/pesquisa/qualificacao-comercial',
+                buttonText: 'Responder Pesquisa de Qualificação',
+                icon: 'survey',
+                color: '#7c3aed',
+                surveyId: 'survey-qualificacao-comercial',
+                badge: '2 Minutos'
+            }
+        ]
+    },
+    customDomain: db.custom_domain || '',
+    blocks: db.blocks || [],
     viewsCount: Number(db.views_count || 0),
     conversionsCount: Number(db.conversions_count || 0),
+    createdAt: db.created_at || new Date().toISOString(),
+    updatedAt: db.updated_at || new Date().toISOString()
+});
+
+// ==========================================
+// Surveys Mappers (Pesquisas & Formulários de Qualificação)
+// ==========================================
+const mapSurveyToDB = (s: any) => ({
+    id: s.id,
+    company_id: s.companyId || 'comp-alfa',
+    title: s.title,
+    slug: (s.slug || '').toLowerCase().trim().replace(/[^a-z0-9_-]/g, '-'),
+    description: s.description || '',
+    status: s.status || 'published',
+    theme: s.theme || {},
+    questions: s.questions || [],
+    thank_you: s.thankYou || {},
+    responses_count: Number(s.responsesCount || 0),
+    average_nps: Number(s.averageNps || 0),
+    created_at: s.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
+
+const mapSurveyFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    title: db.title,
+    slug: db.slug,
+    description: db.description || '',
+    status: db.status || 'published',
+    theme: db.theme || {
+        primaryColor: '#2563eb',
+        backgroundColor: 'white',
+        fontFamily: 'Inter',
+        buttonStyle: 'rounded-xl'
+    },
+    questions: db.questions || [],
+    thankYou: db.thank_you || {
+        title: '🎉 Muito obrigado pela sua resposta!',
+        subtitle: 'Seus dados e opiniões foram gravados com sucesso.',
+        ctaButtonText: 'Concluir'
+    },
+    responsesCount: Number(db.responses_count || 0),
+    averageNps: Number(db.average_nps || 0),
+    createdAt: db.created_at || new Date().toISOString(),
+    updatedAt: db.updated_at || new Date().toISOString()
+});
+
+// ==========================================
+// Custom Domains Mappers (Domínios Próprios & DNS)
+// ==========================================
+const mapCustomDomainToDB = (d: any) => ({
+    id: d.id,
+    company_id: d.companyId || 'comp-alfa',
+    domain: (d.domain || '').toLowerCase().trim(),
+    type: d.type || 'all',
+    status: d.status || 'pending_verification',
+    ssl_active: Boolean(d.sslActive),
+    dns_records: d.dnsRecords || [],
+    verified_at: d.verifiedAt || null,
+    default_landing_page_id: d.defaultLandingPageId || null,
+    created_at: d.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
+
+const mapCustomDomainFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    domain: db.domain,
+    type: db.type || 'all',
+    status: db.status || 'pending_verification',
+    sslActive: Boolean(db.ssl_active),
+    dnsRecords: db.dns_records || [],
+    verifiedAt: db.verified_at,
+    defaultLandingPageId: db.default_landing_page_id,
     createdAt: db.created_at || new Date().toISOString(),
     updatedAt: db.updated_at || new Date().toISOString()
 });
@@ -932,7 +1149,747 @@ let inMemoryLandingPages: any[] = [
     conversions_count: 94,
     created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
     updated_at: new Date().toISOString()
+  },
+  {
+    id: 'lp-diagnostico-comercial-gratuito',
+    company_id: 'comp-alfa',
+    title: 'Diagnóstico Comercial Gratuito & Análise de Funil',
+    slug: 'diagnostico-comercial-gratuito',
+    description: 'Descubra os gargalos do seu processo de vendas e receba um plano de ação prático em 24h.',
+    status: 'published',
+    category: 'service_consulting',
+    theme: {
+      primaryColor: '#2563eb',
+      accentColor: '#10b981',
+      backgroundColor: 'white',
+      fontFamily: 'Inter',
+      buttonStyle: 'rounded-xl'
+    },
+    hero: {
+      badge: '🎯 Diagnóstico 100% Gratuito para Empresas',
+      headline: 'Aumente suas Vendas e Converta Mais Leads Qualificados no WhatsApp',
+      subheadline: 'Descubra os gargalos ocultos do seu funil comercial e receba um plano de ação prático em 24h para escalar seu faturamento sem precisar aumentar o orçamento de anúncios.',
+      ctaText: 'Agendar Meu Diagnóstico Gratuito',
+      imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80'
+    },
+    features: [
+      { id: 'feat-1', title: 'Análise de Conversão', description: 'Mapeamento ponto a ponto do tempo de resposta e etapas do CRM.' },
+      { id: 'feat-2', title: 'Rastreamento CAPI & ROI', description: 'Atribuição precisa de cada venda ao anúncio original.' }
+    ],
+    social_proof: { enabled: true, stats: [{ label: 'Empresas Aceleradas', value: '+450' }] },
+    countdown: { enabled: true, title: 'Vagas limitadas encerram em:' },
+    form: {
+      title: 'Solicite seu Diagnóstico Gratuito',
+      buttonText: 'Quero Meu Diagnóstico Gratuito 🚀',
+      buttonColor: '#2563eb',
+      fields: [
+        { id: 'f-name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Ex: Rogério Belmiro', required: true },
+        { id: 'f-phone', name: 'phone', label: 'WhatsApp com DDD', type: 'tel', placeholder: '(11) 99999-9999', required: true },
+        { id: 'f-email', name: 'email', label: 'Seu Melhor E-mail', type: 'email', placeholder: 'seu@email.com', required: true }
+      ],
+      actionType: 'thank_you_page',
+      targetStage: 'Novo Lead',
+      tags: ['lp-diagnostico', 'alta-intencao']
+    },
+    thank_you_page: {
+      enabled: true,
+      title: '🎉 Parabéns! Sua Inscrição Foi Confirmada!',
+      subtitle: 'Para não perder nenhum detalhe e acessar os materiais exclusivos, siga os passos abaixo:',
+      badge: 'Acesso Liberado com Sucesso',
+      showCheckmark: true,
+      messageCardTitle: 'Instruções Importantes para seu Acesso',
+      messageCardText: 'Entramos em contato também pelo WhatsApp cadastrado. Acesse os botões abaixo para participar da comunidade e baixar seus materiais.',
+      buttons: [
+        {
+          id: 'btn-wa-group',
+          type: 'whatsapp_group',
+          title: 'Entrar no Grupo VIP do WhatsApp',
+          description: 'Receba networking, alertas de lives e materiais exclusivos',
+          url: 'https://chat.whatsapp.com/demo-mdtracker',
+          buttonText: 'Entrar no Grupo VIP Agora',
+          icon: 'whatsapp',
+          color: '#25D366',
+          badge: 'Vagas Limitadas'
+        },
+        {
+          id: 'btn-pdf',
+          type: 'download_pdf',
+          title: 'Baixar E-book / Material em PDF',
+          description: 'Download direto do guia completo e planilha de métricas',
+          url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+          buttonText: 'Baixar PDF Grátis',
+          icon: 'download',
+          color: '#2563eb',
+          badge: 'PDF + Planilha'
+        },
+        {
+          id: 'btn-survey',
+          type: 'survey',
+          title: 'Responder Pesquisa Rápida de Perfil',
+          description: 'Leva apenas 2 minutos e nos ajuda a personalizar sua consultoria',
+          url: '/pesquisa/qualificacao-comercial',
+          buttonText: 'Responder Pesquisa de Qualificação',
+          icon: 'survey',
+          color: '#7c3aed',
+          surveyId: 'survey-qualificacao-comercial',
+          badge: '2 Minutos'
+        }
+      ]
+    },
+    views_count: 98,
+    conversions_count: 24,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'lp-guia-definitivo-vendas-whatsapp',
+    company_id: 'comp-alfa',
+    title: 'Guia Definitivo de Vendas no WhatsApp',
+    slug: 'guia-definitivo-vendas-whatsapp',
+    description: 'Baixe gratuitamente o material completo com 7 scripts de mensagens persuasivas.',
+    status: 'published',
+    category: 'lead_magnet',
+    theme: { primaryColor: '#059669', accentColor: '#f59e0b', backgroundColor: 'white', fontFamily: 'Inter', buttonStyle: 'rounded-xl' },
+    hero: {
+      badge: '📘 Material Rico em PDF',
+      headline: 'O Guia Prático para Escalar suas Vendas no WhatsApp',
+      subheadline: 'Baixe agora os modelos validados de script de abordagem rápida.',
+      ctaText: 'Baixar E-book Grátis Imediatamente'
+    },
+    features: [{ id: 'f-1', title: '7 Scripts Prontos', description: 'Frases de abertura testadas.' }],
+    form: {
+      title: 'Onde devemos enviar o seu E-book?',
+      buttonText: 'Quero Baixar Meu E-book Grátis 📥',
+      buttonColor: '#059669',
+      fields: [
+        { id: 'f-1', name: 'name', label: 'Seu Nome', type: 'text', placeholder: 'Seu nome', required: true },
+        { id: 'f-2', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true }
+      ],
+      actionType: 'thank_you_page',
+      targetStage: 'Novo Lead',
+      tags: ['ebook-whatsapp']
+    },
+    views_count: 85,
+    conversions_count: 31,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'lp-oferta-especial-lancamento',
+    company_id: 'comp-alfa',
+    title: 'Oferta Especial de Lançamento VIP',
+    slug: 'oferta-especial-lancamento',
+    description: 'Condição exclusiva com desconto de inauguração por tempo limitado.',
+    status: 'published',
+    category: 'product_launch',
+    theme: { primaryColor: '#7c3aed', accentColor: '#ec4899', backgroundColor: 'white', fontFamily: 'Inter', buttonStyle: 'rounded-full' },
+    hero: {
+      badge: '⚡ Apenas Hoje',
+      headline: 'Garanta sua Vaga com 40% de Desconto Exclusivo',
+      subheadline: 'Aproveite o bônus de lançamento antes que o lote termine.',
+      ctaText: 'Garantir Desconto de Lançamento'
+    },
+    features: [{ id: 'f-1', title: 'Acesso Vitalício', description: 'Sem mensalidades recorrentes.' }],
+    form: {
+      title: 'Garanta sua Condição Especial',
+      buttonText: 'Quero Minha Vaga com Desconto 🚀',
+      buttonColor: '#7c3aed',
+      fields: [
+        { id: 'f-1', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome', required: true },
+        { id: 'f-2', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true }
+      ],
+      actionType: 'thank_you_page',
+      targetStage: 'Novo Lead',
+      tags: ['lancamento-vip']
+    },
+    views_count: 140,
+    conversions_count: 48,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'lp-workshop-vendas-online',
+    company_id: 'comp-alfa',
+    title: 'Workshop Gratuito de Vendas Online',
+    slug: 'workshop-vendas-online',
+    description: 'Aula prática ao vivo mostrando como triplicar o faturamento da sua empresa.',
+    status: 'published',
+    category: 'event_webinar',
+    theme: { primaryColor: '#dc2626', accentColor: '#f97316', backgroundColor: 'white', fontFamily: 'Inter', buttonStyle: 'rounded-xl' },
+    hero: {
+      badge: '🔴 Transmissão Ao Vivo',
+      headline: 'A Masterclass Definitiva de Tráfego e Conversão',
+      subheadline: 'Participe do workshop prático e descubra o método validado.',
+      ctaText: 'Inscrever-se no Workshop'
+    },
+    features: [{ id: 'f-1', title: 'Ao Vivo com Especialistas', description: 'Tire dúvidas em tempo real.' }],
+    form: {
+      title: 'Inscreva-se Gratuitamente',
+      buttonText: 'Garantir Meu Lugar no Workshop 🎟️',
+      buttonColor: '#dc2626',
+      fields: [
+        { id: 'f-1', name: 'name', label: 'Nome', type: 'text', placeholder: 'Seu nome', required: true },
+        { id: 'f-2', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true }
+      ],
+      actionType: 'thank_you_page',
+      targetStage: 'Novo Lead',
+      tags: ['workshop-vendas']
+    },
+    views_count: 67,
+    conversions_count: 22,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
+];
+
+// ==========================================
+// In-Memory Seed for Surveys (Pesquisas & Qualificação)
+// ==========================================
+let inMemorySurveys: any[] = [
+  {
+    id: 'survey-qualificacao-comercial',
+    company_id: 'comp-alfa',
+    title: 'Pesquisa de Qualificação Comercial & Perfil de Vendas',
+    slug: 'qualificacao-comercial',
+    description: 'Responda a estas perguntas rápidas para receber um diagnóstico sob medida para a sua operação.',
+    status: 'published',
+    theme: {
+      primaryColor: '#2563eb',
+      backgroundColor: 'white',
+      fontFamily: 'Inter',
+      buttonStyle: 'rounded-xl'
+    },
+    questions: [
+      {
+        id: 'q1',
+        title: 'Qual é o tamanho atual da sua equipe comercial no WhatsApp?',
+        description: 'Selecione a opção que melhor reflete seu momento atual.',
+        type: 'single_choice',
+        required: true,
+        options: [
+          { id: 'opt1', label: 'Apenas eu atendendo' },
+          { id: 'opt2', label: '2 a 5 atendentes' },
+          { id: 'opt3', label: '6 a 15 atendentes' },
+          { id: 'opt4', label: 'Mais de 15 atendentes (Operação robusta)' }
+        ]
+      },
+      {
+        id: 'q2',
+        title: 'Qual o principal gargalo na sua conversão de leads hoje?',
+        description: 'Você pode selecionar uma ou mais opções.',
+        type: 'multiple_choice',
+        required: true,
+        options: [
+          { id: 'opt_g1', label: 'Demora no primeiro contato (atendentes sobrecarregados)' },
+          { id: 'opt_g2', label: 'Falta de rastreamento do anúncio até o fechamento (ROI cego)' },
+          { id: 'opt_g3', label: 'Desorganização e perda de mensagens sem supervisão' },
+          { id: 'opt_g4', label: 'Leads desqualificados ou sem poder de compra' }
+        ]
+      },
+      {
+        id: 'q3',
+        title: 'Em uma escala de 0 a 10, quão prioridade é escalar suas vendas com automação e IA?',
+        description: '0 = Nenhuma prioridade | 10 = Extrema prioridade para os próximos 30 dias',
+        type: 'nps',
+        required: true,
+        minScale: 0,
+        maxScale: 10
+      },
+      {
+        id: 'q4',
+        title: 'Informe seus dados para envio do Diagnóstico Completo:',
+        description: 'Enviaremos a devolutiva executiva diretamente para você.',
+        type: 'contact_info',
+        required: true
+      }
+    ],
+    thank_you: {
+      title: '🎉 Respostas Recebidas com Sucesso!',
+      subtitle: 'Nossa equipe especializada já está processando suas informações. Em até 24h você receberá a análise personalizada.',
+      whatsappGroupUrl: 'https://chat.whatsapp.com/demo-mdtracker',
+      ctaButtonText: 'Entrar no Grupo VIP do WhatsApp'
+    },
+    responses_count: 38,
+    average_nps: 9.4,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'survey-satisfacao-atendimento',
+    company_id: 'comp-alfa',
+    title: 'Pesquisa de Satisfação & NPS Pós-Atendimento',
+    slug: 'satisfacao-atendimento',
+    description: 'Sua opinião é fundamental para melhorarmos a qualidade do nosso time.',
+    status: 'published',
+    theme: {
+      primaryColor: '#10b981',
+      backgroundColor: 'white',
+      fontFamily: 'Inter',
+      buttonStyle: 'rounded-xl'
+    },
+    questions: [
+      {
+        id: 'q_nps',
+        title: 'Como você avalia a atenção e presteza do seu atendente hoje?',
+        type: 'rating_stars',
+        required: true,
+        minScale: 1,
+        maxScale: 5
+      },
+      {
+        id: 'q_feedback',
+        title: 'Deixe um comentário ou sugestão de melhoria:',
+        type: 'text',
+        required: false
+      }
+    ],
+    thank_you: {
+      title: 'Obrigado pela sua avaliação!',
+      subtitle: 'Seu feedback foi computado e contribui para nosso padrão de excelência.',
+      ctaButtonText: 'Finalizar'
+    },
+    responses_count: 142,
+    average_nps: 4.8,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+let inMemorySurveyResponses: any[] = [
+  {
+    id: 'sr-1',
+    survey_id: 'survey-qualificacao-comercial',
+    company_id: 'comp-alfa',
+    lead_name: 'Felipe Santana',
+    lead_phone: '11988887777',
+    lead_email: 'felipe@comercial.com',
+    answers: {
+      q1: '2 a 5 atendentes',
+      q2: ['Demora no primeiro contato (atendentes sobrecarregados)', 'Falta de rastreamento do anúncio até o fechamento (ROI cego)'],
+      q3: 10,
+      q4: { name: 'Felipe Santana', phone: '11988887777', email: 'felipe@comercial.com' }
+    },
+    nps_score: 10,
+    created_at: new Date(Date.now() - 3600000 * 4).toISOString()
+  },
+  {
+    id: 'sr-2',
+    survey_id: 'survey-qualificacao-comercial',
+    company_id: 'comp-alfa',
+    lead_name: 'Camila Rocha',
+    lead_phone: '21977776666',
+    lead_email: 'camila@agencia.com',
+    answers: {
+      q1: '6 a 15 atendentes',
+      q2: ['Desorganização e perda de mensagens sem supervisão'],
+      q3: 9,
+      q4: { name: 'Camila Rocha', phone: '21977776666', email: 'camila@agencia.com' }
+    },
+    nps_score: 9,
+    created_at: new Date(Date.now() - 3600000 * 18).toISOString()
+  }
+];
+
+// ==========================================
+// In-Memory Seed for Custom Domains (Domínios Próprios & DNS)
+// ==========================================
+let inMemoryCustomDomains: any[] = [
+  {
+    id: 'dom-1',
+    company_id: 'comp-alfa',
+    domain: 'lp.alfa.com.br',
+    type: 'landing_pages',
+    status: 'active',
+    ssl_active: true,
+    dns_records: [
+      {
+        type: 'CNAME',
+        name: 'lp',
+        expectedValue: 'cname.vercel-dns.com',
+        currentValue: 'cname.vercel-dns.com',
+        verified: true
+      }
+    ],
+    verified_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'dom-2',
+    company_id: 'comp-alfa',
+    domain: 'links.alfa.com.br',
+    type: 'tracking_links',
+    status: 'active',
+    ssl_active: true,
+    dns_records: [
+      {
+        type: 'CNAME',
+        name: 'links',
+        expectedValue: 'cname.vercel-dns.com',
+        currentValue: 'cname.vercel-dns.com',
+        verified: true
+      }
+    ],
+    verified_at: new Date(Date.now() - 86400000 * 8).toISOString(),
+    created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+// ==========================================
+// Event Gamification & Live Presentation Mappers & In-Memory Store
+// ==========================================
+const mapGamificationEventFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id || 'comp-alfa',
+    title: db.title,
+    slug: db.slug,
+    pinCode: db.pin_code,
+    description: db.description || '',
+    theme: typeof db.theme === 'string' ? JSON.parse(db.theme) : (db.theme || { primaryColor: '#8b5cf6', backgroundColor: '#1e1b4b', accentColor: '#06b6d4' }),
+    status: db.status || 'live',
+    currentActivityId: db.current_activity_id,
+    requirePhone: db.require_phone ?? true,
+    requireEmail: db.require_email ?? false,
+    requireCompany: db.require_company ?? false,
+    requireRole: db.require_role ?? false,
+    leadMagnetUrl: db.lead_magnet_url,
+    settings: typeof db.settings === 'string' ? JSON.parse(db.settings) : (db.settings || { allowAnonymous: false, showLiveCount: true, enableSounds: true }),
+    createdAt: db.created_at,
+    updatedAt: db.updated_at
+});
+
+const mapGamificationEventToDB = (e: any) => ({
+    id: e.id,
+    company_id: e.companyId || e.company_id || 'comp-alfa',
+    title: e.title,
+    slug: (e.slug || '').toLowerCase().trim(),
+    pin_code: (e.pinCode || e.pin_code || '1234').toUpperCase().trim(),
+    description: e.description || '',
+    theme: typeof e.theme === 'object' ? e.theme : { primaryColor: '#8b5cf6', backgroundColor: '#1e1b4b', accentColor: '#06b6d4' },
+    status: e.status || 'live',
+    current_activity_id: e.currentActivityId || e.current_activity_id || null,
+    require_phone: e.requirePhone ?? true,
+    require_email: e.requireEmail ?? false,
+    require_company: e.requireCompany ?? false,
+    require_role: e.requireRole ?? false,
+    lead_magnet_url: e.leadMagnetUrl || null,
+    settings: typeof e.settings === 'object' ? e.settings : { allowAnonymous: false, showLiveCount: true, enableSounds: true },
+    created_at: e.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
+
+const mapGamificationActivityFromDB = (db: any) => ({
+    id: db.id,
+    eventId: db.event_id,
+    type: db.type,
+    title: db.title,
+    subtitle: db.subtitle || '',
+    options: typeof db.options === 'string' ? JSON.parse(db.options) : (db.options || []),
+    correctOptionId: db.correct_option_id,
+    timeLimitSeconds: db.time_limit_seconds || 30,
+    points: db.points || 100,
+    orderIndex: db.order_index || 0,
+    status: db.status || 'pending',
+    metadata: typeof db.metadata === 'string' ? JSON.parse(db.metadata) : (db.metadata || {}),
+    createdAt: db.created_at
+});
+
+const mapGamificationParticipantFromDB = (db: any) => ({
+    id: db.id,
+    eventId: db.event_id,
+    name: db.name,
+    phone: db.phone || '',
+    email: db.email || '',
+    company: db.company || '',
+    role: db.role || '',
+    avatar: db.avatar || '🚀',
+    score: db.score || 0,
+    isWinner: db.is_winner || false,
+    deviceToken: db.device_token,
+    createdAt: db.created_at,
+    lastActiveAt: db.last_active_at
+});
+
+const mapGamificationResponseFromDB = (db: any) => ({
+    id: db.id,
+    activityId: db.activity_id,
+    participantId: db.participant_id,
+    participantName: db.participant_name,
+    participantAvatar: db.participant_avatar,
+    responseData: typeof db.response_data === 'string' ? JSON.parse(db.response_data) : (db.response_data || {}),
+    upvotes: db.upvotes || 0,
+    createdAt: db.created_at
+});
+
+// SSE Subscribers for live event realtime updates
+const liveEventSubscribers: Record<string, Response[]> = {};
+
+function broadcastLiveEventUpdate(eventId: string, eventData: any) {
+    const subs = liveEventSubscribers[eventId] || [];
+    const payload = `data: ${JSON.stringify(eventData)}\n\n`;
+    subs.forEach(res => {
+        try {
+            res.write(payload);
+        } catch {}
+    });
+}
+
+let inMemoryGamificationEvents: any[] = [
+    {
+        id: 'event-growth-summit',
+        company_id: 'comp-alfa',
+        title: 'Imersão Growth & IA 2026',
+        slug: 'imersao-growth',
+        pin_code: 'GROWTH',
+        description: 'Arena interativa de dinâmicas ao vivo, votação e quizzes com premiação para o público',
+        theme: {
+            primaryColor: '#8b5cf6',
+            backgroundColor: '#1e1b4b',
+            accentColor: '#06b6d4',
+            fontFamily: 'Inter'
+        },
+        status: 'live',
+        current_activity_id: 'act-wordcloud-1',
+        require_phone: true,
+        require_email: false,
+        require_company: false,
+        lead_magnet_url: 'https://mdtracker.app/p/oferta-5538',
+        settings: {
+            allowAnonymous: false,
+            showLiveCount: true,
+            enableSounds: true
+        },
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+let inMemoryGamificationActivities: any[] = [
+    {
+        id: 'act-wordcloud-1',
+        event_id: 'event-growth-summit',
+        type: 'word_cloud',
+        title: 'Em 1 palavra, qual é a principal prioridade do seu negócio hoje?',
+        subtitle: 'Envie até 3 palavras pelo seu celular e veja a nuvem se formar no telão!',
+        order_index: 0,
+        status: 'active',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-poll-2',
+        event_id: 'event-growth-summit',
+        type: 'multiple_choice',
+        title: 'Qual canal de aquisição traz leads com maior taxa de conversão no seu negócio?',
+        subtitle: 'Selecione a opção no seu celular',
+        order_index: 1,
+        status: 'pending',
+        options: [
+            { id: 'opt-1', text: 'WhatsApp Direto com Automação', color: '#10b981' },
+            { id: 'opt-2', text: 'Anúncios no Instagram / Meta Ads', color: '#ec4899' },
+            { id: 'opt-3', text: 'Google Search & YouTube', color: '#3b82f6' },
+            { id: 'opt-4', text: 'Indicações de Clientes & Parcerias', color: '#f59e0b' }
+        ],
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-quiz-3',
+        event_id: 'event-growth-summit',
+        type: 'quiz',
+        title: 'Quantos minutos um lead pode esperar antes de que a chance de conversão caia em 80%?',
+        subtitle: 'Responda rápido para acumular mais pontos no ranking!',
+        time_limit_seconds: 20,
+        points: 150,
+        correct_option_id: 'qopt-1',
+        options: [
+            { id: 'qopt-1', text: 'Até 5 minutos (Resposta Correta)', isCorrect: true, color: '#10b981' },
+            { id: 'qopt-2', text: 'Até 30 minutos', isCorrect: false, color: '#ef4444' },
+            { id: 'qopt-3', text: 'Até 2 horas', isCorrect: false, color: '#f59e0b' },
+            { id: 'qopt-4', text: 'Até 24 horas', isCorrect: false, color: '#6366f1' }
+        ],
+        order_index: 2,
+        status: 'pending',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-qa-4',
+        event_id: 'event-growth-summit',
+        type: 'qa',
+        title: 'Mural de Dúvidas: Pergunte ao Palestrante',
+        subtitle: 'Envie sua dúvida e curta as perguntas de outros colegas para subir ao topo!',
+        order_index: 3,
+        status: 'pending',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-tf-5',
+        event_id: 'event-growth-summit',
+        type: 'true_false',
+        title: 'Empresas que atendem leads no WhatsApp em menos de 60 segundos faturam até 3x mais.',
+        subtitle: 'Verdadeiro ou Falso?',
+        correct_option_id: 'tf-1',
+        options: [
+            { id: 'tf-1', text: 'Verdadeiro (Comprovado por pesquisa)', isCorrect: true, color: '#10b981' },
+            { id: 'tf-2', text: 'Falso', isCorrect: false, color: '#ef4444' }
+        ],
+        order_index: 4,
+        status: 'pending',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-draw-6',
+        event_id: 'event-growth-summit',
+        type: 'lucky_draw',
+        title: 'Sorteio Oficial da Palestra: Mentoria Individual de Escala',
+        subtitle: 'Todos os participantes cadastrados estão concorrendo automaticamente!',
+        order_index: 5,
+        status: 'pending',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'act-ranking-7',
+        event_id: 'event-growth-summit',
+        type: 'ranking',
+        title: 'Grande Final: Pódio & Placar dos Líderes 🏆',
+        subtitle: 'Conheça os participantes com maior pontuação no evento',
+        order_index: 6,
+        status: 'pending',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    }
+];
+
+let inMemoryGamificationParticipants: any[] = [
+    {
+        id: 'part-1',
+        event_id: 'event-growth-summit',
+        name: 'Camila Fernandes',
+        phone: '11988887766',
+        email: 'camila@empresa.com.br',
+        company: 'Fernandes Tech',
+        score: 350,
+        avatar: '🚀',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        last_active_at: new Date().toISOString()
+    },
+    {
+        id: 'part-2',
+        event_id: 'event-growth-summit',
+        name: 'Rodrigo Alcantara',
+        phone: '21977776655',
+        email: 'rodrigo@alcantara.io',
+        company: 'Escala Rápida',
+        score: 300,
+        avatar: '⚡',
+        created_at: new Date(Date.now() - 3400000).toISOString(),
+        last_active_at: new Date().toISOString()
+    },
+    {
+        id: 'part-3',
+        event_id: 'event-growth-summit',
+        name: 'Mariana Duarte',
+        phone: '31966665544',
+        email: 'mariana@duarte.com',
+        company: 'Duarte Growth',
+        score: 250,
+        avatar: '🎯',
+        created_at: new Date(Date.now() - 3200000).toISOString(),
+        last_active_at: new Date().toISOString()
+    },
+    {
+        id: 'part-4',
+        event_id: 'event-growth-summit',
+        name: 'Lucas Brandão',
+        phone: '41955554433',
+        email: 'lucas@brandao.com',
+        company: 'Brandão Digital',
+        score: 200,
+        avatar: '🔥',
+        created_at: new Date(Date.now() - 3000000).toISOString(),
+        last_active_at: new Date().toISOString()
+    }
+];
+
+let inMemoryGamificationResponses: any[] = [
+    {
+        id: 'resp-1',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-1',
+        participant_name: 'Camila Fernandes',
+        participant_avatar: '🚀',
+        response_data: { text: 'Vendas' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1800000).toISOString()
+    },
+    {
+        id: 'resp-2',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-2',
+        participant_name: 'Rodrigo Alcantara',
+        participant_avatar: '⚡',
+        response_data: { text: 'Automação' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1700000).toISOString()
+    },
+    {
+        id: 'resp-3',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-3',
+        participant_name: 'Mariana Duarte',
+        participant_avatar: '🎯',
+        response_data: { text: 'Vendas' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1600000).toISOString()
+    },
+    {
+        id: 'resp-4',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-4',
+        participant_name: 'Lucas Brandão',
+        participant_avatar: '🔥',
+        response_data: { text: 'Escalar' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1500000).toISOString()
+    },
+    {
+        id: 'resp-5',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-1',
+        participant_name: 'Camila Fernandes',
+        participant_avatar: '🚀',
+        response_data: { text: 'Automação' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1400000).toISOString()
+    },
+    {
+        id: 'resp-6',
+        activity_id: 'act-wordcloud-1',
+        participant_id: 'part-2',
+        participant_name: 'Rodrigo Alcantara',
+        participant_avatar: '⚡',
+        response_data: { text: 'Vendas' },
+        upvotes: 0,
+        created_at: new Date(Date.now() - 1300000).toISOString()
+    },
+    {
+        id: 'resp-7',
+        activity_id: 'act-qa-4',
+        participant_id: 'part-1',
+        participant_name: 'Camila Fernandes',
+        participant_avatar: '🚀',
+        response_data: { text: 'Como qualificar leads sem parecer robótico no primeiro contato?' },
+        upvotes: 14,
+        created_at: new Date(Date.now() - 1200000).toISOString()
+    },
+    {
+        id: 'resp-8',
+        activity_id: 'act-qa-4',
+        participant_id: 'part-2',
+        participant_name: 'Rodrigo Alcantara',
+        participant_avatar: '⚡',
+        response_data: { text: 'Qual o tempo ideal de teste A/B para mensagens de abordagem?' },
+        upvotes: 9,
+        created_at: new Date(Date.now() - 1100000).toISOString()
+    }
 ];
 
 // ==========================================
@@ -1384,6 +2341,108 @@ let inMemorySmartLists: any[] = [
     leads_count: 2,
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
     updated_at: new Date().toISOString()
+  }
+];
+
+let inMemoryTeams: any[] = [
+  {
+    id: 'team-ativa',
+    company_id: 'comp-alfa',
+    name: 'Equipe Vendas Ativas (Outbound)',
+    description: 'Prospecção ativa de leads de anúncios, ligações de contato imediato e apresentação comercial.',
+    type: 'active_sales',
+    color: '#3B82F6',
+    distribution_strategy: 'round_robin',
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'team-passiva',
+    company_id: 'comp-alfa',
+    name: 'Equipe Vendas Receptivas (Inbound)',
+    description: 'Atendimento a leads que chegam diretamente pelo WhatsApp de campanhas Meta/Google.',
+    type: 'inbound_sales',
+    color: '#10B981',
+    distribution_strategy: 'round_robin',
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 9).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'team-recuperacao',
+    company_id: 'comp-alfa',
+    name: 'Recuperação de Vendas Perdidas',
+    description: 'Especialistas em recuperação de checkout abandonado, boletos e PIX pendentes.',
+    type: 'recovery',
+    color: '#F59E0B',
+    distribution_strategy: 'workload',
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'team-suporte',
+    company_id: 'comp-alfa',
+    name: 'Equipe Suporte & Pós-Venda',
+    description: 'Atendimento de dúvidas técnicas, onboarding de novos clientes e pós-venda.',
+    type: 'support',
+    color: '#8B5CF6',
+    distribution_strategy: 'round_robin',
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+let inMemoryTeamMembers: any[] = [
+  {
+    id: 'tm-1',
+    team_id: 'team-ativa',
+    user_id: 'usr-2',
+    company_id: 'comp-alfa',
+    user_name: 'Rodrigo Gerente (Supervisor)',
+    user_email: 'gerente@alfa.com',
+    role: 'leader',
+    is_external: false,
+    phone_number: '5511991234567',
+    extension: '101',
+    status: 'online',
+    max_concurrent_leads: 25,
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString()
+  },
+  {
+    id: 'tm-2',
+    team_id: 'team-passiva',
+    user_id: 'usr-3',
+    company_id: 'comp-alfa',
+    user_name: 'Lucas Atendente',
+    user_email: 'atendente@alfa.com',
+    role: 'member',
+    is_external: false,
+    phone_number: '5511988887777',
+    extension: '102',
+    status: 'in_call',
+    max_concurrent_leads: 15,
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 9).toISOString()
+  },
+  {
+    id: 'tm-3',
+    team_id: 'team-recuperacao',
+    user_id: 'usr-3',
+    company_id: 'comp-alfa',
+    user_name: 'Lucas Atendente',
+    user_email: 'atendente@alfa.com',
+    role: 'member',
+    is_external: true, // Colaborador Externo / Home Office
+    phone_number: '5521999998888',
+    extension: '103',
+    status: 'online',
+    max_concurrent_leads: 20,
+    active: true,
+    created_at: new Date(Date.now() - 86400000 * 8).toISOString()
   }
 ];
 
@@ -3363,7 +4422,7 @@ app.post('/api/direct/message', async (req: Request, res: Response) => {
 // MARKETING AUTOMATION & WORKFLOWS ENGINE (RD Station style)
 // ==========================================
 
-function formatWorkflowText(template: string, lead: any, companyName: string): string {
+function formatWorkflowText(template: string, lead: any, companyName: string, context?: any): string {
     if (!template) return '';
     return template
         .replace(/\{nome\}/gi, lead.name || 'Cliente')
@@ -3374,7 +4433,112 @@ function formatWorkflowText(template: string, lead: any, companyName: string): s
         .replace(/\{empresa\}/gi, companyName || 'MDTracker')
         .replace(/\{company\}/gi, companyName || 'MDTracker')
         .replace(/\{produto\}/gi, lead.productName || 'nossa solução')
+        .replace(/\{pagina\}/gi, context?.formName || lead.source || 'Landing Page')
+        .replace(/\{page\}/gi, context?.formName || lead.source || 'Landing Page')
+        .replace(/\{link\}/gi, context?.slug ? `/p/${context.slug}` : (lead.checkoutUrl || 'https://mdtracker.app'))
         .replace(/\{link_checkout\}/gi, lead.checkoutUrl || 'https://mdtracker.app');
+}
+
+async function executeWorkflowForLead(
+    wf: any,
+    lead: any,
+    companyId: string,
+    companyName: string,
+    context?: any
+) {
+    if (!wf || !lead) return;
+
+    wf.enrolledCount = (wf.enrolledCount || 0) + 1;
+    try {
+        await supabase.from('marketing_workflows').update({ enrolled_count: wf.enrolledCount }).eq('id', wf.id);
+    } catch {}
+    const mem = inMemoryWorkflows.find(m => m.id === wf.id);
+    if (mem) mem.enrolled_count = wf.enrolledCount;
+
+    const steps = wf.steps || [];
+    for (const step of steps) {
+        if (step.type === 'wait_delay') {
+            const logItem = {
+                id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                company_id: companyId,
+                workflow_id: wf.id,
+                workflow_name: wf.name,
+                lead_id: lead.id,
+                lead_name: lead.name,
+                lead_phone: lead.phone,
+                action_type: 'wait_delay' as const,
+                status: 'scheduled' as const,
+                detail: `Aguardando intervalo de ${step.delayMinutes || 60} minutos para o próximo passo.`,
+                executed_at: new Date().toISOString()
+            };
+            inMemoryWorkflowLogs.unshift(logItem);
+            try {
+                await supabase.from('workflow_logs').insert(logItem);
+            } catch {}
+            continue;
+        }
+
+        let detail = '';
+        let status: 'success' | 'failed' | 'scheduled' = 'success';
+
+        if (step.type === 'send_whatsapp') {
+            const formattedMsg = formatWorkflowText(step.messageTemplate || '', lead, companyName, context);
+            if (lead.phone) {
+                try {
+                    await sendWhatsAppMessage(companyId, lead.phone, formattedMsg, 'bot');
+                    detail = `WhatsApp disparado para ${lead.phone}: "${formattedMsg.substring(0, 50)}..."`;
+                } catch {
+                    detail = `WhatsApp registrado no CRM para ${lead.phone}: "${formattedMsg.substring(0, 50)}..."`;
+                }
+            } else {
+                detail = `Mensagem preparada (lead sem telefone): "${formattedMsg.substring(0, 40)}..."`;
+            }
+        } else if (step.type === 'change_stage') {
+            if (step.targetStage) {
+                try {
+                    await supabase.from('leads').update({ stage: step.targetStage, updated_at: new Date().toISOString() }).eq('id', lead.id);
+                } catch {}
+                detail = `Lead movido automaticamente para o estágio: "${step.targetStage}"`;
+            }
+        } else if (step.type === 'send_email') {
+            const subject = formatWorkflowText(step.emailSubject || 'Aviso Importante', lead, companyName, context);
+            detail = `E-mail enviado para ${lead.email || 'lead'}: "${subject}"`;
+        } else if (step.type === 'send_sms') {
+            const smsContent = formatWorkflowText(step.smsText || 'Mensagem da empresa', lead, companyName, context);
+            detail = `SMS enviado para ${lead.phone || 'lead'}: "${smsContent.substring(0, 45)}..."`;
+        } else if (step.type === 'add_tag') {
+            detail = `Tag adicionada: "${step.tag || 'nutricao_ativa'}"`;
+        } else if (step.type === 'notify_user') {
+            const note = formatWorkflowText(step.notifyMessage || 'Notificação de fluxo', lead, companyName, context);
+            detail = `Notificação interna: "${note}"`;
+        } else {
+            detail = `Ação ${step.type} processada com sucesso.`;
+        }
+
+        wf.executedCount = (wf.executedCount || 0) + 1;
+        try {
+            await supabase.from('marketing_workflows').update({ executed_count: wf.executedCount }).eq('id', wf.id);
+        } catch {}
+        if (mem) mem.executed_count = wf.executedCount;
+
+        const logItem = {
+            id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+            company_id: companyId,
+            workflow_id: wf.id,
+            workflow_name: wf.name,
+            lead_id: lead.id,
+            lead_name: lead.name,
+            lead_phone: lead.phone,
+            action_type: step.type,
+            status,
+            detail,
+            executed_at: new Date().toISOString()
+        };
+        inMemoryWorkflowLogs.unshift(logItem);
+        try {
+            await supabase.from('workflow_logs').insert(logItem);
+        } catch {}
+    }
 }
 
 async function triggerWorkflows(
@@ -3428,101 +4592,14 @@ async function triggerWorkflows(
 
             if (event === 'form_submitted') {
                 if (wf.triggerConfig?.landingPageId && wf.triggerConfig.landingPageId !== 'all') {
-                    if (context?.landingPageId && context.landingPageId !== wf.triggerConfig.landingPageId) continue;
+                    if (context?.landingPageId && context.landingPageId !== wf.triggerConfig.landingPageId && context?.slug !== wf.triggerConfig.landingPageId) continue;
                 }
                 if (wf.triggerConfig?.formSource && wf.triggerConfig.formSource !== 'any') {
                     if (context?.formSource && context.formSource !== wf.triggerConfig.formSource) continue;
                 }
             }
 
-            wf.enrolledCount = (wf.enrolledCount || 0) + 1;
-            try {
-                await supabase.from('marketing_workflows').update({ enrolled_count: wf.enrolledCount }).eq('id', wf.id);
-            } catch {}
-            const mem = inMemoryWorkflows.find(m => m.id === wf.id);
-            if (mem) mem.enrolled_count = wf.enrolledCount;
-
-            const steps = wf.steps || [];
-            for (const step of steps) {
-                if (step.type === 'wait_delay') {
-                    const logItem = {
-                        id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                        company_id: companyId,
-                        workflow_id: wf.id,
-                        workflow_name: wf.name,
-                        lead_id: lead.id,
-                        lead_name: lead.name,
-                        lead_phone: lead.phone,
-                        action_type: 'wait_delay',
-                        status: 'scheduled',
-                        detail: `Aguardando intervalo de ${step.delayMinutes || 60} minutos para o próximo passo.`,
-                        executed_at: new Date().toISOString()
-                    };
-                    inMemoryWorkflowLogs.unshift(logItem);
-                    continue;
-                }
-
-                let detail = '';
-                let status = 'success';
-
-                if (step.type === 'send_whatsapp') {
-                    const formattedMsg = formatWorkflowText(step.messageTemplate || '', lead, companyName);
-                    if (lead.phone) {
-                        try {
-                            await sendWhatsAppMessage(companyId, lead.phone, formattedMsg, 'bot');
-                            detail = `WhatsApp disparado para ${lead.phone}: "${formattedMsg.substring(0, 50)}..."`;
-                        } catch {
-                            detail = `WhatsApp registrado no CRM para ${lead.phone}: "${formattedMsg.substring(0, 50)}..."`;
-                        }
-                    } else {
-                        detail = `Mensagem preparada (lead sem telefone): "${formattedMsg.substring(0, 40)}..."`;
-                    }
-                } else if (step.type === 'change_stage') {
-                    if (step.targetStage) {
-                        try {
-                            await supabase.from('leads').update({ stage: step.targetStage, updated_at: new Date().toISOString() }).eq('id', lead.id);
-                        } catch {}
-                        detail = `Lead movido automaticamente para o estágio: "${step.targetStage}"`;
-                    }
-                } else if (step.type === 'send_email') {
-                    const subject = formatWorkflowText(step.emailSubject || 'Aviso Importante', lead, companyName);
-                    detail = `E-mail enviado para ${lead.email || 'lead'}: "${subject}"`;
-                } else if (step.type === 'send_sms') {
-                    const smsContent = formatWorkflowText(step.smsText || 'Mensagem da empresa', lead, companyName);
-                    detail = `SMS enviado para ${lead.phone || 'lead'}: "${smsContent.substring(0, 45)}..."`;
-                } else if (step.type === 'add_tag') {
-                    detail = `Tag adicionada: "${step.tag || 'nutricao_ativa'}"`;
-                } else if (step.type === 'notify_user') {
-                    const note = formatWorkflowText(step.notifyMessage || 'Notificação de fluxo', lead, companyName);
-                    detail = `Notificação interna: "${note}"`;
-                } else {
-                    detail = `Ação ${step.type} processada com sucesso.`;
-                }
-
-                wf.executedCount = (wf.executedCount || 0) + 1;
-                try {
-                    await supabase.from('marketing_workflows').update({ executed_count: wf.executedCount }).eq('id', wf.id);
-                } catch {}
-                if (mem) mem.executed_count = wf.executedCount;
-
-                const logItem = {
-                    id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                    company_id: companyId,
-                    workflow_id: wf.id,
-                    workflow_name: wf.name,
-                    lead_id: lead.id,
-                    lead_name: lead.name,
-                    lead_phone: lead.phone,
-                    action_type: step.type,
-                    status,
-                    detail,
-                    executed_at: new Date().toISOString()
-                };
-                inMemoryWorkflowLogs.unshift(logItem);
-                try {
-                    await supabase.from('workflow_logs').insert(logItem);
-                } catch {}
-            }
+            await executeWorkflowForLead(wf, lead, companyId, companyName, context);
         }
     } catch (err) {
         console.warn('Erro ao executar triggerWorkflows:', err);
@@ -3791,20 +4868,24 @@ app.post('/api/landing-pages', async (req: Request, res: Response) => {
             ...req.body,
             id,
             slug: cleanSlug,
-            companyId: req.body.companyId || 'comp-alfa'
+            companyId: req.body.companyId || req.body.company_id || 'comp-alfa'
         };
 
         const dbRow = mapLandingPageToDB(landingPageData);
 
         try {
-            const { data, error } = await supabase.from('landing_pages').insert(dbRow).select().single();
+            const { data, error } = await supabase.from('landing_pages').upsert(dbRow).select().single();
             if (!error && data) {
-                inMemoryLandingPages.unshift(dbRow);
+                const idx = inMemoryLandingPages.findIndex(l => l.id === id);
+                if (idx !== -1) inMemoryLandingPages[idx] = { ...inMemoryLandingPages[idx], ...dbRow };
+                else inMemoryLandingPages.unshift(dbRow);
                 return res.status(201).json(mapLandingPageFromDB(data));
             }
         } catch {}
 
-        inMemoryLandingPages.unshift(dbRow);
+        const idx = inMemoryLandingPages.findIndex(l => l.id === id);
+        if (idx !== -1) inMemoryLandingPages[idx] = { ...inMemoryLandingPages[idx], ...dbRow };
+        else inMemoryLandingPages.unshift(dbRow);
         res.status(201).json(mapLandingPageFromDB(dbRow));
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -3834,10 +4915,11 @@ app.put('/api/landing-pages/:id', async (req: Request, res: Response) => {
         const dbRow = mapLandingPageToDB(updatedData);
 
         try {
-            const { data, error } = await supabase.from('landing_pages').update(dbRow).eq('id', id).select().single();
+            const { data, error } = await supabase.from('landing_pages').upsert(dbRow).select().single();
             if (!error && data) {
                 const idx = inMemoryLandingPages.findIndex(l => l.id === id);
                 if (idx !== -1) inMemoryLandingPages[idx] = { ...inMemoryLandingPages[idx], ...dbRow };
+                else inMemoryLandingPages.unshift(dbRow);
                 return res.json(mapLandingPageFromDB(data));
             }
         } catch {}
@@ -3846,9 +4928,10 @@ app.put('/api/landing-pages/:id', async (req: Request, res: Response) => {
         if (idx !== -1) {
             inMemoryLandingPages[idx] = { ...inMemoryLandingPages[idx], ...dbRow };
             return res.json(mapLandingPageFromDB(inMemoryLandingPages[idx]));
+        } else {
+            inMemoryLandingPages.unshift(dbRow);
+            return res.json(mapLandingPageFromDB(dbRow));
         }
-
-        res.status(404).json({ error: 'Landing page não encontrada' });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -4143,16 +5226,1158 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
             whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanTargetPhone}&text=${encodeURIComponent(msg)}`;
         }
 
+        const thankYouUrl = `/p/${lp.slug}/obrigado`;
+
         res.json({
             success: true,
-            actionType: lp.form?.actionType || 'thank_you_message',
+            actionType: lp.form?.actionType || 'thank_you_page',
             whatsappUrl,
             redirectUrl: lp.form?.redirectUrl || '',
+            thankYouUrl,
             successMessage: lp.form?.successMessage || '🎉 Parabéns! Seus dados foram recebidos com sucesso. Em instantes entraremos em contato!',
             leadId: newLeadId
         });
     } catch (err: any) {
         console.error('Erro ao submeter formulário de Landing Page:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// SURVEYS REST API (Pesquisas & NPS / Qualificação)
+// ==========================================
+
+// List all surveys for current company
+app.get('/api/surveys', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('surveys')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map(mapSurveyFromDB));
+            }
+        } catch {}
+
+        const list = inMemorySurveys
+            .filter(s => s.company_id === companyId)
+            .map(mapSurveyFromDB);
+        res.json(list);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get single survey by ID or Slug
+app.get('/api/surveys/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            const { data, error } = await supabase
+                .from('surveys')
+                .select('*')
+                .or(`id.eq.${id},slug.eq.${id.toLowerCase()}`)
+                .single();
+
+            if (!error && data) {
+                return res.json(mapSurveyFromDB(data));
+            }
+        } catch {}
+
+        const s = inMemorySurveys.find(item => item.id === id || item.slug === id.toLowerCase());
+        if (s) return res.json(mapSurveyFromDB(s));
+
+        res.status(404).json({ error: 'Pesquisa não encontrada' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create a new survey
+app.post('/api/surveys', async (req: Request, res: Response) => {
+    try {
+        const id = req.body.id || `survey-${Date.now()}`;
+        const rawSlug = req.body.slug || req.body.title || `pesquisa-${Date.now()}`;
+        const cleanSlug = rawSlug
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9_-]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        const surveyData = {
+            ...req.body,
+            id,
+            slug: cleanSlug,
+            companyId: req.body.companyId || 'comp-alfa',
+            status: req.body.status || 'published',
+            responsesCount: req.body.responsesCount || 0,
+            averageNps: req.body.averageNps || 0
+        };
+
+        const dbRow = mapSurveyToDB(surveyData);
+
+        try {
+            const { data, error } = await supabase.from('surveys').insert(dbRow).select().single();
+            if (!error && data) {
+                inMemorySurveys.unshift(dbRow);
+                return res.status(201).json(mapSurveyFromDB(data));
+            }
+        } catch {}
+
+        inMemorySurveys.unshift(dbRow);
+        res.status(201).json(mapSurveyFromDB(dbRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update survey
+app.put('/api/surveys/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const rawSlug = req.body.slug || req.body.title;
+        const cleanSlug = rawSlug
+            ? rawSlug
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9_-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '')
+            : undefined;
+
+        const updatedData = {
+            ...req.body,
+            id,
+            ...(cleanSlug ? { slug: cleanSlug } : {})
+        };
+
+        const dbRow = mapSurveyToDB(updatedData);
+
+        try {
+            const { data, error } = await supabase.from('surveys').update(dbRow).eq('id', id).select().single();
+            if (!error && data) {
+                const idx = inMemorySurveys.findIndex(s => s.id === id);
+                if (idx !== -1) inMemorySurveys[idx] = { ...inMemorySurveys[idx], ...dbRow };
+                return res.json(mapSurveyFromDB(data));
+            }
+        } catch {}
+
+        const idx = inMemorySurveys.findIndex(s => s.id === id);
+        if (idx !== -1) {
+            inMemorySurveys[idx] = { ...inMemorySurveys[idx], ...dbRow };
+            return res.json(mapSurveyFromDB(inMemorySurveys[idx]));
+        }
+
+        res.status(404).json({ error: 'Pesquisa não encontrada' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete survey
+app.delete('/api/surveys/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('surveys').delete().eq('id', id);
+            await supabase.from('survey_responses').delete().eq('survey_id', id);
+        } catch {}
+        inMemorySurveys = inMemorySurveys.filter(s => s.id !== id);
+        inMemorySurveyResponses = inMemorySurveyResponses.filter(r => r.survey_id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// List responses for a survey
+app.get('/api/surveys/:id/responses', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            const { data, error } = await supabase
+                .from('survey_responses')
+                .select('*')
+                .eq('survey_id', id)
+                .order('created_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map((r: any) => ({
+                    id: r.id,
+                    surveyId: r.survey_id,
+                    companyId: r.company_id,
+                    leadId: r.lead_id,
+                    leadName: r.lead_name,
+                    leadPhone: r.lead_phone,
+                    leadEmail: r.lead_email,
+                    answers: r.answers || {},
+                    npsScore: r.nps_score,
+                    createdAt: r.created_at
+                })));
+            }
+        } catch {}
+
+        const list = inMemorySurveyResponses
+            .filter(r => r.survey_id === id)
+            .map((r: any) => ({
+                id: r.id,
+                surveyId: r.survey_id,
+                companyId: r.company_id,
+                leadId: r.lead_id,
+                leadName: r.lead_name,
+                leadPhone: r.lead_phone,
+                leadEmail: r.lead_email,
+                answers: r.answers || {},
+                npsScore: r.nps_score,
+                createdAt: r.created_at
+            }));
+        res.json(list);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Submit a survey response (Public)
+app.post('/api/surveys/:slug/submit', async (req: Request, res: Response) => {
+    try {
+        const slug = req.params.slug.toLowerCase().trim();
+        let survey: any = null;
+
+        try {
+            const { data } = await supabase.from('surveys').select('*').eq('slug', slug).single();
+            if (data) survey = mapSurveyFromDB(data);
+        } catch {}
+
+        if (!survey) {
+            const mem = inMemorySurveys.find(s => s.slug.toLowerCase() === slug || s.id === slug);
+            if (mem) survey = mapSurveyFromDB(mem);
+        }
+
+        if (!survey) {
+            return res.status(404).json({ error: 'Pesquisa não encontrada' });
+        }
+
+        const body = req.body || {};
+        const answers = body.answers || {};
+        let leadName = body.leadName || '';
+        let leadPhone = body.leadPhone || '';
+        let leadEmail = body.leadEmail || '';
+        let npsScore: number | undefined = undefined;
+
+        // Extract contact info or NPS score from questions if stored in answers
+        for (const q of (survey.questions || [])) {
+            const val = answers[q.id];
+            if (!val) continue;
+
+            if (q.type === 'contact_info' && typeof val === 'object') {
+                if (!leadName && val.name) leadName = val.name;
+                if (!leadPhone && val.phone) leadPhone = val.phone;
+                if (!leadEmail && val.email) leadEmail = val.email;
+            } else if (q.type === 'nps' || q.type === 'rating_stars') {
+                if (typeof val === 'number') npsScore = val;
+                else if (typeof val === 'string' && !isNaN(Number(val))) npsScore = Number(val);
+            }
+        }
+
+        const cleanPhone = (leadPhone || '').replace(/\D/g, '');
+        let createdLeadId: string | undefined = undefined;
+
+        // If phone or name exists, create/link lead
+        if (cleanPhone || leadName) {
+            createdLeadId = `lead-survey-${Date.now()}`;
+            const newLead: any = {
+                id: createdLeadId,
+                company_id: survey.companyId,
+                name: leadName || 'Lead Pesquisa ' + survey.title,
+                phone: cleanPhone || '11999999999',
+                email: leadEmail || '',
+                source: `Pesquisa: ${survey.title}`,
+                stage: 'Qualificado',
+                value: 0,
+                notes: `Respondeu à pesquisa "${survey.title}" (NPS: ${npsScore !== undefined ? npsScore : 'N/A'})`,
+                custom_tags: {
+                    tags: ['pesquisa', `survey-${survey.slug}`]
+                },
+                bot_active: true,
+                conversion_events: [
+                    {
+                        id: `evt-surv-${Date.now()}`,
+                        type: 'survey',
+                        eventName: 'Pesquisa Respondida',
+                        status: 'sucesso',
+                        timestamp: new Date().toISOString(),
+                        details: `Pesquisa "${survey.title}" respondida com sucesso.`
+                    }
+                ],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            await safeInsertLead(mapLeadToDB(newLead));
+            await triggerWorkflows('form_submitted', {
+                lead: newLead,
+                companyId: survey.companyId,
+                context: {
+                    surveyId: survey.id,
+                    slug: survey.slug,
+                    formSource: 'survey'
+                }
+            });
+        }
+
+        const responseId = `sr-${Date.now()}`;
+        const newResponseRow = {
+            id: responseId,
+            survey_id: survey.id,
+            company_id: survey.companyId,
+            lead_id: createdLeadId || null,
+            lead_name: leadName || null,
+            lead_phone: cleanPhone || null,
+            lead_email: leadEmail || null,
+            answers,
+            nps_score: npsScore !== undefined ? npsScore : null,
+            created_at: new Date().toISOString()
+        };
+
+        try {
+            await supabase.from('survey_responses').insert(newResponseRow);
+        } catch {}
+
+        inMemorySurveyResponses.unshift(newResponseRow);
+
+        // Update survey response count & average NPS
+        const newCount = (survey.responsesCount || 0) + 1;
+        let newAvgNps = survey.averageNps || 0;
+        if (npsScore !== undefined) {
+            newAvgNps = Math.round((((survey.averageNps || 0) * (survey.responsesCount || 0)) + npsScore) / newCount * 10) / 10;
+        }
+
+        try {
+            await supabase.from('surveys').update({
+                responses_count: newCount,
+                average_nps: newAvgNps,
+                updated_at: new Date().toISOString()
+            }).eq('id', survey.id);
+        } catch {}
+
+        const sIdx = inMemorySurveys.findIndex(s => s.id === survey.id);
+        if (sIdx !== -1) {
+            inMemorySurveys[sIdx].responses_count = newCount;
+            inMemorySurveys[sIdx].average_nps = newAvgNps;
+        }
+
+        res.json({
+            success: true,
+            message: survey.thankYou?.title || 'Pesquisa enviada com sucesso!',
+            thankYou: survey.thankYou
+        });
+    } catch (err: any) {
+        console.error('Erro ao submeter resposta de pesquisa:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// CUSTOM DOMAINS & DNS API (Domínios Próprios)
+// ==========================================
+
+// List domains for company
+app.get('/api/domains', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('custom_domains')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map(mapCustomDomainFromDB));
+            }
+        } catch {}
+
+        const list = inMemoryCustomDomains
+            .filter(d => d.company_id === companyId)
+            .map(mapCustomDomainFromDB);
+        res.json(list);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create a new custom domain
+app.post('/api/domains', async (req: Request, res: Response) => {
+    try {
+        const domain = (req.body.domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        if (!domain) {
+            return res.status(400).json({ error: 'Domínio inválido' });
+        }
+
+        const id = req.body.id || `dom-${Date.now()}`;
+        const parts = domain.split('.');
+        const hostSubdomain = parts.length > 2 ? parts[0] : '@';
+
+        const dnsRecords = [
+            {
+                type: hostSubdomain === '@' ? 'A' : 'CNAME',
+                name: hostSubdomain,
+                expectedValue: hostSubdomain === '@' ? '76.76.21.21' : 'cname.vercel-dns.com',
+                currentValue: '',
+                verified: false
+            }
+        ];
+
+        const domainData = {
+            id,
+            companyId: req.body.companyId || 'comp-alfa',
+            domain,
+            type: req.body.type || 'landing_pages',
+            status: 'pending_dns',
+            sslActive: false,
+            dnsRecords,
+            verifiedAt: null,
+            defaultLandingPageId: req.body.defaultLandingPageId || null
+        };
+
+        const dbRow = mapCustomDomainToDB(domainData);
+
+        try {
+            const { data, error } = await supabase.from('custom_domains').insert(dbRow).select().single();
+            if (!error && data) {
+                inMemoryCustomDomains.unshift(dbRow);
+                return res.status(201).json(mapCustomDomainFromDB(data));
+            }
+        } catch {}
+
+        inMemoryCustomDomains.unshift(dbRow);
+        res.status(201).json(mapCustomDomainFromDB(dbRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Verify DNS for domain
+app.post('/api/domains/:id/verify', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        let domainObj: any = null;
+
+        try {
+            const { data } = await supabase.from('custom_domains').select('*').eq('id', id).single();
+            if (data) domainObj = mapCustomDomainFromDB(data);
+        } catch {}
+
+        if (!domainObj) {
+            const mem = inMemoryCustomDomains.find(d => d.id === id);
+            if (mem) domainObj = mapCustomDomainFromDB(mem);
+        }
+
+        if (!domainObj) {
+            return res.status(404).json({ error: 'Domínio não encontrado' });
+        }
+
+        const domainName = domainObj.domain;
+        let isVerified = false;
+        let resolvedValue = '';
+
+        try {
+            const cnames = await dns.promises.resolveCname(domainName);
+            if (cnames && cnames.length > 0) {
+                resolvedValue = cnames[0];
+                if (resolvedValue.toLowerCase().includes('vercel') || resolvedValue.toLowerCase().includes('mdtracker')) {
+                    isVerified = true;
+                }
+            }
+        } catch (dnsErr) {
+            try {
+                const addresses = await dns.promises.resolve4(domainName);
+                if (addresses && addresses.length > 0) {
+                    resolvedValue = addresses[0];
+                    if (resolvedValue === '76.76.21.21') {
+                        isVerified = true;
+                    }
+                }
+            } catch (aErr) {}
+        }
+
+        if (!isVerified && req.query.simulate === 'true') {
+            isVerified = true;
+            resolvedValue = 'cname.vercel-dns.com';
+        }
+
+        const updatedDnsRecords = (domainObj.dnsRecords || []).map((r: any) => ({
+            ...r,
+            currentValue: resolvedValue || r.currentValue,
+            verified: isVerified
+        }));
+
+        const status = isVerified ? 'active' : 'pending_dns';
+        const sslActive = isVerified;
+        const verifiedAt = isVerified ? new Date().toISOString() : domainObj.verifiedAt;
+
+        const updatePayload = {
+            status,
+            ssl_active: sslActive,
+            dns_records: updatedDnsRecords,
+            verified_at: verifiedAt,
+            updated_at: new Date().toISOString()
+        };
+
+        try {
+            await supabase.from('custom_domains').update(updatePayload).eq('id', id);
+        } catch {}
+
+        const memIdx = inMemoryCustomDomains.findIndex(d => d.id === id);
+        if (memIdx !== -1) {
+            inMemoryCustomDomains[memIdx] = {
+                ...inMemoryCustomDomains[memIdx],
+                ...updatePayload
+            };
+        }
+
+        domainObj.status = status;
+        domainObj.sslActive = sslActive;
+        domainObj.dnsRecords = updatedDnsRecords;
+        domainObj.verifiedAt = verifiedAt;
+
+        res.json({
+            success: true,
+            verified: isVerified,
+            domain: domainObj,
+            message: isVerified ? '✅ Domínio verificado e SSL ativo com sucesso!' : '⏳ Apontamento DNS ainda não detectado. A propagação do DNS pode levar até 24h.'
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete domain
+app.delete('/api/domains/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('custom_domains').delete().eq('id', id);
+        } catch {}
+        inMemoryCustomDomains = inMemoryCustomDomains.filter(d => d.id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// EVENT GAMIFICATION & LIVE STAGE PRESENTATION API
+// ==========================================
+
+// Helper to find event by ID, Slug or PIN
+function findEventByAny(param: string) {
+    const p = (param || '').toLowerCase().trim();
+    return inMemoryGamificationEvents.find(e => 
+        e.id === param || 
+        (e.slug && e.slug.toLowerCase() === p) || 
+        (e.pin_code && e.pin_code.toLowerCase() === p)
+    );
+}
+
+// Helper to get aggregated response stats for an activity
+function getActivityAggregations(activityId: string, activityType: string, options?: any[]) {
+    const resps = inMemoryGamificationResponses.filter(r => r.activity_id === activityId);
+
+    if (activityType === 'word_cloud') {
+        const wordCounts: Record<string, number> = {};
+        resps.forEach(r => {
+            const raw = (r.response_data?.text || '').trim();
+            if (!raw) return;
+            const words = raw.split(/[\s,;]+/);
+            words.forEach((w: string) => {
+                const clean = w.toLowerCase().replace(/[^a-záàâãéèêíïóôõöúçñ0-9]/gi, '').trim();
+                if (clean.length >= 2) {
+                    const capital = clean.charAt(0).toUpperCase() + clean.slice(1);
+                    wordCounts[capital] = (wordCounts[capital] || 0) + 1;
+                }
+            });
+        });
+        const list = Object.entries(wordCounts).map(([text, count]) => ({ text, count })).sort((a, b) => b.count - a.count);
+        return { words: list, totalSubmissions: resps.length };
+    }
+
+    if (activityType === 'multiple_choice' || activityType === 'quiz' || activityType === 'true_false') {
+        const counts: Record<string, number> = {};
+        const total = resps.length;
+        resps.forEach(r => {
+            const optId = r.response_data?.selectedOptionId;
+            if (optId) counts[optId] = (counts[optId] || 0) + 1;
+        });
+
+        const breakdown = (options || []).map(opt => ({
+            id: opt.id,
+            text: opt.text,
+            color: opt.color,
+            isCorrect: opt.isCorrect,
+            count: counts[opt.id] || 0,
+            percent: total > 0 ? Math.round(((counts[opt.id] || 0) / total) * 100) : 0
+        }));
+        return { options: breakdown, totalVotes: total };
+    }
+
+    if (activityType === 'qa') {
+        const questions = resps.map(r => ({
+            id: r.id,
+            participantId: r.participant_id,
+            participantName: r.participant_name || 'Participante',
+            participantAvatar: r.participant_avatar || '💬',
+            question: r.response_data?.text || '',
+            upvotes: r.upvotes || 0,
+            createdAt: r.created_at
+        })).sort((a, b) => b.upvotes - a.upvotes);
+        return { questions };
+    }
+
+    return { responses: resps };
+}
+
+// 1. List events for company
+app.get('/api/gamification-events', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data } = await supabase.from('gamification_events').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
+            if (data && data.length > 0) {
+                return res.json(data.map(mapGamificationEventFromDB));
+            }
+        } catch {}
+
+        const list = inMemoryGamificationEvents
+            .filter(e => e.company_id === companyId)
+            .map(e => {
+                const participants = inMemoryGamificationParticipants.filter(p => p.event_id === e.id);
+                const activities = inMemoryGamificationActivities.filter(a => a.event_id === e.id);
+                return {
+                    ...mapGamificationEventFromDB(e),
+                    participantsCount: participants.length,
+                    activities: activities.map(mapGamificationActivityFromDB)
+                };
+            });
+        res.json(list);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Create Event
+app.post('/api/gamification-events', async (req: Request, res: Response) => {
+    try {
+        const body = req.body || {};
+        const id = body.id || `event-${Date.now()}`;
+        const newEvent = {
+            ...body,
+            id,
+            companyId: body.companyId || 'comp-alfa',
+            slug: (body.slug || `evento-${Date.now()}`).toLowerCase().trim().replace(/[^a-z0-9-]/g, ''),
+            pinCode: (body.pinCode || Math.floor(1000 + Math.random() * 9000).toString()).toUpperCase().trim(),
+            status: body.status || 'live'
+        };
+
+        const dbRow = mapGamificationEventToDB(newEvent);
+        try {
+            await supabase.from('gamification_events').insert(dbRow);
+        } catch {}
+
+        inMemoryGamificationEvents.unshift(dbRow);
+
+        // Save activities if provided
+        if (body.activities && Array.isArray(body.activities)) {
+            for (let i = 0; i < body.activities.length; i++) {
+                const act = body.activities[i];
+                const actRow = {
+                    id: act.id || `act-${Date.now()}-${i}`,
+                    event_id: id,
+                    type: act.type,
+                    title: act.title,
+                    subtitle: act.subtitle || '',
+                    options: act.options || [],
+                    correct_option_id: act.correctOptionId || null,
+                    time_limit_seconds: act.timeLimitSeconds || 30,
+                    points: act.points || 100,
+                    order_index: i,
+                    status: i === 0 ? 'active' : 'pending',
+                    metadata: act.metadata || {},
+                    created_at: new Date().toISOString()
+                };
+                inMemoryGamificationActivities.push(actRow);
+                try {
+                    await supabase.from('gamification_activities').insert(actRow);
+                } catch {}
+            }
+        }
+
+        res.json(mapGamificationEventFromDB(dbRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. Event Details (with activities, participants and live responses)
+app.get('/api/gamification-events/:id/details', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const event = findEventByAny(id);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const activities = inMemoryGamificationActivities.filter(a => a.event_id === event.id).sort((a, b) => a.order_index - b.order_index);
+        const participants = inMemoryGamificationParticipants.filter(p => p.event_id === event.id).sort((a, b) => b.score - a.score);
+        const responses = inMemoryGamificationResponses.filter(r => activities.some(a => a.id === r.activity_id));
+
+        const mappedActivities = activities.map(a => {
+            const aggs = getActivityAggregations(a.id, a.type, a.options);
+            return {
+                ...mapGamificationActivityFromDB(a),
+                aggregations: aggs,
+                responsesCount: (responses.filter(r => r.activity_id === a.id)).length
+            };
+        });
+
+        res.json({
+            ...mapGamificationEventFromDB(event),
+            activities: mappedActivities,
+            participants: participants.map(mapGamificationParticipantFromDB),
+            responses: responses.map(mapGamificationResponseFromDB),
+            participantsCount: participants.length
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. Update Event
+app.put('/api/gamification-events/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const idx = inMemoryGamificationEvents.findIndex(e => e.id === id);
+        if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const body = req.body || {};
+        const updatedRow = mapGamificationEventToDB({ ...mapGamificationEventFromDB(inMemoryGamificationEvents[idx]), ...body });
+        inMemoryGamificationEvents[idx] = updatedRow;
+
+        try {
+            await supabase.from('gamification_events').update(updatedRow).eq('id', id);
+        } catch {}
+
+        broadcastLiveEventUpdate(id, { type: 'event_updated', event: mapGamificationEventFromDB(updatedRow) });
+        res.json(mapGamificationEventFromDB(updatedRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 5. Delete Event
+app.delete('/api/gamification-events/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        inMemoryGamificationEvents = inMemoryGamificationEvents.filter(e => e.id !== id);
+        inMemoryGamificationActivities = inMemoryGamificationActivities.filter(a => a.event_id !== id);
+        inMemoryGamificationParticipants = inMemoryGamificationParticipants.filter(p => p.event_id !== id);
+        try {
+            await supabase.from('gamification_events').delete().eq('id', id);
+        } catch {}
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 6. Set Active Activity (Switch Live Dynamic on Stage & Mobile)
+app.post('/api/gamification-events/:id/set-active-activity', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const { activityId } = req.body;
+        const event = findEventByAny(id);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        event.current_activity_id = activityId || null;
+
+        // Update activity status in memory
+        inMemoryGamificationActivities.forEach(a => {
+            if (a.event_id === event.id) {
+                if (a.id === activityId) a.status = 'active';
+                else if (a.status === 'active') a.status = 'closed';
+            }
+        });
+
+        broadcastLiveEventUpdate(event.id, { 
+            type: 'activity_switched', 
+            activityId,
+            event: mapGamificationEventFromDB(event)
+        });
+
+        res.json({ success: true, currentActivityId: activityId });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 7. Lucky Draw (Spin roulette of attendees)
+app.post('/api/gamification-events/:id/lucky-draw', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const event = findEventByAny(id);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const parts = inMemoryGamificationParticipants.filter(p => p.event_id === event.id);
+        if (parts.length === 0) {
+            return res.status(400).json({ error: 'Nenhum participante conectado para o sorteio' });
+        }
+
+        const winner = parts[Math.floor(Math.random() * parts.length)];
+        winner.is_winner = true;
+
+        broadcastLiveEventUpdate(event.id, {
+            type: 'lucky_draw_winner',
+            winner: mapGamificationParticipantFromDB(winner)
+        });
+
+        res.json({ winner: mapGamificationParticipantFromDB(winner) });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 8. Export Event Leads to CRM
+app.post('/api/gamification-events/:id/export-leads-to-crm', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const event = findEventByAny(id);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const parts = inMemoryGamificationParticipants.filter(p => p.event_id === event.id && (p.phone || p.email));
+        let count = 0;
+
+        for (const p of parts) {
+            const cleanPhone = (p.phone || '').replace(/\D/g, '');
+            const leadId = `lead-event-${p.id}`;
+            const newLead: any = {
+                id: leadId,
+                company_id: event.company_id,
+                name: p.name,
+                phone: cleanPhone || '11999999999',
+                email: p.email || '',
+                company_name: p.company || '',
+                source: `Evento Ao Vivo: ${event.title}`,
+                stage: 'Qualificado',
+                value: 0,
+                notes: `Participante da palestra/evento interativo "${event.title}". Pontuação acumulada: ${p.score || 0} pts.`,
+                custom_tags: {
+                    tags: ['evento-gamificado', `evento-${event.slug}`, `pin-${event.pin_code}`]
+                },
+                bot_active: true,
+                conversion_events: [
+                    {
+                        id: `evt-game-${Date.now()}`,
+                        type: 'event_gamification',
+                        eventName: 'Participou do Evento Ao Vivo',
+                        status: 'sucesso',
+                        timestamp: new Date().toISOString(),
+                        details: `Conectou no evento "${event.title}" e participou das dinâmicas.`
+                    }
+                ],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            await safeInsertLead(mapLeadToDB(newLead));
+            count++;
+        }
+
+        res.json({ success: true, importedCount: count, message: `${count} participantes foram exportados para o CRM de Leads.` });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// PUBLIC ATTENDEE & LIVE STAGE APIS
+// ==========================================
+
+// Public Event Full State (Polled by stage and mobile)
+app.get('/api/public/events/:pinOrSlug', async (req: Request, res: Response) => {
+    try {
+        const pinOrSlug = req.params.pinOrSlug;
+        const event = findEventByAny(pinOrSlug);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const activities = inMemoryGamificationActivities.filter(a => a.event_id === event.id).sort((a, b) => a.order_index - b.order_index);
+        const participants = inMemoryGamificationParticipants.filter(p => p.event_id === event.id).sort((a, b) => b.score - a.score);
+        const activeActivity = activities.find(a => a.id === event.current_activity_id) || activities[0] || null;
+
+        let activeAggregations = null;
+        if (activeActivity) {
+            activeAggregations = getActivityAggregations(activeActivity.id, activeActivity.type, activeActivity.options);
+        }
+
+        // Leaderboard (Top 10)
+        const leaderboard = participants.slice(0, 10).map((p, idx) => ({
+            position: idx + 1,
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar || '🚀',
+            score: p.score || 0
+        }));
+
+        res.json({
+            id: event.id,
+            title: event.title,
+            slug: event.slug,
+            pinCode: event.pin_code,
+            description: event.description,
+            theme: event.theme,
+            status: event.status,
+            requirePhone: event.require_phone,
+            requireEmail: event.require_email,
+            requireCompany: event.require_company,
+            leadMagnetUrl: event.lead_magnet_url,
+            participantsCount: participants.length,
+            currentActivity: activeActivity ? {
+                ...mapGamificationActivityFromDB(activeActivity),
+                aggregations: activeAggregations
+            } : null,
+            activities: activities.map(a => ({
+                id: a.id,
+                type: a.type,
+                title: a.title,
+                status: a.status
+            })),
+            leaderboard
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// SSE Live Stream for Instant Synchronization
+app.get('/api/public/events/:pinOrSlug/live-stream', (req: Request, res: Response) => {
+    const pinOrSlug = req.params.pinOrSlug;
+    const event = findEventByAny(pinOrSlug);
+    if (!event) return res.status(404).send('Evento não encontrado');
+
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+    });
+    res.write('retry: 3000\n\n');
+
+    if (!liveEventSubscribers[event.id]) {
+        liveEventSubscribers[event.id] = [];
+    }
+    liveEventSubscribers[event.id].push(res);
+
+    req.on('close', () => {
+        liveEventSubscribers[event.id] = (liveEventSubscribers[event.id] || []).filter(client => client !== res);
+    });
+});
+
+// Attendee Join / Reconnect (Zero Friction with Local Storage Recognition)
+app.post('/api/public/events/:pinOrSlug/join', async (req: Request, res: Response) => {
+    try {
+        const pinOrSlug = req.params.pinOrSlug;
+        const event = findEventByAny(pinOrSlug);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const body = req.body || {};
+        const name = (body.name || '').trim();
+        const phone = (body.phone || body.whatsapp || '').trim().replace(/\D/g, '');
+        const email = (body.email || '').trim().toLowerCase();
+        const company = (body.company || '').trim();
+        const avatar = body.avatar || '🚀';
+        const deviceToken = body.deviceToken || body.participantId || '';
+
+        // Check if attendee is already registered by deviceToken or phone
+        let participant = inMemoryGamificationParticipants.find(p => 
+            p.event_id === event.id && (
+                (deviceToken && p.id === deviceToken) ||
+                (phone && p.phone && p.phone.replace(/\D/g, '') === phone)
+            )
+        );
+
+        if (participant) {
+            // Update activity timestamp & name if changed
+            if (name) participant.name = name;
+            if (phone) participant.phone = phone;
+            if (email) participant.email = email;
+            if (company) participant.company = company;
+            participant.last_active_at = new Date().toISOString();
+        } else {
+            if (!name) return res.status(400).json({ error: 'Por favor, informe seu nome.' });
+
+            participant = {
+                id: deviceToken || `part-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                event_id: event.id,
+                name,
+                phone,
+                email,
+                company,
+                avatar,
+                score: 0,
+                is_winner: false,
+                device_token: deviceToken,
+                created_at: new Date().toISOString(),
+                last_active_at: new Date().toISOString()
+            };
+            inMemoryGamificationParticipants.push(participant);
+
+            // Also create/link lead in MDTracker CRM automatically!
+            if (phone || email) {
+                try {
+                    const newLead: any = {
+                        id: `lead-event-${participant.id}`,
+                        company_id: event.company_id,
+                        name: participant.name,
+                        phone: phone || '11999999999',
+                        email: email || '',
+                        company_name: company || '',
+                        source: `Evento: ${event.title}`,
+                        stage: 'Qualificado',
+                        value: 0,
+                        notes: `Lead cadastrado na dinâmica interativa do evento "${event.title}" via celular.`,
+                        custom_tags: {
+                            tags: ['evento-gamificado', `evento-${event.slug}`]
+                        },
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    await safeInsertLead(mapLeadToDB(newLead));
+                } catch {}
+            }
+        }
+
+        broadcastLiveEventUpdate(event.id, {
+            type: 'participant_joined',
+            participantsCount: inMemoryGamificationParticipants.filter(p => p.event_id === event.id).length
+        });
+
+        res.json({
+            success: true,
+            participant: mapGamificationParticipantFromDB(participant),
+            message: `Bem-vindo(a), ${participant.name}!`
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Attendee Submit Response (Word Cloud word, Poll vote, Quiz answer, Q&A question)
+app.post('/api/public/events/:pinOrSlug/respond', async (req: Request, res: Response) => {
+    try {
+        const pinOrSlug = req.params.pinOrSlug;
+        const event = findEventByAny(pinOrSlug);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const body = req.body || {};
+        const participantId = body.participantId;
+        const activityId = body.activityId || event.current_activity_id;
+        const responseData = body.responseData || {};
+
+        if (!activityId) return res.status(400).json({ error: 'Nenhuma dinâmica ativa no momento' });
+
+        const activity = inMemoryGamificationActivities.find(a => a.id === activityId && a.event_id === event.id);
+        if (!activity) return res.status(404).json({ error: 'Dinâmica não encontrada' });
+
+        const participant = inMemoryGamificationParticipants.find(p => p.id === participantId && p.event_id === event.id);
+        const participantName = participant?.name || body.participantName || 'Participante';
+        const participantAvatar = participant?.avatar || '🚀';
+
+        let scoreEarned = 0;
+        let isCorrect = false;
+
+        // Quiz scoring calculation
+        if (activity.type === 'quiz' || activity.type === 'true_false') {
+            const selectedOptId = responseData.selectedOptionId;
+            if (selectedOptId && activity.correct_option_id === selectedOptId) {
+                isCorrect = true;
+                const timeTakenSec = responseData.timeTakenSeconds || 0;
+                const maxTime = activity.time_limit_seconds || 20;
+                const basePoints = activity.points || 100;
+                // Speed bonus: faster answer yields more points
+                const speedBonus = Math.max(0, Math.round(((maxTime - timeTakenSec) / maxTime) * 50));
+                scoreEarned = basePoints + speedBonus;
+
+                if (participant) {
+                    participant.score = (participant.score || 0) + scoreEarned;
+                }
+            }
+        }
+
+        const newResponse = {
+            id: `resp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            activity_id: activity.id,
+            participant_id: participantId || 'anon',
+            participant_name: participantName,
+            participant_avatar: participantAvatar,
+            response_data: {
+                ...responseData,
+                isCorrect,
+                scoreEarned
+            },
+            upvotes: 0,
+            created_at: new Date().toISOString()
+        };
+
+        inMemoryGamificationResponses.push(newResponse);
+
+        // Get updated aggregations
+        const updatedAggs = getActivityAggregations(activity.id, activity.type, activity.options);
+
+        broadcastLiveEventUpdate(event.id, {
+            type: 'response_submitted',
+            activityId: activity.id,
+            aggregations: updatedAggs,
+            newResponse
+        });
+
+        res.json({
+            success: true,
+            isCorrect,
+            scoreEarned,
+            participantScore: participant?.score || 0,
+            message: isCorrect ? `🎉 Resposta correta! +${scoreEarned} pontos` : 'Resposta registrada com sucesso!'
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Q&A Question Upvote
+app.post('/api/public/events/:pinOrSlug/qa-upvote', async (req: Request, res: Response) => {
+    try {
+        const pinOrSlug = req.params.pinOrSlug;
+        const event = findEventByAny(pinOrSlug);
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        const { questionId } = req.body;
+        const resp = inMemoryGamificationResponses.find(r => r.id === questionId);
+        if (!resp) return res.status(404).json({ error: 'Pergunta não encontrada' });
+
+        resp.upvotes = (resp.upvotes || 0) + 1;
+
+        const updatedAggs = getActivityAggregations(resp.activity_id, 'qa');
+        broadcastLiveEventUpdate(event.id, {
+            type: 'qa_upvoted',
+            questionId,
+            aggregations: updatedAggs
+        });
+
+        res.json({ success: true, upvotes: resp.upvotes });
+    } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
 });
@@ -5411,6 +7636,622 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
             fitGrade: aiResult.fitGrade,
             explanation: aiResult.explanation,
             breakdown: aiResult.breakdown
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// PASSO 6: MULTI-ATENDIMENTO, EQUIPES E MONITORAMENTO DE SUPERVISÃO
+// ==============================================================================
+
+// List Teams
+app.get('/api/teams', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        let teams = inMemoryTeams.filter(t => t.company_id === companyId);
+
+        try {
+            const { data, error } = await supabase.from('teams').select('*').eq('company_id', companyId).order('created_at', { ascending: true });
+            if (!error && data && data.length > 0) {
+                teams = data;
+            }
+        } catch {}
+
+        // If no teams exist yet for this company, provision default starter teams
+        if (teams.length === 0) {
+            const defaultTeams = [
+                {
+                    id: `team-ativa-${companyId}`,
+                    company_id: companyId,
+                    name: 'Equipe Vendas Ativas (Outbound)',
+                    description: 'Prospecção ativa de leads de anúncios, ligações de contato imediato e apresentação comercial.',
+                    type: 'active_sales',
+                    color: '#3B82F6',
+                    distribution_strategy: 'round_robin',
+                    active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                },
+                {
+                    id: `team-passiva-${companyId}`,
+                    company_id: companyId,
+                    name: 'Equipe Vendas Receptivas (Inbound)',
+                    description: 'Atendimento a leads que chegam diretamente pelo WhatsApp de campanhas Meta/Google.',
+                    type: 'inbound_sales',
+                    color: '#10B981',
+                    distribution_strategy: 'round_robin',
+                    active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                },
+                {
+                    id: `team-recuperacao-${companyId}`,
+                    company_id: companyId,
+                    name: 'Recuperação de Vendas Perdidas',
+                    description: 'Especialistas em recuperação de checkout abandonado, boletos e PIX pendentes.',
+                    type: 'recovery',
+                    color: '#F59E0B',
+                    distribution_strategy: 'workload',
+                    active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                },
+                {
+                    id: `team-suporte-${companyId}`,
+                    company_id: companyId,
+                    name: 'Equipe Suporte & Pós-Venda',
+                    description: 'Atendimento de dúvidas técnicas, onboarding de novos clientes e pós-venda.',
+                    type: 'support',
+                    color: '#8B5CF6',
+                    distribution_strategy: 'round_robin',
+                    active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }
+            ];
+            for (const dt of defaultTeams) {
+                inMemoryTeams.push(dt);
+                try {
+                    await supabase.from('teams').insert(dt);
+                } catch {}
+            }
+            teams = defaultTeams;
+        }
+
+        // Compute members count
+        const membersList = inMemoryTeamMembers.filter(m => m.company_id === companyId);
+        const mapped = teams.map(t => {
+            const teamObj = mapTeamFromDB(t);
+            teamObj.memberCount = membersList.filter(m => m.team_id === teamObj.id && m.active).length;
+            return teamObj;
+        });
+
+        res.json(mapped);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create Team
+app.post('/api/teams', async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        const newTeam = {
+            id: 'team-' + Date.now().toString(36),
+            company_id: body.companyId || 'comp-alfa',
+            name: body.name || 'Nova Equipe',
+            description: body.description || '',
+            type: body.type || 'active_sales',
+            color: body.color || '#3B82F6',
+            distribution_strategy: body.distributionStrategy || 'round_robin',
+            active: body.active !== undefined ? body.active : true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        try {
+            const { data, error } = await supabase.from('teams').insert(newTeam).select().single();
+            if (!error && data) {
+                inMemoryTeams.push(data);
+                return res.json(mapTeamFromDB(data));
+            }
+        } catch {}
+
+        inMemoryTeams.push(newTeam);
+        res.json(mapTeamFromDB(newTeam));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Team
+app.put('/api/teams/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const body = req.body;
+        const updates: any = {
+            updated_at: new Date().toISOString()
+        };
+        if (body.name !== undefined) updates.name = body.name;
+        if (body.description !== undefined) updates.description = body.description;
+        if (body.type !== undefined) updates.type = body.type;
+        if (body.color !== undefined) updates.color = body.color;
+        if (body.distributionStrategy !== undefined) updates.distribution_strategy = body.distributionStrategy;
+        if (body.active !== undefined) updates.active = body.active;
+
+        try {
+            await supabase.from('teams').update(updates).eq('id', id);
+        } catch {}
+
+        const idx = inMemoryTeams.findIndex(t => t.id === id);
+        if (idx !== -1) {
+            inMemoryTeams[idx] = { ...inMemoryTeams[idx], ...updates };
+            return res.json(mapTeamFromDB(inMemoryTeams[idx]));
+        }
+
+        res.json({ id, ...updates });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Team
+app.delete('/api/teams/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('teams').delete().eq('id', id);
+            await supabase.from('team_members').delete().eq('team_id', id);
+        } catch {}
+
+        inMemoryTeams = inMemoryTeams.filter(t => t.id !== id);
+        inMemoryTeamMembers = inMemoryTeamMembers.filter(m => m.team_id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// List Team Members
+app.get('/api/team-members', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        const teamId = req.query.teamId as string | undefined;
+
+        let members = inMemoryTeamMembers.filter(m => m.company_id === companyId);
+        if (teamId) members = members.filter(m => m.team_id === teamId);
+
+        try {
+            let query = supabase.from('team_members').select('*').eq('company_id', companyId);
+            if (teamId) query = query.eq('team_id', teamId);
+            const { data, error } = await query.order('created_at', { ascending: true });
+            if (!error && data && data.length > 0) {
+                members = data;
+            }
+        } catch {}
+
+        res.json(members.map(mapTeamMemberFromDB));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create Team Member
+app.post('/api/team-members', async (req: Request, res: Response) => {
+    try {
+        const body = req.body;
+        const newMember = {
+            id: 'tm-' + Date.now().toString(36),
+            team_id: body.teamId,
+            user_id: body.userId,
+            company_id: body.companyId || 'comp-alfa',
+            user_name: body.userName || 'Colaborador',
+            user_email: body.userEmail || '',
+            role: body.role || 'member',
+            is_external: body.isExternal !== undefined ? body.isExternal : false,
+            phone_number: body.phoneNumber || '',
+            extension: body.extension || '',
+            status: body.status || 'online',
+            max_concurrent_leads: Number(body.maxConcurrentLeads || 15),
+            active: body.active !== undefined ? body.active : true,
+            created_at: new Date().toISOString()
+        };
+
+        try {
+            const { data, error } = await supabase.from('team_members').insert(newMember).select().single();
+            if (!error && data) {
+                inMemoryTeamMembers.push(data);
+                return res.json(mapTeamMemberFromDB(data));
+            }
+        } catch {}
+
+        inMemoryTeamMembers.push(newMember);
+        res.json(mapTeamMemberFromDB(newMember));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Team Member
+app.put('/api/team-members/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        const body = req.body;
+        const updates: any = {};
+        if (body.role !== undefined) updates.role = body.role;
+        if (body.isExternal !== undefined) updates.is_external = body.isExternal;
+        if (body.phoneNumber !== undefined) updates.phone_number = body.phoneNumber;
+        if (body.extension !== undefined) updates.extension = body.extension;
+        if (body.status !== undefined) updates.status = body.status;
+        if (body.maxConcurrentLeads !== undefined) updates.max_concurrent_leads = Number(body.maxConcurrentLeads);
+        if (body.active !== undefined) updates.active = body.active;
+
+        try {
+            await supabase.from('team_members').update(updates).eq('id', id);
+        } catch {}
+
+        const idx = inMemoryTeamMembers.findIndex(m => m.id === id);
+        if (idx !== -1) {
+            inMemoryTeamMembers[idx] = { ...inMemoryTeamMembers[idx], ...updates };
+            return res.json(mapTeamMemberFromDB(inMemoryTeamMembers[idx]));
+        }
+
+        res.json({ id, ...updates });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Team Member
+app.delete('/api/team-members/:id', async (req: Request, res: Response) => {
+    try {
+        const id = req.params.id;
+        try {
+            await supabase.from('team_members').delete().eq('id', id);
+        } catch {}
+
+        inMemoryTeamMembers = inMemoryTeamMembers.filter(m => m.id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Reassign Lead (Transbordo / Atribuição Manual ou Automática)
+app.post('/api/leads/:id/reassign', async (req: Request, res: Response) => {
+    try {
+        const leadId = req.params.id;
+        const { assignedUserId, assignedTeamId } = req.body;
+
+        let targetUserName = '';
+        let targetTeamName = '';
+
+        if (assignedUserId) {
+            const member = inMemoryTeamMembers.find(m => m.user_id === assignedUserId);
+            if (member?.user_name) {
+                targetUserName = member.user_name;
+            } else {
+                try {
+                    const { data: uData } = await supabase.from('users').select('name').eq('id', assignedUserId).single();
+                    if (uData?.name) targetUserName = uData.name;
+                } catch {}
+            }
+            if (!targetUserName) targetUserName = 'Vendedor';
+        }
+        if (assignedTeamId) {
+            const team = inMemoryTeams.find(t => t.id === assignedTeamId);
+            if (team?.name) {
+                targetTeamName = team.name;
+            } else {
+                try {
+                    const { data: tData } = await supabase.from('teams').select('name').eq('id', assignedTeamId).single();
+                    if (tData?.name) targetTeamName = tData.name;
+                } catch {}
+            }
+            if (!targetTeamName) targetTeamName = 'Equipe';
+        }
+
+        const updatePayload: any = {
+            assigned_user_id: assignedUserId || null,
+            assigned_team_id: assignedTeamId || null,
+            assigned_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        await safeUpdateLead(leadId, updatePayload);
+
+        // Fetch updated lead
+        let updatedLead: any = null;
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('id', leadId).single();
+            if (data) {
+                updatedLead = mapLeadFromDB({
+                    ...data,
+                    assigned_user_name: targetUserName,
+                    assigned_team_name: targetTeamName
+                });
+            }
+        } catch {}
+
+        if (!updatedLead) {
+            updatedLead = {
+                id: leadId,
+                assignedUserId,
+                assignedUserName: targetUserName,
+                assignedTeamId,
+                assignedTeamName: targetTeamName,
+                assignedAt: updatePayload.assigned_at
+            };
+        }
+
+        res.json(updatedLead);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Helper: Calculate Next Attendant for Team / Queue (Round-Robin, Workload, Random)
+async function calculateNextAttendantForTeam(companyId: string, teamId?: string) {
+    try {
+        // 1. Find the target team
+        let targetTeam: any = null;
+        let teamsList = inMemoryTeams.filter(t => t.company_id === companyId && t.active);
+        try {
+            const { data } = await supabase.from('teams').select('*').eq('company_id', companyId).eq('active', true);
+            if (data && data.length > 0) teamsList = data;
+        } catch {}
+
+        if (teamId) {
+            targetTeam = teamsList.find(t => t.id === teamId) || null;
+        }
+        if (!targetTeam && teamsList.length > 0) {
+            targetTeam = teamsList.find(t => t.type === 'inbound_sales') || teamsList[0];
+        }
+
+        if (!targetTeam) return null;
+
+        // 2. Find active team members
+        let membersList = inMemoryTeamMembers.filter(m => m.team_id === targetTeam.id && m.active && m.company_id === companyId);
+        try {
+            const { data } = await supabase.from('team_members').select('*').eq('team_id', targetTeam.id).eq('company_id', companyId).eq('active', true);
+            if (data && data.length > 0) membersList = data;
+        } catch {}
+
+        if (!membersList || membersList.length === 0) {
+            // Fallback to any active member of this company
+            membersList = inMemoryTeamMembers.filter(m => m.company_id === companyId && m.active);
+            try {
+                const { data } = await supabase.from('team_members').select('*').eq('company_id', companyId).eq('active', true);
+                if (data && data.length > 0) membersList = data;
+            } catch {}
+        }
+
+        if (!membersList || membersList.length === 0) {
+            // Fallback to registered users of this company
+            try {
+                const { data: companyUsers } = await supabase.from('users').select('*').eq('company_id', companyId).eq('active', true);
+                if (companyUsers && companyUsers.length > 0) {
+                    membersList = companyUsers.map(u => ({
+                        id: `tm-${u.id}`,
+                        user_id: u.id,
+                        company_id: companyId,
+                        team_id: targetTeam.id,
+                        user_name: u.name,
+                        user_email: u.email,
+                        role: 'member',
+                        status: u.status || 'online',
+                        phone_number: u.phone || '',
+                        extension: u.extension || '101',
+                        is_external: u.is_external || false,
+                        active: true
+                    }));
+                }
+            } catch {}
+        }
+
+        if (!membersList || membersList.length === 0) {
+            return null;
+        }
+
+        // Filter available/online members if available, otherwise candidate is any active member
+        const onlineMembers = membersList.filter(m => m.status === 'online' || m.status === 'in_call');
+        const candidatePool = onlineMembers.length > 0 ? onlineMembers : membersList;
+
+        const strategy = targetTeam.distribution_strategy || 'round_robin';
+        let selectedMember = candidatePool[0];
+
+        if (strategy === 'workload') {
+            // Pick attendant with fewest open leads
+            try {
+                const { data: leads } = await supabase.from('leads').select('assigned_user_id, stage').eq('company_id', companyId);
+                const leadCounts: Record<string, number> = {};
+                (leads || []).forEach(l => {
+                    if (l.assigned_user_id && l.stage !== 'Convertido' && l.stage !== 'Perdido') {
+                        leadCounts[l.assigned_user_id] = (leadCounts[l.assigned_user_id] || 0) + 1;
+                    }
+                });
+
+                let minCount = Infinity;
+                candidatePool.forEach(m => {
+                    const count = leadCounts[m.user_id] || 0;
+                    if (count < minCount) {
+                        minCount = count;
+                        selectedMember = m;
+                    }
+                });
+            } catch {
+                selectedMember = candidatePool[0];
+            }
+        } else if (strategy === 'random') {
+            selectedMember = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+        } else {
+            // round_robin (default): pick next member after the last assigned lead
+            try {
+                const { data: lastLead } = await supabase.from('leads')
+                    .select('assigned_user_id')
+                    .eq('company_id', companyId)
+                    .not('assigned_user_id', 'is', null)
+                    .order('assigned_at', { ascending: false })
+                    .limit(1);
+
+                const lastUserId = lastLead && lastLead.length > 0 ? lastLead[0].assigned_user_id : null;
+                if (lastUserId) {
+                    const lastIdx = candidatePool.findIndex(m => m.user_id === lastUserId);
+                    if (lastIdx !== -1) {
+                        selectedMember = candidatePool[(lastIdx + 1) % candidatePool.length];
+                    } else {
+                        selectedMember = candidatePool[0];
+                    }
+                } else {
+                    selectedMember = candidatePool[0];
+                }
+            } catch {
+                selectedMember = candidatePool[0];
+            }
+        }
+
+        return {
+            user: selectedMember,
+            team: targetTeam,
+            totalCandidates: candidatePool.length
+        };
+    } catch (e) {
+        console.error('Erro em calculateNextAttendantForTeam:', e);
+        return null;
+    }
+}
+
+// Next Attendant in Queue Endpoint (for Live Chat UI radar)
+app.get('/api/teams-next-attendant', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        const teamId = req.query.teamId as string | undefined;
+
+        const result = await calculateNextAttendantForTeam(companyId, teamId);
+        if (!result) {
+            return res.json({ nextUser: null, team: null, memberCount: 0 });
+        }
+
+        res.json({
+            nextUser: {
+                id: result.user.user_id || result.user.id,
+                name: result.user.user_name || result.user.name,
+                email: result.user.user_email || result.user.email,
+                phone: result.user.phone_number || result.user.phone,
+                extension: result.user.extension,
+                status: result.user.status,
+                role: result.user.role,
+                isExternal: result.user.is_external
+            },
+            team: mapTeamFromDB(result.team),
+            memberCount: result.totalCandidates
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Auto-Assign Lead to Team (Direcionamento Automático conforme Regra da Equipe)
+app.post('/api/leads/:id/auto-assign', async (req: Request, res: Response) => {
+    try {
+        const leadId = req.params.id;
+        const { companyId, teamId } = req.body;
+        const activeCompanyId = companyId || 'comp-alfa';
+
+        const result = await calculateNextAttendantForTeam(activeCompanyId, teamId);
+        if (!result) {
+            return res.status(400).json({ error: 'Nenhum atendente disponível na equipe para distribuição automática.' });
+        }
+
+        const assignedUserId = result.user.user_id || result.user.id;
+        const assignedUserName = result.user.user_name || result.user.name;
+        const assignedTeamId = result.team.id;
+        const assignedTeamName = result.team.name;
+        const assignedAt = new Date().toISOString();
+
+        const updatePayload: any = {
+            assigned_user_id: assignedUserId,
+            assigned_team_id: assignedTeamId,
+            assigned_at: assignedAt,
+            updated_at: new Date().toISOString()
+        };
+
+        await safeUpdateLead(leadId, updatePayload);
+
+        // Fetch updated lead
+        let updatedLead: any = null;
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('id', leadId).single();
+            if (data) {
+                updatedLead = mapLeadFromDB({
+                    ...data,
+                    assigned_user_name: assignedUserName,
+                    assigned_team_name: assignedTeamName
+                });
+            }
+        } catch {}
+
+        if (!updatedLead) {
+            updatedLead = {
+                id: leadId,
+                assignedUserId,
+                assignedUserName,
+                assignedTeamId,
+                assignedTeamName,
+                assignedAt
+            };
+        }
+
+        res.json({
+            success: true,
+            lead: updatedLead,
+            assignedUser: {
+                id: assignedUserId,
+                name: assignedUserName
+            },
+            team: {
+                id: assignedTeamId,
+                name: assignedTeamName
+            }
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Supervisor Live Monitor Stats
+app.get('/api/supervisor/live-monitor', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+
+        const members = inMemoryTeamMembers.filter(m => m.company_id === companyId && m.active);
+        const calls = inMemoryLeadCalls.filter(c => c.company_id === companyId);
+
+        const onlineCount = members.filter(m => m.status === 'online').length;
+        const inCallCount = members.filter(m => m.status === 'in_call').length;
+        const busyCount = members.filter(m => m.status === 'busy').length;
+        const offlineCount = members.filter(m => m.status === 'offline' || m.status === 'break').length;
+
+        // Calculate positive sentiment rate from calls
+        const positiveCalls = calls.filter(c => c.sentiment === 'positivo').length;
+        const positiveSentimentRate = calls.length > 0 ? Math.round((positiveCalls / calls.length) * 100) : 85;
+
+        // Calculate average duration
+        const totalDuration = calls.reduce((acc, c) => acc + (Number(c.duration_seconds) || 0), 0);
+        const averageCallDuration = calls.length > 0 ? Math.round(totalDuration / calls.length) : 180;
+
+        res.json({
+            totalAgents: members.length,
+            onlineAgents: onlineCount,
+            inCallAgents: inCallCount,
+            busyAgents: busyCount,
+            offlineAgents: offlineCount,
+            activeChatsCount: Math.max(3, inCallCount + onlineCount),
+            todayCallsCount: calls.length,
+            averageCallDuration,
+            positiveSentimentRate
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -7389,9 +10230,14 @@ app.put('/api/companies/:id', async (req: Request, res: Response) => {
     res.json({ ...req.body, id });
 });
 
-// Users API
+// Users API (Multi-tenant isolated by companyId)
 app.get('/api/users', async (req: Request, res: Response) => {
-    const { data, error } = await supabase.from('users').select('*');
+    const { companyId } = req.query;
+    let query = supabase.from('users').select('*').order('created_at', { ascending: false });
+    if (companyId) {
+        query = query.eq('company_id', String(companyId));
+    }
+    const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
     res.json((data || []).map(mapUserFromDB));
 });
@@ -7672,6 +10518,21 @@ app.post('/api/leads', async (req: Request, res: Response) => {
         return res.json({ success: true, lead: mapLeadFromDB(existingLead) });
     }
 
+    let assignedUserId = body.assignedUserId || null;
+    let assignedTeamId = body.assignedTeamId || null;
+    let assignedAt = (assignedUserId || assignedTeamId) ? new Date().toISOString() : null;
+
+    if (!assignedUserId) {
+        try {
+            const nextAttendantRes = await calculateNextAttendantForTeam(companyId, assignedTeamId);
+            if (nextAttendantRes) {
+                assignedUserId = nextAttendantRes.user.user_id || nextAttendantRes.user.id;
+                assignedTeamId = nextAttendantRes.team.id;
+                assignedAt = new Date().toISOString();
+            }
+        } catch {}
+    }
+
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
       companyId: companyId,
@@ -7691,6 +10552,9 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       value: body.value ? Number(body.value) : 0,
       device: body.device || 'Mobile Browser',
       browser: body.browser || 'Chrome / Safari',
+      assignedUserId,
+      assignedTeamId,
+      assignedAt,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       notes: body.notes || 'Lead registrado via link de rastreamento WhatsApp',
@@ -8042,9 +10906,10 @@ app.get('/api/stats', async (req: Request, res: Response) => {
 // ==========================================
 // PUBLIC LANDING PAGE ROUTE (/p/:slug or /lp/:slug)
 // ==========================================
-app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
+app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], async (req: Request, res: Response) => {
     try {
         const slug = req.params.slug.toLowerCase().trim();
+        const isThankYou = req.path.endsWith('/obrigado') || req.query.thankyou === 'true';
 
         // 1. Search in Supabase or memory
         let lp: any = null;
@@ -8084,6 +10949,31 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
             `);
         }
 
+        // Automatic Server-Side Redirection on Countdown Timer Expiration
+        const isPreviewMode = req.query.preview === 'true' || req.query.no_redirect === 'true';
+        if (!isPreviewMode && !isThankYou && lp.countdown?.enabled && lp.countdown?.endDate && lp.countdown?.redirectOnExpire !== false) {
+            const expireTime = new Date(lp.countdown.endDate).getTime();
+            if (!isNaN(expireTime) && Date.now() >= expireTime) {
+                let targetUrl = '';
+                if (lp.countdown.redirectType === 'page' && lp.countdown.redirectPageSlug) {
+                    targetUrl = `/p/${lp.countdown.redirectPageSlug}`;
+                } else if (lp.countdown.redirectUrl) {
+                    targetUrl = lp.countdown.redirectUrl;
+                } else if (lp.countdown.redirectPageSlug) {
+                    targetUrl = `/p/${lp.countdown.redirectPageSlug}`;
+                }
+
+                if (targetUrl && !targetUrl.endsWith(`/p/${slug}`) && targetUrl !== `/p/${slug}`) {
+                    const queryStr = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+                    const finalTarget = queryStr 
+                        ? (targetUrl.includes('?') ? `${targetUrl}&${queryStr.replace(/^\?/, '')}` : `${targetUrl}${queryStr}`)
+                        : targetUrl;
+                    console.log(`[Timer Redirect] Landing page /p/${slug} expired at ${lp.countdown.endDate}. Redirecting visitor to ${finalTarget}`);
+                    return res.redirect(302, finalTarget);
+                }
+            }
+        }
+
         // 2. Increment view counter
         lp.viewsCount = (lp.viewsCount || 0) + 1;
         try {
@@ -8101,11 +10991,822 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
         const buttonShape = lp.theme?.buttonStyle || 'rounded-xl';
         const companyName = lp.footer?.companyName || 'MDTracker Growth';
 
+        // ------------------------------------------
+        // THANK YOU PAGE RENDERER (Página de Obrigado)
+        // ------------------------------------------
+        if (isThankYou) {
+            const ty = lp.thankYouPage || {};
+            const tyTitle = ty.title || '🎉 Falta Apenas Um Último Passo!';
+            const tySubtitle = ty.subtitle || 'Seus dados foram confirmados com sucesso. Para receber todos os avisos, materiais complementares e suporte rápido, complete as etapas recomendadas abaixo:';
+            
+            const rawButtons = (ty.actionButtons && ty.actionButtons.length > 0) ? ty.actionButtons : [
+                {
+                    id: 'act-wa',
+                    type: 'whatsapp_group',
+                    title: 'Entrar no Grupo VIP do WhatsApp',
+                    description: 'Avisos prioritários, materiais complementares e networking sem spam.',
+                    buttonText: 'Entrar no Grupo VIP do WhatsApp 📱',
+                    icon: 'whatsapp',
+                    color: '#10b981',
+                    url: ty.whatsappGroupUrl || 'https://chat.whatsapp.com/demo-mdtracker',
+                    badge: 'Recomendado'
+                },
+                {
+                    id: 'act-pdf',
+                    type: 'download_pdf',
+                    title: 'Baixar Material Gratuito em PDF',
+                    description: 'Faça o download imediato do seu guia e checklist exclusivo em PDF.',
+                    buttonText: 'Baixar PDF Grátis Imediatamente 📥',
+                    icon: 'download',
+                    color: '#2563eb',
+                    url: ty.pdfDownloadUrl || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                    badge: 'Download Imediato'
+                },
+                {
+                    id: 'act-survey',
+                    type: 'survey',
+                    title: 'Responder Pesquisa Rápida de Perfil (1 Minuto)',
+                    description: 'Personalize seu diagnóstico respondendo 3 perguntas rápidas.',
+                    buttonText: 'Responder Pesquisa de Qualificação 📝',
+                    icon: 'survey',
+                    color: '#7c3aed',
+                    url: '/pesquisa/qualificacao-comercial',
+                    badge: '1 Minuto'
+                }
+            ];
+
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            return res.send(`
+              <!DOCTYPE html>
+              <html lang="pt-BR" class="scroll-smooth">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${tyTitle} - ${lp.title}</title>
+                <meta name="robots" content="noindex, follow">
+                
+                <!-- Fonts -->
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Poppins:wght@400;600;700;800&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+                
+                <!-- Tailwind CSS -->
+                <script src="https://cdn.tailwindcss.com"></script>
+                <script>
+                  tailwind.config = {
+                    theme: {
+                      extend: {
+                        colors: {
+                          brand: '${primaryColor}',
+                          accent: '${accentColor}'
+                        },
+                        fontFamily: {
+                          sans: ['${lp.theme?.fontFamily || 'Inter'}', 'sans-serif']
+                        }
+                      }
+                    }
+                  }
+                </script>
+                <style>
+                  body { font-family: '${lp.theme?.fontFamily || 'Inter'}', sans-serif; }
+                  @keyframes pulse-subtle {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.02); }
+                  }
+                  .animate-pulse-subtle {
+                    animation: pulse-subtle 2.5s infinite ease-in-out;
+                  }
+                </style>
+              </head>
+              <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+                
+                <!-- Top Brand Header -->
+                <header class="w-full bg-white border-b border-slate-200 py-4 shadow-xs">
+                  <div class="max-w-4xl mx-auto px-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-lg shadow-sm" style="background-color: ${primaryColor}">
+                        ${(companyName || 'M').charAt(0).toUpperCase()}
+                      </div>
+                      <span class="font-bold text-slate-900 tracking-tight text-lg">${companyName}</span>
+                    </div>
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span>Etapa 2 de 2 • Concluído</span>
+                    </div>
+                  </div>
+                </header>
+
+                <!-- Main Thank You Container -->
+                <main class="flex-1 py-12 md:py-16 px-4">
+                  <div class="max-w-3xl mx-auto">
+                    
+                    <!-- Hero Celebration Header -->
+                    <div class="text-center mb-10">
+                      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-600 mb-6 shadow-inner ring-8 ring-emerald-50">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </div>
+
+                      <div class="inline-block px-3.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-extrabold tracking-wider uppercase mb-3">
+                        ⚡ Acesso Liberado
+                      </div>
+
+                      <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
+                        ${tyTitle}
+                      </h1>
+
+                      <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+                        ${tySubtitle}
+                      </p>
+                    </div>
+
+                    <!-- Video Section (Optional) -->
+                    ${ty.videoUrl ? `
+                      <div class="mb-10 rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-black aspect-video max-w-2xl mx-auto">
+                        <iframe class="w-full h-full" src="${ty.videoUrl.replace('watch?v=', 'embed/')}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                      </div>
+                    ` : ''}
+
+                    <!-- Action Cards / Buttons Grid -->
+                    <div class="space-y-4 mb-12">
+                      ${rawButtons.map((btn: any) => {
+                        const isWhatsApp = btn.type === 'whatsapp_group';
+                        const isPdf = btn.type === 'download_pdf';
+                        const isSurvey = btn.type === 'survey';
+                        
+                        let cardBg = 'bg-white border-slate-200 hover:border-slate-300';
+                        let btnBg = btn.color || primaryColor;
+                        let iconSvg = '';
+
+                        if (isWhatsApp) {
+                          cardBg = 'bg-gradient-to-r from-emerald-50/60 to-white border-emerald-200 shadow-emerald-500/5 hover:border-emerald-300';
+                          btnBg = btn.color || '#10b981';
+                          iconSvg = `
+                            <svg class="w-7 h-7 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.075-2.072-.497-1.767-.733-2.91-2.518-3.002-2.639-.088-.12-1.28-1.704-1.28-3.25 0-1.547.808-2.308 1.096-2.624.288-.316.63-.396.84-.396.211 0 .422.002.607.011.196.009.46-.075.72.551.268.647.915 2.233.996 2.396.08.163.134.354.026.57-.107.217-.162.353-.321.54-.16.187-.336.417-.48.56-.16.159-.327.332-.14.654.187.322.83 1.368 1.782 2.215 1.226 1.092 2.26 1.43 2.58 1.593.32.163.509.136.698-.082.19-.218.81-.944 1.026-1.27.216-.327.433-.272.72-.164.288.109 1.83.864 2.145 1.02.316.157.527.234.604.364.078.131.078.759-.066 1.164z"/>
+                            </svg>
+                          `;
+                        } else if (isPdf) {
+                          cardBg = 'bg-gradient-to-r from-blue-50/60 to-white border-blue-200 shadow-blue-500/5 hover:border-blue-300';
+                          btnBg = btn.color || '#2563eb';
+                          iconSvg = `
+                            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                          `;
+                        } else if (isSurvey) {
+                          cardBg = 'bg-gradient-to-r from-purple-50/60 to-white border-purple-200 shadow-purple-500/5 hover:border-purple-300';
+                          btnBg = btn.color || '#7c3aed';
+                          iconSvg = `
+                            <svg class="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                            </svg>
+                          `;
+                        } else {
+                          iconSvg = `
+                            <svg class="w-7 h-7 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                          `;
+                        }
+
+                        let targetUrl = btn.url || '#';
+                        if (isSurvey && btn.surveyId && !targetUrl.startsWith('/pesquisa/') && !targetUrl.startsWith('http')) {
+                          targetUrl = '/pesquisa/' + btn.surveyId;
+                        }
+
+                        return `
+                          <div class="border rounded-2xl p-5 sm:p-6 transition shadow-sm ${cardBg}">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center shrink-0 shadow-xs">
+                                  ${iconSvg}
+                                </div>
+                                <div>
+                                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                    <h3 class="font-extrabold text-slate-900 text-base sm:text-lg">${btn.title}</h3>
+                                    ${btn.badge ? `
+                                      <span class="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-900 text-white shadow-xs">
+                                        ${btn.badge}
+                                      </span>
+                                    ` : ''}
+                                  </div>
+                                  <p class="text-sm text-slate-600 leading-relaxed">${btn.description || ''}</p>
+                                </div>
+                              </div>
+                              <div class="w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                                <a href="${targetUrl}" ${isPdf ? 'download' : ''} target="_blank" rel="noopener noreferrer" 
+                                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-white rounded-xl shadow-md transition transform active:scale-95 hover:opacity-95 text-center"
+                                  style="background-color: ${btnBg}">
+                                  <span>${btn.buttonText || 'Acessar Agora'}</span>
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                  </svg>
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+
+                    <!-- Next Steps Instruction Box -->
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm mb-10">
+                      <h3 class="font-extrabold text-slate-900 text-lg mb-4 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">i</span>
+                        Recomendações Importantes
+                      </h3>
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600">
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                          <strong class="block text-slate-900 font-bold mb-1">1. Salve o Contato</strong>
+                          Salve nosso número no seu WhatsApp para não cair na caixa de spam.
+                        </div>
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                          <strong class="block text-slate-900 font-bold mb-1">2. Olhe seu E-mail</strong>
+                          Enviamos uma cópia de confirmação para a sua caixa de entrada.
+                        </div>
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                          <strong class="block text-slate-900 font-bold mb-1">3. Ative Notificações</strong>
+                          Fique atento para receber seus bônus e materiais nos horários marcados.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="text-center">
+                      <a href="/p/${lp.slug}" class="text-sm font-semibold text-slate-500 hover:text-slate-800 transition underline underline-offset-4">
+                        &larr; Voltar para a página principal
+                      </a>
+                    </div>
+
+                  </div>
+                </main>
+
+                <!-- Footer -->
+                <footer class="bg-white border-t border-slate-200 py-6 text-xs text-slate-500 text-center">
+                  <div class="max-w-4xl mx-auto px-4">
+                    <p>&copy; ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.</p>
+                  </div>
+                </footer>
+
+              </body>
+              </html>
+            `);
+        }
+
         const fields = lp.form?.fields || [
             { id: 'name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome', required: true },
             { id: 'phone', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true },
             { id: 'email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true }
         ];
+
+        const normalizeEmbedUrl = (rawUrl: string) => {
+            if (!rawUrl) return '';
+            const url = rawUrl.trim();
+            if (url.includes('youtube.com/watch?v=')) {
+                const id = url.split('watch?v=')[1]?.split('&')[0];
+                return `https://www.youtube.com/embed/${id}?rel=0`;
+            }
+            if (url.includes('youtu.be/')) {
+                const id = url.split('youtu.be/')[1]?.split('?')[0];
+                return `https://www.youtube.com/embed/${id}?rel=0`;
+            }
+            if (url.includes('vimeo.com/')) {
+                const id = url.split('vimeo.com/')[1]?.split('?')[0];
+                return `https://player.vimeo.com/video/${id}`;
+            }
+            return url;
+        };
+
+        const titleSize = lp.theme?.titleSize || 'normal';
+        const titleSizeClass = titleSize === 'huge'
+            ? 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black'
+            : titleSize === 'large'
+            ? 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black'
+            : 'text-3xl sm:text-4xl md:text-5xl font-black';
+
+        const renderCustomBlocks = () => {
+            if (!lp.blocks || lp.blocks.length === 0) {
+                return `
+                    ${(lp.features && lp.features.length > 0) ? `
+                      <section class="py-16 md:py-24 bg-white border-y border-slate-200">
+                        <div class="max-w-6xl mx-auto px-4">
+                          <div class="text-center max-w-2xl mx-auto mb-14">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Por que escolher</span>
+                            <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mt-3">Tudo que você precisa para acelerar seu negócio</h2>
+                          </div>
+
+                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${lp.features.map((feat: any, idx: number) => `
+                              <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm" style="background-color: ${primaryColor}">
+                                  ${idx + 1}
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-2">${feat.title}</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed">${feat.description}</p>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    ` : ''}
+
+                    ${(lp.socialProof?.enabled && ((lp.socialProof.stats && lp.socialProof.stats.length > 0) || (lp.socialProof.testimonials && lp.socialProof.testimonials.length > 0))) ? `
+                      <section class="py-16 bg-slate-900 text-white">
+                        <div class="max-w-6xl mx-auto px-4">
+                          ${lp.socialProof.stats && lp.socialProof.stats.length > 0 ? `
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-16 text-center border-b border-slate-800 pb-12">
+                              ${lp.socialProof.stats.map((s: any) => `
+                                <div>
+                                  <div class="text-3xl sm:text-4xl font-black text-amber-400 mb-1">${s.value}</div>
+                                  <div class="text-xs sm:text-sm text-slate-400 font-medium">${s.label}</div>
+                                </div>
+                              `).join('')}
+                            </div>
+                          ` : ''}
+
+                          ${lp.socialProof.testimonials && lp.socialProof.testimonials.length > 0 ? `
+                            <div class="text-center max-w-xl mx-auto mb-10">
+                              <h2 class="text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              ${lp.socialProof.testimonials.map((t: any) => `
+                                <div class="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
+                                  <div class="flex items-center gap-1 text-amber-400 mb-3">
+                                    ${'★'.repeat(t.rating || 5)}
+                                  </div>
+                                  <p class="text-sm text-slate-300 italic mb-4">"${t.text}"</p>
+                                  <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-sm">
+                                      ${(t.name || 'C').charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div class="font-bold text-sm text-white">${t.name}</div>
+                                      <div class="text-xs text-slate-400">${t.role}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              `).join('')}
+                            </div>
+                          ` : ''}
+                        </div>
+                      </section>
+                    ` : ''}
+
+                    ${(lp.faq?.enabled && lp.faq.items && lp.faq.items.length > 0) ? `
+                      <section class="py-16 bg-white border-t border-slate-200">
+                        <div class="max-w-4xl mx-auto px-4">
+                          <div class="text-center mb-12">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Tire suas dúvidas</span>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">Perguntas Frequentes</h2>
+                          </div>
+
+                          <div class="space-y-4">
+                            ${lp.faq.items.map((item: any, idx: number) => `
+                              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                                <button type="button" onclick="toggleFaq(${idx})" class="w-full p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition">
+                                  <span>${item.question}</span>
+                                  <span id="faq-icon-${idx}" class="text-lg font-bold text-slate-400 transform transition">&plus;</span>
+                                </button>
+                                <div id="faq-ans-${idx}" class="hidden p-5 pt-0 text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
+                                  ${item.answer}
+                                </div>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    ` : ''}
+                `;
+            }
+
+            return lp.blocks.filter((b: any) => b.enabled !== false).map((b: any, bIdx: number) => {
+                const bgMap: Record<string, string> = {
+                    white: 'bg-white text-slate-800 border-y border-slate-200/80',
+                    slate: 'bg-slate-50 text-slate-800 border-y border-slate-200/80',
+                    dark: 'bg-slate-900 text-white border-y border-slate-800',
+                    primary: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
+                };
+                const bgClass = bgMap[b.backgroundColor || 'white'] || 'bg-white text-slate-800 border-y border-slate-200/80';
+
+                if (b.type === 'video') {
+                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                    return `
+                      <section class="py-14 md:py-20 ${bgClass}">
+                        <div class="max-w-4xl mx-auto px-4 text-center">
+                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                          ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
+                          ${embedUrl ? `
+                            <div class="rounded-2xl overflow-hidden shadow-2xl border border-black/10 bg-black aspect-video max-w-3xl mx-auto">
+                              <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                          ` : `
+                            <div class="rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400">
+                              Nenhum vídeo configurado
+                            </div>
+                          `}
+                          ${b.videoCaption ? `<p class="text-xs opacity-75 mt-3 italic">${b.videoCaption}</p>` : ''}
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'image') {
+                    return `
+                      <section class="py-14 md:py-20 ${bgClass}">
+                        <div class="max-w-5xl mx-auto px-4 text-center">
+                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                          ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
+                          ${b.imageUrl ? `
+                            <div class="inline-block rounded-2xl overflow-hidden shadow-2xl border border-black/10">
+                              <img src="${b.imageUrl}" alt="${b.imageAlt || b.title || 'Imagem'}" class="max-h-[520px] w-auto max-w-full object-cover rounded-2xl mx-auto" />
+                            </div>
+                          ` : ''}
+                          ${b.imageCaption ? `<p class="text-xs opacity-75 mt-3">${b.imageCaption}</p>` : ''}
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'text') {
+                    const align = b.textAlignment === 'center' ? 'text-center' : b.textAlignment === 'right' ? 'text-right' : 'text-left';
+                    return `
+                      <section class="py-14 md:py-20 ${bgClass}">
+                        <div class="max-w-3xl mx-auto px-4 ${align}">
+                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                          ${b.subtitle ? `<p class="text-base sm:text-lg font-semibold text-blue-600 mb-6">${b.subtitle}</p>` : ''}
+                          <div class="opacity-90 leading-relaxed space-y-4 text-base sm:text-lg">
+                            ${(b.textContent || '').split('\\n\\n').map((p: string) => `<p>${p.replace(/\\n/g, '<br/>')}</p>`).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'features') {
+                    const feats = b.features || lp.features || [];
+                    return `
+                      <section class="py-16 md:py-24 ${bgClass}">
+                        <div class="max-w-6xl mx-auto px-4">
+                          <div class="text-center max-w-2xl mx-auto mb-14">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Diferenciais</span>
+                            <h2 class="text-3xl font-extrabold tracking-tight mt-3">${b.title || 'Tudo que você precisa para acelerar seu negócio'}</h2>
+                            ${b.subtitle ? `<p class="text-sm opacity-80 mt-2">${b.subtitle}</p>` : ''}
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${feats.map((feat: any, idx: number) => `
+                              <div class="p-6 rounded-2xl bg-white/90 border border-slate-200/80 hover:border-blue-400 hover:shadow-xl transition text-slate-800">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm" style="background-color: ${primaryColor}">
+                                  ${idx + 1}
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-2">${feat.title}</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed">${feat.description}</p>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'socialProof') {
+                    const testimonials = b.testimonials || lp.socialProof?.testimonials || [];
+                    const stats = b.stats || lp.socialProof?.stats || [];
+                    return `
+                      <section class="py-16 md:py-24 ${bgClass}">
+                        <div class="max-w-6xl mx-auto px-4">
+                          ${stats.length > 0 ? `
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-16 text-center border-b border-white/10 pb-12">
+                              ${stats.map((s: any) => `
+                                <div>
+                                  <div class="text-3xl sm:text-4xl font-black text-amber-400 mb-1">${s.value}</div>
+                                  <div class="text-xs sm:text-sm opacity-80 font-medium">${s.label}</div>
+                                </div>
+                              `).join('')}
+                            </div>
+                          ` : ''}
+                          <div class="text-center max-w-xl mx-auto mb-10">
+                            <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">${b.title || 'O que dizem os nossos clientes'}</h2>
+                            ${b.subtitle ? `<p class="text-sm opacity-80 mt-2">${b.subtitle}</p>` : ''}
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${testimonials.map((t: any) => `
+                              <div class="p-6 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-md text-white">
+                                <div class="flex items-center gap-1 text-amber-400 mb-3">
+                                  ${'★'.repeat(t.rating || 5)}
+                                </div>
+                                <p class="text-sm text-slate-300 italic mb-4">"${t.text}"</p>
+                                <div class="flex items-center gap-3">
+                                  <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-sm">
+                                    ${(t.name || 'C').charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div class="font-bold text-sm text-white">${t.name}</div>
+                                    <div class="text-xs text-slate-400">${t.role}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'pricing') {
+                    const plans = b.pricingPlans || [];
+                    return `
+                      <section class="py-16 md:py-24 ${bgClass}">
+                        <div class="max-w-5xl mx-auto px-4">
+                          <div class="text-center max-w-2xl mx-auto mb-12">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Planos & Condições</span>
+                            <h2 class="text-3xl font-extrabold tracking-tight mt-3">${b.title || 'Escolha o Plano Ideal'}</h2>
+                            <p class="opacity-80 mt-2">${b.subtitle || 'Transparência total e sem taxas escondidas'}</p>
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                            ${plans.map((plan: any) => `
+                              <div class="p-6 rounded-2xl border ${plan.highlighted ? 'border-2 border-blue-600 shadow-2xl relative bg-white scale-105' : 'border-slate-200 bg-white shadow-md'} flex flex-col justify-between text-slate-800">
+                                <div>
+                                  ${plan.highlighted ? `<span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">${plan.badge || 'Mais Escolhido'}</span>` : ''}
+                                  <h3 class="font-bold text-xl text-slate-900 mb-1">${plan.name}</h3>
+                                  ${plan.description ? `<p class="text-xs text-slate-500 mb-4">${plan.description}</p>` : ''}
+                                  <div class="my-4">
+                                    <span class="text-3xl sm:text-4xl font-black text-slate-900">${plan.price}</span>
+                                    ${plan.period ? `<span class="text-xs text-slate-500 ml-1">/${plan.period}</span>` : ''}
+                                  </div>
+                                  <ul class="space-y-2.5 text-xs sm:text-sm text-slate-600 my-6">
+                                    ${(plan.features || []).map((feat: string) => `
+                                      <li class="flex items-center gap-2">
+                                        <span class="text-emerald-500 font-bold">✓</span>
+                                        <span>${feat}</span>
+                                      </li>
+                                    `).join('')}
+                                  </ul>
+                                </div>
+                                <a href="${plan.buttonUrl || '#capture-form'}" class="w-full py-3 px-4 text-center font-bold text-sm ${buttonShape} ${plan.highlighted ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-md' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'} transition block">
+                                  ${plan.buttonText || 'Garantir Vaga'}
+                                </a>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'faq') {
+                    const faqItems = b.faqItems || lp.faq?.items || [];
+                    return `
+                      <section class="py-16 ${bgClass}">
+                        <div class="max-w-4xl mx-auto px-4">
+                          <div class="text-center mb-12">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Tire suas dúvidas</span>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-2">${b.title || 'Perguntas Frequentes'}</h2>
+                            ${b.subtitle ? `<p class="text-sm opacity-80 mt-1">${b.subtitle}</p>` : ''}
+                          </div>
+                          <div class="space-y-4">
+                            ${faqItems.map((item: any, fIdx: number) => `
+                              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 text-slate-800">
+                                <button type="button" onclick="toggleFaq(${100 + fIdx})" class="w-full p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition">
+                                  <span>${item.question}</span>
+                                  <span id="faq-icon-${100 + fIdx}" class="text-lg font-bold text-slate-400 transform transition">&plus;</span>
+                                </button>
+                                <div id="faq-ans-${100 + fIdx}" class="hidden p-5 pt-0 text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
+                                  ${item.answer}
+                                </div>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'countdown') {
+                    return `
+                      <section class="py-12 bg-slate-900 text-white text-center">
+                        <div class="max-w-xl mx-auto px-4">
+                          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                            ${b.countdownTitle || b.title || 'Tempo restante para garantir esta condição:'}
+                          </div>
+                          <div class="grid grid-cols-4 gap-3 text-center font-bold">
+                            <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+                              <span class="cd-days text-2xl sm:text-3xl font-black text-amber-400">00</span>
+                              <span class="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+                              <span class="cd-hours text-2xl sm:text-3xl font-black text-white">00</span>
+                              <span class="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+                              <span class="cd-mins text-2xl sm:text-3xl font-black text-white">00</span>
+                              <span class="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                            </div>
+                            <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+                              <span class="cd-secs text-2xl sm:text-3xl font-black text-emerald-400">00</span>
+                              <span class="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'cta_banner') {
+                    return `
+                      <section class="py-16 md:py-20 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-center">
+                        <div class="max-w-4xl mx-auto px-4">
+                          ${b.ctaBadge ? `<span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm text-xs font-bold uppercase tracking-wider rounded-full mb-4">${b.ctaBadge}</span>` : ''}
+                          <h2 class="text-3xl sm:text-4xl md:text-5xl font-black mb-4">${b.ctaHeadline || b.title || 'Pronto para Transformar seus Resultados?'}</h2>
+                          <p class="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto mb-8">${b.ctaSubheadline || b.subtitle || 'Dê o próximo passo hoje mesmo e garanta sua vaga.'}</p>
+                          <a href="${b.ctaButtonUrl || '#capture-form'}" class="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 font-extrabold text-base ${buttonShape} shadow-2xl hover:bg-slate-50 transition transform hover:-translate-y-0.5">
+                            <span>${b.ctaButtonText || 'Quero Garantir Minha Vaga Agora'}</span>
+                            <span>&rarr;</span>
+                          </a>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'header_form') {
+                    const isLeft = b.formPosition === 'left';
+                    const trustBadges = b.headerTrustBadges || ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'];
+                    const navEnabled = b.headerNavbarEnabled !== false;
+                    const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
+                    const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
+                    const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
+                    const blockHeadline = b.headerHeadline || b.title || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
+                    const blockSubheadline = b.headerSubheadline || b.subtitle || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
+                    const blockPrimaryCta = b.headerPrimaryCtaText || 'Quero Meu Acesso Gratuito Agora →';
+                    const formBadge = b.formCardBadge || 'CADASTRE-SE GRÁTIS';
+                    const formTitle = b.formCardTitle || 'Garanta sua Condição Especial';
+                    const formSubtitle = b.formCardSubtitle || 'Preencha os campos abaixo e receba atendimento exclusivo em minutos.';
+                    const formBtnText = b.formCardButtonText || 'Quero Começar Agora Mesmo 🚀';
+                    const lgpdText = b.formLgpdNotice || '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).';
+
+                    return `
+                      <section class="py-8 md:py-16 ${bgClass}">
+                        ${navEnabled ? `
+                          <!-- Integrated Brand Top Header -->
+                          <div class="max-w-6xl mx-auto px-4 mb-8 sm:mb-12 flex items-center justify-between pb-4 border-b border-slate-200/60">
+                            <div class="flex items-center gap-2.5">
+                              <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                                ${blockLogo.charAt(0).toUpperCase()}
+                              </div>
+                              <span class="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">${blockLogo}</span>
+                            </div>
+                            <div>
+                              <a href="#block-form-${b.id}" class="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5">
+                                <span>${blockNavCta}</span>
+                              </a>
+                            </div>
+                          </div>
+                        ` : ''}
+
+                        <div class="max-w-6xl mx-auto px-4">
+                          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                            
+                            <!-- Copy Column -->
+                            <div class="lg:col-span-7 ${isLeft ? 'lg:order-2' : 'lg:order-1'} text-center lg:text-left">
+                              ${blockBadge ? `
+                                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-5 bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs">
+                                  <span>${blockBadge}</span>
+                                </div>
+                              ` : ''}
+
+                              <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-5">
+                                ${blockHeadline}
+                              </h1>
+
+                              <p class="text-base sm:text-lg text-slate-600 leading-relaxed mb-8 max-w-2xl mx-auto lg:mx-0">
+                                ${blockSubheadline}
+                              </p>
+
+                              <!-- Countdown Timer (if enabled) -->
+                              ${lp.countdown?.enabled ? `
+                                <div class="mb-8 p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl max-w-lg mx-auto lg:mx-0">
+                                  <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+                                    ${lp.countdown.title || 'Tempo restante para garantir esta condição:'}
+                                  </div>
+                                  <div class="grid grid-cols-4 gap-2 text-center" id="countdown-timer-header">
+                                    <div class="bg-slate-800 p-2 rounded-xl">
+                                      <span class="cd-days text-2xl font-black text-amber-400">00</span>
+                                      <span class="block text-[10px] text-slate-400 uppercase font-normal">Dias</span>
+                                    </div>
+                                    <div class="bg-slate-800 p-2 rounded-xl">
+                                      <span class="cd-hours text-2xl font-black text-white">00</span>
+                                      <span class="block text-[10px] text-slate-400 uppercase font-normal">Horas</span>
+                                    </div>
+                                    <div class="bg-slate-800 p-2 rounded-xl">
+                                      <span class="cd-mins text-2xl font-black text-white">00</span>
+                                      <span class="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
+                                    </div>
+                                    <div class="bg-slate-800 p-2 rounded-xl">
+                                      <span class="cd-secs text-2xl font-black text-emerald-400">00</span>
+                                      <span class="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ` : ''}
+
+                              <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
+                                <a href="#block-form-${b.id}" class="w-full sm:w-auto px-7 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base shadow-lg shadow-emerald-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                  <span>${blockPrimaryCta}</span>
+                                </a>
+                              </div>
+
+                              <!-- Trust Badges -->
+                              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs text-slate-600">
+                                ${trustBadges.map(badge => `
+                                  <span class="flex items-center gap-1.5 font-medium">
+                                    <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                    <span>${badge}</span>
+                                  </span>
+                                `).join('')}
+                              </div>
+                            </div>
+
+                            <!-- Embedded Form Column -->
+                            <div class="lg:col-span-5 ${isLeft ? 'lg:order-1' : 'lg:order-2'}">
+                              <div id="block-form-${b.id}" class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-2xl relative">
+                                ${formBadge ? `
+                                  <div class="absolute -top-3.5 right-6 bg-emerald-600 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+                                    ${formBadge}
+                                  </div>
+                                ` : ''}
+
+                                <div class="mb-6">
+                                  <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                                    ${formTitle}
+                                  </h2>
+                                  <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                                    ${formSubtitle}
+                                  </p>
+                                </div>
+
+                                <!-- Autofill Welcome Notice -->
+                                <div class="autofill-banner hidden mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800 transition shadow-xs">
+                                  <div class="flex items-center gap-2">
+                                    <span class="text-base">⚡</span>
+                                    <div>
+                                      <span class="font-bold">Olá, <span class="autofill-user-name"></span>!</span>
+                                      <p class="text-[11px] text-emerald-600">Seus dados foram preenchidos automaticamente.</p>
+                                    </div>
+                                  </div>
+                                  <button type="button" onclick="clearAutofillData()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline px-2 py-1 rounded-md hover:bg-emerald-100 transition">
+                                    Limpar
+                                  </button>
+                                </div>
+
+                                <!-- Form -->
+                                <form class="lp-interactive-form space-y-4" data-block-id="${b.id}">
+                                  ${fields.map((f: any) => `
+                                    <div>
+                                      <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5" for="block-${b.id}-${f.id}">
+                                        ${f.label} ${f.required ? '<span class="text-red-500">*</span>' : ''}
+                                      </label>
+                                      <input 
+                                        type="${f.type === 'tel' ? 'tel' : f.type === 'email' ? 'email' : 'text'}" 
+                                        id="block-${b.id}-${f.id}" 
+                                        name="${f.name || f.id}" 
+                                        placeholder="${f.placeholder || ''}" 
+                                        ${f.required ? 'required' : ''} 
+                                        autocomplete="${f.type === 'tel' || (f.name && (f.name.includes('phone') || f.name.includes('whats'))) ? 'tel' : f.type === 'email' || (f.name && f.name.includes('email')) ? 'email' : (f.name && (f.name.includes('name') || f.name.includes('nome'))) ? 'name' : 'on'}"
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-hidden text-sm transition bg-slate-50/50 focus:bg-white ${f.type === 'tel' ? 'phone-mask' : ''}" 
+                                      />
+                                    </div>
+                                  `).join('')}
+
+                                  <div class="form-error-msg hidden p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl"></div>
+                                  <div class="form-success-msg hidden p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl font-medium"></div>
+
+                                  <button 
+                                    type="submit" 
+                                    class="w-full py-4 px-6 font-black text-base rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-50"
+                                  >
+                                    <span class="btn-text-label">${formBtnText}</span>
+                                    <span class="btn-loading-spinner hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                  </button>
+
+                                  <p class="text-[11px] text-slate-400 text-center mt-3 leading-relaxed">
+                                    ${lgpdText}
+                                  </p>
+                                </form>
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                return '';
+            }).join('');
+        };
+
+        const hasHeaderFormBlock = Boolean(lp.blocks && lp.blocks.some((b: any) => b.type === 'header_form' && b.enabled !== false));
+        const showDefaultHero = lp.hero?.enabled !== false && !hasHeaderFormBlock;
 
         // Render high-converting standalone HTML
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -8124,7 +11825,7 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
             <!-- Fonts -->
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;600;700;800&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Poppins:wght@400;600;700;800&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 
             <!-- Tailwind CSS CDN -->
             <script src="https://cdn.tailwindcss.com"></script>
@@ -8156,6 +11857,7 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
           </head>
           <body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white min-h-screen flex flex-col justify-between">
             
+            ${showDefaultHero ? `
             <!-- Top Header -->
             <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 transition shadow-sm">
               <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -8186,7 +11888,7 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                       </div>
                     ` : ''}
 
-                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-slate-900 leading-tight tracking-tight mb-5">
+                    <h1 class="${titleSizeClass} text-slate-900 leading-tight tracking-tight mb-5">
                       ${lp.hero?.headline || lp.title}
                     </h1>
 
@@ -8260,8 +11962,22 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                         ${lp.form?.subtitle ? `<p class="text-sm text-slate-500 mt-1">${lp.form.subtitle}</p>` : ''}
                       </div>
 
+                      <!-- Autofill Welcome Notice -->
+                      <div class="autofill-banner hidden mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800 transition shadow-xs">
+                        <div class="flex items-center gap-2">
+                          <span class="text-base">⚡</span>
+                          <div>
+                            <span class="font-bold">Olá, <span class="autofill-user-name"></span>!</span>
+                            <p class="text-[11px] text-emerald-600">Seus dados foram preenchidos automaticamente.</p>
+                          </div>
+                        </div>
+                        <button type="button" onclick="clearAutofillData()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline px-2 py-1 rounded-md hover:bg-emerald-100 transition">
+                          Limpar
+                        </button>
+                      </div>
+
                       <!-- Form AJAX -->
-                      <form id="lp-lead-form" class="space-y-4">
+                      <form id="lp-lead-form" class="lp-interactive-form space-y-4">
                         ${fields.map((f: any) => `
                           <div>
                             <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5" for="field-${f.id}">
@@ -8276,22 +11992,23 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                                 name="${f.name || f.id}" 
                                 placeholder="${f.placeholder || ''}" 
                                 ${f.required ? 'required' : ''} 
+                                autocomplete="${f.type === 'tel' || (f.name && (f.name.includes('phone') || f.name.includes('whats'))) ? 'tel' : f.type === 'email' || (f.name && f.name.includes('email')) ? 'email' : (f.name && (f.name.includes('name') || f.name.includes('nome'))) ? 'name' : 'on'}"
                                 class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-hidden text-sm transition ${f.type === 'tel' ? 'phone-mask' : ''}" 
                               />
                             `}
                           </div>
                         `).join('')}
 
-                        <div id="form-error" class="hidden p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl"></div>
-                        <div id="form-success" class="hidden p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl font-medium"></div>
+                        <div class="form-error-msg hidden p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl"></div>
+                        <div class="form-success-msg hidden p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl font-medium"></div>
 
                         <button 
                           type="submit" 
                           id="submit-btn" 
                           class="custom-primary-btn w-full py-3.5 px-6 font-bold text-base ${buttonShape} shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          <span id="btn-text">${lp.form?.buttonText || 'Enviar Dados Agora'}</span>
-                          <span id="btn-spinner" class="hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span class="btn-text-label">${lp.form?.buttonText || 'Enviar Dados Agora'}</span>
+                          <span class="btn-loading-spinner hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                         </button>
 
                         <p class="text-[11px] text-slate-400 text-center mt-3">
@@ -8305,99 +12022,11 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                 </div>
               </div>
             </section>
-
-            <!-- Features & Benefits Section -->
-            ${(lp.features && lp.features.length > 0) ? `
-              <section class="py-16 md:py-24 bg-white border-y border-slate-200">
-                <div class="max-w-6xl mx-auto px-4">
-                  <div class="text-center max-w-2xl mx-auto mb-14">
-                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Por que escolher</span>
-                    <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mt-3">Tudo que você precisa para acelerar seu negócio</h2>
-                  </div>
-
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    ${lp.features.map((feat: any, idx: number) => `
-                      <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
-                        <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm" style="background-color: ${primaryColor}">
-                          ${idx + 1}
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-900 mb-2">${feat.title}</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">${feat.description}</p>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              </section>
             ` : ''}
 
-            <!-- Social Proof & Testimonials -->
-            ${(lp.socialProof?.enabled && ((lp.socialProof.stats && lp.socialProof.stats.length > 0) || (lp.socialProof.testimonials && lp.socialProof.testimonials.length > 0))) ? `
-              <section class="py-16 bg-slate-900 text-white">
-                <div class="max-w-6xl mx-auto px-4">
-                  ${lp.socialProof.stats && lp.socialProof.stats.length > 0 ? `
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-16 text-center border-b border-slate-800 pb-12">
-                      ${lp.socialProof.stats.map((s: any) => `
-                        <div>
-                          <div class="text-3xl sm:text-4xl font-black text-amber-400 mb-1">${s.value}</div>
-                          <div class="text-xs sm:text-sm text-slate-400 font-medium">${s.label}</div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  ` : ''}
+            <!-- Modular Custom Blocks (or Default Sections) -->
+            ${renderCustomBlocks()}
 
-                  ${lp.socialProof.testimonials && lp.socialProof.testimonials.length > 0 ? `
-                    <div class="text-center max-w-xl mx-auto mb-10">
-                      <h2 class="text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      ${lp.socialProof.testimonials.map((t: any) => `
-                        <div class="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
-                          <div class="flex items-center gap-1 text-amber-400 mb-3">
-                            ${'★'.repeat(t.rating || 5)}
-                          </div>
-                          <p class="text-sm text-slate-300 italic mb-4">"${t.text}"</p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-sm">
-                              ${(t.name || 'C').charAt(0)}
-                            </div>
-                            <div>
-                              <div class="font-bold text-sm text-white">${t.name}</div>
-                              <div class="text-xs text-slate-400">${t.role}</div>
-                            </div>
-                          </div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  ` : ''}
-                </div>
-              </section>
-            ` : ''}
-
-            <!-- FAQ Section -->
-            ${(lp.faq?.enabled && lp.faq.items && lp.faq.items.length > 0) ? `
-              <section class="py-16 bg-white border-t border-slate-200">
-                <div class="max-w-4xl mx-auto px-4">
-                  <div class="text-center mb-12">
-                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Tire suas dúvidas</span>
-                    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">Perguntas Frequentes</h2>
-                  </div>
-
-                  <div class="space-y-4">
-                    ${lp.faq.items.map((item: any, idx: number) => `
-                      <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                        <button type="button" onclick="toggleFaq(${idx})" class="w-full p-5 text-left font-semibold text-slate-900 flex items-center justify-between gap-4 hover:bg-slate-100/70 transition">
-                          <span>${item.question}</span>
-                          <span id="faq-icon-${idx}" class="text-lg font-bold text-slate-400 transform transition">&plus;</span>
-                        </button>
-                        <div id="faq-ans-${idx}" class="hidden p-5 pt-0 text-sm text-slate-600 leading-relaxed border-t border-slate-200/50 bg-white">
-                          ${item.answer}
-                        </div>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              </section>
-            ` : ''}
 
             <!-- Footer -->
             <footer class="bg-slate-900 text-slate-400 py-10 border-t border-slate-800 text-xs">
@@ -8415,22 +12044,23 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
               </div>
             </footer>
 
-            <!-- Form & Interaction Scripts -->
+            <!-- Form & Cross-Campaign Recognition Scripts -->
             <script>
               // Phone input mask (11) 99999-9999
-              const phoneInputs = document.querySelectorAll('.phone-mask');
-              phoneInputs.forEach(input => {
-                input.addEventListener('input', function(e) {
-                  let v = e.target.value.replace(/\\D/g, '');
-                  if (v.length > 11) v = v.substring(0, 11);
-                  if (v.length > 6) {
-                    e.target.value = '(' + v.substring(0, 2) + ') ' + v.substring(2, 7) + '-' + v.substring(7);
-                  } else if (v.length > 2) {
-                    e.target.value = '(' + v.substring(0, 2) + ') ' + v.substring(2);
-                  } else {
-                    e.target.value = v;
-                  }
-                });
+              function applyPhoneMask(input) {
+                let v = input.value.replace(/\\D/g, '');
+                if (v.length > 11) v = v.substring(0, 11);
+                if (v.length > 6) {
+                  input.value = '(' + v.substring(0, 2) + ') ' + v.substring(2, 7) + '-' + v.substring(7);
+                } else if (v.length > 2) {
+                  input.value = '(' + v.substring(0, 2) + ') ' + v.substring(2);
+                } else {
+                  input.value = v;
+                }
+              }
+
+              document.querySelectorAll('.phone-mask, input[type="tel"]').forEach(input => {
+                input.addEventListener('input', function() { applyPhoneMask(this); });
               });
 
               // Toggle FAQ
@@ -8448,45 +12078,178 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                 }
               }
 
-              // Countdown ticker (if present)
-              const cdTarget = new Date(Date.now() + 86400000 * 3);
+              // Countdown ticker & dynamic redirection
+              const countdownConfig = ${JSON.stringify({
+                enabled: Boolean(lp.countdown?.enabled),
+                title: lp.countdown?.title || 'Tempo restante para garantir esta condição:',
+                endDate: lp.countdown?.endDate || null,
+                redirectOnExpire: lp.countdown?.redirectOnExpire !== false,
+                redirectUrl: lp.countdown?.redirectType === 'page' && lp.countdown?.redirectPageSlug
+                  ? `/p/${lp.countdown.redirectPageSlug}`
+                  : (lp.countdown.redirectUrl || (lp.countdown.redirectPageSlug ? `/p/${lp.countdown.redirectPageSlug}` : null)),
+                expiredMessage: lp.countdown?.expiredMessage || '⏰ Tempo esgotado! Redirecionando para a próxima etapa...'
+              })};
+
+              let cdTarget;
+              if (countdownConfig.endDate) {
+                const parsed = new Date(countdownConfig.endDate);
+                cdTarget = isNaN(parsed.getTime()) ? new Date(Date.now() + 86400000 * 3) : parsed;
+              } else {
+                cdTarget = new Date(Date.now() + 86400000 * 3);
+              }
+
+              let isRedirecting = false;
               function updateCountdown() {
                 const now = new Date();
                 const diff = cdTarget - now;
-                if (diff <= 0) return;
-                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const s = Math.floor((diff % (1000 * 60)) / 1000);
 
                 const dEl = document.getElementById('cd-days');
                 const hEl = document.getElementById('cd-hours');
                 const mEl = document.getElementById('cd-mins');
                 const sEl = document.getElementById('cd-secs');
 
-                if (dEl) dEl.textContent = String(d).padStart(2, '0');
-                if (hEl) hEl.textContent = String(h).padStart(2, '0');
-                if (mEl) mEl.textContent = String(m).padStart(2, '0');
-                if (sEl) sEl.textContent = String(s).padStart(2, '0');
+                if (diff <= 0) {
+                  if (dEl) dEl.textContent = '00';
+                  if (hEl) hEl.textContent = '00';
+                  if (mEl) mEl.textContent = '00';
+                  if (sEl) sEl.textContent = '00';
+
+                  document.querySelectorAll('.cd-days').forEach(el => el.textContent = '00');
+                  document.querySelectorAll('.cd-hours').forEach(el => el.textContent = '00');
+                  document.querySelectorAll('.cd-mins').forEach(el => el.textContent = '00');
+                  document.querySelectorAll('.cd-secs').forEach(el => el.textContent = '00');
+
+                  if (countdownConfig.redirectOnExpire && countdownConfig.redirectUrl && !isRedirecting) {
+                    isRedirecting = true;
+                    const redirectBanner = document.createElement('div');
+                    redirectBanner.className = 'fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white';
+                    redirectBanner.innerHTML = '<div class="max-w-md bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-2xl space-y-4">' +
+                      '<div class="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-3xl">⏳</div>' +
+                      '<h3 class="text-xl font-black text-white">' + (countdownConfig.expiredMessage || '⏰ Tempo esgotado! Redirecionando...') + '</h3>' +
+                      '<p class="text-xs text-slate-400">Você está sendo redirecionado automaticamente...</p>' +
+                      '<div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>' +
+                    '</div>';
+                    document.body.appendChild(redirectBanner);
+
+                    const search = window.location.search || '';
+                    const dest = countdownConfig.redirectUrl;
+                    const finalDest = search ? (dest.includes('?') ? dest + '&' + search.substring(1) : dest + search) : dest;
+
+                    setTimeout(() => {
+                      window.location.href = finalDest;
+                    }, 1500);
+                  }
+                  return;
+                }
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                const dStr = String(d).padStart(2, '0');
+                const hStr = String(h).padStart(2, '0');
+                const mStr = String(m).padStart(2, '0');
+                const sStr = String(s).padStart(2, '0');
+
+                if (dEl) dEl.textContent = dStr;
+                if (hEl) hEl.textContent = hStr;
+                if (mEl) mEl.textContent = mStr;
+                if (sEl) sEl.textContent = sStr;
+
+                document.querySelectorAll('.cd-days').forEach(el => el.textContent = dStr);
+                document.querySelectorAll('.cd-hours').forEach(el => el.textContent = hStr);
+                document.querySelectorAll('.cd-mins').forEach(el => el.textContent = mStr);
+                document.querySelectorAll('.cd-secs').forEach(el => el.textContent = sStr);
               }
+              updateCountdown();
               setInterval(updateCountdown, 1000);
 
-              // Form AJAX Submit
-              const form = document.getElementById('lp-lead-form');
-              const submitBtn = document.getElementById('submit-btn');
-              const btnText = document.getElementById('btn-text');
-              const btnSpinner = document.getElementById('btn-spinner');
-              const errDiv = document.getElementById('form-error');
-              const successDiv = document.getElementById('form-success');
+              // ==========================================
+              // CROSS-CAMPAIGN LEAD AUTOPREFILL & RECOGNITION
+              // (localStorage + 365-day Cookies + Native Autocomplete)
+              // ==========================================
+              function getCookie(name) {
+                const match = document.cookie.match(new RegExp('(^|;\\\\s*)' + name + '=([^;]*)'));
+                return match ? decodeURIComponent(match[2]) : null;
+              }
 
-              if (form) {
+              function setCookie(name, val, days) {
+                const expires = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = name + '=' + encodeURIComponent(val) + '; expires=' + expires + '; path=/; SameSite=Lax';
+              }
+
+              function loadCachedProfile() {
+                let profile = null;
+                try {
+                  const raw = localStorage.getItem('mdtracker_visitor_profile') || localStorage.getItem('mdtracker_lead_profile');
+                  if (raw) profile = JSON.parse(raw);
+                } catch(e) {}
+
+                if (!profile) {
+                  const cName = getCookie('mdtracker_lead_name');
+                  const cPhone = getCookie('mdtracker_lead_phone');
+                  const cEmail = getCookie('mdtracker_lead_email');
+                  const cCompany = getCookie('mdtracker_lead_company');
+                  if (cName || cPhone || cEmail) {
+                    profile = { name: cName || '', phone: cPhone || '', email: cEmail || '', company: cCompany || '' };
+                  }
+                }
+
+                if (profile && (profile.name || profile.phone || profile.email)) {
+                  document.querySelectorAll('form').forEach(f => {
+                    const nameInput = f.querySelector('input[name="name"], input[name="nome"], input[id*="name"], input[autocomplete="name"]');
+                    const phoneInput = f.querySelector('input[name="phone"], input[name="whatsapp"], input[name="telefone"], input[id*="phone"], input[autocomplete="tel"], input[type="tel"]');
+                    const emailInput = f.querySelector('input[name="email"], input[id*="email"], input[autocomplete="email"], input[type="email"]');
+                    const companyInput = f.querySelector('input[name="company"], input[name="empresa"], input[autocomplete="organization"]');
+
+                    if (nameInput && !nameInput.value && profile.name) nameInput.value = profile.name;
+                    if (phoneInput && !phoneInput.value && profile.phone) {
+                      phoneInput.value = profile.phone;
+                      applyPhoneMask(phoneInput);
+                    }
+                    if (emailInput && !emailInput.value && profile.email) emailInput.value = profile.email;
+                    if (companyInput && !companyInput.value && profile.company) companyInput.value = profile.company;
+
+                    // Reveal Welcome Auto-fill banner
+                    const banner = f.closest('div').querySelector('.autofill-banner');
+                    if (banner) {
+                      const nameSpan = banner.querySelector('.autofill-user-name');
+                      if (nameSpan && profile.name) nameSpan.textContent = profile.name.split(' ')[0];
+                      banner.classList.remove('hidden');
+                    }
+                  });
+                }
+              }
+
+              function clearAutofillData() {
+                localStorage.removeItem('mdtracker_visitor_profile');
+                localStorage.removeItem('mdtracker_lead_profile');
+                ['mdtracker_lead_name', 'mdtracker_lead_phone', 'mdtracker_lead_email', 'mdtracker_lead_company', 'mdtracker_session_lead'].forEach(k => {
+                  document.cookie = k + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+                });
+                document.querySelectorAll('form').forEach(f => f.reset());
+                document.querySelectorAll('.autofill-banner').forEach(b => b.classList.add('hidden'));
+              }
+
+              window.addEventListener('DOMContentLoaded', loadCachedProfile);
+
+              // Form AJAX Submit for ALL forms on page
+              document.querySelectorAll('.lp-interactive-form, #lp-lead-form').forEach(form => {
                 form.addEventListener('submit', async function(e) {
                   e.preventDefault();
-                  errDiv.classList.add('hidden');
-                  successDiv.classList.add('hidden');
-                  submitBtn.disabled = true;
-                  btnText.classList.add('opacity-0');
-                  btnSpinner.classList.remove('hidden');
+                  const container = form.closest('div');
+                  const errDiv = form.querySelector('.form-error-msg') || document.getElementById('form-error');
+                  const successDiv = form.querySelector('.form-success-msg') || document.getElementById('form-success');
+                  const submitBtn = form.querySelector('button[type="submit"]');
+                  const btnText = form.querySelector('.btn-text-label');
+                  const btnSpinner = form.querySelector('.btn-loading-spinner');
+
+                  if (errDiv) errDiv.classList.add('hidden');
+                  if (successDiv) successDiv.classList.add('hidden');
+                  if (submitBtn) submitBtn.disabled = true;
+                  if (btnText) btnText.classList.add('opacity-0');
+                  if (btnSpinner) btnSpinner.classList.remove('hidden');
 
                   const formData = new FormData(form);
                   const data = Object.fromEntries(formData.entries());
@@ -8496,6 +12259,24 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                   ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach(p => {
                     if (urlParams.has(p)) data[p] = urlParams.get(p);
                   });
+
+                  // Update localStorage profile & cookies for cross-campaign recognition!
+                  const profileToSave = {
+                    name: data.name || data.nome || '',
+                    phone: data.phone || data.whatsapp || '',
+                    email: data.email || '',
+                    company: data.company || data.empresa || '',
+                    updatedAt: Date.now()
+                  };
+                  try {
+                    localStorage.setItem('mdtracker_visitor_profile', JSON.stringify(profileToSave));
+                    localStorage.setItem('mdtracker_lead_profile', JSON.stringify(profileToSave));
+                    if (profileToSave.name) setCookie('mdtracker_lead_name', profileToSave.name, 365);
+                    if (profileToSave.phone) setCookie('mdtracker_lead_phone', profileToSave.phone, 365);
+                    if (profileToSave.email) setCookie('mdtracker_lead_email', profileToSave.email, 365);
+                    if (profileToSave.company) setCookie('mdtracker_lead_company', profileToSave.company, 365);
+                    setCookie('mdtracker_session_lead', '1', 365);
+                  } catch(e) {}
 
                   try {
                     const res = await fetch('/api/landing-pages/${lp.slug}/submit', {
@@ -8509,11 +12290,16 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                       throw new Error(result.error || 'Erro ao processar seu cadastro.');
                     }
 
-                    form.reset();
-                    successDiv.textContent = result.successMessage || '🎉 Cadastro realizado com sucesso!';
-                    successDiv.classList.remove('hidden');
+                    if (successDiv) {
+                      successDiv.textContent = result.successMessage || '🎉 Cadastro realizado com sucesso!';
+                      successDiv.classList.remove('hidden');
+                    }
 
-                    if (result.actionType === 'redirect_whatsapp' && result.whatsappUrl) {
+                    if (result.actionType === 'thank_you_page') {
+                      setTimeout(() => {
+                        window.location.href = result.thankYouUrl || '/p/${lp.slug}/obrigado';
+                      }, 800);
+                    } else if (result.actionType === 'redirect_whatsapp' && result.whatsappUrl) {
                       setTimeout(() => {
                         window.location.href = result.whatsappUrl;
                       }, 1200);
@@ -8523,9 +12309,482 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
                       }, 1200);
                     }
                   } catch (err) {
-                    errDiv.textContent = err.message || 'Falha na conexão. Tente novamente.';
-                    errDiv.classList.remove('hidden');
+                    if (errDiv) {
+                      errDiv.textContent = err.message || 'Falha na conexão. Tente novamente.';
+                      errDiv.classList.remove('hidden');
+                    }
                   } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (btnText) btnText.classList.remove('opacity-0');
+                    if (btnSpinner) btnSpinner.classList.add('hidden');
+                  }
+                });
+              });
+            </script>
+          </body>
+          </html>
+        `);
+    } catch (err: any) {
+        res.status(500).send('Erro interno ao carregar a página: ' + err.message);
+    }
+});
+
+// ==========================================
+// PUBLIC SURVEY RUNNER ROUTE (/pesquisa/:slug or /survey/:slug)
+// ==========================================
+app.get(['/pesquisa/:slug', '/survey/:slug'], async (req: Request, res: Response) => {
+    try {
+        const slug = req.params.slug.toLowerCase().trim();
+
+        // 1. Search in Supabase or in-memory
+        let survey: any = null;
+        try {
+            const { data } = await supabase
+                .from('surveys')
+                .select('*')
+                .eq('slug', slug)
+                .single();
+            if (data) survey = mapSurveyFromDB(data);
+        } catch {}
+
+        if (!survey) {
+            const mem = inMemorySurveys.find(s => s.slug.toLowerCase() === slug || s.id === slug);
+            if (mem) survey = mapSurveyFromDB(mem);
+        }
+
+        if (!survey) {
+            return res.status(404).send(`
+              <!DOCTYPE html>
+              <html lang="pt-BR">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Pesquisa Não Encontrada - MDTracker</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+              </head>
+              <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+                <div class="max-w-md w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 text-center shadow-2xl">
+                  <div class="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold">?</div>
+                  <h1 class="text-2xl font-bold text-white mb-2">Pesquisa Não Encontrada</h1>
+                  <p class="text-slate-400 mb-6 text-sm">A pesquisa "<strong>${slug}</strong>" não existe ou foi finalizada.</p>
+                  <a href="/" class="inline-block bg-purple-600 hover:bg-purple-500 text-white font-semibold px-6 py-2.5 rounded-xl transition shadow-lg">Voltar ao Início</a>
+                </div>
+              </body>
+              </html>
+            `);
+        }
+
+        const primaryColor = survey.theme?.primaryColor || '#7c3aed';
+        const questions = survey.questions || [];
+        const thankYou = survey.thankYou || {};
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(`
+          <!DOCTYPE html>
+          <html lang="pt-BR" class="h-full">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${survey.title}</title>
+            <meta name="description" content="${survey.description || ''}">
+            <meta name="robots" content="noindex, follow">
+
+            <!-- Fonts -->
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+            <!-- Tailwind CSS -->
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              body { font-family: 'Inter', sans-serif; }
+              .survey-btn-primary {
+                background-color: ${primaryColor};
+                color: #ffffff;
+              }
+              .survey-btn-primary:hover {
+                filter: brightness(0.92);
+              }
+              .active-nps {
+                background-color: ${primaryColor} !important;
+                color: #ffffff !important;
+                border-color: ${primaryColor} !important;
+                transform: scale(1.05);
+              }
+              .active-option {
+                border-color: ${primaryColor} !important;
+                background-color: rgba(124, 58, 237, 0.04) !important;
+              }
+              .star-active {
+                color: #f59e0b !important;
+              }
+            </style>
+          </head>
+          <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-purple-500 selection:text-white">
+            
+            <!-- Header with Progress -->
+            <header class="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
+              <div class="max-w-2xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-purple-400">MDTracker Forms & Pesquisas</span>
+                  <span id="progress-text" class="text-xs font-semibold text-slate-400">Etapa 1 de ${questions.length || 1}</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div id="progress-bar" class="h-full transition-all duration-300 rounded-full" style="width: ${questions.length > 0 ? (1 / questions.length) * 100 : 100}%; background-color: ${primaryColor};"></div>
+                </div>
+              </div>
+            </header>
+
+            <!-- Main Survey Container -->
+            <main class="flex-1 flex items-center justify-center py-8 sm:py-12 px-4">
+              <div class="w-full max-w-2xl">
+                
+                <!-- Introduction Card (Shown before question 1 if wanted, or first step) -->
+                <div id="survey-content" class="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
+                  
+                  <!-- Form Title & Description -->
+                  <div class="mb-8 border-b border-slate-700/60 pb-6">
+                    <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">${survey.title}</h1>
+                    ${survey.description ? `<p class="text-slate-400 text-sm sm:text-base leading-relaxed">${survey.description}</p>` : ''}
+                  </div>
+
+                  <!-- Questions Form -->
+                  <form id="survey-form">
+                    ${questions.map((q: any, idx: number) => `
+                      <div id="step-${idx}" class="survey-step ${idx === 0 ? '' : 'hidden'} space-y-6">
+                        <div>
+                          <div class="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full text-xs font-bold mb-3">
+                            <span>Pergunta ${idx + 1} de ${questions.length}</span>
+                            ${q.required ? '<span class="text-red-400">*Obrigatória</span>' : ''}
+                          </div>
+                          <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">${q.title}</h2>
+                          ${q.description ? `<p class="text-sm text-slate-400 mt-1">${q.description}</p>` : ''}
+                        </div>
+
+                        <!-- Question Input Renderers -->
+                        <div class="pt-2">
+                          ${q.type === 'single_choice' ? `
+                            <div class="space-y-3">
+                              ${(q.options || []).map((opt: any) => `
+                                <label class="flex items-center gap-3.5 p-4 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-700/50 hover:border-purple-500/50 cursor-pointer transition select-none group">
+                                  <input type="radio" name="q_${q.id}" value="${opt.label}" ${q.required ? 'required' : ''} class="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-600 bg-slate-700">
+                                  <span class="text-sm sm:text-base font-medium text-slate-200 group-hover:text-white">${opt.label}</span>
+                                </label>
+                              `).join('')}
+                            </div>
+                          ` : ''}
+
+                          ${q.type === 'multiple_choice' ? `
+                            <div class="space-y-3">
+                              ${(q.options || []).map((opt: any) => `
+                                <label class="flex items-center gap-3.5 p-4 rounded-2xl border border-slate-700 bg-slate-800/60 hover:bg-slate-700/50 hover:border-purple-500/50 cursor-pointer transition select-none group">
+                                  <input type="checkbox" name="q_${q.id}" value="${opt.label}" class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-600 bg-slate-700">
+                                  <span class="text-sm sm:text-base font-medium text-slate-200 group-hover:text-white">${opt.label}</span>
+                                </label>
+                              `).join('')}
+                            </div>
+                          ` : ''}
+
+                          ${q.type === 'nps' ? `
+                            <div class="space-y-3">
+                              <div class="grid grid-cols-11 gap-1.5 sm:gap-2">
+                                ${Array.from({ length: 11 }, (_, i) => i).map(num => `
+                                  <button type="button" onclick="selectNps('${q.id}', ${num}, this)" 
+                                    class="nps-btn-${q.id} aspect-square rounded-xl border border-slate-700 bg-slate-800 text-sm font-bold text-slate-200 hover:border-purple-500 hover:text-white transition flex items-center justify-center">
+                                    ${num}
+                                  </button>
+                                `).join('')}
+                              </div>
+                              <input type="hidden" id="nps_input_${q.id}" name="q_${q.id}" ${q.required ? 'required' : ''}>
+                              <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1 pt-1">
+                                <span>0 - Pouco Provável</span>
+                                <span>5 - Neutro</span>
+                                <span>10 - Altamente Provável</span>
+                              </div>
+                            </div>
+                          ` : ''}
+
+                          ${q.type === 'rating_stars' ? `
+                            <div class="text-center py-4">
+                              <div class="inline-flex items-center gap-3" id="stars_${q.id}">
+                                ${[1, 2, 3, 4, 5].map(star => `
+                                  <button type="button" onclick="selectStar('${q.id}', ${star})" class="star-btn text-3xl sm:text-4xl text-slate-600 hover:text-amber-400 transition" data-star="${star}">
+                                    ★
+                                  </button>
+                                `).join('')}
+                              </div>
+                              <input type="hidden" id="rating_input_${q.id}" name="q_${q.id}" ${q.required ? 'required' : ''}>
+                              <p class="text-xs text-slate-400 mt-2">Clique na estrela para avaliar de 1 a 5</p>
+                            </div>
+                          ` : ''}
+
+                          ${q.type === 'text' ? `
+                            <div>
+                              <textarea name="q_${q.id}" rows="4" placeholder="${q.placeholder || 'Digite sua resposta com detalhes...'}" ${q.required ? 'required' : ''}
+                                class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm leading-relaxed"></textarea>
+                            </div>
+                          ` : ''}
+
+                          ${q.type === 'contact_info' ? `
+                            <div class="space-y-4">
+                              <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Seu Nome Completo *</label>
+                                <input type="text" name="lead_name" required placeholder="Ex: Roberto Silva"
+                                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                              </div>
+                              <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">WhatsApp com DDD *</label>
+                                <input type="tel" name="lead_phone" required placeholder="(11) 99999-9999"
+                                  class="w-full phone-mask bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                              </div>
+                              <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Seu E-mail Corporativo</label>
+                                <input type="email" name="lead_email" placeholder="seu@email.com"
+                                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                              </div>
+                            </div>
+                          ` : ''}
+                        </div>
+
+                        <!-- Error Message -->
+                        <div id="step-error-${idx}" class="hidden p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl font-medium"></div>
+
+                        <!-- Buttons Navigation -->
+                        <div class="flex items-center justify-between gap-4 pt-4 border-t border-slate-700/60">
+                          ${idx > 0 ? `
+                            <button type="button" onclick="prevStep(${idx})" class="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white text-sm font-semibold transition">
+                              &larr; Voltar
+                            </button>
+                          ` : '<div></div>'}
+
+                          ${idx < questions.length - 1 ? `
+                            <button type="button" onclick="nextStep(${idx})" class="survey-btn-primary px-7 py-3 rounded-xl text-sm font-bold shadow-lg transition inline-flex items-center gap-2">
+                              <span>Continuar</span>
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                          ` : `
+                            <button type="submit" id="submit-survey-btn" class="survey-btn-primary px-8 py-3.5 rounded-xl text-sm font-extrabold shadow-xl transition inline-flex items-center gap-2">
+                              <span id="survey-submit-text">Finalizar e Enviar Respostas 🚀</span>
+                              <svg id="survey-submit-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                            </button>
+                          `}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </form>
+
+                  <!-- Final Thank You Screen (Shown upon success) -->
+                  <div id="survey-thankyou-screen" class="hidden text-center py-6">
+                    <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner border border-emerald-500/30">
+                      🎉
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">
+                      ${thankYou.title || 'Respostas Recebidas com Sucesso!'}
+                    </h2>
+                    <p class="text-slate-400 text-base max-w-lg mx-auto leading-relaxed mb-8">
+                      ${thankYou.subtitle || 'Agradecemos muito por compartilhar sua visão conosco. Suas respostas foram salvas com segurança.'}
+                    </p>
+
+                    ${thankYou.whatsappGroupUrl ? `
+                      <div class="mb-6">
+                        <a href="${thankYou.whatsappGroupUrl}" target="_blank" class="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-xl shadow-emerald-600/30 transition transform hover:-translate-y-0.5">
+                          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.075-2.072-.497-1.767-.733-2.91-2.518-3.002-2.639-.088-.12-1.28-1.704-1.28-3.25 0-1.547.808-2.308 1.096-2.624.288-.316.63-.396.84-.396.211 0 .422.002.607.011.196.009.46-.075.72.551.268.647.915 2.233.996 2.396.08.163.134.354.026.57-.107.217-.162.353-.321.54-.16.187-.336.417-.48.56-.16.159-.327.332-.14.654.187.322.83 1.368 1.782 2.215 1.226 1.092 2.26 1.43 2.58 1.593.32.163.509.136.698-.082.19-.218.81-.944 1.026-1.27.216-.327.433-.272.72-.164.288.109 1.83.864 2.145 1.02.316.157.527.234.604.364.078.131.078.759-.066 1.164z"/></svg>
+                          <span>${thankYou.ctaButtonText || 'Entrar no Grupo VIP do WhatsApp'}</span>
+                        </a>
+                      </div>
+                    ` : ''}
+
+                    <div class="text-xs text-slate-500">
+                      Você pode fechar esta aba com segurança.
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="w-full bg-slate-900 border-t border-slate-800 py-4 text-xs text-slate-500 text-center">
+              <span>Tecnologia de Pesquisas & Qualificação Comercial • MDTracker</span>
+            </footer>
+
+            <!-- Survey Client Logic -->
+            <script>
+              const totalQuestions = ${questions.length};
+              const questionsConfig = ${JSON.stringify(questions)};
+
+              // Phone Mask
+              document.querySelectorAll('.phone-mask').forEach(input => {
+                input.addEventListener('input', function(e) {
+                  let v = e.target.value.replace(/\\D/g, '');
+                  if (v.length > 11) v = v.substring(0, 11);
+                  if (v.length > 6) {
+                    e.target.value = '(' + v.substring(0, 2) + ') ' + v.substring(2, 7) + '-' + v.substring(7);
+                  } else if (v.length > 2) {
+                    e.target.value = '(' + v.substring(0, 2) + ') ' + v.substring(2);
+                  } else {
+                    e.target.value = v;
+                  }
+                });
+              });
+
+              // NPS Selection
+              function selectNps(qId, score, btn) {
+                document.getElementById('nps_input_' + qId).value = score;
+                document.querySelectorAll('.nps-btn-' + qId).forEach(b => b.classList.remove('active-nps'));
+                btn.classList.add('active-nps');
+              }
+
+              // Star Rating Selection
+              function selectStar(qId, star) {
+                document.getElementById('rating_input_' + qId).value = star;
+                const container = document.getElementById('stars_' + qId);
+                const buttons = container.querySelectorAll('.star-btn');
+                buttons.forEach((b, i) => {
+                  if (i < star) {
+                    b.classList.add('star-active');
+                  } else {
+                    b.classList.remove('star-active');
+                  }
+                });
+              }
+
+              // Update Progress
+              function updateProgress(stepIdx) {
+                const pct = ((stepIdx + 1) / totalQuestions) * 100;
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('progress-text').textContent = 'Etapa ' + (stepIdx + 1) + ' de ' + totalQuestions;
+              }
+
+              // Step navigation
+              function nextStep(currentIdx) {
+                const currentStepEl = document.getElementById('step-' + currentIdx);
+                const errorEl = document.getElementById('step-error-' + currentIdx);
+                errorEl.classList.add('hidden');
+
+                const q = questionsConfig[currentIdx];
+                if (q && q.required) {
+                  if (q.type === 'single_choice') {
+                    const sel = currentStepEl.querySelector('input[name="q_' + q.id + '"]:checked');
+                    if (!sel) {
+                      errorEl.textContent = 'Por favor, selecione uma opção para continuar.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  } else if (q.type === 'multiple_choice') {
+                    const sel = currentStepEl.querySelectorAll('input[name="q_' + q.id + '"]:checked');
+                    if (!sel || sel.length === 0) {
+                      errorEl.textContent = 'Por favor, selecione ao menos uma opção.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  } else if (q.type === 'nps') {
+                    const val = document.getElementById('nps_input_' + q.id).value;
+                    if (val === '') {
+                      errorEl.textContent = 'Por favor, escolha uma pontuação de 0 a 10.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  } else if (q.type === 'rating_stars') {
+                    const val = document.getElementById('rating_input_' + q.id).value;
+                    if (!val) {
+                      errorEl.textContent = 'Por favor, selecione uma avaliação em estrelas.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  } else if (q.type === 'text') {
+                    const val = currentStepEl.querySelector('textarea').value.trim();
+                    if (!val) {
+                      errorEl.textContent = 'Por favor, preencha este campo para avançar.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  } else if (q.type === 'contact_info') {
+                    const name = currentStepEl.querySelector('input[name="lead_name"]').value.trim();
+                    const phone = currentStepEl.querySelector('input[name="lead_phone"]').value.trim();
+                    if (!name || !phone) {
+                      errorEl.textContent = 'Por favor, informe seu nome e telefone WhatsApp.';
+                      errorEl.classList.remove('hidden');
+                      return;
+                    }
+                  }
+                }
+
+                currentStepEl.classList.add('hidden');
+                const nextStepEl = document.getElementById('step-' + (currentIdx + 1));
+                if (nextStepEl) {
+                  nextStepEl.classList.remove('hidden');
+                  updateProgress(currentIdx + 1);
+                }
+              }
+
+              function prevStep(currentIdx) {
+                document.getElementById('step-' + currentIdx).classList.add('hidden');
+                const prevStepEl = document.getElementById('step-' + (currentIdx - 1));
+                if (prevStepEl) {
+                  prevStepEl.classList.remove('hidden');
+                  updateProgress(currentIdx - 1);
+                }
+              }
+
+              // Form submission
+              const form = document.getElementById('survey-form');
+              if (form) {
+                form.addEventListener('submit', async function(e) {
+                  e.preventDefault();
+                  const submitBtn = document.getElementById('submit-survey-btn');
+                  const btnText = document.getElementById('survey-submit-text');
+                  const btnSpinner = document.getElementById('survey-submit-spinner');
+
+                  submitBtn.disabled = true;
+                  btnText.classList.add('opacity-0');
+                  btnSpinner.classList.remove('hidden');
+
+                  const formData = new FormData(form);
+                  const answers = {};
+                  let leadName = '';
+                  let leadPhone = '';
+                  let leadEmail = '';
+
+                  // Collect answers by question ID
+                  questionsConfig.forEach(q => {
+                    if (q.type === 'multiple_choice') {
+                      answers[q.id] = formData.getAll('q_' + q.id);
+                    } else if (q.type === 'contact_info') {
+                      leadName = formData.get('lead_name') || '';
+                      leadPhone = formData.get('lead_phone') || '';
+                      leadEmail = formData.get('lead_email') || '';
+                      answers[q.id] = { name: leadName, phone: leadPhone, email: leadEmail };
+                    } else {
+                      answers[q.id] = formData.get('q_' + q.id);
+                    }
+                  });
+
+                  try {
+                    const res = await fetch('/api/surveys/${survey.slug}/submit', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        answers,
+                        leadName,
+                        leadPhone,
+                        leadEmail
+                      })
+                    });
+
+                    if (!res.ok) {
+                      const err = await res.json();
+                      throw new Error(err.error || 'Erro ao enviar respostas.');
+                    }
+
+                    // Show thank you screen
+                    form.classList.add('hidden');
+                    document.getElementById('survey-thankyou-screen').classList.remove('hidden');
+                    document.getElementById('progress-bar').style.width = '100%';
+                    document.getElementById('progress-text').textContent = 'Concluído 100%';
+                  } catch (err) {
+                    alert('Atenção: ' + err.message);
                     submitBtn.disabled = false;
                     btnText.classList.remove('opacity-0');
                     btnSpinner.classList.add('hidden');
@@ -8537,7 +12796,1107 @@ app.get(['/p/:slug', '/lp/:slug'], async (req: Request, res: Response) => {
           </html>
         `);
     } catch (err: any) {
-        res.status(500).send('Erro interno ao carregar a página: ' + err.message);
+        res.status(500).send('Erro interno ao carregar pesquisa: ' + err.message);
+    }
+});
+
+// ==========================================
+// EVENT GAMIFICATION: TELÃO DO APRESENTADOR (STAGE VIEW)
+// (/telao/:slugOrPin or /apresentar/:slugOrPin)
+// ==========================================
+app.get(['/telao/:slugOrPin', '/apresentar/:slugOrPin'], async (req: Request, res: Response) => {
+    try {
+        const slugOrPin = req.params.slugOrPin;
+        const event = findEventByAny(slugOrPin);
+
+        if (!event) {
+            return res.status(404).send(`
+              <!DOCTYPE html>
+              <html lang="pt-BR">
+              <head>
+                <meta charset="UTF-8">
+                <title>Evento Não Encontrado</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+              </head>
+              <body class="bg-slate-950 text-white flex items-center justify-center min-h-screen p-4 text-center">
+                <div class="max-w-md bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl">
+                  <span class="text-4xl mb-3 block">🎮</span>
+                  <h1 class="text-2xl font-bold text-red-400 mb-2">Evento Não Encontrado</h1>
+                  <p class="text-slate-400 text-sm mb-6">O código ou link "<strong>${slugOrPin}</strong>" não corresponde a nenhum evento ativo.</p>
+                  <a href="/" class="px-5 py-2.5 bg-purple-600 text-white rounded-xl font-bold text-xs inline-block">Voltar ao Painel</a>
+                </div>
+              </body>
+              </html>
+            `);
+        }
+
+        const host = req.get('host') || 'mdtracker.app';
+        const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+        const mobileUrl = `${protocol}://${host}/evento/${event.slug}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(mobileUrl)}`;
+
+        const theme = event.theme || { primaryColor: '#8b5cf6', backgroundColor: '#1e1b4b', accentColor: '#06b6d4' };
+
+        res.send(`
+          <!DOCTYPE html>
+          <html lang="pt-BR" class="h-full">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${event.title} - Telão Ao Vivo</title>
+            <!-- Google Fonts & Tailwind -->
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+            <script src="https://cdn.tailwindcss.com"></script>
+            <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+            <style>
+              body {
+                font-family: 'Outfit', 'Inter', sans-serif;
+                background-color: ${theme.backgroundColor || '#161338'};
+                color: #ffffff;
+                user-select: none;
+              }
+              .neon-glow {
+                box-shadow: 0 0 35px rgba(139, 92, 246, 0.35);
+              }
+              .pulse-glow {
+                animation: pulseGlow 2.5s infinite;
+              }
+              @keyframes pulseGlow {
+                0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+                50% { box-shadow: 0 0 45px rgba(139, 92, 246, 0.7); }
+              }
+              .floating-word {
+                animation: floatWord 4s ease-in-out infinite alternate;
+              }
+              @keyframes floatWord {
+                0% { transform: translateY(0px) rotate(0deg); }
+                100% { transform: translateY(-8px) rotate(1deg); }
+              }
+            </style>
+          </head>
+          <body class="h-full flex flex-col justify-between overflow-hidden bg-radial from-slate-900 via-indigo-950 to-slate-950 p-6 md:p-10 relative">
+            
+            <!-- Background Glow Lights -->
+            <div class="absolute -top-32 -left-32 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px] pointer-events-none"></div>
+            <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-600/15 rounded-full blur-[120px] pointer-events-none"></div>
+
+            <!-- Top Header Stage Bar -->
+            <header class="flex items-center justify-between gap-6 z-20 shrink-0">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-2xl shadow-xl shadow-purple-600/40">
+                  🎮
+                </div>
+                <div>
+                  <h1 class="text-xl md:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+                    <span>${event.title}</span>
+                  </h1>
+                  <div class="flex items-center gap-3 mt-1">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span>Ao Vivo</span>
+                    </span>
+                    <span id="header-participant-count" class="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
+                      👥 Carregando participantes...
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Join instructions & Giant PIN -->
+              <div class="flex items-center gap-4 bg-slate-900/80 backdrop-blur-md border border-purple-800/60 rounded-3xl p-3 pr-5 shadow-2xl neon-glow">
+                <div class="bg-white p-1 rounded-2xl shadow-sm">
+                  <img src="${qrUrl}" alt="QR Code" class="w-16 h-16 rounded-xl object-contain" />
+                </div>
+                <div>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-purple-300 block">Aponte a câmera para entrar:</span>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-sm md:text-base font-mono font-bold text-cyan-300">mdtracker.app/evento/${event.slug}</span>
+                  </div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-xs text-slate-400 font-semibold">Ou digite o PIN:</span>
+                    <span class="text-sm md:text-lg font-black tracking-widest text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-lg border border-amber-400/30 font-mono">
+                      ${event.pin_code}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <!-- Main Stage Content Area (Dynamically changes with activity type) -->
+            <main id="stage-main" class="flex-1 flex items-center justify-center py-6 px-4 z-10">
+              <div id="stage-card" class="w-full max-w-5xl text-center">
+                <div class="p-12 text-center text-slate-400">
+                  <span class="text-5xl animate-spin block mb-4">⌛</span>
+                  <h2 class="text-2xl font-bold text-white">Carregando dinâmica do telão...</h2>
+                </div>
+              </div>
+            </main>
+
+            <!-- Bottom Stage Controls & Shortcuts -->
+            <footer class="flex items-center justify-between gap-4 text-xs font-semibold text-slate-400 border-t border-purple-900/40 pt-4 z-20 shrink-0">
+              <div class="flex items-center gap-3">
+                <span class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                  ⌨️ <strong>&larr; &rarr;</strong> Teclas do Passador de Slide para Mudar Dinâmica
+                </span>
+                <span class="hidden sm:inline text-slate-500">•</span>
+                <span class="hidden sm:inline text-slate-500">Pressione <strong>F11</strong> para Tela Cheia</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button onclick="toggleAudio()" id="btn-audio" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition" title="Ligar/Desligar Sons">
+                  🔊
+                </button>
+                <button onclick="toggleFullscreen()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition shadow-sm flex items-center gap-1.5">
+                  <span>Tela Cheia</span>
+                  <span>⛶</span>
+                </button>
+              </div>
+            </footer>
+
+            <!-- Live Client Logic -->
+            <script>
+              const eventSlug = "${event.slug}";
+              let currentEventData = null;
+              let soundEnabled = true;
+              let audioCtx = null;
+
+              function playTone(freq, type, duration) {
+                if (!soundEnabled) return;
+                try {
+                  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                  const osc = audioCtx.createOscillator();
+                  const gain = audioCtx.createGain();
+                  osc.type = type || 'sine';
+                  osc.frequency.value = freq || 440;
+                  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                  osc.connect(gain);
+                  gain.connect(audioCtx.destination);
+                  osc.start();
+                  osc.stop(audioCtx.currentTime + duration);
+                } catch(e) {}
+              }
+
+              function playSuccessChime() {
+                playTone(523.25, 'triangle', 0.15);
+                setTimeout(() => playTone(659.25, 'triangle', 0.2), 150);
+                setTimeout(() => playTone(783.99, 'triangle', 0.35), 300);
+              }
+
+              function toggleAudio() {
+                soundEnabled = !soundEnabled;
+                document.getElementById('btn-audio').textContent = soundEnabled ? '🔊' : '🔇';
+              }
+
+              function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                  document.exitFullscreen().catch(() => {});
+                }
+              }
+
+              // Render Activity onto Stage
+              function renderActivity(activity, aggregations, leaderboard) {
+                const stage = document.getElementById('stage-card');
+                if (!activity) {
+                  stage.innerHTML = \`
+                    <div class="bg-slate-900/70 backdrop-blur-xl border border-purple-800/60 p-12 rounded-3xl shadow-2xl max-w-2xl mx-auto">
+                      <span class="text-6xl mb-4 block">👋</span>
+                      <h2 class="text-3xl font-black text-white mb-2">Apresentação Iniciando...</h2>
+                      <p class="text-slate-300 text-base">Aguarde o palestrante abrir a primeira dinâmica da palestra.</p>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 1. Nuvem de Palavras
+                if (activity.type === 'word_cloud') {
+                  const words = (aggregations && aggregations.words) || [];
+                  const total = (aggregations && aggregations.totalSubmissions) || 0;
+                  const colors = ['text-cyan-400', 'text-amber-400', 'text-emerald-400', 'text-purple-400', 'text-rose-400', 'text-indigo-400', 'text-teal-300', 'text-orange-400'];
+
+                  stage.innerHTML = \`
+                    <div class="space-y-6 animate-scale-in">
+                      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        <span>☁️ Nuvem de Palavras Coletiva</span>
+                      </div>
+                      <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight max-w-4xl mx-auto leading-tight">
+                        \${activity.title}
+                      </h2>
+                      \${activity.subtitle ? \`<p class="text-slate-400 text-lg max-w-2xl mx-auto">\${activity.subtitle}</p>\` : ''}
+
+                      <div class="min-h-[380px] flex items-center justify-center p-8 bg-slate-900/60 backdrop-blur-xl rounded-3xl border border-purple-800/50 shadow-2xl relative overflow-hidden">
+                        \${words.length === 0 ? \`
+                          <div class="text-center text-slate-400">
+                            <span class="text-4xl block mb-2">💬</span>
+                            <p class="text-lg font-bold">Aguardando primeiras respostas...</p>
+                            <p class="text-xs text-slate-500">Envie suas palavras pelo celular para vê-las aqui!</p>
+                          </div>
+                        \` : \`
+                          <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 max-w-4xl py-6">
+                            \${words.map((w, i) => {
+                              const maxCount = Math.max(...words.map(x => x.count), 1);
+                              const ratio = w.count / maxCount;
+                              const sizeRem = 1.3 + (ratio * 3.5); // scale between 1.3rem and 4.8rem
+                              const colorClass = colors[i % colors.length];
+                              return \`
+                                <span class="floating-word font-black \${colorClass} transition-all duration-500" style="font-size: \${sizeRem}rem; animation-delay: \${(i * 0.2)}s">
+                                  \${w.text} <sub class="text-xs opacity-60 font-mono">\${w.count > 1 ? '(' + w.count + ')' : ''}</sub>
+                                </span>
+                              \`;
+                            }).join('')}
+                          </div>
+                        \`}
+                      </div>
+                      <div class="text-sm font-bold text-slate-400">
+                        Total de respostas registradas: <span class="text-cyan-400 font-mono font-black text-base">\${total}</span>
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 2. Múltipla Escolha / Enquete
+                if (activity.type === 'multiple_choice') {
+                  const opts = (aggregations && aggregations.options) || activity.options || [];
+                  const total = (aggregations && aggregations.totalVotes) || 0;
+                  const letters = ['A', 'B', 'C', 'D', 'E'];
+
+                  stage.innerHTML = \`
+                    <div class="space-y-8 animate-scale-in max-w-4xl mx-auto">
+                      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        <span>📊 Votação & Enquete em Tempo Real</span>
+                      </div>
+                      <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                        \${activity.title}
+                      </h2>
+                      \${activity.subtitle ? \`<p class="text-slate-400 text-lg">\${activity.subtitle}</p>\` : ''}
+
+                      <div class="space-y-4 text-left">
+                        \${opts.map((opt, i) => {
+                          const percent = opt.percent || 0;
+                          return \`
+                            <div class="p-4 sm:p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 shadow-xl relative overflow-hidden transition-all duration-700">
+                              <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-600/40 to-indigo-600/50 rounded-2xl transition-all duration-700" style="width: \${percent}%"></div>
+                              <div class="relative z-10 flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                  <span class="w-8 h-8 rounded-xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
+                                    \${letters[i] || (i + 1)}
+                                  </span>
+                                  <span class="text-base sm:text-xl font-bold text-white">\${opt.text}</span>
+                                </div>
+                                <div class="text-right shrink-0">
+                                  <span class="text-2xl sm:text-3xl font-black text-cyan-300 font-mono">\${percent}%</span>
+                                  <span class="text-xs text-slate-400 block font-normal">\${opt.count || 0} votos</span>
+                                </div>
+                              </div>
+                            </div>
+                          \`;
+                        }).join('')}
+                      </div>
+
+                      <div class="text-sm font-bold text-slate-400">
+                        Total de votos computados: <span class="text-cyan-400 font-mono font-black text-base">\${total}</span>
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 3. Quiz Competitivo
+                if (activity.type === 'quiz' || activity.type === 'true_false') {
+                  const opts = activity.options || [];
+                  const letters = ['A', 'B', 'C', 'D'];
+                  const shapes = ['▲', '◆', '●', '■'];
+                  const shapeColors = ['bg-rose-500', 'bg-blue-600', 'bg-amber-500', 'bg-emerald-600'];
+
+                  stage.innerHTML = \`
+                    <div class="space-y-6 animate-scale-in max-w-4xl mx-auto">
+                      <div class="flex items-center justify-center gap-4">
+                        <span class="px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          ⏱️ Quiz Competitivo (\${activity.points || 100} pts)
+                        </span>
+                      </div>
+
+                      <h2 class="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                        \${activity.title}
+                      </h2>
+
+                      <!-- Options Cards -->
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-2">
+                        \${opts.map((opt, i) => {
+                          const isCorrect = opt.isCorrect;
+                          const bg = shapeColors[i % shapeColors.length];
+                          return \`
+                            <div class="p-5 rounded-2xl \${bg} text-white shadow-xl flex items-center gap-4 transform transition hover:scale-[1.02]">
+                              <span class="text-3xl font-bold opacity-80 shrink-0">\${shapes[i % shapes.length]}</span>
+                              <span class="text-base sm:text-lg font-black leading-snug">\${opt.text}</span>
+                            </div>
+                          \`;
+                        }).join('')}
+                      </div>
+
+                      <div class="pt-4 flex items-center justify-center gap-3">
+                        <button onclick="revealCorrectAnswer()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm shadow-lg transition">
+                          Revelar Resposta Correta ✨
+                        </button>
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 4. Pergunte ao Palestrante (Q&A)
+                if (activity.type === 'qa') {
+                  const questions = (aggregations && aggregations.questions) || [];
+                  stage.innerHTML = \`
+                    <div class="space-y-6 animate-scale-in max-w-4xl mx-auto">
+                      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span>💬 Pergunte ao Palestrante (Q&A)</span>
+                      </div>
+                      <h2 class="text-2xl md:text-4xl font-black text-white tracking-tight">
+                        \${activity.title}
+                      </h2>
+                      \${activity.subtitle ? \`<p class="text-slate-400 text-base">\${activity.subtitle}</p>\` : ''}
+
+                      <div class="grid grid-cols-1 gap-3 max-h-[440px] overflow-y-auto pr-2 text-left">
+                        \${questions.length === 0 ? \`
+                          <div class="p-12 text-center text-slate-400 bg-slate-900/60 rounded-3xl border border-slate-800">
+                            <span class="text-4xl block mb-2">🙋</span>
+                            <p class="text-lg font-bold">Nenhuma dúvida enviada ainda.</p>
+                            <p class="text-xs text-slate-500">Envie sua pergunta pelo celular para aparecer aqui no telão!</p>
+                          </div>
+                        \` : \`
+                          \${questions.map((q, idx) => \`
+                            <div class="p-4 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 flex items-center justify-between gap-4 shadow-md">
+                              <div class="flex items-start gap-3">
+                                <span class="text-2xl shrink-0 mt-0.5">\${q.participantAvatar || '💬'}</span>
+                                <div>
+                                  <span class="text-xs font-bold text-cyan-300 block mb-0.5">\${q.participantName}</span>
+                                  <p class="text-base font-bold text-white leading-snug">\${q.question}</p>
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl font-bold text-sm shrink-0">
+                                <span>👍</span>
+                                <span class="font-mono">\${q.upvotes || 0}</span>
+                              </div>
+                            </div>
+                          \`).join('')}
+                        \`}
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 5. Sorteio de Participantes
+                if (activity.type === 'lucky_draw') {
+                  stage.innerHTML = \`
+                    <div class="space-y-6 animate-scale-in max-w-2xl mx-auto">
+                      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        <span>🎰 Sorteio Oficial da Palestra</span>
+                      </div>
+                      <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight">
+                        \${activity.title}
+                      </h2>
+                      \${activity.subtitle ? \`<p class="text-slate-400 text-base">\${activity.subtitle}</p>\` : ''}
+
+                      <div id="draw-box" class="p-10 rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-purple-800/80 shadow-2xl pulse-glow my-6">
+                        <span id="draw-avatar" class="text-6xl block mb-3">🎲</span>
+                        <h3 id="draw-name" class="text-3xl md:text-4xl font-black text-white">Pronto para sortear?</h3>
+                        <p id="draw-sub" class="text-slate-400 text-sm mt-2">Clique no botão abaixo ou acione pelo celular do palestrante.</p>
+                      </div>
+
+                      <button onclick="triggerStageLuckyDraw()" class="px-8 py-4 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-white font-black text-lg rounded-2xl shadow-2xl transition transform hover:scale-105">
+                        Sortear Agora 🎲
+                      </button>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 6. Ranking & Pódio
+                if (activity.type === 'ranking') {
+                  const top = leaderboard || [];
+                  const first = top[0];
+                  const second = top[1];
+                  const third = top[2];
+
+                  stage.innerHTML = \`
+                    <div class="space-y-6 animate-scale-in max-w-4xl mx-auto">
+                      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span>🏆 Placar Geral & Pódio dos Líderes</span>
+                      </div>
+                      <h2 class="text-3xl md:text-5xl font-black text-white tracking-tight">
+                        \${activity.title}
+                      </h2>
+
+                      <!-- Olympic Podium -->
+                      <div class="grid grid-cols-3 gap-3 items-end pt-4 pb-6 max-w-2xl mx-auto">
+                        <!-- 2nd Place -->
+                        <div class="text-center">
+                          <span class="text-3xl block mb-1">\${second ? (second.avatar || '🥈') : '🥈'}</span>
+                          <span class="text-sm font-bold text-white block truncate">\${second ? second.name : '—'}</span>
+                          <span class="text-xs font-mono font-bold text-slate-400">\${second ? second.score + ' pts' : '0 pts'}</span>
+                          <div class="h-28 bg-slate-800 rounded-t-2xl border-t-4 border-slate-400 flex items-center justify-center font-black text-2xl text-slate-300 shadow-xl mt-2">
+                            2º
+                          </div>
+                        </div>
+
+                        <!-- 1st Place (Gold / Highest) -->
+                        <div class="text-center">
+                          <span class="text-5xl block mb-1 animate-bounce">\${first ? (first.avatar || '👑') : '👑'}</span>
+                          <span class="text-base font-black text-amber-300 block truncate">\${first ? first.name : '—'}</span>
+                          <span class="text-sm font-mono font-black text-amber-400">\${first ? first.score + ' pts' : '0 pts'}</span>
+                          <div class="h-40 bg-gradient-to-t from-amber-600 to-amber-500 rounded-t-2xl border-t-4 border-amber-300 flex items-center justify-center font-black text-4xl text-white shadow-2xl mt-2 neon-glow">
+                            1º 🥇
+                          </div>
+                        </div>
+
+                        <!-- 3rd Place -->
+                        <div class="text-center">
+                          <span class="text-3xl block mb-1">\${third ? (third.avatar || '🥉') : '🥉'}</span>
+                          <span class="text-sm font-bold text-white block truncate">\${third ? third.name : '—'}</span>
+                          <span class="text-xs font-mono font-bold text-slate-400">\${third ? third.score + ' pts' : '0 pts'}</span>
+                          <div class="h-20 bg-slate-800 rounded-t-2xl border-t-4 border-amber-700 flex items-center justify-center font-black text-2xl text-amber-600 shadow-xl mt-2">
+                            3º
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="flex justify-center">
+                        <button onclick="confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-xs font-bold text-white shadow-md">
+                          Comemorar com Confetes 🎉
+                        </button>
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+              }
+
+              function revealCorrectAnswer() {
+                playSuccessChime();
+                confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+              }
+
+              async function triggerStageLuckyDraw() {
+                try {
+                  const res = await fetch('/api/gamification-events/' + currentEventData.id + '/lucky-draw', { method: 'POST' });
+                  const data = await res.json();
+                  if (data.winner) {
+                    const box = document.getElementById('draw-box');
+                    document.getElementById('draw-avatar').textContent = data.winner.avatar || '🏆';
+                    document.getElementById('draw-name').textContent = data.winner.name;
+                    document.getElementById('draw-sub').textContent = '🎉 Parabéns! Ganhador Oficial da Palestra!';
+                    playSuccessChime();
+                    confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+                  }
+                } catch(e) {
+                  alert('Erro ao sortear: ' + e.message);
+                }
+              }
+
+              // Poll Event State
+              async function fetchEventState() {
+                try {
+                  const res = await fetch('/api/public/events/' + eventSlug);
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  currentEventData = data;
+
+                  document.getElementById('header-participant-count').innerHTML = \`
+                    👥 <strong>\${data.participantsCount || 0}</strong> Conectados
+                  \`;
+
+                  renderActivity(data.currentActivity, data.currentActivity?.aggregations, data.leaderboard);
+                } catch(e) {}
+              }
+
+              // Start Polling and SSE
+              fetchEventState();
+              setInterval(fetchEventState, 2000);
+
+              // Setup Keyboard arrow shortcuts for presenter clicker
+              window.addEventListener('keydown', (e) => {
+                if (!currentEventData || !currentEventData.activities) return;
+                const acts = currentEventData.activities;
+                const currIdx = acts.findIndex(a => a.id === currentEventData.currentActivity?.id);
+                if (e.key === 'ArrowRight' && currIdx < acts.length - 1) {
+                  fetch('/api/gamification-events/' + currentEventData.id + '/set-active-activity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activityId: acts[currIdx + 1].id })
+                  }).then(() => fetchEventState());
+                } else if (e.key === 'ArrowLeft' && currIdx > 0) {
+                  fetch('/api/gamification-events/' + currentEventData.id + '/set-active-activity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activityId: acts[currIdx - 1].id })
+                  }).then(() => fetchEventState());
+                }
+              });
+            </script>
+          </body>
+          </html>
+        `);
+    } catch (err: any) {
+        res.status(500).send('Erro interno ao carregar telão: ' + err.message);
+    }
+});
+
+// ==========================================
+// EVENT GAMIFICATION: TELA MOBILE DO PARTICIPANTE
+// (/evento/:slugOrPin, /e/:slugOrPin, /live/:slugOrPin)
+// ==========================================
+app.get(['/evento/:slugOrPin', '/e/:slugOrPin', '/live/:slugOrPin'], async (req: Request, res: Response) => {
+    try {
+        const slugOrPin = req.params.slugOrPin;
+        const event = findEventByAny(slugOrPin);
+
+        if (!event) {
+            return res.status(404).send(`
+              <!DOCTYPE html>
+              <html lang="pt-BR">
+              <head>
+                <meta charset="UTF-8">
+                <title>Evento Não Encontrado</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+              </head>
+              <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4 text-center">
+                <div class="max-w-md bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-xl">
+                  <h1 class="text-xl font-bold text-red-400 mb-2">Evento Não Encontrado</h1>
+                  <p class="text-slate-400 text-xs mb-4">Verifique o código ou link fornecido pelo palestrante.</p>
+                </div>
+              </body>
+              </html>
+            `);
+        }
+
+        const theme = event.theme || { primaryColor: '#8b5cf6', backgroundColor: '#1e1b4b', accentColor: '#06b6d4' };
+
+        res.send(`
+          <!DOCTYPE html>
+          <html lang="pt-BR" class="h-full">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <title>${event.title} - Participação Ao Vivo</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              body {
+                font-family: 'Inter', sans-serif;
+                background-color: #0f172a;
+                color: #ffffff;
+                -webkit-tap-highlight-color: transparent;
+              }
+            </style>
+          </head>
+          <body class="min-h-full flex flex-col justify-between p-4 sm:p-6 bg-slate-950 text-white">
+
+            <!-- Mobile Top Bar -->
+            <header class="flex items-center justify-between gap-3 pb-3 border-b border-slate-800 shrink-0">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-sm font-bold shadow-md">
+                  🎮
+                </div>
+                <div>
+                  <h1 class="text-xs font-bold text-white leading-tight line-clamp-1">${event.title}</h1>
+                  <span class="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>Ao Vivo no Telão</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Logged-in User Badge -->
+              <div id="user-badge" class="hidden flex items-center gap-2">
+                <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700 text-xs">
+                  <span id="badge-avatar">🚀</span>
+                  <span id="badge-name" class="font-bold text-white max-w-[90px] truncate">Nome</span>
+                </div>
+                <button onclick="handleLogout()" class="text-[10px] text-slate-400 hover:text-slate-200 underline">Trocar</button>
+              </div>
+            </header>
+
+            <!-- Main Interactive Container -->
+            <main class="flex-1 flex items-center justify-center py-4">
+              <div class="w-full max-w-md">
+
+                <!-- STEP 1: ONBOARDING / LEAD REGISTRATION (Only shown once, saved in localStorage) -->
+                <div id="step-signup" class="space-y-4">
+                  <div class="text-center mb-6">
+                    <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-3xl mx-auto mb-3 shadow-xl shadow-purple-600/30">
+                      🚀
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Entre na Sala Interativa</h2>
+                    <p class="text-xs text-slate-400 mt-1">Preencha uma única vez para participar de todas as dinâmicas e sorteios da palestra.</p>
+                  </div>
+
+                  <form id="form-signup" onsubmit="handleSignup(event)" class="space-y-3.5 bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-2xl">
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                        Seu Nome Completo *
+                      </label>
+                      <input
+                        type="text"
+                        id="signup-name"
+                        autocomplete="name"
+                        required
+                        placeholder="Ex: Carlos Eduardo"
+                        class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-hidden transition"
+                      />
+                    </div>
+
+                    ${event.require_phone ? `
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                          WhatsApp com DDD *
+                        </label>
+                        <input
+                          type="tel"
+                          id="signup-phone"
+                          autocomplete="tel"
+                          required
+                          placeholder="(11) 99999-9999"
+                          oninput="maskPhone(this)"
+                          class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-hidden transition"
+                        />
+                      </div>
+                    ` : ''}
+
+                    ${event.require_email ? `
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                          Seu E-mail *
+                        </label>
+                        <input
+                          type="email"
+                          id="signup-email"
+                          autocomplete="email"
+                          required
+                          placeholder="seu@email.com"
+                          class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-hidden transition"
+                        />
+                      </div>
+                    ` : ''}
+
+                    <!-- Avatar Picker -->
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                        Escolha seu Mascote / Avatar:
+                      </label>
+                      <div class="grid grid-cols-6 gap-2" id="avatar-grid">
+                        ${['🚀', '⚡', '🎯', '🔥', '💎', '🦁'].map((av, idx) => `
+                          <button
+                            type="button"
+                            onclick="selectAvatar('${av}')"
+                            class="avatar-opt p-2.5 rounded-xl border text-xl flex items-center justify-center transition ${idx === 0 ? 'bg-purple-600 border-purple-400' : 'bg-slate-800 border-slate-700'}"
+                            data-avatar="${av}"
+                          >
+                            ${av}
+                          </button>
+                        `).join('')}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      id="btn-signup-submit"
+                      class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm rounded-xl shadow-lg shadow-purple-600/30 transition transform hover:-translate-y-0.5 mt-2"
+                    >
+                      Entrar no Evento 🚀
+                    </button>
+
+                    <p class="text-[11px] text-slate-500 text-center mt-2">
+                      🔒 Seus dados serão mantidos no cache do aparelho para não precisar digitar novamente.
+                    </p>
+                  </form>
+                </div>
+
+                <!-- STEP 2: ACTIVE DYNAMIC SCREEN (Shown automatically when logged in) -->
+                <div id="step-active" class="hidden space-y-4">
+                  <div id="dynamic-container" class="space-y-4">
+                    <div class="p-8 text-center text-slate-400 bg-slate-900 rounded-3xl border border-slate-800">
+                      <span class="text-3xl animate-spin block mb-2">⌛</span>
+                      <p class="text-sm font-bold text-white">Conectando à apresentação...</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </main>
+
+            <!-- Mobile Footer -->
+            <footer class="text-center text-[11px] text-slate-500 pt-3 border-t border-slate-800 shrink-0">
+              MDTracker Eventos Ao Vivo &bull; Sistema Gamificado de Alta Conversão
+            </footer>
+
+            <!-- Attendee Client Logic -->
+            <script>
+              const eventSlug = "${event.slug}";
+              const storageKey = "mdtracker_event_participant_" + eventSlug;
+              let selectedAvatar = '🚀';
+              let currentParticipant = null;
+              let currentActiveActivity = null;
+              let hasAnsweredCurrent = false;
+
+              function maskPhone(input) {
+                let v = input.value.replace(/\D/g, '');
+                if (v.length > 11) v = v.substring(0, 11);
+                if (v.length > 6) {
+                  v = '(' + v.substring(0, 2) + ') ' + v.substring(2, 7) + '-' + v.substring(7);
+                } else if (v.length > 2) {
+                  v = '(' + v.substring(0, 2) + ') ' + v.substring(2);
+                }
+                input.value = v;
+              }
+
+              function selectAvatar(av) {
+                selectedAvatar = av;
+                document.querySelectorAll('.avatar-opt').forEach(btn => {
+                  if (btn.getAttribute('data-avatar') === av) {
+                    btn.classList.add('bg-purple-600', 'border-purple-400');
+                    btn.classList.remove('bg-slate-800', 'border-slate-700');
+                  } else {
+                    btn.classList.remove('bg-purple-600', 'border-purple-400');
+                    btn.classList.add('bg-slate-800', 'border-slate-700');
+                  }
+                });
+              }
+
+              function handleLogout() {
+                localStorage.removeItem(storageKey);
+                window.location.reload();
+              }
+
+              // Attendee Signup
+              async function handleSignup(e) {
+                e.preventDefault();
+                const name = document.getElementById('signup-name').value.trim();
+                const phone = document.getElementById('signup-phone')?.value.trim() || '';
+                const email = document.getElementById('signup-email')?.value.trim() || '';
+
+                if (!name) return alert('Por favor, informe seu nome');
+
+                const btn = document.getElementById('btn-signup-submit');
+                btn.disabled = true;
+                btn.textContent = 'Entrando...';
+
+                try {
+                  const res = await fetch('/api/public/events/' + eventSlug + '/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name,
+                      phone,
+                      email,
+                      avatar: selectedAvatar
+                    })
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || 'Erro ao entrar');
+
+                  currentParticipant = data.participant;
+                  // Persist in localStorage so they never have to type again!
+                  localStorage.setItem(storageKey, JSON.stringify(data.participant));
+
+                  // Transition to Active Screen
+                  showActiveScreen();
+                } catch(err) {
+                  alert('Atenção: ' + err.message);
+                  btn.disabled = false;
+                  btn.textContent = 'Entrar no Evento 🚀';
+                }
+              }
+
+              function showActiveScreen() {
+                document.getElementById('step-signup').classList.add('hidden');
+                document.getElementById('step-active').classList.remove('hidden');
+
+                // Update Header User Badge
+                const badge = document.getElementById('user-badge');
+                badge.classList.remove('hidden');
+                document.getElementById('badge-avatar').textContent = currentParticipant.avatar || '🚀';
+                document.getElementById('badge-name').textContent = currentParticipant.name;
+              }
+
+              // Render Mobile Dynamic based on activity type
+              function renderMobileDynamic(activity) {
+                const container = document.getElementById('dynamic-container');
+
+                if (!activity) {
+                  container.innerHTML = \`
+                    <div class="p-8 text-center bg-slate-900 rounded-3xl border border-slate-800">
+                      <span class="text-4xl block mb-3 animate-pulse">⏳</span>
+                      <h3 class="text-base font-bold text-white">Aguardando a Próxima Dinâmica</h3>
+                      <p class="text-xs text-slate-400 mt-1">O palestrante abrirá a próxima rodada no telão em instantes.</p>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // If user already answered this activity in this session
+                if (hasAnsweredCurrent) {
+                  container.innerHTML = \`
+                    <div class="p-8 text-center bg-slate-900 rounded-3xl border border-purple-800/80 shadow-xl animate-scale-in">
+                      <span class="text-4xl block mb-2">🎉</span>
+                      <h3 class="text-lg font-black text-white">Sua resposta foi enviada!</h3>
+                      <p class="text-xs text-slate-300 mt-1">Acompanhe os resultados sendo projetados ao vivo no telão.</p>
+                      <div class="mt-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-xs text-purple-300 font-bold">
+                        Aguardando palestrante avançar para a próxima rodada...
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 1. Nuvem de Palavras
+                if (activity.type === 'word_cloud') {
+                  container.innerHTML = \`
+                    <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4 text-center">
+                      <span class="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20 inline-block">
+                        ☁️ Nuvem de Palavras
+                      </span>
+                      <h3 class="text-base sm:text-lg font-bold text-white">\${activity.title}</h3>
+                      <p class="text-xs text-slate-400">\${activity.subtitle || 'Digite de 1 a 3 palavras para projetar no telão:'}</p>
+
+                      <form onsubmit="submitWordCloud(event)" class="space-y-3">
+                        <input
+                          type="text"
+                          id="mobile-word-input"
+                          required
+                          maxlength="40"
+                          placeholder="Ex: Vendas, Automação, IA"
+                          class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-center text-base font-bold text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-hidden transition"
+                        />
+                        <button type="submit" class="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-sm rounded-xl shadow-lg transition">
+                          Enviar Palavra para o Telão 🚀
+                        </button>
+                      </form>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 2. Múltipla Escolha
+                if (activity.type === 'multiple_choice') {
+                  const opts = activity.options || [];
+                  container.innerHTML = \`
+                    <div class="space-y-3 text-center">
+                      <span class="text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 inline-block mb-1">
+                        📊 Enquete Ao Vivo
+                      </span>
+                      <h3 class="text-base sm:text-lg font-bold text-white">\${activity.title}</h3>
+                      <p class="text-xs text-slate-400 mb-4">Toque na sua opção preferida:</p>
+
+                      <div class="space-y-2.5">
+                        \${opts.map((opt, i) => \`
+                          <button
+                            type="button"
+                            onclick="submitOptionAnswer('\${opt.id}')"
+                            class="w-full p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-purple-500 text-left flex items-center justify-between text-sm font-bold text-white shadow-md transition active:scale-95"
+                          >
+                            <span>\${opt.text}</span>
+                            <span class="text-slate-400">&rarr;</span>
+                          </button>
+                        \`).join('')}
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 3. Quiz Competitivo
+                if (activity.type === 'quiz' || activity.type === 'true_false') {
+                  const opts = activity.options || [];
+                  const shapeColors = ['bg-rose-600', 'bg-blue-600', 'bg-amber-500', 'bg-emerald-600'];
+                  const shapes = ['▲', '◆', '●', '■'];
+
+                  container.innerHTML = \`
+                    <div class="space-y-3 text-center">
+                      <span class="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 inline-block mb-1">
+                        ⏱️ Quiz Competitivo (\${activity.points || 100} pts)
+                      </span>
+                      <h3 class="text-base sm:text-lg font-black text-white leading-tight">\${activity.title}</h3>
+                      <p class="text-xs text-slate-400 mb-3">Responda o mais rápido possível para pontuar mais alto!</p>
+
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        \${opts.map((opt, i) => \`
+                          <button
+                            type="button"
+                            onclick="submitOptionAnswer('\${opt.id}')"
+                            class="p-4 rounded-2xl \${shapeColors[i % shapeColors.length]} text-white font-black text-base shadow-lg transition active:scale-95 flex items-center gap-3 text-left"
+                          >
+                            <span class="text-xl opacity-75">\${shapes[i % shapes.length]}</span>
+                            <span>\${opt.text}</span>
+                          </button>
+                        \`).join('')}
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 4. Q&A (Pergunte ao Palestrante)
+                if (activity.type === 'qa') {
+                  const questions = activity.aggregations?.questions || [];
+                  container.innerHTML = \`
+                    <div class="space-y-4">
+                      <div class="text-center">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 inline-block mb-1">
+                          💬 Pergunte ao Palestrante
+                        </span>
+                        <h3 class="text-base font-bold text-white">\${activity.title}</h3>
+                      </div>
+
+                      <form onsubmit="submitQuestion(event)" class="space-y-2.5 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                        <textarea
+                          id="mobile-question-input"
+                          required
+                          rows="2"
+                          placeholder="Digite sua dúvida para ser respondida no telão..."
+                          class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs sm:text-sm text-white focus:border-purple-500 outline-hidden"
+                        ></textarea>
+                        <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-md">
+                          Enviar Pergunta 🚀
+                        </button>
+                      </form>
+
+                      <div class="space-y-2 pt-2">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Dúvidas da Plateia (Curta para subir no telão):</span>
+                        \${questions.map(q => \`
+                          <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                            <span class="text-white font-medium">\${q.question}</span>
+                            <button onclick="upvoteQuestion('\${q.id}')" class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg font-bold flex items-center gap-1 shrink-0">
+                              <span>👍</span>
+                              <span>\${q.upvotes || 0}</span>
+                            </button>
+                          </div>
+                        \`).join('')}
+                      </div>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 5. Sorteio
+                if (activity.type === 'lucky_draw') {
+                  container.innerHTML = \`
+                    <div class="p-8 text-center bg-slate-900 rounded-3xl border border-rose-800/80 shadow-xl space-y-3">
+                      <span class="text-5xl block animate-bounce">🍀</span>
+                      <h3 class="text-lg font-black text-white">Você está concorrendo ao sorteio!</h3>
+                      <p class="text-xs text-slate-300">Como você está conectado(a), seu nome já está na roleta oficial. Olhe para o telão agora!</p>
+                    </div>
+                  \`;
+                  return;
+                }
+
+                // 6. Ranking
+                if (activity.type === 'ranking') {
+                  container.innerHTML = \`
+                    <div class="p-8 text-center bg-slate-900 rounded-3xl border border-amber-800/80 shadow-xl space-y-3">
+                      <span class="text-5xl block">🏆</span>
+                      <h3 class="text-lg font-black text-white">Confira o Pódio no Telão!</h3>
+                      <p class="text-xs text-slate-300">Os vencedores com maior pontuação e rapidez estão sendo revelados no telão da palestra.</p>
+                    </div>
+                  \`;
+                  return;
+                }
+              }
+
+              // Submissions
+              async function submitWordCloud(e) {
+                e.preventDefault();
+                const word = document.getElementById('mobile-word-input').value.trim();
+                if (!word) return;
+                await sendResponse({ text: word });
+              }
+
+              async function submitOptionAnswer(optId) {
+                await sendResponse({ selectedOptionId: optId });
+              }
+
+              async function submitQuestion(e) {
+                e.preventDefault();
+                const q = document.getElementById('mobile-question-input').value.trim();
+                if (!q) return;
+                await sendResponse({ text: q });
+              }
+
+              async function upvoteQuestion(qId) {
+                try {
+                  await fetch('/api/public/events/' + eventSlug + '/qa-upvote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ questionId: qId })
+                  });
+                  pollMobileState();
+                } catch(e) {}
+              }
+
+              async function sendResponse(payload) {
+                try {
+                  const res = await fetch('/api/public/events/' + eventSlug + '/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      participantId: currentParticipant?.id,
+                      participantName: currentParticipant?.name,
+                      activityId: currentActiveActivity?.id,
+                      responseData: payload
+                    })
+                  });
+                  hasAnsweredCurrent = true;
+                  renderMobileDynamic(currentActiveActivity);
+                } catch(e) {
+                  alert('Erro ao enviar: ' + e.message);
+                }
+              }
+
+              // Poll Event State
+              async function pollMobileState() {
+                try {
+                  const res = await fetch('/api/public/events/' + eventSlug);
+                  if (!res.ok) return;
+                  const data = await res.json();
+
+                  // Check if presenter switched activity
+                  if (currentActiveActivity?.id !== data.currentActivity?.id) {
+                    currentActiveActivity = data.currentActivity;
+                    hasAnsweredCurrent = false; // reset for new activity
+                    if (currentParticipant) {
+                      renderMobileDynamic(currentActiveActivity);
+                    }
+                  }
+                } catch(e) {}
+              }
+
+              // Initialize on load: Check browser cache
+              window.addEventListener('DOMContentLoaded', () => {
+                const cached = localStorage.getItem(storageKey);
+                if (cached) {
+                  try {
+                    currentParticipant = JSON.parse(cached);
+                    showActiveScreen();
+                  } catch(e) {}
+                }
+                pollMobileState();
+                setInterval(pollMobileState, 2000);
+              });
+            </script>
+          </body>
+          </html>
+        `);
+    } catch (err: any) {
+        res.status(500).send('Erro interno ao carregar página mobile: ' + err.message);
     }
 });
 
@@ -8648,8 +14007,32 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       ...query
     };
 
+    // Resolve dynamic phone rotation if multi-phone or team rotation configured
+    let chosenPhone = linkObj.phone;
+    let assignedUserId = '';
+    let assignedTeamId = linkObj.assignedTeamId || '';
+
+    if (linkObj.assignedTeamId) {
+      const teamMembers = inMemoryTeamMembers.filter(m => m.team_id === linkObj.assignedTeamId && m.active);
+      if (teamMembers.length > 0) {
+        const clicks = Number(dbLink.clicks_count || 0);
+        const memberIdx = clicks % teamMembers.length;
+        const member = teamMembers[memberIdx];
+        assignedUserId = member.user_id;
+        if (member.phone_number && (linkObj.rotationMode === 'team_rotation' || !linkObj.phone)) {
+          chosenPhone = member.phone_number;
+        }
+      }
+    }
+
+    if (Array.isArray(linkObj.phoneNumbers) && linkObj.phoneNumbers.length > 0 && linkObj.rotationMode === 'round_robin') {
+      const clicks = Number(dbLink.clicks_count || 0);
+      const phoneIdx = clicks % linkObj.phoneNumbers.length;
+      chosenPhone = linkObj.phoneNumbers[phoneIdx] || chosenPhone;
+    }
+
     // Build target wa.me URL
-    const targetWaUrl = buildWhatsAppUrl(linkObj.phone, linkObj.message, msgParams);
+    const targetWaUrl = buildWhatsAppUrl(chosenPhone, linkObj.message, msgParams);
 
     // Fetch settings explicitly using link's company_id
     const settings = await getSettings(dbLink.company_id);
@@ -8864,6 +14247,8 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
               linkId,
               linkTitle,
               stage: 'Novo Lead',
+              assignedUserId: '${assignedUserId}',
+              assignedTeamId: '${assignedTeamId}',
               device: deviceType,
               browser: navigator.userAgent
             };

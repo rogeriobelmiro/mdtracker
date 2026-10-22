@@ -20,6 +20,11 @@ import { VirtualDialer } from './components/VirtualDialer';
 import { VirtualPhoneManager } from './components/VirtualPhoneManager';
 import { LeadScoringAndLists } from './components/LeadScoringAndLists';
 import { InstagramAutoDM } from './components/InstagramAutoDM';
+import { TeamsManager } from './components/TeamsManager';
+import { SupervisorLiveMonitor } from './components/SupervisorLiveMonitor';
+import { SurveysManager } from './components/SurveysManager';
+import { CustomDomainsManager } from './components/CustomDomainsManager';
+import { EventGamificationManager } from './components/EventGamificationManager';
 import {
   fetchCompanies,
   fetchUsers,
@@ -118,7 +123,7 @@ export default function App() {
         fetchSettings(activeCompanyId),
         fetchWebhookLogs(),
         fetchCompanies(),
-        fetchUsers(),
+        fetchUsers(activeCompanyId),
         fetchProducts(activeCompanyId),
         fetchLeadPurchases(activeCompanyId),
         fetchPopups(activeCompanyId)
@@ -196,6 +201,11 @@ export default function App() {
     if (!currentCompany) return [];
     return popups.filter(p => p.companyId ? p.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
   }, [popups, currentCompany]);
+
+  const companyUsers = useMemo(() => {
+    if (!currentCompany) return [];
+    return users.filter(u => u.companyId === currentCompany.id);
+  }, [users, currentCompany]);
 
   // Dynamically calculate isolated stats per company
   const companyStats: StatsSummary = useMemo(() => {
@@ -572,6 +582,60 @@ export default function App() {
               />
             )}
 
+            {activeTab === 'teams' && (
+              currentUser.role !== 'attendant' ? (
+                <TeamsManager
+                  currentCompany={currentCompany}
+                  currentUser={currentUser}
+                  users={companyUsers}
+                  onNavigateToTab={(tab) => setActiveTab(tab as any)}
+                />
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-lg mx-auto mt-12 shadow-xs">
+                  <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-xl">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-slate-800">Acesso Restrito à Gestão de Equipes</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Seu perfil é de Atendente. Somente Administradores e Gerentes podem configurar as filas e equipes de vendas.
+                  </p>
+                </div>
+              )
+            )}
+
+            {activeTab === 'supervisor_monitor' && (
+              currentUser.role !== 'attendant' ? (
+                <SupervisorLiveMonitor
+                  currentCompany={currentCompany}
+                  currentUser={currentUser}
+                  leads={companyLeads}
+                  links={companyLinks}
+                  users={companyUsers}
+                  onOpenWhatsApp={(leadId) => {
+                    setChatSelectedLeadId(leadId);
+                    setActiveTab('chat');
+                  }}
+                  onInitiateCall={(target) => {
+                    setActiveCallTarget({
+                      leadId: target.id,
+                      leadName: target.name,
+                      leadPhone: target.phone
+                    });
+                  }}
+                />
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-lg mx-auto mt-12 shadow-xs">
+                  <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-xl">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-slate-800">Acesso Restrito à Torre de Supervisão</h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    A Torre de Supervisão ao vivo é reservada para Gerentes e Supervisores da equipe comercial.
+                  </p>
+                </div>
+              )
+            )}
+
             {activeTab === 'events' && currentUser.role !== 'attendant' && (
               <IntegrationsAndEvents
                 settings={settings}
@@ -597,6 +661,24 @@ export default function App() {
                 currentCompany={currentCompany}
                 products={products}
                 onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'surveys' && currentUser.role !== 'attendant' && (
+              <SurveysManager
+                currentCompany={currentCompany}
+              />
+            )}
+
+            {activeTab === 'custom_domains' && currentUser.role !== 'attendant' && (
+              <CustomDomainsManager
+                currentCompany={currentCompany}
+              />
+            )}
+
+            {activeTab === 'event_gamification' && currentUser.role !== 'attendant' && (
+              <EventGamificationManager
+                currentCompany={currentCompany}
               />
             )}
 
@@ -653,10 +735,15 @@ export default function App() {
               <WhatsAppChatInbox
                 leads={companyLeads}
                 links={companyLinks}
+                currentUser={currentUser}
+                currentCompany={currentCompany}
+                users={companyUsers}
                 initialSelectedLeadId={chatSelectedLeadId}
                 onUpdateLeadStage={(leadId, newStage) => {
                   handleUpdateLead(leadId, { stage: newStage });
                 }}
+                onUpdateLead={handleUpdateLead}
+                onRefreshLeads={loadData}
               />
             )}
 
@@ -664,7 +751,7 @@ export default function App() {
               <UserManagement
                 currentCompany={currentCompany}
                 currentUser={currentUser}
-                users={users}
+                users={companyUsers}
                 onAddUser={handleAddUser}
                 onUpdateUser={handleUpdateUser}
                 onDeleteUser={handleDeleteUser}
