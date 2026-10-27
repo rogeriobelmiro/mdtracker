@@ -61,26 +61,126 @@ let inMemoryWebhookLogs: WebhookLog[] = [...initialWebhookLogs];
 let inMemoryProducts: any[] = [];
 let inMemoryLeadPurchases: any[] = [];
 
-try {
-    if (fs.existsSync(LOCAL_AUTH_FILE)) {
-        const parsed = JSON.parse(fs.readFileSync(LOCAL_AUTH_FILE, 'utf-8'));
-        if (Array.isArray(parsed.companies) && parsed.companies.length > 0) {
-            parsed.companies.forEach((c: any) => {
-                const idx = inMemoryCompanies.findIndex(ic => ic.id === c.id);
-                if (idx >= 0) inMemoryCompanies[idx] = { ...inMemoryCompanies[idx], ...c };
-                else inMemoryCompanies.unshift(c);
-            });
-        }
-        if (Array.isArray(parsed.users) && parsed.users.length > 0) {
-            parsed.users.forEach((u: any) => {
-                const idx = inMemoryUsers.findIndex(iu => iu.id === u.id || iu.email?.toLowerCase() === u.email?.toLowerCase());
-                if (idx >= 0) inMemoryUsers[idx] = { ...inMemoryUsers[idx], ...u };
-                else inMemoryUsers.unshift(u);
-            });
-        }
+const GENERIC_EMAIL_DOMAINS = new Set([
+    'gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'yahoo.com.br',
+    'icloud.com', 'live.com', 'msn.com', 'uol.com.br', 'bol.com.br', 'terra.com.br', 'ig.com.br'
+]);
+
+function formatCompanyNameFromSlug(slug: string): string {
+    const lower = slug.toLowerCase();
+    if (lower === 'fachinettiabdalla') return 'Fachinetti Abdalla';
+    if (lower === 'mudadigital') return 'MudaDigital';
+    return slug
+        .replace(/[._-]+/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase())
+        .trim() || 'Nova Empresa';
+}
+
+function resolveIsolatedCompanyForEmail(email: string, preferredCompanyId?: string): any {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const [localPart = 'empresa', domainPart = ''] = cleanEmail.split('@');
+
+    // 1. Explicit MudaDigital domain
+    if (domainPart.startsWith('mudadigital.')) {
+        return inMemoryCompanies.find(c => c.id === 'comp-1786498560971') || inMemoryCompanies[0];
     }
-} catch (err) {
-    console.warn('Could not load local auth store:', err);
+
+    // 2. Seed demo domains
+    if (domainPart === 'alfa.com') {
+        return inMemoryCompanies.find(c => c.id === 'comp-alfa') || initialCompanies[0];
+    }
+    if (domainPart === 'beta.com') {
+        return inMemoryCompanies.find(c => c.id === 'comp-beta') || initialCompanies[1];
+    }
+
+    // 3. If a non-MudaDigital preferredCompanyId was provided and exists, use it
+    if (preferredCompanyId && preferredCompanyId !== 'comp-1786498560971') {
+        const existingById = inMemoryCompanies.find(c => c.id === preferredCompanyId);
+        if (existingById) return existingById;
+    }
+
+    // 4. Derive deterministic isolated company from corporate domain (or local part for generic email)
+    const isGeneric = !domainPart || GENERIC_EMAIL_DOMAINS.has(domainPart);
+    const rawSlug = isGeneric
+        ? localPart.replace(/[^a-z0-9]/g, '')
+        : domainPart.split('.')[0].replace(/[^a-z0-9]/g, '');
+    const safeSlug = rawSlug || `tenant-${Date.now()}`;
+    const targetCompanyId = preferredCompanyId && preferredCompanyId !== 'comp-1786498560971'
+        ? preferredCompanyId
+        : `comp-${safeSlug}`;
+
+    let company = inMemoryCompanies.find(c => c.id === targetCompanyId);
+    if (!company) {
+        company = {
+            id: targetCompanyId,
+            name: formatCompanyNameFromSlug(isGeneric ? localPart : domainPart.split('.')[0]),
+            cnpj: '',
+            plan: 'pro',
+            active: true,
+            createdAt: new Date().toISOString()
+        };
+        inMemoryCompanies.push(company);
+    }
+    return company;
+}
+
+const companyAliasCache: Record<string, string> = {};
+
+async function resolveRealCompanyId(companyId?: string): Promise<string> {
+    if (!companyId) return '';
+    if (companyAliasCache[companyId]) return companyAliasCache[companyId];
+
+    // Standard or timestamp-based IDs don't need alias lookup
+    if (companyId === 'comp-alfa' || companyId === 'comp-beta' || /^comp-\d+$/.test(companyId)) {
+        return companyId;
+    }
+
+    // For slug-based offline IDs (e.g. 'comp-fachinettiabdalla'), check if a user or company in Supabase has a real timestamp ID
+    const slug = companyId.replace(/^comp-/, '').toLowerCase();
+    try {
+        const localUsersForComp = inMemoryUsers.filter(u => u.companyId === companyId && u.email);
+        for (const lu of localUsersForComp) {
+            const { data: dbUsers } = await supabase
+                .from('users')
+                .select('id, company_id, email, name, role, active, password')
+                .ilike('email', lu.email.trim())
+                .limit(1);
+            if (dbUsers && dbUsers.length > 0 && dbUsers[0].company_id && dbUsers[0].company_id !== 'comp-1786498560971') {
+                const realId = dbUsers[0].company_id;
+                companyAliasCache[companyId] = realId;
+                lu.id = dbUsers[0].id || lu.id;
+                lu.companyId = realId;
+                saveLocalAuthStore();
+                return realId;
+            }
+        }
+
+        if (slug.length >= 3) {
+            const { data: dbComps } = await supabase
+                .from('companies')
+                .select('*')
+                .neq('id', 'comp-1786498560971');
+            if (dbComps && dbComps.length > 0) {
+                const matched = dbComps.find((c: any) =>
+                    String(c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(slug)
+                );
+                if (matched) {
+                    companyAliasCache[companyId] = matched.id;
+                    const mappedComp = mapCompanyFromDB(matched);
+                    const cIdx = inMemoryCompanies.findIndex(ic => ic.id === matched.id || ic.id === companyId);
+                    if (cIdx >= 0) inMemoryCompanies[cIdx] = mappedComp;
+                    else inMemoryCompanies.push(mappedComp);
+                    inMemoryUsers.forEach(u => {
+                        if (u.companyId === companyId) u.companyId = matched.id;
+                    });
+                    saveLocalAuthStore();
+                    return matched.id;
+                }
+            }
+        }
+    } catch {}
+
+    return companyId;
 }
 
 function saveLocalAuthStore() {
@@ -91,6 +191,41 @@ function saveLocalAuthStore() {
             'utf-8'
         );
     } catch {}
+}
+
+try {
+    if (fs.existsSync(LOCAL_AUTH_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_AUTH_FILE, 'utf-8'));
+        if (Array.isArray(parsed.companies) && parsed.companies.length > 0) {
+            parsed.companies.forEach((c: any) => {
+                const idx = inMemoryCompanies.findIndex(ic => ic.id === c.id);
+                if (idx >= 0) inMemoryCompanies[idx] = { ...inMemoryCompanies[idx], ...c };
+                else inMemoryCompanies.push(c);
+            });
+        }
+        if (Array.isArray(parsed.users) && parsed.users.length > 0) {
+            parsed.users.forEach((u: any) => {
+                const idx = inMemoryUsers.findIndex(iu => iu.id === u.id || iu.email?.toLowerCase() === u.email?.toLowerCase());
+                if (idx >= 0) inMemoryUsers[idx] = { ...inMemoryUsers[idx], ...u };
+                else inMemoryUsers.push(u);
+            });
+        }
+        // Sanitize any non-MudaDigital users that were previously fallback-mapped to MudaDigital ('comp-1786498560971')
+        let fixedAny = false;
+        inMemoryUsers.forEach((u: any) => {
+            const emailLower = String(u.email || '').trim().toLowerCase();
+            if (u.companyId === 'comp-1786498560971' && !emailLower.includes('@mudadigital.')) {
+                const isolatedComp = resolveIsolatedCompanyForEmail(emailLower);
+                u.companyId = isolatedComp.id;
+                fixedAny = true;
+            }
+        });
+        if (fixedAny) {
+            saveLocalAuthStore();
+        }
+    }
+} catch (err) {
+    console.warn('Could not load local auth store:', err);
 }
 
 async function verifyUserPassword(inputPassword: string, storedPassword?: string): Promise<boolean> {
@@ -2785,30 +2920,39 @@ async function sendMetaCAPIEvent(eventName: string, leadData: any, settings: any
 }
 
 
-// Fetch current settings directly from DB with smart fallback
+// Fetch current settings isolated strictly by companyId
 async function getSettings(companyId?: string): Promise<IntegrationSettings | any> {
+    const targetId = companyId || 'comp-alfa';
     try {
-      if (companyId && companyId !== 'comp-alfa') {
-        const { data } = await supabase.from('settings').select('*').eq('company_id', companyId).maybeSingle();
-        if (data) return mapSettingsFromDB(data);
+      const { data } = await supabase.from('settings').select('*').eq('company_id', targetId).maybeSingle();
+      if (data) {
+        const mapped = mapSettingsFromDB(data);
+        inMemorySettings[targetId] = mapped;
+        return mapped;
       }
-      // Fallback: buscar settings com Pixel ID e Token configurados
-      const { data: configured } = await supabase
-        .from('settings')
-        .select('*')
-        .not('global_meta_pixel_id', 'is', null)
-        .neq('global_meta_pixel_id', '')
-        .limit(1)
-        .maybeSingle();
-      if (configured) return mapSettingsFromDB(configured);
-
-      // Fallback final: qualquer linha na tabela settings
-      const { data: fallback } = await supabase.from('settings').select('*').limit(1).maybeSingle();
-      if (fallback) return mapSettingsFromDB(fallback);
     } catch {}
 
-    const targetId = companyId || 'comp-alfa';
-    return inMemorySettings[targetId] || inMemorySettings['comp-alfa'] || { ...initialSettings, companyId: targetId };
+    if (inMemorySettings[targetId]) {
+        return inMemorySettings[targetId];
+    }
+
+    return {
+        companyId: targetId,
+        globalMetaPixelId: '',
+        globalMetaToken: '',
+        globalGoogleAdsId: '',
+        globalGoogleAdsLabel: '',
+        globalWebhookUrl: '',
+        evolutionApiUrl: '',
+        evolutionApiKey: '',
+        evolutionInstanceName: '',
+        whatsappProvider: 'official',
+        autoFireMetaOnLead: true,
+        autoFireMetaOnConversion: true,
+        autoFireGoogleOnConversion: true,
+        autoFireWebhookOnLead: true,
+        autoFireWebhookOnStageChange: true
+    };
 }
 
 // Helper function to format WhatsApp message template
@@ -3450,10 +3594,11 @@ app.delete('/api/lead-purchases/:id', async (req: Request, res: Response) => {
 // List Popups by Company
 app.get('/api/popups', async (req: Request, res: Response) => {
     try {
-        const companyId = req.query.companyId as string || 'comp-alfa';
+        const rawCompanyId = req.query.companyId as string || 'comp-alfa';
+        const companyId = await resolveRealCompanyId(rawCompanyId);
         const { data, error } = await supabase.from('popups').select('*').eq('company_id', companyId);
         
-        if (error && error.code !== '42P01') {
+        if (error && error.code !== '42P01' && error.code !== 'SUPABASE_OFFLINE') {
             console.warn('Supabase popups error, using fallback:', error.message);
         }
         
@@ -3462,12 +3607,11 @@ app.get('/api/popups', async (req: Request, res: Response) => {
         }
 
         // Fallback to in-memory popups
-        const companyPopups = inMemoryPopups.filter(p => p.company_id === companyId);
+        const companyPopups = inMemoryPopups.filter(p => p.company_id === rawCompanyId || p.company_id === companyId);
         res.json(companyPopups.map(mapPopupFromDB));
     } catch (error: any) {
-        console.error('Error fetching popups:', error);
-        const companyId = req.query.companyId as string || 'comp-alfa';
-        res.json(inMemoryPopups.filter(p => p.company_id === companyId).map(mapPopupFromDB));
+        const rawCompanyId = req.query.companyId as string || 'comp-alfa';
+        res.json(inMemoryPopups.filter(p => p.company_id === rawCompanyId).map(mapPopupFromDB));
     }
 });
 
@@ -4759,13 +4903,7 @@ app.get('/api/workflows', async (req: Request, res: Response) => {
             }
         } catch {}
 
-        let list = inMemoryWorkflows.filter(w => w.company_id === companyId).map(mapWorkflowFromDB);
-        if (list.length === 0) {
-            list = inMemoryWorkflows.filter(w => w.company_id === 'comp-alfa').map(w => ({
-                ...mapWorkflowFromDB(w),
-                companyId
-            }));
-        }
+        const list = inMemoryWorkflows.filter(w => w.company_id === companyId).map(mapWorkflowFromDB);
         res.json(list);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -8620,14 +8758,7 @@ app.get('/api/instagram/automations', async (req: Request, res: Response) => {
         } catch {}
 
         if (rules.length === 0) {
-            let filtered = inMemoryInstagramAutomations.filter(a => a.companyId === companyId);
-            if (filtered.length === 0) {
-                filtered = inMemoryInstagramAutomations.map(a => ({
-                    ...a,
-                    companyId
-                }));
-            }
-            rules = filtered;
+            rules = inMemoryInstagramAutomations.filter(a => a.companyId === companyId);
         }
 
         // Recuperar logs para auditar e sincronizar as estatísticas de cada regra
@@ -9479,10 +9610,10 @@ async function subscribeInstagramAndPage(instagramAccountId?: string, pageId?: s
     }
 }
 
-// Helper para resolver credenciais do Instagram (Memória -> Supabase -> Arquivo)
+// Helper para resolver credenciais do Instagram isoladas por empresa (Memória -> Supabase)
 async function resolveInstagramSettings(companyId?: string): Promise<any> {
     let settings = companyId ? inMemoryInstagramSettings[companyId] : null;
-    if (!settings?.accessToken) {
+    if (!companyId && !settings?.accessToken) {
         const anyActive = Object.values(inMemoryInstagramSettings).find((s: any) => s.accessToken);
         if (anyActive) settings = anyActive;
     }
@@ -9500,8 +9631,7 @@ async function resolveInstagramSettings(companyId?: string): Promise<any> {
                 } else if (data?.global_meta_token) {
                     settings = { accessToken: data.global_meta_token, autoReplyReal: true };
                 }
-            }
-            if (!settings?.accessToken) {
+            } else {
                 const { data: allSet } = await supabase
                     .from('settings')
                     .select('instagram_config, company_id')
@@ -9510,7 +9640,6 @@ async function resolveInstagramSettings(companyId?: string): Promise<any> {
                 const found = allSet?.find((s: any) => s.instagram_config?.accessToken);
                 if (found) {
                     settings = found.instagram_config;
-                    if (companyId) inMemoryInstagramSettings[companyId] = settings;
                 }
             }
         } catch (e: any) {
@@ -10477,10 +10606,15 @@ app.post('/api/login', async (req: Request, res: Response) => {
                     if (compData && compData.length > 0 && compData[0].active !== false) {
                         companyObj = mapCompanyFromDB(compData[0]);
                     } else {
-                        companyObj = inMemoryCompanies.find(c => c.id === candidate.company_id) || inMemoryCompanies[0];
+                        companyObj = resolveIsolatedCompanyForEmail(cleanEmail, candidate.company_id);
                     }
 
-                    const mappedUser = mapUserFromDB(candidate);
+                    // Ensure non-MudaDigital email never gets accidentally mapped to MudaDigital ('comp-1786498560971')
+                    if (companyObj.id === 'comp-1786498560971' && !cleanEmail.includes('@mudadigital.')) {
+                        companyObj = resolveIsolatedCompanyForEmail(cleanEmail);
+                    }
+
+                    const mappedUser = { ...mapUserFromDB(candidate), companyId: companyObj.id };
                     // Cache in local fallback store
                     const uIdx = inMemoryUsers.findIndex(u => u.id === mappedUser.id || u.email?.toLowerCase() === cleanEmail);
                     if (uIdx >= 0) inMemoryUsers[uIdx] = { ...inMemoryUsers[uIdx], ...mappedUser, password: candidate.password };
@@ -10518,22 +10652,29 @@ app.post('/api/login', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
         }
 
+        // Prevent cross-company mapping to MudaDigital if user email is from another company
+        if (localUser.companyId === 'comp-1786498560971' && !cleanEmail.includes('@mudadigital.')) {
+            const fixedComp = resolveIsolatedCompanyForEmail(cleanEmail);
+            localUser.companyId = fixedComp.id;
+            saveLocalAuthStore();
+        }
+
         const localCompany =
             inMemoryCompanies.find(c => c.id === localUser.companyId && c.active !== false) ||
-            inMemoryCompanies[0];
+            resolveIsolatedCompanyForEmail(cleanEmail, localUser.companyId);
 
         const { password: _pw, ...safeUser } = localUser;
         return res.json({ user: safeUser, company: localCompany });
     }
 
     // 3. If Supabase is currently offline/unreachable and user logged in with a valid email & password not yet cached locally,
-    // recover/provision their session in the primary company so they are never locked out during Supabase maintenance/pause
+    // recover/provision their session in their OWN isolated company (never MudaDigital unless @mudadigital.*)
     if (supabaseOffline && cleanEmail.includes('@') && String(password).length > 0) {
-        const defaultCompany = inMemoryCompanies[0];
+        const isolatedCompany = resolveIsolatedCompanyForEmail(cleanEmail);
         const hashedPassword = await bcrypt.hash(password, 10);
         const recoveredUser = {
             id: `usr-${Date.now()}`,
-            companyId: defaultCompany.id,
+            companyId: isolatedCompany.id,
             name: cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             email: cleanEmail,
             password: hashedPassword,
@@ -10545,7 +10686,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
         saveLocalAuthStore();
 
         const { password: _pw, ...safeUser } = recoveredUser;
-        return res.json({ user: safeUser, company: defaultCompany });
+        return res.json({ user: safeUser, company: isolatedCompany });
     }
 
     return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
@@ -10600,10 +10741,18 @@ app.delete('/api/users/:id', async (req: Request, res: Response) => {
 
 // API Routes
 app.get('/api/links', async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query;
-    const { data, error } = await supabase.from('campaign_links').select('*').order('created_at', { ascending: false });
+    const { startDate, endDate, companyId } = req.query;
+    const resolvedCompanyId = companyId ? await resolveRealCompanyId(String(companyId)) : '';
+    let query = supabase.from('campaign_links').select('*').order('created_at', { ascending: false });
+    if (resolvedCompanyId) {
+        query = query.eq('company_id', resolvedCompanyId);
+    }
+    const { data, error } = await query;
     if (error || !data) {
-        return res.json(inMemoryLinks);
+        const fallbackLinks = companyId
+            ? inMemoryLinks.filter(l => l.companyId === String(companyId) || l.companyId === resolvedCompanyId)
+            : inMemoryLinks;
+        return res.json(fallbackLinks);
     }
     
     const links = data.map(mapLinkFromDB);
@@ -10739,8 +10888,19 @@ app.delete('/api/links/:id', async (req: Request, res: Response) => {
 
 // Leads API
 app.get('/api/leads', async (req: Request, res: Response) => {
-    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
-    if (error || !data) return res.json(inMemoryLeads);
+    const { companyId } = req.query;
+    const resolvedCompanyId = companyId ? await resolveRealCompanyId(String(companyId)) : '';
+    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
+    if (resolvedCompanyId) {
+        query = query.eq('company_id', resolvedCompanyId);
+    }
+    const { data, error } = await query;
+    if (error || !data) {
+        const fallbackLeads = companyId
+            ? inMemoryLeads.filter(l => l.companyId === String(companyId) || l.companyId === resolvedCompanyId)
+            : inMemoryLeads;
+        return res.json(fallbackLeads);
+    }
     res.json(data.map(mapLeadFromDB));
 });
 
@@ -11066,16 +11226,7 @@ app.get('/api/leads/export', async (req: Request, res: Response) => {
 app.get('/api/settings', async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     
-    let targetCompanyId = req.query.companyId as string;
-    if (!targetCompanyId || targetCompanyId === 'comp-alfa') {
-        try {
-            const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
-            targetCompanyId = fallback ? fallback.id : 'comp-alfa';
-        } catch {
-            targetCompanyId = 'comp-alfa';
-        }
-    }
-    
+    const targetCompanyId = (req.query.companyId as string) || 'comp-alfa';
     const settings = await getSettings(targetCompanyId);
     if (!settings) {
         return res.json({ companyId: targetCompanyId }); 
@@ -11084,17 +11235,9 @@ app.get('/api/settings', async (req: Request, res: Response) => {
 });
 
 app.post('/api/settings', async (req: Request, res: Response) => {
-    let targetCompanyId = req.body.companyId;
-    if (!targetCompanyId || targetCompanyId === 'comp-alfa') {
-        try {
-            const { data: fallback } = await supabase.from('companies').select('id').eq('active', true).limit(1).maybeSingle();
-            targetCompanyId = fallback ? fallback.id : 'comp-alfa';
-        } catch {
-            targetCompanyId = 'comp-alfa';
-        }
-    }
-    
-    const updatedSettings = { ...(inMemorySettings[targetCompanyId] || initialSettings), ...req.body, companyId: targetCompanyId };
+    const targetCompanyId = req.body.companyId || 'comp-alfa';
+    const existingForCompany = await getSettings(targetCompanyId);
+    const updatedSettings = { ...existingForCompany, ...req.body, companyId: targetCompanyId };
     inMemorySettings[targetCompanyId] = updatedSettings;
 
     try {
@@ -11106,8 +11249,18 @@ app.post('/api/settings', async (req: Request, res: Response) => {
 
 // Webhook logs API
 app.get('/api/webhooks/logs', async (req: Request, res: Response) => {
-    const { data, error } = await supabase.from('webhook_logs').select('*').order('timestamp', { ascending: false });
-    if (error || !data) return res.json(inMemoryWebhookLogs);
+    const { companyId } = req.query;
+    let query = supabase.from('webhook_logs').select('*').order('timestamp', { ascending: false });
+    if (companyId) {
+        query = query.eq('company_id', String(companyId));
+    }
+    const { data, error } = await query;
+    if (error || !data) {
+        const fallbackLogs = companyId
+            ? inMemoryWebhookLogs.filter(w => w.companyId === String(companyId))
+            : inMemoryWebhookLogs;
+        return res.json(fallbackLogs);
+    }
     res.json(data.map(mapWebhookFromDB));
 });
 

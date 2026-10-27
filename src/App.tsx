@@ -80,15 +80,31 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('mdtracker_user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed: User = JSON.parse(saved);
+      if (parsed.companyId === 'comp-1786498560971' && !parsed.email?.toLowerCase().includes('@mudadigital.')) {
+        localStorage.removeItem('mdtracker_user');
+        localStorage.removeItem('mdtracker_company');
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }
   });
   const [currentCompany, setCurrentCompany] = useState<Company | null>(() => {
     try {
-      const saved = localStorage.getItem('mdtracker_company');
-      return saved ? JSON.parse(saved) : null;
+      const savedUserStr = localStorage.getItem('mdtracker_user');
+      const savedCompStr = localStorage.getItem('mdtracker_company');
+      if (!savedUserStr || !savedCompStr) return null;
+      const parsedUser: User = JSON.parse(savedUserStr);
+      const parsedComp: Company = JSON.parse(savedCompStr);
+      if (parsedComp.id === 'comp-1786498560971' && !parsedUser.email?.toLowerCase().includes('@mudadigital.')) {
+        localStorage.removeItem('mdtracker_user');
+        localStorage.removeItem('mdtracker_company');
+        return null;
+      }
+      return parsedComp;
     } catch {
       return null;
     }
@@ -119,23 +135,27 @@ export default function App() {
   const [endDate, setEndDate] = useState<string>('');
 
   // Refs for state values to prevent stale closures in setInterval
-  const stateRef = React.useRef({ startDate, endDate, currentCompany });
+  const stateRef = React.useRef({ startDate, endDate, currentCompany, currentUser });
   useEffect(() => {
-    stateRef.current = { startDate, endDate, currentCompany };
-  }, [startDate, endDate, currentCompany]);
+    stateRef.current = { startDate, endDate, currentCompany, currentUser };
+  }, [startDate, endDate, currentCompany, currentUser]);
 
   // Load Initial Application State
   const loadData = async (overrideCompanyId?: string, overrideStart?: string, overrideEnd?: string) => {
     try {
       const activeCompanyId = overrideCompanyId || stateRef.current.currentCompany?.id;
+      if (!activeCompanyId) {
+        setLoading(false);
+        return;
+      }
       const start = overrideStart !== undefined ? overrideStart : stateRef.current.startDate;
       const end = overrideEnd !== undefined ? overrideEnd : stateRef.current.endDate;
 
       const [linksRes, leadsRes, settingsRes, logsRes, companiesRes, usersRes, productsRes, purchasesRes, popupsRes] = await Promise.all([
-        fetchLinks(start, end),
-        fetchLeads(),
+        fetchLinks(start, end, activeCompanyId),
+        fetchLeads(activeCompanyId),
         fetchSettings(activeCompanyId),
-        fetchWebhookLogs(),
+        fetchWebhookLogs(activeCompanyId),
         fetchCompanies(),
         fetchUsers(activeCompanyId),
         fetchProducts(activeCompanyId),
@@ -153,15 +173,32 @@ export default function App() {
       
       if (companiesRes && companiesRes.length > 0) {
         setCompanies(companiesRes);
-        if (stateRef.current.currentCompany) {
-          // Atualiza os dados da empresa atual caso tenham mudado (ex: logomarca, cnpj)
-          setCurrentCompany(companiesRes.find(c => c.id === stateRef.current.currentCompany?.id) || stateRef.current.currentCompany);
+        if (stateRef.current.currentCompany && !overrideCompanyId) {
+          const updatedComp = companiesRes.find(c => c.id === stateRef.current.currentCompany?.id);
+          if (updatedComp) {
+            setCurrentCompany(updatedComp);
+            try { localStorage.setItem('mdtracker_company', JSON.stringify(updatedComp)); } catch {}
+          }
         }
       }
       if (usersRes && usersRes.length > 0) {
         setUsers(usersRes);
-        if (currentUser) {
-          setCurrentUser(usersRes.find(u => u.id === currentUser.id) || currentUser);
+        if (stateRef.current.currentUser && !overrideCompanyId) {
+          const updatedUsr = usersRes.find(
+            u => u.id === stateRef.current.currentUser?.id ||
+                 u.email?.toLowerCase() === stateRef.current.currentUser?.email?.toLowerCase()
+          );
+          if (updatedUsr) {
+            setCurrentUser(updatedUsr);
+            try { localStorage.setItem('mdtracker_user', JSON.stringify(updatedUsr)); } catch {}
+            if (updatedUsr.companyId && updatedUsr.companyId !== stateRef.current.currentCompany?.id && companiesRes) {
+              const matchedComp = companiesRes.find(c => c.id === updatedUsr.companyId);
+              if (matchedComp) {
+                setCurrentCompany(matchedComp);
+                try { localStorage.setItem('mdtracker_company', JSON.stringify(matchedComp)); } catch {}
+              }
+            }
+          }
         }
       }
     } catch (err) {
@@ -183,7 +220,7 @@ export default function App() {
   // Filter isolated data for the active company
   const companyLinks = useMemo(() => {
     if (!currentCompany) return [];
-    return links.filter(l => l.companyId ? l.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
+    return links.filter(l => l.companyId === currentCompany.id);
   }, [links, currentCompany]);
 
   const companyLeads = useMemo(() => {
@@ -194,7 +231,7 @@ export default function App() {
       const link = links.find(lnk => lnk.id === l.linkId);
       if (link && link.companyId) return link.companyId === currentCompany.id;
       
-      return currentCompany.id === 'comp-alfa';
+      return false;
     });
 
     if (startDate && endDate) {
@@ -208,12 +245,12 @@ export default function App() {
 
   const companyWebhookLogs = useMemo(() => {
     if (!currentCompany) return [];
-    return webhookLogs.filter(w => w.companyId ? w.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
+    return webhookLogs.filter(w => w.companyId === currentCompany.id);
   }, [webhookLogs, currentCompany]);
 
   const companyPopups = useMemo(() => {
     if (!currentCompany) return [];
-    return popups.filter(p => p.companyId ? p.companyId === currentCompany.id : currentCompany.id === 'comp-alfa');
+    return popups.filter(p => p.companyId === currentCompany.id);
   }, [popups, currentCompany]);
 
   const companyUsers = useMemo(() => {
@@ -263,8 +300,29 @@ export default function App() {
 
   // Authentication Handlers
   const handleLoginSuccess = (user: User, company: Company) => {
+    // Clear any previous company's data immediately to prevent cross-company bleed
+    setLinks([]);
+    setLeads([]);
+    setProducts([]);
+    setLeadPurchases([]);
+    setPopups([]);
+    setWebhookLogs([]);
+    setSettings({
+      globalMetaPixelId: '',
+      globalMetaToken: '',
+      globalGoogleAdsId: '',
+      globalGoogleAdsLabel: '',
+      globalWebhookUrl: '',
+      autoFireMetaOnLead: true,
+      autoFireMetaOnConversion: true,
+      autoFireGoogleOnConversion: true,
+      autoFireWebhookOnLead: true,
+      autoFireWebhookOnStageChange: true,
+    });
+
     setCurrentUser(user);
     setCurrentCompany(company);
+    stateRef.current = { ...stateRef.current, currentCompany: company, currentUser: user };
     try {
       localStorage.setItem('mdtracker_user', JSON.stringify(user));
       localStorage.setItem('mdtracker_company', JSON.stringify(company));
@@ -284,6 +342,13 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentCompany(null);
+    setLinks([]);
+    setLeads([]);
+    setProducts([]);
+    setLeadPurchases([]);
+    setPopups([]);
+    setWebhookLogs([]);
+    stateRef.current = { ...stateRef.current, currentCompany: null, currentUser: null };
     try {
       localStorage.removeItem('mdtracker_user');
       localStorage.removeItem('mdtracker_company');

@@ -5,18 +5,20 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://mkeiblxfegxmriyutl
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZWlibHhmZWd4bXJpeXV0bGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODc3NzYsImV4cCI6MjEwMjA2Mzc3Nn0.4ebo_HAnWPs1BKvxg1WxxPSxDmGAcvg38vHBhAGFSZY';
 
 let offlineUntil = 0;
-const SUPABASE_TIMEOUT_MS = 1800;
-const OFFLINE_COOLDOWN_MS = 45000;
+let supabaseVerifiedOnline = false;
+let probePromise: Promise<boolean> | null = null;
 
-const resilientFetch: typeof fetch = async (input, init) => {
-  const now = Date.now();
-  if (now < offlineUntil) {
-    return new Response(
-      JSON.stringify({ message: 'Supabase temporarily unreachable (circuit breaker active)', code: 'SUPABASE_OFFLINE' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
+const SUPABASE_TIMEOUT_MS = 5000;
+const OFFLINE_COOLDOWN_MS = 120000; // 120s (> 62s Envoy upstream retry window to let connection pool drain)
 
+function makeOfflineResponse(reason: string): Response {
+  return new Response(
+    JSON.stringify({ message: reason, code: 'SUPABASE_OFFLINE' }),
+    { status: 400, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+async function executeTimedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -37,25 +39,52 @@ const resilientFetch: typeof fetch = async (input, init) => {
     ]);
     if (timer) clearTimeout(timer);
 
-    // Cloudflare 520-526, Gateway 502/503/504, or Proxy 403 means Supabase instance is paused or unreachable.
-    // Return 400 so @supabase/supabase-js does not sleep 7s retrying 5xx responses.
     if (res.status >= 500 || res.status === 403) {
+      supabaseVerifiedOnline = false;
       offlineUntil = Date.now() + OFFLINE_COOLDOWN_MS;
-      return new Response(
-        JSON.stringify({ message: `Supabase HTTP ${res.status}`, code: 'SUPABASE_OFFLINE' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return makeOfflineResponse(`Supabase HTTP ${res.status}`);
     }
 
+    supabaseVerifiedOnline = true;
+    offlineUntil = 0;
     return res;
   } catch (err: any) {
     if (timer) clearTimeout(timer);
+    supabaseVerifiedOnline = false;
     offlineUntil = Date.now() + OFFLINE_COOLDOWN_MS;
-    return new Response(
-      JSON.stringify({ message: err?.message || 'Supabase fetch timeout', code: 'SUPABASE_OFFLINE' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return makeOfflineResponse(err?.message || 'Supabase fetch timeout');
   }
+}
+
+const resilientFetch: typeof fetch = async (input, init) => {
+  const now = Date.now();
+  if (now < offlineUntil) {
+    return makeOfflineResponse('Supabase temporarily unreachable (circuit breaker active)');
+  }
+
+  // Single-flight gate: when not yet verified online, only allow 1 request to probe Supabase
+  // so Promise.all() bursts never flood PostgREST's connection pool (PGRST003).
+  if (!supabaseVerifiedOnline) {
+    if (probePromise) {
+      const isOnline = await probePromise;
+      if (!isOnline || Date.now() < offlineUntil) {
+        return makeOfflineResponse('Supabase temporarily unreachable (probe failed)');
+      }
+    } else {
+      let resolveProbe!: (ok: boolean) => void;
+      probePromise = new Promise<boolean>((r) => { resolveProbe = r; });
+      try {
+        const res = await executeTimedFetch(input, init);
+        const ok = supabaseVerifiedOnline;
+        resolveProbe(ok);
+        return res;
+      } finally {
+        probePromise = null;
+      }
+    }
+  }
+
+  return executeTimedFetch(input, init);
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

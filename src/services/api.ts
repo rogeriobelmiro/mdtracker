@@ -89,10 +89,11 @@ export async function fetchStats(): Promise<StatsSummary> {
   return res.json();
 }
 
-export async function fetchLinks(startDate?: string, endDate?: string): Promise<CampaignLink[]> {
+export async function fetchLinks(startDate?: string, endDate?: string, companyId?: string): Promise<CampaignLink[]> {
   const queryParams = new URLSearchParams();
   if (startDate) queryParams.append('startDate', startDate);
   if (endDate) queryParams.append('endDate', endDate);
+  if (companyId) queryParams.append('companyId', companyId);
   
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const res = await fetch(`/api/links${queryString}`);
@@ -122,8 +123,9 @@ export async function deleteLink(id: string): Promise<void> {
   await fetch(`/api/links/${id}`, { method: 'DELETE' });
 }
 
-export async function fetchLeads(): Promise<Lead[]> {
-  const res = await fetch('/api/leads');
+export async function fetchLeads(companyId?: string): Promise<Lead[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/leads${query}`);
   if (!res.ok) return [];
   return res.json();
 }
@@ -236,8 +238,9 @@ export async function updateSettings(data: Partial<IntegrationSettings>): Promis
   return res.json();
 }
 
-export async function fetchWebhookLogs(): Promise<WebhookLog[]> {
-  const res = await fetch('/api/webhooks/logs');
+export async function fetchWebhookLogs(companyId?: string): Promise<WebhookLog[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/webhooks/logs${query}`);
   if (!res.ok) return [];
   return res.json();
 }
