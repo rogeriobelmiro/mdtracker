@@ -76,9 +76,23 @@ export default function App() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
-  // Logged-in Session State
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
+  // Logged-in Session State (Persisted in localStorage)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('mdtracker_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(() => {
+    try {
+      const saved = localStorage.getItem('mdtracker_company');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Application Data States
   const [links, setLinks] = useState<CampaignLink[]>([]);
@@ -251,6 +265,10 @@ export default function App() {
   const handleLoginSuccess = (user: User, company: Company) => {
     setCurrentUser(user);
     setCurrentCompany(company);
+    try {
+      localStorage.setItem('mdtracker_user', JSON.stringify(user));
+      localStorage.setItem('mdtracker_company', JSON.stringify(company));
+    } catch {}
     
     // Fetch data specifically for this company right after login
     loadData(company.id);
@@ -266,6 +284,10 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentCompany(null);
+    try {
+      localStorage.removeItem('mdtracker_user');
+      localStorage.removeItem('mdtracker_company');
+    } catch {}
   };
 
   // User Management Handlers (Admin)

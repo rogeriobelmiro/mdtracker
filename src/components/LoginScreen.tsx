@@ -63,12 +63,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const { user, company } = await loginUser(email, password);
       onLoginSuccess(user, company);
     } catch (err: any) {
       setAuthError(err.message || 'Usuário ou senha incorretos.');
       generateCaptcha();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -287,10 +290,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-xs transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 mt-2"
+                  disabled={isSubmitting}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 px-4 rounded-lg text-xs transition shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 mt-2 cursor-pointer"
                 >
                   <KeyRound className="w-4 h-4" />
-                  Entrar na Empresa
+                  {isSubmitting ? 'Autenticando...' : 'Entrar na Empresa'}
                 </button>
 
               </form>

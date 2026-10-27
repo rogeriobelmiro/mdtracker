@@ -9,3 +9,4 @@ coverage/
 ._*
 baileys_auth_info/
 instagram_settings.json
+.local_auth_store.json
