@@ -85,6 +85,18 @@ function resolveIsolatedCompanyForEmail(email: string, preferredCompanyId?: stri
         return inMemoryCompanies.find(c => c.id === 'comp-1786498560971') || inMemoryCompanies[0];
     }
 
+    // 1.1 Explicit Fachinetti & Abdalla domain
+    if (domainPart.startsWith('fachinettiabdalla.')) {
+        return inMemoryCompanies.find(c => c.id === 'comp-1788784548541') || {
+            id: 'comp-1788784548541',
+            name: 'Fachinetti & Abdalla',
+            cnpj: '61.239.050/0001-10',
+            plan: 'starter',
+            active: true,
+            createdAt: '2026-09-07T12:35:49.062Z'
+        };
+    }
+
     // 2. Seed demo domains
     if (domainPart === 'alfa.com') {
         return inMemoryCompanies.find(c => c.id === 'comp-alfa') || initialCompanies[0];
@@ -128,6 +140,7 @@ const companyAliasCache: Record<string, string> = {};
 
 async function resolveRealCompanyId(companyId?: string): Promise<string> {
     if (!companyId) return '';
+    if (companyId === 'comp-fachinettiabdalla') return 'comp-1788784548541';
     if (companyAliasCache[companyId]) return companyAliasCache[companyId];
 
     // Standard or timestamp-based IDs don't need alias lookup
