@@ -1421,4 +1421,23 @@ export async function updateAIAgentLog(logId: string, data: Partial<AIAgentExecu
   return res.json();
 }
 
+export async function testSmtpEmail(data: {
+  companyId?: string;
+  targetEmail: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  smtpFromName?: string;
+  smtpFromEmail?: string;
+  smtpSecure?: boolean;
+}): Promise<{ success: boolean; messageId?: string; message?: string; error?: string }> {
+  const res = await fetch('/api/settings/test-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
 

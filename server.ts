@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { startWhatsApp, logoutWhatsApp, getWhatsAppStatus, sendWhatsAppMessage, sendWhatsAppMedia } from './src/services/whatsappService.js';
 import { GoogleGenAI } from '@google/genai';
 import dns from 'dns';
+import nodemailer from 'nodemailer';
 
 // Local Auth & Core Data Fallback Store (stored inside baileys_auth_info so tsx watch & vite ignore writes)
 const LOCAL_AUTH_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_auth_store.json');
@@ -597,6 +598,13 @@ const mapSettingsToDB = (s: any) => ({
     evolution_instance: s.evolutionInstance,
     evolution_api_url: s.evolutionApiUrl,
     evolution_api_key: s.evolutionApiKey,
+    smtp_host: s.smtpHost || null,
+    smtp_port: s.smtpPort ? Number(s.smtpPort) : 465,
+    smtp_user: s.smtpUser || null,
+    smtp_pass: s.smtpPass || null,
+    smtp_from_name: s.smtpFromName || null,
+    smtp_from_email: s.smtpFromEmail || null,
+    smtp_secure: typeof s.smtpSecure === 'boolean' ? s.smtpSecure : true,
     auto_fire_meta_on_lead: s.autoFireMetaOnLead,
     auto_fire_meta_on_conversion: s.autoFireMetaOnConversion,
     auto_fire_google_on_conversion: s.autoFireGoogleOnConversion,
@@ -637,6 +645,13 @@ const mapSettingsFromDB = (db: any) => ({
     evolutionInstance: db.evolution_instance || '',
     evolutionApiUrl: db.evolution_api_url || '',
     evolutionApiKey: db.evolution_api_key || '',
+    smtpHost: db.smtp_host || '',
+    smtpPort: db.smtp_port ? Number(db.smtp_port) : 465,
+    smtpUser: db.smtp_user || '',
+    smtpPass: db.smtp_pass || '',
+    smtpFromName: db.smtp_from_name || '',
+    smtpFromEmail: db.smtp_from_email || '',
+    smtpSecure: typeof db.smtp_secure === 'boolean' ? db.smtp_secure : true,
     autoFireMetaOnLead: db.auto_fire_meta_on_lead || false,
     autoFireMetaOnConversion: db.auto_fire_meta_on_conversion || false,
     autoFireGoogleOnConversion: db.auto_fire_google_on_conversion || false,
@@ -2986,6 +3001,13 @@ async function getSettings(companyId?: string): Promise<IntegrationSettings | an
         evolutionApiKey: '',
         evolutionInstanceName: '',
         whatsappProvider: 'official',
+        smtpHost: '',
+        smtpPort: 465,
+        smtpUser: '',
+        smtpPass: '',
+        smtpFromName: '',
+        smtpFromEmail: '',
+        smtpSecure: true,
         autoFireMetaOnLead: true,
         autoFireMetaOnConversion: true,
         autoFireGoogleOnConversion: true,
@@ -3926,14 +3948,25 @@ app.post('/api/popups/:id/submit', async (req: Request, res: Response) => {
         // Direct Email marketing trigger
         if (popup.autoTriggerEmail && leadEmail) {
             const subject = formatWorkflowText(popup.emailSubject || `Obrigado pelo seu contato`, leadObj, popup.name);
+            const body = formatWorkflowText(popup.emailBody || `Olá {nome}!\n\nRecebemos suas informações enviadas pelo nosso site e entraremos em contato em breve.\n\nAtenciosamente,\n{empresa}`, leadObj, popup.name);
+            const mailRes = await sendMarketingEmail({
+                to: leadEmail,
+                subject,
+                body,
+                companyId,
+                companyName: popup.name,
+                lead: leadObj
+            });
             leadObj.conversion_events = leadObj.conversion_events || [];
             leadObj.conversion_events.push({
                 id: `evt-email-${Date.now()}`,
                 type: 'email',
                 eventName: 'E-mail Marketing (Pop-up) Disparado',
-                status: 'sucesso',
+                status: mailRes.success ? 'sucesso' : 'falha',
                 timestamp: new Date().toISOString(),
-                details: `Assunto: "${subject}" enviado para ${leadEmail}`
+                details: mailRes.success 
+                    ? `Assunto: "${subject}" enviado com sucesso para ${leadEmail}`
+                    : `Falha ao enviar para ${leadEmail}: ${mailRes.error}`
             });
         }
 
@@ -4803,6 +4836,105 @@ function formatWorkflowText(template: string, lead: any, companyName: string, co
         .replace(/\{link_checkout\}/gi, lead.checkoutUrl || 'https://mdtracker.app');
 }
 
+interface SendMarketingEmailParams {
+    to: string;
+    subject: string;
+    body: string;
+    companyId?: string;
+    companyName?: string;
+    lead?: any;
+    context?: any;
+}
+
+async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+        const companyId = params.companyId || 'comp-alfa';
+        const settings = await getSettings(companyId);
+
+        const smtpHost = settings.smtpHost || process.env.SMTP_HOST;
+        const smtpPort = Number(settings.smtpPort || process.env.SMTP_PORT || 465);
+        const smtpUser = settings.smtpUser || process.env.SMTP_USER;
+        const smtpPass = settings.smtpPass || process.env.SMTP_PASS;
+        const smtpSecure = typeof settings.smtpSecure === 'boolean' ? settings.smtpSecure : (smtpPort === 465);
+        const smtpFromName = settings.smtpFromName || params.companyName || process.env.SMTP_FROM_NAME || 'MDTracker';
+        const smtpFromEmail = settings.smtpFromEmail || smtpUser || process.env.SMTP_FROM_EMAIL || 'nao-responda@mudadigital.net';
+
+        if (!smtpHost || !smtpUser || !smtpPass) {
+            console.warn(`[sendMarketingEmail] Configurações SMTP incompletas para empresa ${companyId}. Host: ${smtpHost || 'vazio'}, User: ${smtpUser || 'vazio'}`);
+            return {
+                success: false,
+                error: 'Servidor SMTP não configurado. Por favor, acerte as credenciais em Integrações > Configurações de E-mail.'
+            };
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: {
+                user: smtpUser,
+                pass: smtpPass
+            },
+            tls: {
+                rejectUnauthorized: false
+            }
+        });
+
+        // Format variables in subject and body
+        const finalSubject = formatWorkflowText(params.subject, params.lead || { name: 'Cliente', email: params.to }, params.companyName || smtpFromName, params.context);
+        const rawBody = formatWorkflowText(params.body, params.lead || { name: 'Cliente', email: params.to }, params.companyName || smtpFromName, params.context);
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${finalSubject}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .header { background: #2563eb; padding: 24px 32px; color: #ffffff; text-align: left; }
+    .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .content { padding: 32px; font-size: 15px; line-height: 1.6; color: #334155; }
+    .content p { margin: 0 0 16px 0; }
+    .footer { padding: 20px 32px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>${smtpFromName}</h1>
+    </div>
+    <div class="content">
+      ${rawBody.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('')}
+    </div>
+    <div class="footer">
+      Esta mensagem foi enviada para <strong>${params.to}</strong> por <strong>${smtpFromName}</strong>.<br/>
+      Se não desejava receber este comunicado, por favor desconsidere.
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+        const mailOptions = {
+            from: `"${smtpFromName}" <${smtpFromEmail}>`,
+            to: params.to,
+            subject: finalSubject,
+            text: rawBody,
+            html: htmlContent
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`[sendMarketingEmail] E-mail enviado com sucesso para ${params.to}! ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (err: any) {
+        console.error('[sendMarketingEmail] Erro ao disparar e-mail:', err);
+        return { success: false, error: err.message || 'Erro de envio via SMTP' };
+    }
+}
+
 async function executeWorkflowForLead(
     wf: any,
     lead: any,
@@ -4866,7 +4998,25 @@ async function executeWorkflowForLead(
             }
         } else if (step.type === 'send_email') {
             const subject = formatWorkflowText(step.emailSubject || 'Aviso Importante', lead, companyName, context);
-            detail = `E-mail enviado para ${lead.email || 'lead'}: "${subject}"`;
+            const body = formatWorkflowText(step.emailBody || 'Olá {nome}, preparamos esse conteúdo exclusivo para você.', lead, companyName, context);
+            if (lead.email) {
+                const mailRes = await sendMarketingEmail({
+                    to: lead.email,
+                    subject,
+                    body,
+                    companyId,
+                    companyName,
+                    lead,
+                    context
+                });
+                if (mailRes.success) {
+                    detail = `E-mail enviado com sucesso para ${lead.email}: "${subject}"`;
+                } else {
+                    detail = `Falha no envio de e-mail para ${lead.email} (${mailRes.error}): "${subject}"`;
+                }
+            } else {
+                detail = `E-mail não disparado (lead sem e-mail cadastrado): "${subject}"`;
+            }
         } else if (step.type === 'send_sms') {
             const smsContent = formatWorkflowText(step.smsText || 'Mensagem da empresa', lead, companyName, context);
             detail = `SMS enviado para ${lead.phone || 'lead'}: "${smsContent.substring(0, 45)}..."`;
@@ -5606,15 +5756,27 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
 
         // Direct Email marketing trigger
         if (lp.form?.autoTriggerEmail && leadEmail) {
-            const subject = formatWorkflowText(lp.form.emailSubject || `Confirmação de cadastro - {empresa}`, newLead, lp.title);
+            const subject = formatWorkflowText(lp.form.emailSubject || `Confirmação de cadastro - {empresa}`, newLead, lp.title, { slug: lp.slug });
+            const body = formatWorkflowText(lp.form.emailBody || `Olá {nome}!\n\nRecebemos seu cadastro na página "{empresa}". Em breve entraremos em contato com mais informações!\n\nAtenciosamente,\n{empresa}`, newLead, lp.title, { slug: lp.slug });
+            const mailRes = await sendMarketingEmail({
+                to: leadEmail,
+                subject,
+                body,
+                companyId: lp.companyId,
+                companyName: lp.title,
+                lead: newLead,
+                context: { slug: lp.slug }
+            });
             newLead.conversion_events = newLead.conversion_events || [];
             newLead.conversion_events.push({
                 id: `evt-email-${Date.now()}`,
                 type: 'email',
                 eventName: 'E-mail Marketing (Landing Page) Disparado',
-                status: 'sucesso',
+                status: mailRes.success ? 'sucesso' : 'falha',
                 timestamp: new Date().toISOString(),
-                details: `Assunto: "${subject}" enviado para ${leadEmail}`
+                details: mailRes.success
+                    ? `Assunto: "${subject}" enviado com sucesso para ${leadEmail}`
+                    : `Falha ao enviar para ${leadEmail}: ${mailRes.error}`
             });
         }
 
@@ -5967,17 +6129,29 @@ app.post('/api/surveys/:slug/submit', async (req: Request, res: Response) => {
 
             // Direct Email marketing trigger
             if (survey.autoTriggerEmail && leadEmail) {
-                const subject = formatWorkflowText(survey.emailSubject || `Obrigado pela sua resposta - {empresa}`, newLead, survey.title);
+                const subject = formatWorkflowText(survey.emailSubject || `Obrigado pela sua resposta - {empresa}`, newLead, survey.title, { slug: survey.slug });
+                const body = formatWorkflowText(survey.emailBody || `Olá {nome}!\n\nMuito obrigado por responder à nossa pesquisa "{empresa}". Suas respostas foram salvas e nossa equipe entrará em contato em breve.\n\nAtenciosamente,\n{empresa}`, newLead, survey.title, { slug: survey.slug });
+                const mailRes = await sendMarketingEmail({
+                    to: leadEmail,
+                    subject,
+                    body,
+                    companyId: survey.companyId,
+                    companyName: survey.title,
+                    lead: newLead,
+                    context: { slug: survey.slug }
+                });
                 newLead.conversion_events = newLead.conversion_events || [];
                 newLead.conversion_events.push({
                     id: `evt-email-${Date.now()}`,
                     type: 'email',
                     eventName: 'E-mail Marketing (Pesquisa) Disparado',
-                    status: 'sucesso',
+                    status: mailRes.success ? 'sucesso' : 'falha',
                     timestamp: new Date().toISOString(),
-                    details: `Assunto: "${subject}" enviado para ${leadEmail}`
+                    details: mailRes.success
+                        ? `Assunto: "${subject}" enviado com sucesso para ${leadEmail}`
+                        : `Falha ao enviar para ${leadEmail}: ${mailRes.error}`
                 });
-                console.log(`[EMAIL MARKETING DISPATCH] Para: ${leadEmail} | Assunto: ${subject} | Pesquisa: ${survey.title}`);
+                console.log(`[EMAIL MARKETING DISPATCH] Para: ${leadEmail} | Sucesso: ${mailRes.success} | Assunto: ${subject}`);
             }
         }
 
@@ -11418,6 +11592,86 @@ app.post('/api/settings', async (req: Request, res: Response) => {
         await supabase.from('settings').upsert(dbRecord);
     } catch {}
     res.json(updatedSettings);
+});
+
+// Test SMTP Email Dispatch
+app.post('/api/settings/test-email', async (req: Request, res: Response) => {
+    try {
+        const { companyId, targetEmail, smtpHost, smtpPort, smtpUser, smtpPass, smtpFromName, smtpFromEmail, smtpSecure } = req.body;
+        
+        if (!targetEmail) {
+            return res.status(400).json({ success: false, error: 'Por favor, informe o e-mail de destino para o teste.' });
+        }
+
+        const host = smtpHost || process.env.SMTP_HOST;
+        const port = Number(smtpPort || process.env.SMTP_PORT || 465);
+        const user = smtpUser || process.env.SMTP_USER;
+        const pass = smtpPass || process.env.SMTP_PASS;
+        const secure = typeof smtpSecure === 'boolean' ? smtpSecure : (port === 465);
+        const fromName = smtpFromName || 'MDTracker Marketing';
+        const fromEmail = smtpFromEmail || user || 'nao-responda@mudadigital.net';
+
+        if (!host || !user || !pass) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Preencha o servidor SMTP, usuário e senha para testar o envio.' 
+            });
+        }
+
+        const transporter = nodemailer.createTransport({
+            host,
+            port,
+            secure,
+            auth: { user, pass },
+            tls: { rejectUnauthorized: false }
+        });
+
+        // Test connection handshake
+        await transporter.verify();
+
+        // Send a formatted test message
+        const info = await transporter.sendMail({
+            from: `"${fromName}" <${fromEmail}>`,
+            to: targetEmail,
+            subject: '✅ Teste de Conexão SMTP - MDTracker',
+            text: `Olá! Se você recebeu este e-mail, as configurações de SMTP do MDTracker estão funcionando com 100% de sucesso! Servidor: ${host}:${port}`,
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <div style="background: #2563eb; padding: 24px 32px; color: #ffffff;">
+                  <h1 style="margin: 0; font-size: 20px; font-weight: 700;">✅ Teste de Conexão SMTP com Sucesso!</h1>
+                </div>
+                <div style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
+                  <p style="margin-top: 0;">Olá,</p>
+                  <p>Este é um e-mail de validação enviado pelo <strong>MDTracker</strong> para confirmar que suas credenciais de disparo de e-mail marketing estão 100% ativas e operacionais.</p>
+                  <div style="background: #f8fafc; border-left: 4px solid #16a34a; padding: 16px; margin: 20px 0; border-radius: 4px; font-size: 13px;">
+                    <p style="margin: 0 0 6px 0;"><strong>Servidor Host:</strong> ${host}</p>
+                    <p style="margin: 0 0 6px 0;"><strong>Porta:</strong> ${port} (${secure ? 'SSL/TLS' : 'STARTTLS'})</p>
+                    <p style="margin: 0 0 6px 0;"><strong>Usuário SMTP:</strong> ${user}</p>
+                    <p style="margin: 0 0 6px 0;"><strong>Remetente:</strong> "${fromName}" &lt;${fromEmail}&gt;</p>
+                    <p style="margin: 0;"><strong>Data e Hora:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                  </div>
+                  <p>Agora suas Landing Pages, Pop-ups e Automações de Marketing dispararão e-mails reais para seus leads.</p>
+                </div>
+                <div style="padding: 16px 32px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+                  Enviado para <strong>${targetEmail}</strong> via MDTracker
+                </div>
+              </div>
+            `
+        });
+
+        console.log(`[test-email] E-mail de teste enviado com sucesso para ${targetEmail}. ID: ${info.messageId}`);
+        res.json({
+            success: true,
+            messageId: info.messageId,
+            message: `E-mail de teste enviado com sucesso para ${targetEmail}!`
+        });
+    } catch (err: any) {
+        console.error('[test-email] Falha no teste SMTP:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message || 'Falha ao conectar ou autenticar no servidor SMTP. Verifique host, porta, usuário e senha.'
+        });
+    }
 });
 
 // Webhook logs API

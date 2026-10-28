@@ -187,6 +187,13 @@ export interface IntegrationSettings {
   stageEventMappings?: Record<FunnelStage, StageEventConfig>;
   autoStageKeywords?: AutoStageKeywordRule[];
   chatbotConfig?: ChatbotConfig;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFromName?: string;
+  smtpFromEmail?: string;
+  smtpSecure?: boolean;
 }
 
 export type ChatbotMode = 'prompt' | 'visual_flow';

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company, ChatbotConfig } from '../types';
-import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink, Bot, Sparkles, AlertTriangle } from 'lucide-react';
+import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink, Bot, Sparkles, AlertTriangle, Mail } from 'lucide-react';
 import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
-import { simulateChatbot } from '../services/api';
+import { simulateChatbot, testSmtpEmail } from '../services/api';
 
 interface IntegrationsAndEventsProps {
   settings: IntegrationSettings;
@@ -74,6 +74,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const [testStatus, setTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [evoTestStatus, setEvoTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
+  const [smtpTestEmail, setSmtpTestEmail] = useState('');
+  const [smtpTestStatus, setSmtpTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -284,6 +286,38 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       }
     } catch (err) {
       setEvoTestStatus({ loading: false, message: 'Erro de conexão.', success: false });
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    if (!smtpTestEmail) {
+      setSmtpTestStatus({ loading: false, message: 'Digite um e-mail para receber a mensagem de teste.', success: false });
+      return;
+    }
+    if (!formData.smtpHost || !formData.smtpUser || !formData.smtpPass) {
+      setSmtpTestStatus({ loading: false, message: 'Preencha o servidor host, usuário e senha SMTP antes de testar.', success: false });
+      return;
+    }
+    setSmtpTestStatus({ loading: true, message: 'Conectando ao servidor SMTP e disparando e-mail de teste...' });
+    try {
+      const res = await testSmtpEmail({
+        companyId: currentCompany.id,
+        targetEmail: smtpTestEmail.trim(),
+        smtpHost: formData.smtpHost.trim(),
+        smtpPort: Number(formData.smtpPort) || 465,
+        smtpUser: formData.smtpUser.trim(),
+        smtpPass: formData.smtpPass,
+        smtpFromName: formData.smtpFromName?.trim() || currentCompany.name,
+        smtpFromEmail: formData.smtpFromEmail?.trim() || formData.smtpUser.trim(),
+        smtpSecure: formData.smtpSecure ?? (Number(formData.smtpPort) === 465)
+      });
+      if (res.success) {
+        setSmtpTestStatus({ loading: false, message: res.message || 'E-mail de teste enviado com sucesso! Verifique sua caixa de entrada.', success: true });
+      } else {
+        setSmtpTestStatus({ loading: false, message: res.error || 'Falha ao enviar e-mail via SMTP.', success: false });
+      }
+    } catch (err: any) {
+      setSmtpTestStatus({ loading: false, message: err.message || 'Erro de conexão com o servidor SMTP.', success: false });
     }
   };
 
@@ -984,6 +1018,136 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     className="w-4 h-4 accent-blue-600 rounded"
                   />
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: SMTP Email Marketing Server */}
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xs">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+              <div className="w-9 h-9 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Disparo de E-mail Marketing (SMTP)</h3>
+                <p className="text-[11px] text-slate-500">Envio automático para Landing Pages, Pop-ups e Automações.</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Servidor SMTP (Host)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: smtp.hostinger.com ou smtp.gmail.com"
+                    value={formData.smtpHost || ''}
+                    onChange={(e) => setFormData({ ...formData, smtpHost: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Porta</label>
+                  <input
+                    type="number"
+                    placeholder="465 ou 587"
+                    value={formData.smtpPort || 465}
+                    onChange={(e) => setFormData({ ...formData, smtpPort: Number(e.target.value) })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Usuário / E-mail de Envio</label>
+                  <input
+                    type="text"
+                    placeholder="contato@seudominio.com"
+                    value={formData.smtpUser || ''}
+                    onChange={(e) => setFormData({ ...formData, smtpUser: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Senha SMTP / Senha de App</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={formData.smtpPass || ''}
+                    onChange={(e) => setFormData({ ...formData, smtpPass: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Nome do Remetente</label>
+                  <input
+                    type="text"
+                    placeholder={currentCompany?.name || 'Ex: Fachinetti & Abdalla'}
+                    value={formData.smtpFromName || ''}
+                    onChange={(e) => setFormData({ ...formData, smtpFromName: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">E-mail Remetente (From)</label>
+                  <input
+                    type="email"
+                    placeholder="contato@seudominio.com"
+                    value={formData.smtpFromEmail || ''}
+                    onChange={(e) => setFormData({ ...formData, smtpFromEmail: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center justify-between bg-slate-50 p-2.5 rounded border border-slate-200 text-xs cursor-pointer">
+                  <span className="text-slate-700 font-medium">Usar Conexão Segura SSL/TLS (Porta 465)</span>
+                  <input
+                    type="checkbox"
+                    checked={formData.smtpSecure ?? true}
+                    onChange={(e) => setFormData({ ...formData, smtpSecure: e.target.checked })}
+                    className="w-4 h-4 accent-blue-600 rounded"
+                  />
+                </label>
+              </div>
+
+              {/* Live Test Dispatch */}
+              <div className="pt-3 border-t border-slate-100 space-y-2">
+                <label className="block text-[11px] font-semibold text-slate-700">Testar Disparo de E-mail</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Digite seu e-mail para receber o teste..."
+                    value={smtpTestEmail}
+                    onChange={(e) => setSmtpTestEmail(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-blue-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestSmtp}
+                    disabled={smtpTestStatus.loading || !smtpTestEmail}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
+                  >
+                    {smtpTestStatus.loading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>Enviar Teste</span>
+                  </button>
+                </div>
+                {smtpTestStatus.message && (
+                  <div className={`p-2 rounded text-xs font-semibold ${
+                    smtpTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
+                  }`}>
+                    {smtpTestStatus.message}
+                  </div>
+                )}
               </div>
             </div>
           </div>

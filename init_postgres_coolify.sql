@@ -181,6 +181,16 @@ CREATE TABLE IF NOT EXISTS public.settings (
   api_key TEXT,
   chatbot_config JSONB,
   instagram_config JSONB,
+  evolution_api_url TEXT,
+  evolution_api_key TEXT,
+  evolution_instance TEXT,
+  smtp_host TEXT,
+  smtp_port INTEGER DEFAULT 465,
+  smtp_user TEXT,
+  smtp_pass TEXT,
+  smtp_from_name TEXT,
+  smtp_from_email TEXT,
+  smtp_secure BOOLEAN DEFAULT TRUE,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
