@@ -3105,6 +3105,518 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                       </div>
                                     </div>
                                   )}
+
+                                  {/* Specific Fields: FEATURES / BENEFÍCIOS */}
+                                  {block.type === 'features' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                                            <Layers className="w-3.5 h-3.5 text-blue-600" />
+                                            <span>Lista de Benefícios & Diferenciais</span>
+                                          </label>
+                                          <p className="text-[10px] text-slate-500 mt-0.5">
+                                            Adicione e edite os tópicos que destacam o valor da sua oferta.
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const currentFeatures = [...(block.features || editingPage.features || [])];
+                                            currentFeatures.push({
+                                              id: `feat-${Date.now()}`,
+                                              title: 'Novo Benefício Exclusivo',
+                                              description: 'Descreva em poucas linhas o ganho real para o seu cliente.'
+                                            });
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, features: currentFeatures };
+                                            setEditingPage({
+                                              ...editingPage,
+                                              blocks,
+                                              features: currentFeatures
+                                            });
+                                          }}
+                                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Plus className="w-3 h-3" />
+                                          <span>Adicionar Benefício</span>
+                                        </button>
+                                      </div>
+
+                                      <div className="space-y-2.5">
+                                        {(block.features || editingPage.features || []).map((feat, fIdx) => (
+                                          <div key={feat.id || fIdx} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 relative shadow-xs">
+                                            <div className="flex items-center justify-between">
+                                              <span className="font-bold text-xs text-blue-700">Item #{fIdx + 1}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const currentFeatures = [...(block.features || editingPage.features || [])];
+                                                  currentFeatures.splice(fIdx, 1);
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, features: currentFeatures };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    features: currentFeatures
+                                                  });
+                                                }}
+                                                className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                                title="Remover benefício"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Título do Benefício</label>
+                                              <input
+                                                type="text"
+                                                value={feat.title}
+                                                onChange={e => {
+                                                  const currentFeatures = [...(block.features || editingPage.features || [])];
+                                                  currentFeatures[fIdx] = { ...feat, title: e.target.value };
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, features: currentFeatures };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    features: currentFeatures
+                                                  });
+                                                }}
+                                                placeholder="Ex: Mapeamento de Gargalos"
+                                                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Descrição</label>
+                                              <textarea
+                                                rows={2}
+                                                value={feat.description}
+                                                onChange={e => {
+                                                  const currentFeatures = [...(block.features || editingPage.features || [])];
+                                                  currentFeatures[fIdx] = { ...feat, description: e.target.value };
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, features: currentFeatures };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    features: currentFeatures
+                                                  });
+                                                }}
+                                                placeholder="Descreva o que o cliente ganha com isso..."
+                                                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-700 leading-relaxed focus:outline-none focus:border-blue-500"
+                                              />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: SOCIAL PROOF / PROVA SOCIAL & DEPOIMENTOS */}
+                                  {block.type === 'socialProof' && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-200">
+                                      {/* 1. Métricas / Estatísticas de Impacto */}
+                                      <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                              <span>Métricas & Números em Destaque</span>
+                                            </label>
+                                            <p className="text-[10px] text-amber-700 mt-0.5">
+                                              Altere os inscritos confirmados, notas de avaliação ou resultados alcançados.
+                                            </p>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const currentStats = [...(block.stats || editingPage.socialProof?.stats || [
+                                                { label: 'Inscritos Confirmados', value: '+1.800' },
+                                                { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                                              ])];
+                                              currentStats.push({ label: 'Nova Métrica', value: '+500' });
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, stats: currentStats };
+                                              setEditingPage({
+                                                ...editingPage,
+                                                blocks,
+                                                socialProof: { ...editingPage.socialProof, enabled: true, stats: currentStats }
+                                              });
+                                            }}
+                                            className="text-amber-800 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                            <span>Adicionar Número</span>
+                                          </button>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                          {(block.stats || editingPage.socialProof?.stats || [
+                                            { label: 'Inscritos Confirmados', value: '+1.800' },
+                                            { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                                          ]).map((st, sIdx) => (
+                                            <div key={sIdx} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-amber-200/80 shadow-xs">
+                                              <div className="w-1/3">
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Valor / Número</label>
+                                                <input
+                                                  type="text"
+                                                  value={st.value}
+                                                  onChange={e => {
+                                                    const stats = [...(block.stats || editingPage.socialProof?.stats || [
+                                                      { label: 'Inscritos Confirmados', value: '+1.800' },
+                                                      { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                                                    ])];
+                                                    stats[sIdx] = { ...st, value: e.target.value };
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, stats };
+                                                    setEditingPage({
+                                                      ...editingPage,
+                                                      blocks,
+                                                      socialProof: { ...editingPage.socialProof, enabled: true, stats }
+                                                    });
+                                                  }}
+                                                  placeholder="+1.800 ou 4.95 ⭐"
+                                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs font-bold text-amber-600 focus:outline-none focus:border-amber-500"
+                                                />
+                                              </div>
+                                              <div className="flex-1">
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Rótulo / Descrição</label>
+                                                <input
+                                                  type="text"
+                                                  value={st.label}
+                                                  onChange={e => {
+                                                    const stats = [...(block.stats || editingPage.socialProof?.stats || [
+                                                      { label: 'Inscritos Confirmados', value: '+1.800' },
+                                                      { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                                                    ])];
+                                                    stats[sIdx] = { ...st, label: e.target.value };
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, stats };
+                                                    setEditingPage({
+                                                      ...editingPage,
+                                                      blocks,
+                                                      socialProof: { ...editingPage.socialProof, enabled: true, stats }
+                                                    });
+                                                  }}
+                                                  placeholder="Ex: Inscritos Confirmados"
+                                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs text-slate-700 focus:outline-none focus:border-amber-500"
+                                                />
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const stats = [...(block.stats || editingPage.socialProof?.stats || [
+                                                    { label: 'Inscritos Confirmados', value: '+1.800' },
+                                                    { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                                                  ])];
+                                                  stats.splice(sIdx, 1);
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, stats };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    socialProof: { ...editingPage.socialProof, enabled: true, stats }
+                                                  });
+                                                }}
+                                                className="mt-4 text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                                title="Remover esta métrica"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* 2. Depoimentos dos Clientes */}
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <label className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                              <span>Depoimentos dos Clientes</span>
+                                            </label>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                              Adicione, edite e remova depoimentos reais para gerar alta confiança.
+                                            </p>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const currentTestimonials = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                              ])];
+                                              currentTestimonials.push({
+                                                id: `t-${Date.now()}`,
+                                                name: 'Novo Cliente',
+                                                role: 'Cargo / Empresa',
+                                                text: 'Excelente produto! Superou todas as nossas expectativas e acelerou nossos resultados.',
+                                                rating: 5
+                                              });
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, testimonials: currentTestimonials };
+                                              setEditingPage({
+                                                ...editingPage,
+                                                blocks,
+                                                socialProof: { ...editingPage.socialProof, enabled: true, testimonials: currentTestimonials }
+                                              });
+                                            }}
+                                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                            <span>Adicionar Depoimento</span>
+                                          </button>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                          {(block.testimonials || editingPage.socialProof?.testimonials || [
+                                            { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                            { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                          ]).map((t, tIdx) => (
+                                            <div key={t.id || tIdx} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 relative shadow-xs">
+                                              <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="font-bold text-xs text-slate-800">Depoimento #{tIdx + 1}</span>
+                                                  <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map(star => (
+                                                      <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const list = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                            { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                            { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                                          ])];
+                                                          list[tIdx] = { ...t, rating: star };
+                                                          const blocks = [...(editingPage.blocks || [])];
+                                                          blocks[idx] = { ...block, testimonials: list };
+                                                          setEditingPage({
+                                                            ...editingPage,
+                                                            blocks,
+                                                            socialProof: { ...editingPage.socialProof, enabled: true, testimonials: list }
+                                                          });
+                                                        }}
+                                                        className={`text-sm cursor-pointer transition hover:scale-110 ${(t.rating || 5) >= star ? 'text-amber-400' : 'text-slate-300'}`}
+                                                      >
+                                                        ★
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const list = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                      { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                      { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                                    ])];
+                                                    list.splice(tIdx, 1);
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, testimonials: list };
+                                                    setEditingPage({
+                                                      ...editingPage,
+                                                      blocks,
+                                                      socialProof: { ...editingPage.socialProof, enabled: true, testimonials: list }
+                                                    });
+                                                  }}
+                                                  className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                                  title="Remover depoimento"
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                              </div>
+
+                                              <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Cliente</label>
+                                                  <input
+                                                    type="text"
+                                                    value={t.name}
+                                                    onChange={e => {
+                                                      const list = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                        { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                        { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                                      ])];
+                                                      list[tIdx] = { ...t, name: e.target.value };
+                                                      const blocks = [...(editingPage.blocks || [])];
+                                                      blocks[idx] = { ...block, testimonials: list };
+                                                      setEditingPage({
+                                                        ...editingPage,
+                                                        blocks,
+                                                        socialProof: { ...editingPage.socialProof, enabled: true, testimonials: list }
+                                                      });
+                                                    }}
+                                                    placeholder="Ex: Mariana Silveira"
+                                                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Cargo / Empresa</label>
+                                                  <input
+                                                    type="text"
+                                                    value={t.role}
+                                                    onChange={e => {
+                                                      const list = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                        { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                        { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                                      ])];
+                                                      list[tIdx] = { ...t, role: e.target.value };
+                                                      const blocks = [...(editingPage.blocks || [])];
+                                                      blocks[idx] = { ...block, testimonials: list };
+                                                      setEditingPage({
+                                                        ...editingPage,
+                                                        blocks,
+                                                        socialProof: { ...editingPage.socialProof, enabled: true, testimonials: list }
+                                                      });
+                                                    }}
+                                                    placeholder="Ex: Diretora Comercial"
+                                                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-blue-500"
+                                                  />
+                                                </div>
+                                              </div>
+
+                                              <div>
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Texto do Depoimento</label>
+                                                <textarea
+                                                  rows={2}
+                                                  value={t.text}
+                                                  onChange={e => {
+                                                    const list = [...(block.testimonials || editingPage.socialProof?.testimonials || [
+                                                      { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                                                      { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                                                    ])];
+                                                    list[tIdx] = { ...t, text: e.target.value };
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    blocks[idx] = { ...block, testimonials: list };
+                                                    setEditingPage({
+                                                      ...editingPage,
+                                                      blocks,
+                                                      socialProof: { ...editingPage.socialProof, enabled: true, testimonials: list }
+                                                    });
+                                                  }}
+                                                  placeholder="O que o cliente disse sobre a experiência..."
+                                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-800 leading-relaxed focus:outline-none focus:border-blue-500"
+                                                />
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: FAQ / PERGUNTAS FREQUENTES */}
+                                  {block.type === 'faq' && (
+                                    <div className="space-y-3 pt-2 border-t border-slate-200">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <label className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                                            <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+                                            <span>Perguntas & Respostas (FAQ)</span>
+                                          </label>
+                                          <p className="text-[10px] text-slate-500 mt-0.5">
+                                            Responda às principais dúvidas para quebrar objeções.
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const currentFaq = [...(block.faqItems || editingPage.faq?.items || [
+                                              { id: 'q1', question: 'Preciso de conhecimento técnico para usar?', answer: 'Não! O construtor é 100% visual.' }
+                                            ])];
+                                            currentFaq.push({
+                                              id: `faq-${Date.now()}`,
+                                              question: 'Nova Pergunta Frequente?',
+                                              answer: 'Insira aqui a resposta detalhada e objetiva.'
+                                            });
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, faqItems: currentFaq };
+                                            setEditingPage({
+                                              ...editingPage,
+                                              blocks,
+                                              faq: { ...editingPage.faq, enabled: true, items: currentFaq }
+                                            });
+                                          }}
+                                          className="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Plus className="w-3 h-3" />
+                                          <span>Adicionar Pergunta</span>
+                                        </button>
+                                      </div>
+
+                                      <div className="space-y-2.5">
+                                        {(block.faqItems || editingPage.faq?.items || [
+                                          { id: 'q1', question: 'Preciso de conhecimento técnico para usar?', answer: 'Não! O construtor é 100% visual.' }
+                                        ]).map((faqItem, qIdx) => (
+                                          <div key={faqItem.id || qIdx} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 relative shadow-xs">
+                                            <div className="flex items-center justify-between">
+                                              <span className="font-bold text-xs text-purple-700">Pergunta #{qIdx + 1}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const currentFaq = [...(block.faqItems || editingPage.faq?.items || [])];
+                                                  currentFaq.splice(qIdx, 1);
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, faqItems: currentFaq };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    faq: { ...editingPage.faq, enabled: true, items: currentFaq }
+                                                  });
+                                                }}
+                                                className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                                title="Remover pergunta"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Pergunta</label>
+                                              <input
+                                                type="text"
+                                                value={faqItem.question}
+                                                onChange={e => {
+                                                  const currentFaq = [...(block.faqItems || editingPage.faq?.items || [])];
+                                                  currentFaq[qIdx] = { ...faqItem, question: e.target.value };
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, faqItems: currentFaq };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    faq: { ...editingPage.faq, enabled: true, items: currentFaq }
+                                                  });
+                                                }}
+                                                placeholder="Ex: Como funciona a garantia?"
+                                                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-purple-500"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Resposta</label>
+                                              <textarea
+                                                rows={2}
+                                                value={faqItem.answer}
+                                                onChange={e => {
+                                                  const currentFaq = [...(block.faqItems || editingPage.faq?.items || [])];
+                                                  currentFaq[qIdx] = { ...faqItem, answer: e.target.value };
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, faqItems: currentFaq };
+                                                  setEditingPage({
+                                                    ...editingPage,
+                                                    blocks,
+                                                    faq: { ...editingPage.faq, enabled: true, items: currentFaq }
+                                                  });
+                                                }}
+                                                placeholder="Digite a resposta explicativa..."
+                                                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-700 leading-relaxed focus:outline-none focus:border-purple-500"
+                                              />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -4014,145 +4526,451 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                 )}
 
                 {/* 4. BENEFÍCIOS */}
-                {activeEditorTab === 'features' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Lista de Benefícios ({editingPage.features?.length || 0})
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newFeatures = [...(editingPage.features || [])];
-                          newFeatures.push({
-                            id: `feat-${Date.now()}`,
-                            title: 'Novo Benefício Exclusivo',
-                            description: 'Descreva em poucas linhas o ganho real para o cliente.'
-                          });
-                          setEditingPage({ ...editingPage, features: newFeatures });
-                        }}
-                        className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Adicionar</span>
-                      </button>
-                    </div>
+                {activeEditorTab === 'features' && (() => {
+                  const featuresBlock = editingPage.blocks?.find(b => b.type === 'features');
+                  const currentFeatures = (editingPage.features && editingPage.features.length > 0)
+                    ? editingPage.features
+                    : (featuresBlock?.features || [
+                        { id: 'f1', title: 'Aulas 100% Práticas', description: 'Sem enrolação teórica: mostramos tela a tela o que funciona no mercado atual.' },
+                        { id: 'f2', title: 'Sessão de Perguntas e Respostas', description: 'Tire suas dúvidas diretamente ao vivo com nossos mentores.' },
+                        { id: 'f3', title: 'Certificado de Participação', description: 'Comprove seu aperfeiçoamento profissional com certificado digital incluso.' }
+                      ]);
 
-                    {(editingPage.features || []).map((feat, idx) => (
-                      <div key={feat.id || idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 relative space-y-2">
+                  return (
+                    <div className="space-y-4">
+                      {/* Sync Banner with Blocks */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+                          <div className="text-xs text-blue-900 leading-snug">
+                            <span className="font-bold">Sincronizado com Blocos & Seções:</span> Altere aqui ou direto no bloco visual da página.
+                          </div>
+                        </div>
+                        {featuresBlock && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedBlockId(featuresBlock.id);
+                              setActiveEditorTab('blocks');
+                            }}
+                            className="text-[11px] font-bold text-blue-700 bg-white border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition whitespace-nowrap cursor-pointer shrink-0"
+                          >
+                            Ir ao Bloco ➔
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Lista de Benefícios ({currentFeatures.length})
+                        </label>
                         <button
                           type="button"
                           onClick={() => {
-                            const newFeatures = editingPage.features.filter((_, i) => i !== idx);
-                            setEditingPage({ ...editingPage, features: newFeatures });
+                            const newFeatures = [...currentFeatures];
+                            newFeatures.push({
+                              id: `feat-${Date.now()}`,
+                              title: 'Novo Benefício Exclusivo',
+                              description: 'Descreva em poucas linhas o ganho real para o cliente.'
+                            });
+                            const updatedBlocks = (editingPage.blocks || []).map(b =>
+                              b.type === 'features' ? { ...b, features: newFeatures } : b
+                            );
+                            setEditingPage({ ...editingPage, features: newFeatures, blocks: updatedBlocks });
                           }}
-                          className="absolute top-3 right-3 text-slate-400 hover:text-red-500"
+                          className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar Benefício</span>
                         </button>
-
-                        <div className="text-xs font-bold text-slate-500">Item #{idx + 1}</div>
-                        <input
-                          type="text"
-                          value={feat.title}
-                          onChange={e => {
-                            const updated = [...editingPage.features];
-                            updated[idx].title = e.target.value;
-                            setEditingPage({ ...editingPage, features: updated });
-                          }}
-                          placeholder="Título do Benefício"
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold"
-                        />
-                        <textarea
-                          value={feat.description}
-                          onChange={e => {
-                            const updated = [...editingPage.features];
-                            updated[idx].description = e.target.value;
-                            setEditingPage({ ...editingPage, features: updated });
-                          }}
-                          rows={2}
-                          placeholder="Descrição detalhada..."
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
-                        />
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      {currentFeatures.map((feat, idx) => (
+                        <div key={feat.id || idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 relative space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newFeatures = currentFeatures.filter((_, i) => i !== idx);
+                              const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                b.type === 'features' ? { ...b, features: newFeatures } : b
+                              );
+                              setEditingPage({ ...editingPage, features: newFeatures, blocks: updatedBlocks });
+                            }}
+                            className="absolute top-3 right-3 text-slate-400 hover:text-red-500 cursor-pointer"
+                            title="Remover benefício"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="text-xs font-bold text-slate-500">Item #{idx + 1}</div>
+                          <input
+                            type="text"
+                            value={feat.title}
+                            onChange={e => {
+                              const updated = [...currentFeatures];
+                              updated[idx] = { ...feat, title: e.target.value };
+                              const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                b.type === 'features' ? { ...b, features: updated } : b
+                              );
+                              setEditingPage({ ...editingPage, features: updated, blocks: updatedBlocks });
+                            }}
+                            placeholder="Título do Benefício"
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:border-blue-500"
+                          />
+                          <textarea
+                            value={feat.description}
+                            onChange={e => {
+                              const updated = [...currentFeatures];
+                              updated[idx] = { ...feat, description: e.target.value };
+                              const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                b.type === 'features' ? { ...b, features: updated } : b
+                              );
+                              setEditingPage({ ...editingPage, features: updated, blocks: updatedBlocks });
+                            }}
+                            rows={2}
+                            placeholder="Descrição detalhada..."
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* 5. PROVA SOCIAL */}
-                {activeEditorTab === 'social' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                      <div>
-                        <div className="font-semibold text-slate-800">Ativar Seção de Prova Social</div>
-                        <div className="text-xs text-slate-500">Exibir métricas e depoimentos de clientes</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={editingPage.socialProof?.enabled || false}
-                        onChange={e => setEditingPage({
-                          ...editingPage,
-                          socialProof: { ...editingPage.socialProof, enabled: e.target.checked }
-                        })}
-                        className="w-5 h-5 text-blue-600 rounded"
-                      />
-                    </div>
+                {activeEditorTab === 'social' && (() => {
+                  const socialProofBlock = editingPage.blocks?.find(b => b.type === 'socialProof');
+                  const currentStats = (editingPage.socialProof?.stats && editingPage.socialProof.stats.length > 0)
+                    ? editingPage.socialProof.stats
+                    : (socialProofBlock?.stats || [
+                        { label: 'Inscritos Confirmados', value: '+1.800' },
+                        { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+                      ]);
 
-                    {editingPage.socialProof?.enabled && (
-                      <div className="space-y-4">
-                        <div className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                          Depoimentos de Clientes
-                        </div>
-                        {(editingPage.socialProof.testimonials || []).map((t, idx) => (
-                          <div key={t.id || idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                            <input
-                              type="text"
-                              value={t.name}
-                              onChange={e => {
-                                const list = [...(editingPage.socialProof.testimonials || [])];
-                                list[idx].name = e.target.value;
-                                setEditingPage({
-                                  ...editingPage,
-                                  socialProof: { ...editingPage.socialProof, testimonials: list }
-                                });
-                              }}
-                              placeholder="Nome do cliente"
-                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold"
-                            />
-                            <input
-                              type="text"
-                              value={t.role}
-                              onChange={e => {
-                                const list = [...(editingPage.socialProof.testimonials || [])];
-                                list[idx].role = e.target.value;
-                                setEditingPage({
-                                  ...editingPage,
-                                  socialProof: { ...editingPage.socialProof, testimonials: list }
-                                });
-                              }}
-                              placeholder="Cargo ou empresa"
-                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
-                            />
-                            <textarea
-                              value={t.text}
-                              onChange={e => {
-                                const list = [...(editingPage.socialProof.testimonials || [])];
-                                list[idx].text = e.target.value;
-                                setEditingPage({
-                                  ...editingPage,
-                                  socialProof: { ...editingPage.socialProof, testimonials: list }
-                                });
-                              }}
-                              rows={2}
-                              placeholder="Depoimento..."
-                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
-                            />
+                  const currentTestimonials = (editingPage.socialProof?.testimonials && editingPage.socialProof.testimonials.length > 0)
+                    ? editingPage.socialProof.testimonials
+                    : (socialProofBlock?.testimonials || [
+                        { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial', text: 'Excelente solução! O retorno sobre o investimento foi imediato e o atendimento é impecável.', rating: 5 },
+                        { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O processo direto de tráfego com qualificação no WhatsApp mudou totalmente nosso faturamento.', rating: 5 }
+                      ]);
+
+                  const isEnabled = editingPage.socialProof?.enabled !== false;
+
+                  return (
+                    <div className="space-y-5">
+                      {/* Sync Banner with Blocks */}
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-600 fill-amber-500 shrink-0" />
+                          <div className="text-xs text-amber-900 leading-snug">
+                            <span className="font-bold">Sincronizado com Blocos & Seções:</span> Você também pode gerenciar e reordenar esta seção na aba <span className="font-bold">Blocos & Seções 🧱</span>.
                           </div>
-                        ))}
+                        </div>
+                        {socialProofBlock && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedBlockId(socialProofBlock.id);
+                              setActiveEditorTab('blocks');
+                            }}
+                            className="text-[11px] font-bold text-amber-800 bg-white border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-100 transition whitespace-nowrap cursor-pointer shrink-0"
+                          >
+                            Ir ao Bloco ➔
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Header Activation Toggle */}
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                        <div>
+                          <div className="font-bold text-slate-800 text-sm">Ativar Seção de Prova Social</div>
+                          <div className="text-xs text-slate-500">Exibir métricas e depoimentos de clientes</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={e => {
+                            const enabled = e.target.checked;
+                            const updatedBlocks = (editingPage.blocks || []).map(b =>
+                              b.type === 'socialProof' ? { ...b, enabled } : b
+                            );
+                            setEditingPage({
+                              ...editingPage,
+                              socialProof: { ...editingPage.socialProof, enabled, stats: currentStats, testimonials: currentTestimonials },
+                              blocks: updatedBlocks
+                            });
+                          }}
+                          className="w-5 h-5 text-blue-600 rounded cursor-pointer"
+                        />
+                      </div>
+
+                      {isEnabled && (
+                        <div className="space-y-5">
+                          {/* 1. Métricas & Números em Destaque (Inscritos Confirmados, Nota, etc) */}
+                          <div className="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <label className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Métricas & Números em Destaque</span>
+                                </label>
+                                <p className="text-[10px] text-amber-700 mt-0.5">
+                                  Altere os inscritos confirmados, notas de edições anteriores ou marcas alcançadas.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newStats = [...currentStats];
+                                  newStats.push({ label: 'Nova Métrica', value: '+1.000' });
+                                  const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                    b.type === 'socialProof' ? { ...b, stats: newStats, enabled: true } : b
+                                  );
+                                  setEditingPage({
+                                    ...editingPage,
+                                    socialProof: { ...editingPage.socialProof, enabled: true, stats: newStats, testimonials: currentTestimonials },
+                                    blocks: updatedBlocks
+                                  });
+                                }}
+                                className="text-amber-800 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Adicionar Número</span>
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              {currentStats.map((st, idx) => (
+                                <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-amber-200 shadow-xs">
+                                  <div className="w-1/3">
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Valor / Número</label>
+                                    <input
+                                      type="text"
+                                      value={st.value}
+                                      onChange={e => {
+                                        const newStats = [...currentStats];
+                                        newStats[idx] = { ...st, value: e.target.value };
+                                        const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                          b.type === 'socialProof' ? { ...b, stats: newStats } : b
+                                        );
+                                        setEditingPage({
+                                          ...editingPage,
+                                          socialProof: { ...editingPage.socialProof, stats: newStats },
+                                          blocks: updatedBlocks
+                                        });
+                                      }}
+                                      placeholder="+1.800 ou 4.95 ⭐"
+                                      className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs font-bold text-amber-600 focus:outline-none focus:border-amber-500"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Rótulo / Descrição</label>
+                                    <input
+                                      type="text"
+                                      value={st.label}
+                                      onChange={e => {
+                                        const newStats = [...currentStats];
+                                        newStats[idx] = { ...st, label: e.target.value };
+                                        const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                          b.type === 'socialProof' ? { ...b, stats: newStats } : b
+                                        );
+                                        setEditingPage({
+                                          ...editingPage,
+                                          socialProof: { ...editingPage.socialProof, stats: newStats },
+                                          blocks: updatedBlocks
+                                        });
+                                      }}
+                                      placeholder="Ex: Inscritos Confirmados"
+                                      className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newStats = currentStats.filter((_, i) => i !== idx);
+                                      const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                        b.type === 'socialProof' ? { ...b, stats: newStats } : b
+                                      );
+                                      setEditingPage({
+                                        ...editingPage,
+                                        socialProof: { ...editingPage.socialProof, stats: newStats },
+                                        blocks: updatedBlocks
+                                      });
+                                    }}
+                                    className="mt-4 text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                    title="Remover métrica"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* 2. Depoimentos dos Clientes */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                  <span>Depoimentos dos Clientes ({currentTestimonials.length})</span>
+                                </label>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Adicione e edite depoimentos com avaliações em estrelas.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newTestimonials = [...currentTestimonials];
+                                  newTestimonials.push({
+                                    id: `t-${Date.now()}`,
+                                    name: 'Novo Cliente',
+                                    role: 'Cargo / Empresa',
+                                    text: 'Excelente produto! Superou todas as nossas expectativas e acelerou nossos resultados.',
+                                    rating: 5
+                                  });
+                                  const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                    b.type === 'socialProof' ? { ...b, testimonials: newTestimonials, enabled: true } : b
+                                  );
+                                  setEditingPage({
+                                    ...editingPage,
+                                    socialProof: { ...editingPage.socialProof, enabled: true, stats: currentStats, testimonials: newTestimonials },
+                                    blocks: updatedBlocks
+                                  });
+                                }}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Adicionar Depoimento</span>
+                              </button>
+                            </div>
+
+                            <div className="space-y-3">
+                              {currentTestimonials.map((t, idx) => (
+                                <div key={t.id || idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 relative space-y-2.5 shadow-xs">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs text-slate-800">Depoimento #{idx + 1}</span>
+                                      <div className="flex items-center gap-1">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                          <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => {
+                                              const list = [...currentTestimonials];
+                                              list[idx] = { ...t, rating: star };
+                                              const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                                b.type === 'socialProof' ? { ...b, testimonials: list } : b
+                                              );
+                                              setEditingPage({
+                                                ...editingPage,
+                                                socialProof: { ...editingPage.socialProof, testimonials: list },
+                                                blocks: updatedBlocks
+                                              });
+                                            }}
+                                            className={`text-sm cursor-pointer transition hover:scale-110 ${(t.rating || 5) >= star ? 'text-amber-400' : 'text-slate-300'}`}
+                                          >
+                                            ★
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const list = currentTestimonials.filter((_, i) => i !== idx);
+                                        const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                          b.type === 'socialProof' ? { ...b, testimonials: list } : b
+                                        );
+                                        setEditingPage({
+                                          ...editingPage,
+                                          socialProof: { ...editingPage.socialProof, testimonials: list },
+                                          blocks: updatedBlocks
+                                        });
+                                      }}
+                                      className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
+                                      title="Remover depoimento"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Nome do Cliente</label>
+                                      <input
+                                        type="text"
+                                        value={t.name}
+                                        onChange={e => {
+                                          const list = [...currentTestimonials];
+                                          list[idx] = { ...t, name: e.target.value };
+                                          const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                            b.type === 'socialProof' ? { ...b, testimonials: list } : b
+                                          );
+                                          setEditingPage({
+                                            ...editingPage,
+                                            socialProof: { ...editingPage.socialProof, testimonials: list },
+                                            blocks: updatedBlocks
+                                          });
+                                        }}
+                                        placeholder="Nome do cliente"
+                                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:border-blue-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Cargo / Empresa</label>
+                                      <input
+                                        type="text"
+                                        value={t.role}
+                                        onChange={e => {
+                                          const list = [...currentTestimonials];
+                                          list[idx] = { ...t, role: e.target.value };
+                                          const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                            b.type === 'socialProof' ? { ...b, testimonials: list } : b
+                                          );
+                                          setEditingPage({
+                                            ...editingPage,
+                                            socialProof: { ...editingPage.socialProof, testimonials: list },
+                                            blocks: updatedBlocks
+                                          });
+                                        }}
+                                        placeholder="Cargo ou empresa"
+                                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Texto do Depoimento</label>
+                                    <textarea
+                                      value={t.text}
+                                      onChange={e => {
+                                        const list = [...currentTestimonials];
+                                        list[idx] = { ...t, text: e.target.value };
+                                        const updatedBlocks = (editingPage.blocks || []).map(b =>
+                                          b.type === 'socialProof' ? { ...b, testimonials: list } : b
+                                        );
+                                        setEditingPage({
+                                          ...editingPage,
+                                          socialProof: { ...editingPage.socialProof, testimonials: list },
+                                          blocks: updatedBlocks
+                                        });
+                                      }}
+                                      rows={2}
+                                      placeholder="Depoimento do cliente..."
+                                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs leading-relaxed focus:outline-none focus:border-blue-500"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* 6. FAQ & ESCASSEZ */}
                 {activeEditorTab === 'scarcity' && (
