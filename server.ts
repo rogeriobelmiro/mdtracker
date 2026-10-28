@@ -15809,7 +15809,7 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
 
 // Vite development middleware or production static serving
 async function startLocalServer() {
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
