@@ -263,13 +263,24 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
     }
   ];
 
+  // Remove salas automáticas de agentes que não existem mais nesta empresa
+  const cleanOrphanedRooms = (roomList: AIAgentRoom[], agentList: AIAgent[]) => {
+    return roomList.filter(r => {
+      if (r.id.startsWith('room-auto-')) {
+        const agentId = r.id.replace('room-auto-', '');
+        return agentList.some(a => a.id === agentId);
+      }
+      return true;
+    });
+  };
+
   // Salas de trabalho customizáveis (permite criar salas e juntar vários agentes na mesma sala)
   const [rooms, setRooms] = useState<AIAgentRoom[]>(() => {
     try {
       const saved = localStorage.getItem(storageRoomsKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return cleanOrphanedRooms(parsed, agents);
       }
     } catch {}
     return getDefaultRoomsForCompany(currentCompany.id);
@@ -292,7 +303,7 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
       if (savedRooms) {
         const parsed = JSON.parse(savedRooms);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setRooms(parsed);
+          setRooms(cleanOrphanedRooms(parsed, agents));
         } else {
           setRooms(getDefaultRoomsForCompany(currentCompany.id));
         }
@@ -310,13 +321,32 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
     setPresenceMap({});
   }, [currentCompany.id]);
 
-  // Garantir que todo agente tenha uma sala atribuída (e se criar agentes novos sem sala, cria uma sala para ele ou aloca)
+  // Garantir que todo agente tenha uma sala atribuída e purgar salas automáticas de agentes removidos
   useEffect(() => {
-    if (agents.length === 0) return;
-    let updatedRooms = [...rooms];
+    let updatedRooms = cleanOrphanedRooms(rooms, agents);
     let updatedMap = { ...agentRoomMap };
-    let roomsChanged = false;
+    let roomsChanged = updatedRooms.length !== rooms.length;
     let mapChanged = false;
+
+    // Purgar do mapa agentes que não existem nesta empresa
+    Object.keys(updatedMap).forEach(agId => {
+      if (!agents.some(a => a.id === agId)) {
+        delete updatedMap[agId];
+        mapChanged = true;
+      }
+    });
+
+    if (agents.length === 0) {
+      if (roomsChanged) {
+        setRooms(updatedRooms);
+        try { localStorage.setItem(storageRoomsKey, JSON.stringify(updatedRooms)); } catch {}
+      }
+      if (mapChanged) {
+        setAgentRoomMap(updatedMap);
+        try { localStorage.setItem(storageAssignKey, JSON.stringify(updatedMap)); } catch {}
+      }
+      return;
+    }
 
     agents.forEach((ag, index) => {
       if (ag.roomId && updatedRooms.some(r => r.id === ag.roomId)) {
@@ -1090,6 +1120,26 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
 
           {/* Lista de Salas e Profissionais dentro de cada Sala */}
           <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {agents.length === 0 && (
+              <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center space-y-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center mx-auto text-base">
+                  🤖
+                </div>
+                <h4 className="text-xs font-bold text-white">Nenhum Agente Criado</h4>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  A empresa <strong className="text-slate-200">{currentCompany.name}</strong> ainda não possui agentes em operação.
+                </p>
+                <button
+                  type="button"
+                  onClick={onOpenMagicCreator}
+                  className="w-full py-1.5 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  Criar Agente Agora
+                </button>
+              </div>
+            )}
+
             {filteredRoomsWithAgents.map(({ room, agents: roomAgents }) => {
               const colorStyle = ROOM_COLOR_STYLES[room.color || 'sky'] || ROOM_COLOR_STYLES.sky;
 
@@ -1107,9 +1157,21 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
                           {roomAgents.length}
                         </span>
                       </div>
-                      <span className="w-4 h-4 rounded bg-orange-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0">
-                        {currentCompany.name.charAt(0).toUpperCase()}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        {roomAgents.length === 0 && (
+                          <button
+                            type="button"
+                            title="Excluir Sala Vazia"
+                            onClick={() => handleDeleteRoom(room.id)}
+                            className="text-slate-500 hover:text-rose-400 p-0.5 rounded cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                        <span className="w-4 h-4 rounded bg-orange-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0">
+                          {currentCompany.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">
                       ~/{currentCompany.name.replace(/\s+/g, '')}/{room.name}
@@ -1118,15 +1180,25 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
 
                   {/* Profissionais agrupados dentro desta Sala */}
                   {roomAgents.length === 0 ? (
-                    <div className="text-[10px] text-slate-500 py-2 text-center border border-dashed border-slate-700 rounded-lg">
-                      Sala vazia •{' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowRoomModal(true)}
-                        className="text-amber-400 underline cursor-pointer"
-                      >
-                        Juntar profissional
-                      </button>
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 py-1.5 px-2 border border-dashed border-slate-700 rounded-lg">
+                      <span>Sala vazia</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowRoomModal(true)}
+                          className="text-amber-400 hover:underline cursor-pointer"
+                        >
+                          Juntar
+                        </button>
+                        <button
+                          type="button"
+                          title="Excluir Sala"
+                          onClick={() => handleDeleteRoom(room.id)}
+                          className="text-slate-500 hover:text-rose-400 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-2 divide-y divide-slate-800/80">

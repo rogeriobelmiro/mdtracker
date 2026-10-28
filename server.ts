@@ -14454,333 +14454,20 @@ const DEFAULT_AI_AGENT_TEMPLATES = [
 
 let inMemoryAIAgents: any[] = [];
 let inMemoryAIAgentLogs: any[] = [];
-const seededAgentCompanies = new Set<string>();
-const seededLogCompanies = new Set<string>();
 
+// Retorna estritamente os agentes criados na empresa especificada (sem auto-seed de agentes fictícios)
 function getCompanyDefaultAgents(companyId: string) {
     if (!companyId) return [];
-    const existing = inMemoryAIAgents.filter(a => a.companyId === companyId);
-    if (existing.length > 0 || seededAgentCompanies.has(companyId)) {
-        return existing;
-    }
-    seededAgentCompanies.add(companyId);
-    const suffix = companyId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-8) || 'tenant';
-    const seeded = DEFAULT_AI_AGENT_TEMPLATES.map((tpl, idx) => ({
-        id: `${tpl.slug}-${suffix}`,
-        companyId,
-        name: tpl.name,
-        roleTitle: tpl.roleTitle,
-        avatar: tpl.avatar,
-        descriptionPrompt: tpl.descriptionPrompt,
-        goal: tpl.goal,
-        personaAndContext: tpl.personaAndContext,
-        rules: [...tpl.rules],
-        autonomyMode: tpl.autonomyMode,
-        triggers: [...tpl.triggers],
-        enabledTools: [...tpl.enabledTools],
-        active: tpl.active,
-        executionsCount: tpl.executionsCount,
-        goalsAchievedCount: tpl.goalsAchievedCount,
-        createdAt: new Date(Date.now() - 86400000 * (7 - idx * 3)).toISOString(),
-        updatedAt: new Date().toISOString()
-    }));
-    inMemoryAIAgents.push(...seeded);
-    return seeded;
+    return inMemoryAIAgents.filter(a => a.companyId === companyId);
 }
 
+// Retorna estritamente os logs de atividades da empresa especificada
 function getCompanyDefaultAgentLogs(companyId: string) {
     if (!companyId) return [];
-    const existing = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
-    if (existing.length > 0 || seededLogCompanies.has(companyId)) return existing;
-    seededLogCompanies.add(companyId);
-
-    const agents = getCompanyDefaultAgents(companyId);
-    const sdr = agents[0] || { id: `agent-sdr-maya-${companyId.slice(-6)}`, name: 'Maya — SDR & Qualificadora', avatar: '🤖' };
-    const closer = agents[1] || { id: `agent-closer-lucas-${companyId.slice(-6)}`, name: 'Lucas — Closer & Quebra de Objeções', avatar: '⚡' };
-
-    const now = Date.now();
-    const suffix = companyId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-6) || 'tenant';
-    const seededLogs = [
-        {
-            id: `act-hablla-1-${suffix}`,
-            agentId: sdr.id,
-            agentName: sdr.name,
-            agentAvatar: sdr.avatar || '🤖',
-            companyId,
-            leadId: `lead-demo-1-${suffix}`,
-            leadName: 'Mariana Costa (Clínica Vida)',
-            leadPhone: '(11) 99812-4430',
-            leadStage: 'Em Negociação',
-            leadScore: 88,
-            channel: 'whatsapp',
-            trigger: 'whatsapp_message',
-            boardColumn: 'goal_achieved',
-            activityCategory: 'qualification',
-            taskTitle: 'Qualificação BANT concluída + Card movido p/ Em Negociação',
-            priority: 'high',
-            dueDate: new Date(now + 3600000 * 2).toISOString(),
-            taskCompleted: true,
-            durationMs: 1420,
-            tags: ['SQL Qualificado', 'Plano Pro', 'Orçamento Confirmado'],
-            userMessage: 'Precisamos para 12 atendentes aqui na clínica. Temos orçamento aprovado de até R$ 600/mês para começar ainda essa semana.',
-            agentReply: 'Perfeito, Mariana! Para 12 atendentes com início imediato, nosso Plano Pro Growth (R$ 497/mês) atende com folga e fica dentro do orçamento da Clínica Vida. Já avancei sua ficha prioritária aqui no nosso CRM! Quer que eu gere o link de ativação agora?',
-            steps: [
-                {
-                    id: 'st-1',
-                    type: 'perception',
-                    title: 'Percepção de Contexto & Intenção BANT',
-                    detail: 'Lead informou tamanho da equipe (12 usuários), orçamento aprovado (R$ 600/mês) e urgência (esta semana).',
-                    timestamp: new Date(now - 900000).toISOString()
-                },
-                {
-                    id: 'st-2',
-                    type: 'data_lookup',
-                    title: 'Consulta ao Catálogo de Produtos',
-                    detail: 'Plano Pro Growth localizado (R$ 497,00/mês) — compatível com o orçamento do lead.',
-                    toolId: 'search_products',
-                    timestamp: new Date(now - 899000).toISOString()
-                },
-                {
-                    id: 'st-3',
-                    type: 'rule_check',
-                    title: 'Validação de Regras (Guardrails)',
-                    detail: 'Critério atingido: "Só mover o lead para Em Negociação quando demonstrar interesse claro e perfil".',
-                    timestamp: new Date(now - 898500).toISOString()
-                },
-                {
-                    id: 'st-4',
-                    type: 'action_executed',
-                    title: 'Ação no CRM: Movimentação de Etapa + Score',
-                    detail: 'Card movido de "Novo Lead" para "Em Negociação" e Lead Score atualizado para 88 pts.',
-                    toolId: 'update_lead_stage',
-                    timestamp: new Date(now - 898000).toISOString()
-                }
-            ],
-            actionsTaken: [
-                'Estágio do Lead atualizado para "Em Negociação" no CRM.',
-                'Lead Score aumentado para 88/100 (MQL -> SQL).',
-                'Nota automática registrada na ficha do Lead.'
-            ],
-            status: 'completed',
-            createdAt: new Date(now - 900000).toISOString()
-        },
-        {
-            id: `act-hablla-2-${suffix}`,
-            agentId: closer.id,
-            agentName: closer.name,
-            agentAvatar: closer.avatar || '⚡',
-            companyId,
-            leadId: `lead-demo-2-${suffix}`,
-            leadName: 'Ricardo Almeida (TechSolutions)',
-            leadPhone: '(21) 98741-9012',
-            leadStage: 'Em Negociação',
-            leadScore: 92,
-            channel: 'whatsapp',
-            trigger: 'whatsapp_message',
-            boardColumn: 'qualifying',
-            activityCategory: 'closing',
-            taskTitle: 'Contorno de objeção de preço + Envio de Link de Checkout',
-            priority: 'high',
-            dueDate: new Date(now + 1800000).toISOString(),
-            taskCompleted: false,
-            durationMs: 1680,
-            tags: ['Checkout Enviado', 'Bônus 10%', 'Quente'],
-            userMessage: 'Gostei da plataforma, mas consigo algum desconto se fechar o plano anual hoje no PIX?',
-            agentReply: 'Consegue sim, Ricardo! Pelas nossas regras comerciais, para fechamento à vista hoje consigo liberar 10% de condição especial + onboarding VIP incluso. Segue o link oficial rastreado para ativar agora: https://mdtracker.app/r/oferta-especial',
-            steps: [
-                {
-                    id: 'st-21',
-                    type: 'perception',
-                    title: 'Detecção de Sinal de Fechamento com Condição',
-                    detail: 'Cliente pronto para compra imediata no PIX solicitando condição comercial.',
-                    timestamp: new Date(now - 2400000).toISOString()
-                },
-                {
-                    id: 'st-22',
-                    type: 'rule_check',
-                    title: 'Checagem de Alçada de Desconto',
-                    detail: 'Regra validada: "Não oferecer mais de 10% de desconto sem aprovação de um gerente humano". Aplicado limite seguro de 10%.',
-                    timestamp: new Date(now - 2399000).toISOString()
-                },
-                {
-                    id: 'st-23',
-                    type: 'data_lookup',
-                    title: 'Busca de Link Rastreável da Campanha',
-                    detail: 'Link /r/oferta-especial recuperado com UTMs da campanha ativa.',
-                    toolId: 'get_campaign_links',
-                    timestamp: new Date(now - 2398500).toISOString()
-                },
-                {
-                    id: 'st-24',
-                    type: 'action_executed',
-                    title: 'Ação: Disparo de Link de Conversão',
-                    detail: 'Link enviado no WhatsApp e follow-up automático programado caso não haja pagamento em 4h.',
-                    toolId: 'send_tracking_link',
-                    timestamp: new Date(now - 2398000).toISOString()
-                }
-            ],
-            actionsTaken: [
-                'Link rastreável (/r/oferta-especial) enviado na conversa.',
-                'Follow-up de confirmação de PIX agendado.'
-            ],
-            status: 'completed',
-            createdAt: new Date(now - 2400000).toISOString()
-        },
-        {
-            id: `act-hablla-3-${suffix}`,
-            agentId: closer.id,
-            agentName: closer.name,
-            agentAvatar: closer.avatar || '⚡',
-            companyId,
-            leadId: `lead-demo-3-${suffix}`,
-            leadName: 'Fernanda Rocha (Grupo Horizonte)',
-            leadPhone: '(31) 99104-5581',
-            leadStage: 'Contatado',
-            leadScore: 74,
-            channel: 'instagram',
-            trigger: 'inactivity_followup',
-            boardColumn: 'scheduled',
-            activityCategory: 'followup',
-            taskTitle: 'Follow-up Agendado: Retomar após reunião com sócios (Quinta 15h)',
-            priority: 'medium',
-            dueDate: new Date(now + 86400000).toISOString(),
-            taskCompleted: false,
-            durationMs: 1150,
-            tags: ['Follow-up Agendado', 'Instagram Direct', 'Reunião Sócios'],
-            userMessage: 'Vou apresentar os valores para o meu sócio amanhã de manhã e te dou um retorno à tarde, pode ser?',
-            agentReply: 'Combinado, Fernanda! Já deixei agendado aqui no sistema para falar com você amanhã às 15h. Se surgir qualquer dúvida técnica durante a reunião com seu sócio, é só me chamar!',
-            steps: [
-                {
-                    id: 'st-31',
-                    type: 'perception',
-                    title: 'Identificação de Janela de Decisão',
-                    detail: 'Lead pediu prazo específico (amanhã à tarde após reunião com sócio).',
-                    timestamp: new Date(now - 5400000).toISOString()
-                },
-                {
-                    id: 'st-32',
-                    type: 'action_executed',
-                    title: 'Ação: Criação de Tarefa de Follow-up na Central',
-                    detail: 'Tarefa de retorno agendada automaticamente para o dia seguinte às 15h00.',
-                    toolId: 'schedule_followup',
-                    timestamp: new Date(now - 5399000).toISOString()
-                }
-            ],
-            actionsTaken: [
-                'Tarefa de Follow-up agendada na Central de Atividades.',
-                'Nota de contexto registrada: "Em avaliação com sócio".'
-            ],
-            status: 'completed',
-            createdAt: new Date(now - 5400000).toISOString()
-        },
-        {
-            id: `act-hablla-4-${suffix}`,
-            agentId: sdr.id,
-            agentName: sdr.name,
-            agentAvatar: sdr.avatar || '🤖',
-            companyId,
-            leadId: `lead-demo-4-${suffix}`,
-            leadName: 'Carlos Eduardo Mendes',
-            leadPhone: '(41) 99652-1190',
-            leadStage: 'Em Negociação',
-            leadScore: 81,
-            channel: 'whatsapp',
-            trigger: 'whatsapp_message',
-            boardColumn: 'handed_over',
-            activityCategory: 'human_handover',
-            taskTitle: 'Transbordo p/ Especialista Humano: Pedido de Contrato Enterprise Customizado',
-            priority: 'high',
-            dueDate: new Date(now + 900000).toISOString(),
-            taskCompleted: false,
-            durationMs: 980,
-            tags: ['Aguardando Humano', 'Enterprise', 'Prioridade Alta'],
-            userMessage: 'Temos 85 vendedores e precisamos de cláusula de SLA dedicado no contrato jurídico. Quero falar com um consultor especialista.',
-            agentReply: 'Perfeito, Carlos Eduardo! Como sua operação envolve 85 vendedores e demanda contrato com SLA dedicado, já registrei todos os detalhes no CRM e transferi seu atendimento com prioridade máxima para nosso executivo de contas Enterprise. Ele já vai assumir por aqui!',
-            steps: [
-                {
-                    id: 'st-41',
-                    type: 'perception',
-                    title: 'Detecção de Demanda Enterprise + Pedido de Humano',
-                    detail: 'Lead solicitou atendimento humano para contrato customizado de 85 licenças.',
-                    timestamp: new Date(now - 7200000).toISOString()
-                },
-                {
-                    id: 'st-42',
-                    type: 'rule_check',
-                    title: 'Acionamento de Regra de Transbordo',
-                    detail: 'Regra aplicada: "Se o lead pedir para falar com atendente humano, transferir imediatamente".',
-                    timestamp: new Date(now - 7199000).toISOString()
-                },
-                {
-                    id: 'st-43',
-                    type: 'action_executed',
-                    title: 'Ação: Transferência para Fila Humana + Pausa do Bot',
-                    detail: 'Atendimento atribuído à fila comercial humana com resumo executivo anexado.',
-                    toolId: 'assign_to_human',
-                    timestamp: new Date(now - 7198000).toISOString()
-                }
-            ],
-            actionsTaken: [
-                'Atendimento transferido para fila humana (Bot pausado no lead).',
-                'Resumo executivo anexado ao card da oportunidade.'
-            ],
-            status: 'handed_over',
-            createdAt: new Date(now - 7200000).toISOString()
-        },
-        {
-            id: `act-hablla-5-${suffix}`,
-            agentId: sdr.id,
-            agentName: sdr.name,
-            agentAvatar: sdr.avatar || '🤖',
-            companyId,
-            leadId: `lead-demo-5-${suffix}`,
-            leadName: 'Juliana Paiva (Estética Avançada)',
-            leadPhone: '(85) 98821-3304',
-            leadStage: 'Novo Lead',
-            leadScore: 62,
-            channel: 'whatsapp',
-            trigger: 'lead_created',
-            boardColumn: 'analyzing',
-            activityCategory: 'qualification',
-            taskTitle: 'Recepção de Novo Lead via Campanha Meta Ads + Consulta de Perfil',
-            priority: 'medium',
-            dueDate: new Date(now + 7200000).toISOString(),
-            taskCompleted: false,
-            durationMs: 890,
-            tags: ['Meta Ads', 'Primeiro Contato', 'Sondagem'],
-            userMessage: 'Olá! Vi o anúncio no Instagram e queria entender como funciona o rastreamento de leads no WhatsApp.',
-            agentReply: 'Olá, Juliana! Seja muito bem-vinda! 😊 Com o nosso rastreamento você descobre exatamente qual anúncio do Instagram ou Google gerou cada conversa e venda no seu WhatsApp. Hoje na Estética Avançada vocês já anunciam no Meta Ads com quantos números de atendimento?',
-            steps: [
-                {
-                    id: 'st-51',
-                    type: 'perception',
-                    title: 'Novo Lead Capturado via Link UTM (Meta Ads)',
-                    detail: 'Lead iniciou conversa buscando entender rastreamento de campanhas.',
-                    timestamp: new Date(now - 300000).toISOString()
-                },
-                {
-                    id: 'st-52',
-                    type: 'data_lookup',
-                    title: 'Leitura de Dados de Atribuição UTM do Lead',
-                    detail: 'Origem detectada: utm_source=instagram_ads | utm_campaign=escala_whatsapp.',
-                    toolId: 'get_lead_profile',
-                    timestamp: new Date(now - 299000).toISOString()
-                }
-            ],
-            actionsTaken: [
-                'Estágio do Lead atualizado de "Novo Lead" para "Contatado".',
-                'Pergunta de qualificação de volume enviada.'
-            ],
-            status: 'completed',
-            createdAt: new Date(now - 300000).toISOString()
-        }
-    ];
-
-    inMemoryAIAgentLogs.push(...seededLogs);
-    return seededLogs;
+    return inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
 }
 
-// Listar Agentes de IA (Estritamente isolado por companyId)
+// Listar Agentes de IA (Mostra APENAS os agentes criados nesta empresa)
 app.get('/api/ai-agents', async (req: Request, res: Response) => {
     const companyId = String(req.query.companyId || '').trim();
     if (!companyId) {
@@ -14793,8 +14480,7 @@ app.get('/api/ai-agents', async (req: Request, res: Response) => {
             .eq('company_id', companyId)
             .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
-            seededAgentCompanies.add(companyId);
+        if (!error && data) {
             const dbAgents = data.map((row: any) => ({
                 id: row.id,
                 companyId: row.company_id,
@@ -14808,6 +14494,7 @@ app.get('/api/ai-agents', async (req: Request, res: Response) => {
                 autonomyMode: row.autonomy_mode || 'autonomous',
                 triggers: Array.isArray(row.triggers) ? row.triggers : ['whatsapp_message'],
                 enabledTools: Array.isArray(row.enabled_tools) ? row.enabled_tools : [],
+                room_id: row.room_id || null,
                 active: row.active !== false,
                 executionsCount: row.executions_count || 0,
                 goalsAchievedCount: row.goals_achieved_count || 0,
@@ -14822,10 +14509,10 @@ app.get('/api/ai-agents', async (req: Request, res: Response) => {
             return res.json(dbAgents);
         }
     } catch {}
-    return res.json(getCompanyDefaultAgents(companyId));
+    return res.json(inMemoryAIAgents.filter(a => a.companyId === companyId));
 });
 
-// Listar Logs de Execução / Central de Atividades dos Agentes (Estritamente isolado por companyId)
+// Listar Logs de Execução / Central de Atividades (Mostra APENAS atividades da empresa atual)
 app.get('/api/ai-agents/logs', async (req: Request, res: Response) => {
     const companyId = String(req.query.companyId || '').trim();
     if (!companyId) {
@@ -14844,8 +14531,7 @@ app.get('/api/ai-agents/logs', async (req: Request, res: Response) => {
             query = query.eq('agent_id', agentId);
         }
         const { data, error } = await query;
-        if (!error && data && data.length > 0) {
-            seededLogCompanies.add(companyId);
+        if (!error && data) {
             const dbLogs = data.map((row: any) => ({
                 id: row.id,
                 agentId: row.agent_id,
@@ -14878,7 +14564,6 @@ app.get('/api/ai-agents/logs', async (req: Request, res: Response) => {
         }
     } catch {}
 
-    getCompanyDefaultAgentLogs(companyId);
     let logs = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
     if (agentId) logs = logs.filter(l => l.agentId === agentId);
     res.json(logs.slice(0, 80));
