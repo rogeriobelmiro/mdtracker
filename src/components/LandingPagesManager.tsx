@@ -642,6 +642,15 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
+  // 1-second interval ticker for live countdown timers on cards and preview
+  const [, setTimerTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimerTick(prev => (prev + 1) % 1000000);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load landing pages and surveys
   const loadPages = async () => {
     setIsLoading(true);
@@ -1613,6 +1622,126 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           <div className="text-sm font-bold text-blue-600">{convRate}%</div>
                         </div>
                       </div>
+
+                      {/* Tempo & Redirecionamento Dinâmico */}
+                      {(() => {
+                        const countdownConfig = lp.countdown?.enabled
+                          ? lp.countdown
+                          : lp.blocks?.find(b => b.type === 'countdown' && b.enabled !== false)
+                            ? {
+                                enabled: true,
+                                endDate: lp.blocks.find(b => b.type === 'countdown')?.countdownEndDate || lp.countdown?.endDate,
+                                redirectOnExpire: lp.blocks.find(b => b.type === 'countdown')?.countdownRedirectOnExpire ?? lp.countdown?.redirectOnExpire,
+                                redirectType: lp.blocks.find(b => b.type === 'countdown')?.countdownRedirectType || lp.countdown?.redirectType || 'page',
+                                redirectPageSlug: lp.blocks.find(b => b.type === 'countdown')?.countdownRedirectPageSlug || lp.countdown?.redirectPageSlug,
+                                redirectUrl: lp.blocks.find(b => b.type === 'countdown')?.countdownRedirectUrl || lp.countdown?.redirectUrl,
+                              }
+                            : null;
+
+                        const cd = countdownConfig?.enabled ? getTimerRemaining(countdownConfig.endDate) : null;
+                        const targetPage = countdownConfig?.redirectType === 'custom_url'
+                          ? null
+                          : countdownConfig?.redirectPageSlug
+                            ? landingPages.find(p => p.slug === countdownConfig.redirectPageSlug)
+                            : null;
+                        const targetLabel = countdownConfig?.redirectType === 'custom_url'
+                          ? countdownConfig.redirectUrl
+                          : targetPage ? targetPage.title : (countdownConfig?.redirectPageSlug ? `/p/${countdownConfig.redirectPageSlug}` : null);
+
+                        const formattedEndDate = countdownConfig?.endDate 
+                          ? (() => {
+                              try {
+                                const d = new Date(countdownConfig.endDate);
+                                if (isNaN(d.getTime())) return countdownConfig.endDate;
+                                return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+                              } catch {
+                                return countdownConfig.endDate;
+                              }
+                            })()
+                          : null;
+
+                        if (countdownConfig?.enabled && cd) {
+                          return (
+                            <div 
+                              onClick={() => {
+                                setEditingPage(lp);
+                                setActiveEditorTab('scarcity');
+                              }}
+                              className={`mt-3 p-2.5 rounded-xl border text-xs flex flex-col gap-2 transition cursor-pointer hover:shadow-xs ${
+                                cd.isExpired
+                                  ? 'bg-rose-50/80 border-rose-200 text-rose-900 hover:border-rose-300'
+                                  : 'bg-amber-50/80 border-amber-200 text-amber-900 hover:border-amber-300'
+                              }`}
+                              title="Clique para editar o tempo e o redirecionamento"
+                            >
+                              {/* Tempo Restante / Status */}
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className={`w-3.5 h-3.5 shrink-0 ${cd.isExpired ? 'text-rose-600' : 'text-amber-600 animate-pulse'}`} />
+                                  <span className="font-bold text-[11px] uppercase tracking-wider">
+                                    {cd.isExpired ? 'Tempo Esgotado' : 'Tempo Restante'}
+                                  </span>
+                                </div>
+                                <div className="font-mono font-black text-xs">
+                                  {cd.isExpired ? (
+                                    <span className="text-rose-700 bg-white px-2 py-0.5 rounded-md border border-rose-300 shadow-2xs font-bold text-[11px]">
+                                      Expirado ⚠️
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-900 bg-white px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs font-extrabold text-[11px]">
+                                      {cd.days}d {cd.hours}h {cd.mins}m {cd.secs}s
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Data Limite */}
+                              {formattedEndDate && (
+                                <div className="text-[10px] text-slate-500 flex items-center justify-between px-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span>Término:</span>
+                                  </span>
+                                  <span className="font-mono font-semibold text-slate-700">{formattedEndDate}</span>
+                                </div>
+                              )}
+
+                              {/* Redirecionamento Automático */}
+                              {countdownConfig.redirectOnExpire !== false && (
+                                <div className="pt-1.5 border-t border-slate-200/70 flex items-center justify-between gap-1 text-[11px]">
+                                  <span className="text-slate-600 font-medium flex items-center gap-1 shrink-0">
+                                    <ArrowRight className="w-3 h-3 text-blue-600 shrink-0" />
+                                    <span>Redireciona:</span>
+                                  </span>
+                                  <span 
+                                    className="font-bold text-blue-700 truncate max-w-[160px] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 text-right" 
+                                    title={targetLabel || 'Sem destino definido'}
+                                  >
+                                    {targetLabel || <span className="text-slate-400 italic font-normal">Sem destino</span>}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div 
+                            onClick={() => {
+                              setEditingPage(lp);
+                              setActiveEditorTab('scarcity');
+                            }}
+                            className="mt-3 p-2 bg-slate-50/70 rounded-xl border border-slate-100 flex items-center justify-between text-[11px] text-slate-400 cursor-pointer hover:bg-slate-100/80 transition"
+                            title="Clique para ativar o temporizador e redirecionamento"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3 h-3 text-slate-300" />
+                              <span>Tempo & Redirecionamento:</span>
+                            </span>
+                            <span className="text-blue-600 font-semibold text-[10px] hover:underline">+ Configurar</span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Card Footer Actions */}
