@@ -767,9 +767,9 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                 type="number"
                 value={scoringConfig.mqlThreshold}
                 onChange={(e) => setScoringConfig({ ...scoringConfig, mqlThreshold: Number(e.target.value) })}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold focus:outline-none"
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block">Geralmente entre 35 e 50 pontos.</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-400 mt-1 block">Geralmente entre 35 e 50 pontos.</span>
             </div>
 
             <div>
@@ -780,9 +780,9 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                 type="number"
                 value={scoringConfig.sqlThreshold}
                 onChange={(e) => setScoringConfig({ ...scoringConfig, sqlThreshold: Number(e.target.value) })}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold focus:outline-none"
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block">Geralmente entre 65 e 80 pontos.</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-400 mt-1 block">Geralmente entre 65 e 80 pontos.</span>
             </div>
           </div>
 
@@ -821,9 +821,9 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                         [item.key]: Number(e.target.value)
                       }
                     })}
-                    className="w-full text-xs font-bold text-right p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none"
+                    className="w-full text-xs font-bold text-right p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <span className="text-[10px] font-bold text-slate-400">pts</span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-300">pts</span>
                 </div>
               </div>
             ))}
@@ -914,7 +914,7 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                   <select
                     value={listMatchType}
                     onChange={(e) => setListMatchType(e.target.value as any)}
-                    className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-semibold focus:outline-none"
+                    className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none"
                   >
                     <option value="all">Todas as condições (E / AND)</option>
                     <option value="any">Qualquer condição (OU / OR)</option>
@@ -946,7 +946,7 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                       <select
                         value={cond.field}
                         onChange={(e) => handleUpdateCondition(idx, { field: e.target.value as any })}
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold focus:outline-none flex-1"
+                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none flex-1"
                       >
                         <option value="score">Pontuação Score</option>
                         <option value="qualificationLevel">Nível (SQL / MQL / Lead)</option>
@@ -960,7 +960,7 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                       <select
                         value={cond.operator}
                         onChange={(e) => handleUpdateCondition(idx, { operator: e.target.value as any })}
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold focus:outline-none w-28"
+                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none w-28"
                       >
                         <option value="greater_than">Maior ou =</option>
                         <option value="less_than">Menor ou =</option>
@@ -974,7 +974,7 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                         value={String(cond.value)}
                         onChange={(e) => handleUpdateCondition(idx, { value: e.target.value })}
                         placeholder="Valor..."
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 w-24 font-mono focus:outline-none"
+                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white w-24 font-mono focus:outline-none"
                       />
 
                       <button
