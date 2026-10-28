@@ -27,11 +27,12 @@ import {
   Layers,
   ClipboardList,
   Globe,
-  Trophy
+  Trophy,
+  BrainCircuit
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
+export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -178,6 +179,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           label: 'Torre de Supervisão',
           icon: ShieldCheck,
           badge: { text: 'Ao Vivo', variant: 'purple' },
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'ai_agents',
+          label: 'Agentes de IA (Criador)',
+          icon: BrainCircuit,
+          badge: { text: 'Autônomos 🧠', variant: 'amber' },
           allowedRoles: ['admin', 'manager']
         },
         {

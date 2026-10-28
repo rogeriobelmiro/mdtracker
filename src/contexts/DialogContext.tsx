@@ -7,10 +7,12 @@ interface DialogOptions {
   type?: 'alert' | 'confirm' | 'success';
 }
 
+type DialogInput = string | { title?: string; message: string; confirmText?: string; cancelText?: string };
+
 interface DialogContextProps {
-  alert: (message: string, title?: string) => Promise<void>;
-  success: (message: string, title?: string) => Promise<void>;
-  confirm: (message: string, title?: string) => Promise<boolean>;
+  alert: (messageOrObj: DialogInput, title?: string) => Promise<void>;
+  success: (messageOrObj: DialogInput, title?: string) => Promise<void>;
+  confirm: (messageOrObj: DialogInput, title?: string) => Promise<boolean>;
 }
 
 const DialogContext = createContext<DialogContextProps | undefined>(undefined);
@@ -28,20 +30,35 @@ export const DialogProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [options, setOptions] = useState<DialogOptions | null>(null);
   const [resolvePromise, setResolvePromise] = useState<((val: boolean) => void) | null>(null);
 
-  const showAlert = (message: string, title?: string, type: 'alert' | 'success' = 'alert'): Promise<void> => {
+  const normalizeDialogArgs = (messageOrObj: DialogInput, title?: string): { message: string; title?: string } => {
+    if (typeof messageOrObj === 'object' && messageOrObj !== null) {
+      return {
+        message: String(messageOrObj.message || ''),
+        title: messageOrObj.title ? String(messageOrObj.title) : title
+      };
+    }
+    return {
+      message: String(messageOrObj || ''),
+      title: title ? String(title) : undefined
+    };
+  };
+
+  const showAlert = (messageOrObj: DialogInput, title?: string, type: 'alert' | 'success' = 'alert'): Promise<void> => {
+    const normalized = normalizeDialogArgs(messageOrObj, title);
     return new Promise((resolve) => {
-      setOptions({ title, message, type });
+      setOptions({ title: normalized.title, message: normalized.message, type });
       setIsOpen(true);
       setResolvePromise(() => (val: boolean) => resolve());
     });
   };
 
-  const alert = (message: string, title?: string) => showAlert(message, title, 'alert');
-  const success = (message: string, title?: string) => showAlert(message, title, 'success');
+  const alert = (messageOrObj: DialogInput, title?: string) => showAlert(messageOrObj, title, 'alert');
+  const success = (messageOrObj: DialogInput, title?: string) => showAlert(messageOrObj, title, 'success');
 
-  const confirm = (message: string, title?: string): Promise<boolean> => {
+  const confirm = (messageOrObj: DialogInput, title?: string): Promise<boolean> => {
+    const normalized = normalizeDialogArgs(messageOrObj, title);
     return new Promise((resolve) => {
-      setOptions({ title, message, type: 'confirm' });
+      setOptions({ title: normalized.title, message: normalized.message, type: 'confirm' });
       setIsOpen(true);
       setResolvePromise(() => resolve);
     });

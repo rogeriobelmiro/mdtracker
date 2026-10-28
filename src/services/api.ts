@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -94,7 +94,7 @@ export async function fetchLinks(startDate?: string, endDate?: string, companyId
   if (startDate) queryParams.append('startDate', startDate);
   if (endDate) queryParams.append('endDate', endDate);
   if (companyId) queryParams.append('companyId', companyId);
-  
+
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const res = await fetch(`/api/links${queryString}`);
   if (!res.ok) return [];
@@ -501,13 +501,13 @@ export async function toggleLandingPage(id: string, status: 'published' | 'draft
   return res.json();
 }
 
-export async function generateLandingPageAI(payload: { 
-  prompt?: string; 
-  niche?: string; 
-  productName?: string; 
+export async function generateLandingPageAI(payload: {
+  prompt?: string;
+  niche?: string;
+  productName?: string;
   targetAudience?: string;
   tone?: string;
-  companyId?: string; 
+  companyId?: string;
 }): Promise<any> {
   const res = await fetch('/api/landing-pages/generate-ai', {
     method: 'POST',
@@ -935,15 +935,15 @@ export async function updateInstagramSettings(companyId: string, settings: any):
 }
 
 export async function testInstagramToken(
-  accessToken: string, 
+  accessToken: string,
   instagramAccountId?: string
-): Promise<{ 
-  success: boolean; 
-  accountName?: string; 
-  id?: string; 
-  pageId?: string; 
-  instagramAccountId?: string; 
-  scopes?: string[]; 
+): Promise<{
+  success: boolean;
+  accountName?: string;
+  id?: string;
+  pageId?: string;
+  instagramAccountId?: string;
+  scopes?: string[];
   isCapiToken?: boolean;
   message?: string;
 }> {
@@ -1006,7 +1006,7 @@ export async function deleteTeam(id: string): Promise<void> {
 }
 
 export async function fetchTeamMembers(companyId: string, teamId?: string): Promise<TeamMember[]> {
-  const url = teamId 
+  const url = teamId
     ? `/api/team-members?companyId=${encodeURIComponent(companyId)}&teamId=${encodeURIComponent(teamId)}`
     : `/api/team-members?companyId=${encodeURIComponent(companyId)}`;
   const res = await fetch(url);
@@ -1082,7 +1082,7 @@ export async function fetchSupervisorStats(companyId: string): Promise<Superviso
 }
 
 export async function fetchNextAttendant(companyId: string, teamId?: string): Promise<{ nextUser: User | null; team: Team | null; memberCount: number }> {
-  const url = teamId 
+  const url = teamId
     ? `/api/teams-next-attendant?companyId=${encodeURIComponent(companyId)}&teamId=${encodeURIComponent(teamId)}`
     : `/api/teams-next-attendant?companyId=${encodeURIComponent(companyId)}`;
   const res = await fetch(url);
@@ -1314,4 +1314,109 @@ export async function exportGamificationLeadsToCRM(eventId: string): Promise<{ i
   }
   return res.json();
 }
+
+// ==========================================
+// Autonomous AI Agents Creator & Runner API
+// ==========================================
+
+export async function fetchAIAgents(companyId?: string): Promise<AIAgent[]> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/ai-agents${query}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createAIAgent(data: Partial<AIAgent>): Promise<AIAgent> {
+  const res = await fetch('/api/ai-agents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar agente de IA');
+  }
+  return res.json();
+}
+
+export async function updateAIAgent(id: string, data: Partial<AIAgent>): Promise<AIAgent> {
+  const res = await fetch(`/api/ai-agents/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar agente de IA');
+  }
+  return res.json();
+}
+
+export async function deleteAIAgent(id: string): Promise<void> {
+  const res = await fetch(`/api/ai-agents/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Erro ao excluir agente de IA');
+}
+
+export async function generateAIAgentBlueprint(description: string, companyId?: string): Promise<Partial<AIAgent>> {
+  const res = await fetch('/api/ai-agents/generate-blueprint', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description, companyId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao gerar agente a partir da descrição');
+  }
+  return res.json();
+}
+
+export async function executeAIAgentTurn(
+  agentId: string,
+  payload: {
+    companyId?: string;
+    leadId?: string;
+    userMessage: string;
+    triggerType?: string;
+    conversationHistory?: Array<{ role: 'user' | 'agent'; text: string }>;
+    applyRealActions?: boolean;
+  }
+): Promise<{
+  executionLog: AIAgentExecutionLog;
+  updatedLead?: Lead | null;
+}> {
+  const res = await fetch(`/api/ai-agents/${agentId}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao executar agente de IA');
+  }
+  return res.json();
+}
+
+export async function fetchAIAgentLogs(companyId?: string, agentId?: string): Promise<AIAgentExecutionLog[]> {
+  const params = new URLSearchParams();
+  if (companyId) params.append('companyId', companyId);
+  if (agentId) params.append('agentId', agentId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`/api/ai-agents/logs${query}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function updateAIAgentLog(logId: string, data: Partial<AIAgentExecutionLog>): Promise<AIAgentExecutionLog> {
+  const res = await fetch(`/api/ai-agents/logs/${logId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar atividade do agente');
+  }
+  return res.json();
+}
+
 

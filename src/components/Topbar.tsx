@@ -22,7 +22,8 @@ import {
   Target,
   Instagram,
   Headphones,
-  ShieldCheck
+  ShieldCheck,
+  BrainCircuit
 } from 'lucide-react';
 import { User, Company } from '../types';
 import { NavTabId } from './Sidebar';
@@ -154,6 +155,12 @@ export const Topbar: React.FC<TopbarProps> = ({
           section: 'Vendas & Atendimento',
           title: 'Torre de Supervisão & Monitoramento ao Vivo',
           icon: ShieldCheck
+        };
+      case 'ai_agents':
+        return {
+          section: 'Vendas & Atendimento',
+          title: 'Criador de Agentes de IA Autônomos (Orientados a Objetivos)',
+          icon: BrainCircuit
         };
       case 'users':
         return {

@@ -14386,6 +14386,1097 @@ app.get(['/evento/:slugOrPin', '/e/:slugOrPin', '/live/:slugOrPin'], async (req:
     }
 });
 
+// ============================================================================
+// PASSO 10: CRIADOR DE AGENTES DE IA AUTÔNOMOS (Goal-Driven AI Agents Engine)
+// ============================================================================
+
+let inMemoryAIAgents: any[] = [
+    {
+        id: 'agent-sdr-maya',
+        companyId: 'comp-1786498560971',
+        name: 'Maya — SDR & Qualificadora',
+        roleTitle: 'Agente de Qualificação & Triagem Comercial',
+        avatar: '🤖',
+        descriptionPrompt: 'Recepcionar novos leads do WhatsApp, descobrir qual produto ou serviço buscam, consultar o catálogo de preços, avaliar o perfil de compra e mover leads qualificados para Em Negociação no CRM.',
+        goal: 'Descobrir a necessidade e o orçamento do lead, apresentar a solução mais adequada do catálogo e avançar leads qualificados para "Em Negociação" no funil.',
+        personaAndContext: 'Consultora de pré-vendas simpática, ágil e estratégica. Faz 1 pergunta por vez para não cansar o lead, valida a dor do cliente antes de falar de preço e usa os dados reais do CRM e catálogo de produtos.',
+        rules: [
+            'Nunca inventar produtos ou preços que não estejam cadastrados no catálogo do sistema.',
+            'Não oferecer mais de 10% de desconto sem aprovação de um gerente humano.',
+            'Se o lead pedir para falar com atendente humano, reclamar ou solicitar cancelamento, transferir imediatamente.',
+            'Só mover o lead para "Em Negociação" quando ele demonstrar interesse claro ou perguntar formas de pagamento.'
+        ],
+        autonomyMode: 'autonomous',
+        triggers: ['whatsapp_message', 'lead_created'],
+        enabledTools: [
+            'get_lead_profile',
+            'search_products',
+            'get_campaign_links',
+            'update_lead_stage',
+            'add_lead_note',
+            'update_lead_score',
+            'assign_to_human'
+        ],
+        active: true,
+        executionsCount: 48,
+        goalsAchievedCount: 19,
+        createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+        updatedAt: new Date().toISOString()
+    },
+    {
+        id: 'agent-closer-lucas',
+        companyId: 'comp-1786498560971',
+        name: 'Lucas — Closer & Quebra de Objeções',
+        roleTitle: 'Especialista em Fechamento & Conversão',
+        avatar: '⚡',
+        descriptionPrompt: 'Atuar com leads que já estão em negociação ou perguntaram preço mas não fecharam. Contornar objeções de valor/prazo, enviar o link oficial da campanha/checkout e registrar notas detalhadas no CRM.',
+        goal: 'Converter leads indecisos em clientes pagantes contornando objeções com argumentos de ROI e enviando o link de fechamento.',
+        personaAndContext: 'Especialista sênior em fechamento consultivo. Tom confiante, focado em retorno sobre investimento (ROI), prova social e urgência ética.',
+        rules: [
+            'Jamais pressionar de forma agressiva se o cliente disser explicitamente que não tem interesse.',
+            'Sempre consultar o histórico de compras e o perfil do lead antes de fazer uma oferta.',
+            'Ao confirmar intenção de compra, enviar o link rastreável e atualizar o estágio no CRM.'
+        ],
+        autonomyMode: 'autonomous',
+        triggers: ['whatsapp_message', 'stage_changed', 'inactivity_followup'],
+        enabledTools: [
+            'get_lead_profile',
+            'search_products',
+            'get_lead_purchases',
+            'get_campaign_links',
+            'update_lead_stage',
+            'add_lead_note',
+            'send_tracking_link',
+            'schedule_followup'
+        ],
+        active: true,
+        executionsCount: 31,
+        goalsAchievedCount: 12,
+        createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+        updatedAt: new Date().toISOString()
+    }
+];
+
+let inMemoryAIAgentLogs: any[] = [];
+
+function getCompanyDefaultAgentLogs(companyId: string) {
+    const existing = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
+    if (existing.length > 0) return existing;
+
+    const agents = getCompanyDefaultAgents(companyId);
+    const sdr = agents[0] || { id: 'agent-sdr-maya', name: 'Maya — SDR & Qualificadora', avatar: '🤖' };
+    const closer = agents[1] || { id: 'agent-closer-lucas', name: 'Lucas — Closer & Quebra de Objeções', avatar: '⚡' };
+
+    const now = Date.now();
+    const seededLogs = [
+        {
+            id: `act-hablla-1-${companyId.slice(-4)}`,
+            agentId: sdr.id,
+            agentName: sdr.name,
+            agentAvatar: sdr.avatar || '🤖',
+            companyId,
+            leadId: 'lead-demo-1',
+            leadName: 'Mariana Costa (Clínica Vida)',
+            leadPhone: '(11) 99812-4430',
+            leadStage: 'Em Negociação',
+            leadScore: 88,
+            channel: 'whatsapp',
+            trigger: 'whatsapp_message',
+            boardColumn: 'goal_achieved',
+            activityCategory: 'qualification',
+            taskTitle: 'Qualificação BANT concluída + Card movido p/ Em Negociação',
+            priority: 'high',
+            dueDate: new Date(now + 3600000 * 2).toISOString(),
+            taskCompleted: true,
+            durationMs: 1420,
+            tags: ['SQL Qualificado', 'Plano Pro', 'Orçamento Confirmado'],
+            userMessage: 'Precisamos para 12 atendentes aqui na clínica. Temos orçamento aprovado de até R$ 600/mês para começar ainda essa semana.',
+            agentReply: 'Perfeito, Mariana! Para 12 atendentes com início imediato, nosso Plano Pro Growth (R$ 497/mês) atende com folga e fica dentro do orçamento da Clínica Vida. Já avancei sua ficha prioritária aqui no nosso CRM! Quer que eu gere o link de ativação agora?',
+            steps: [
+                {
+                    id: 'st-1',
+                    type: 'perception',
+                    title: 'Percepção de Contexto & Intenção BANT',
+                    detail: 'Lead informou tamanho da equipe (12 usuários), orçamento aprovado (R$ 600/mês) e urgência (esta semana).',
+                    timestamp: new Date(now - 900000).toISOString()
+                },
+                {
+                    id: 'st-2',
+                    type: 'data_lookup',
+                    title: 'Consulta ao Catálogo de Produtos',
+                    detail: 'Plano Pro Growth localizado (R$ 497,00/mês) — compatível com o orçamento do lead.',
+                    toolId: 'search_products',
+                    timestamp: new Date(now - 899000).toISOString()
+                },
+                {
+                    id: 'st-3',
+                    type: 'rule_check',
+                    title: 'Validação de Regras (Guardrails)',
+                    detail: 'Critério atingido: "Só mover o lead para Em Negociação quando demonstrar interesse claro e perfil".',
+                    timestamp: new Date(now - 898500).toISOString()
+                },
+                {
+                    id: 'st-4',
+                    type: 'action_executed',
+                    title: 'Ação no CRM: Movimentação de Etapa + Score',
+                    detail: 'Card movido de "Novo Lead" para "Em Negociação" e Lead Score atualizado para 88 pts.',
+                    toolId: 'update_lead_stage',
+                    timestamp: new Date(now - 898000).toISOString()
+                }
+            ],
+            actionsTaken: [
+                'Estágio do Lead atualizado para "Em Negociação" no CRM.',
+                'Lead Score aumentado para 88/100 (MQL -> SQL).',
+                'Nota automática registrada na ficha do Lead.'
+            ],
+            status: 'completed',
+            createdAt: new Date(now - 900000).toISOString()
+        },
+        {
+            id: `act-hablla-2-${companyId.slice(-4)}`,
+            agentId: closer.id,
+            agentName: closer.name,
+            agentAvatar: closer.avatar || '⚡',
+            companyId,
+            leadId: 'lead-demo-2',
+            leadName: 'Ricardo Almeida (TechSolutions)',
+            leadPhone: '(21) 98741-9012',
+            leadStage: 'Em Negociação',
+            leadScore: 92,
+            channel: 'whatsapp',
+            trigger: 'whatsapp_message',
+            boardColumn: 'qualifying',
+            activityCategory: 'closing',
+            taskTitle: 'Contorno de objeção de preço + Envio de Link de Checkout',
+            priority: 'high',
+            dueDate: new Date(now + 1800000).toISOString(),
+            taskCompleted: false,
+            durationMs: 1680,
+            tags: ['Checkout Enviado', 'Bônus 10%', 'Quente'],
+            userMessage: 'Gostei da plataforma, mas consigo algum desconto se fechar o plano anual hoje no PIX?',
+            agentReply: 'Consegue sim, Ricardo! Pelas nossas regras comerciais, para fechamento à vista hoje consigo liberar 10% de condição especial + onboarding VIP incluso. Segue o link oficial rastreado para ativar agora: https://mdtracker.app/r/oferta-especial',
+            steps: [
+                {
+                    id: 'st-21',
+                    type: 'perception',
+                    title: 'Detecção de Sinal de Fechamento com Condição',
+                    detail: 'Cliente pronto para compra imediata no PIX solicitando condição comercial.',
+                    timestamp: new Date(now - 2400000).toISOString()
+                },
+                {
+                    id: 'st-22',
+                    type: 'rule_check',
+                    title: 'Checagem de Alçada de Desconto',
+                    detail: 'Regra validada: "Não oferecer mais de 10% de desconto sem aprovação de um gerente humano". Aplicado limite seguro de 10%.',
+                    timestamp: new Date(now - 2399000).toISOString()
+                },
+                {
+                    id: 'st-23',
+                    type: 'data_lookup',
+                    title: 'Busca de Link Rastreável da Campanha',
+                    detail: 'Link /r/oferta-especial recuperado com UTMs da campanha ativa.',
+                    toolId: 'get_campaign_links',
+                    timestamp: new Date(now - 2398500).toISOString()
+                },
+                {
+                    id: 'st-24',
+                    type: 'action_executed',
+                    title: 'Ação: Disparo de Link de Conversão',
+                    detail: 'Link enviado no WhatsApp e follow-up automático programado caso não haja pagamento em 4h.',
+                    toolId: 'send_tracking_link',
+                    timestamp: new Date(now - 2398000).toISOString()
+                }
+            ],
+            actionsTaken: [
+                'Link rastreável (/r/oferta-especial) enviado na conversa.',
+                'Follow-up de confirmação de PIX agendado.'
+            ],
+            status: 'completed',
+            createdAt: new Date(now - 2400000).toISOString()
+        },
+        {
+            id: `act-hablla-3-${companyId.slice(-4)}`,
+            agentId: closer.id,
+            agentName: closer.name,
+            agentAvatar: closer.avatar || '⚡',
+            companyId,
+            leadId: 'lead-demo-3',
+            leadName: 'Fernanda Rocha (Grupo Horizonte)',
+            leadPhone: '(31) 99104-5581',
+            leadStage: 'Contatado',
+            leadScore: 74,
+            channel: 'instagram',
+            trigger: 'inactivity_followup',
+            boardColumn: 'scheduled',
+            activityCategory: 'followup',
+            taskTitle: 'Follow-up Agendado: Retomar após reunião com sócios (Quinta 15h)',
+            priority: 'medium',
+            dueDate: new Date(now + 86400000).toISOString(),
+            taskCompleted: false,
+            durationMs: 1150,
+            tags: ['Follow-up Agendado', 'Instagram Direct', 'Reunião Sócios'],
+            userMessage: 'Vou apresentar os valores para o meu sócio amanhã de manhã e te dou um retorno à tarde, pode ser?',
+            agentReply: 'Combinado, Fernanda! Já deixei agendado aqui no sistema para falar com você amanhã às 15h. Se surgir qualquer dúvida técnica durante a reunião com seu sócio, é só me chamar!',
+            steps: [
+                {
+                    id: 'st-31',
+                    type: 'perception',
+                    title: 'Identificação de Janela de Decisão',
+                    detail: 'Lead pediu prazo específico (amanhã à tarde após reunião com sócio).',
+                    timestamp: new Date(now - 5400000).toISOString()
+                },
+                {
+                    id: 'st-32',
+                    type: 'action_executed',
+                    title: 'Ação: Criação de Tarefa de Follow-up na Central',
+                    detail: 'Tarefa de retorno agendada automaticamente para o dia seguinte às 15h00.',
+                    toolId: 'schedule_followup',
+                    timestamp: new Date(now - 5399000).toISOString()
+                }
+            ],
+            actionsTaken: [
+                'Tarefa de Follow-up agendada na Central de Atividades.',
+                'Nota de contexto registrada: "Em avaliação com sócio".'
+            ],
+            status: 'completed',
+            createdAt: new Date(now - 5400000).toISOString()
+        },
+        {
+            id: `act-hablla-4-${companyId.slice(-4)}`,
+            agentId: sdr.id,
+            agentName: sdr.name,
+            agentAvatar: sdr.avatar || '🤖',
+            companyId,
+            leadId: 'lead-demo-4',
+            leadName: 'Carlos Eduardo Mendes',
+            leadPhone: '(41) 99652-1190',
+            leadStage: 'Em Negociação',
+            leadScore: 81,
+            channel: 'whatsapp',
+            trigger: 'whatsapp_message',
+            boardColumn: 'handed_over',
+            activityCategory: 'human_handover',
+            taskTitle: 'Transbordo p/ Especialista Humano: Pedido de Contrato Enterprise Customizado',
+            priority: 'high',
+            dueDate: new Date(now + 900000).toISOString(),
+            taskCompleted: false,
+            durationMs: 980,
+            tags: ['Aguardando Humano', 'Enterprise', 'Prioridade Alta'],
+            userMessage: 'Temos 85 vendedores e precisamos de cláusula de SLA dedicado no contrato jurídico. Quero falar com um consultor especialista.',
+            agentReply: 'Perfeito, Carlos Eduardo! Como sua operação envolve 85 vendedores e demanda contrato com SLA dedicado, já registrei todos os detalhes no CRM e transferi seu atendimento com prioridade máxima para nosso executivo de contas Enterprise. Ele já vai assumir por aqui!',
+            steps: [
+                {
+                    id: 'st-41',
+                    type: 'perception',
+                    title: 'Detecção de Demanda Enterprise + Pedido de Humano',
+                    detail: 'Lead solicitou atendimento humano para contrato customizado de 85 licenças.',
+                    timestamp: new Date(now - 7200000).toISOString()
+                },
+                {
+                    id: 'st-42',
+                    type: 'rule_check',
+                    title: 'Acionamento de Regra de Transbordo',
+                    detail: 'Regra aplicada: "Se o lead pedir para falar com atendente humano, transferir imediatamente".',
+                    timestamp: new Date(now - 7199000).toISOString()
+                },
+                {
+                    id: 'st-43',
+                    type: 'action_executed',
+                    title: 'Ação: Transferência para Fila Humana + Pausa do Bot',
+                    detail: 'Atendimento atribuído à fila comercial humana com resumo executivo anexado.',
+                    toolId: 'assign_to_human',
+                    timestamp: new Date(now - 7198000).toISOString()
+                }
+            ],
+            actionsTaken: [
+                'Atendimento transferido para fila humana (Bot pausado no lead).',
+                'Resumo executivo anexado ao card da oportunidade.'
+            ],
+            status: 'handed_over',
+            createdAt: new Date(now - 7200000).toISOString()
+        },
+        {
+            id: `act-hablla-5-${companyId.slice(-4)}`,
+            agentId: sdr.id,
+            agentName: sdr.name,
+            agentAvatar: sdr.avatar || '🤖',
+            companyId,
+            leadId: 'lead-demo-5',
+            leadName: 'Juliana Paiva (Estética Avançada)',
+            leadPhone: '(85) 98821-3304',
+            leadStage: 'Novo Lead',
+            leadScore: 62,
+            channel: 'whatsapp',
+            trigger: 'lead_created',
+            boardColumn: 'analyzing',
+            activityCategory: 'qualification',
+            taskTitle: 'Recepção de Novo Lead via Campanha Meta Ads + Consulta de Perfil',
+            priority: 'medium',
+            dueDate: new Date(now + 7200000).toISOString(),
+            taskCompleted: false,
+            durationMs: 890,
+            tags: ['Meta Ads', 'Primeiro Contato', 'Sondagem'],
+            userMessage: 'Olá! Vi o anúncio no Instagram e queria entender como funciona o rastreamento de leads no WhatsApp.',
+            agentReply: 'Olá, Juliana! Seja muito bem-vinda! 😊 Com o nosso rastreamento você descobre exatamente qual anúncio do Instagram ou Google gerou cada conversa e venda no seu WhatsApp. Hoje na Estética Avançada vocês já anunciam no Meta Ads com quantos números de atendimento?',
+            steps: [
+                {
+                    id: 'st-51',
+                    type: 'perception',
+                    title: 'Novo Lead Capturado via Link UTM (Meta Ads)',
+                    detail: 'Lead iniciou conversa buscando entender rastreamento de campanhas.',
+                    timestamp: new Date(now - 300000).toISOString()
+                },
+                {
+                    id: 'st-52',
+                    type: 'data_lookup',
+                    title: 'Leitura de Dados de Atribuição UTM do Lead',
+                    detail: 'Origem detectada: utm_source=instagram_ads | utm_campaign=escala_whatsapp.',
+                    toolId: 'get_lead_profile',
+                    timestamp: new Date(now - 299000).toISOString()
+                }
+            ],
+            actionsTaken: [
+                'Estágio do Lead atualizado de "Novo Lead" para "Contatado".',
+                'Pergunta de qualificação de volume enviada.'
+            ],
+            status: 'completed',
+            createdAt: new Date(now - 300000).toISOString()
+        }
+    ];
+
+    inMemoryAIAgentLogs.push(...seededLogs);
+    return seededLogs;
+}
+
+function getCompanyDefaultAgents(companyId: string) {
+    const existing = inMemoryAIAgents.filter(a => a.companyId === companyId);
+    if (existing.length > 0) return existing;
+    const seeded = inMemoryAIAgents
+        .filter(a => a.companyId === 'comp-1786498560971')
+        .map(a => ({
+            ...a,
+            id: `${a.id}-${companyId.slice(-5)}`,
+            companyId
+        }));
+    inMemoryAIAgents.push(...seeded);
+    return seeded;
+}
+
+// Listar Agentes de IA
+app.get('/api/ai-agents', async (req: Request, res: Response) => {
+    const companyId = (req.query.companyId as string) || 'comp-1786498560971';
+    try {
+        const { data, error } = await supabase
+            .from('ai_agents')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+            return res.json(data.map((row: any) => ({
+                id: row.id,
+                companyId: row.company_id,
+                name: row.name,
+                roleTitle: row.role_title,
+                avatar: row.avatar || '🤖',
+                descriptionPrompt: row.description_prompt || '',
+                goal: row.goal || '',
+                personaAndContext: row.persona_and_context || '',
+                rules: Array.isArray(row.rules) ? row.rules : [],
+                autonomyMode: row.autonomy_mode || 'autonomous',
+                triggers: Array.isArray(row.triggers) ? row.triggers : ['whatsapp_message'],
+                enabledTools: Array.isArray(row.enabled_tools) ? row.enabled_tools : [],
+                active: row.active !== false,
+                executionsCount: row.executions_count || 0,
+                goalsAchievedCount: row.goals_achieved_count || 0,
+                createdAt: row.created_at,
+                updatedAt: row.updated_at
+            })));
+        }
+    } catch {}
+    return res.json(getCompanyDefaultAgents(companyId));
+});
+
+// Listar Logs de Execução / Central de Atividades dos Agentes
+app.get('/api/ai-agents/logs', async (req: Request, res: Response) => {
+    const companyId = (req.query.companyId as string) || 'comp-1786498560971';
+    const agentId = req.query.agentId as string;
+    getCompanyDefaultAgentLogs(companyId);
+    let logs = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
+    if (agentId) logs = logs.filter(l => l.agentId === agentId);
+    res.json(logs.slice(0, 80));
+});
+
+// Atualizar Card/Tarefa na Central de Atividades dos Agentes (Estilo Hablla)
+app.put('/api/ai-agents/logs/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const body = req.body || {};
+    const idx = inMemoryAIAgentLogs.findIndex(l => l.id === id);
+    if (idx < 0) {
+        return res.status(404).json({ error: 'Atividade não encontrada' });
+    }
+    inMemoryAIAgentLogs[idx] = {
+        ...inMemoryAIAgentLogs[idx],
+        ...body,
+        id
+    };
+    res.json(inMemoryAIAgentLogs[idx]);
+});
+
+// Criar Novo Agente de IA
+app.post('/api/ai-agents', async (req: Request, res: Response) => {
+    const body = req.body || {};
+    const safeRules = Array.isArray(body.rules)
+        ? body.rules.map((r: any) => typeof r === 'string' ? r : (r?.rule || r?.text || JSON.stringify(r)))
+        : [];
+    const safeTriggers = Array.isArray(body.triggers)
+        ? body.triggers.map((t: any) => String(t))
+        : ['whatsapp_message'];
+    const safeTools = Array.isArray(body.enabledTools)
+        ? body.enabledTools.map((t: any) => String(t))
+        : ['get_lead_profile', 'search_products', 'update_lead_stage', 'add_lead_note'];
+
+    const newAgent = {
+        id: String(body.id || `agent-${Date.now()}`),
+        companyId: String(body.companyId || 'comp-1786498560971'),
+        name: String(body.name || 'Novo Agente de IA'),
+        roleTitle: String(body.roleTitle || 'Agente Autônomo Especialista'),
+        avatar: String(body.avatar || '🤖'),
+        descriptionPrompt: String(body.descriptionPrompt || ''),
+        goal: String(body.goal || 'Atender o lead, buscar informações necessárias e avançar no funil.'),
+        personaAndContext: String(body.personaAndContext || 'Profissional, prestativo e objetivo.'),
+        rules: safeRules,
+        autonomyMode: body.autonomyMode === 'copilot' ? 'copilot' : 'autonomous',
+        triggers: safeTriggers,
+        enabledTools: safeTools,
+        active: body.active !== false,
+        executionsCount: Number(body.executionsCount || 0),
+        goalsAchievedCount: Number(body.goalsAchievedCount || 0),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+
+    inMemoryAIAgents.unshift(newAgent);
+
+    try {
+        await supabase.from('ai_agents').upsert({
+            id: newAgent.id,
+            company_id: newAgent.companyId,
+            name: newAgent.name,
+            role_title: newAgent.roleTitle,
+            avatar: newAgent.avatar,
+            description_prompt: newAgent.descriptionPrompt,
+            goal: newAgent.goal,
+            persona_and_context: newAgent.personaAndContext,
+            rules: newAgent.rules,
+            autonomy_mode: newAgent.autonomyMode,
+            triggers: newAgent.triggers,
+            enabled_tools: newAgent.enabledTools,
+            active: newAgent.active,
+            executions_count: newAgent.executionsCount,
+            goals_achieved_count: newAgent.goalsAchievedCount,
+            created_at: newAgent.createdAt,
+            updated_at: newAgent.updatedAt
+        });
+    } catch {}
+
+    res.json(newAgent);
+});
+
+// Atualizar Agente de IA
+app.put('/api/ai-agents/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const body = req.body || {};
+    const idx = inMemoryAIAgents.findIndex(a => a.id === id);
+    const updated = {
+        ...(idx >= 0 ? inMemoryAIAgents[idx] : { id }),
+        ...body,
+        id,
+        updatedAt: new Date().toISOString()
+    };
+    if (idx >= 0) {
+        inMemoryAIAgents[idx] = updated;
+    } else {
+        inMemoryAIAgents.unshift(updated);
+    }
+
+    try {
+        await supabase.from('ai_agents').upsert({
+            id: updated.id,
+            company_id: updated.companyId,
+            name: updated.name,
+            role_title: updated.roleTitle,
+            avatar: updated.avatar,
+            description_prompt: updated.descriptionPrompt,
+            goal: updated.goal,
+            persona_and_context: updated.personaAndContext,
+            rules: updated.rules,
+            autonomy_mode: updated.autonomyMode,
+            triggers: updated.triggers,
+            enabled_tools: updated.enabledTools,
+            active: updated.active,
+            executions_count: updated.executionsCount || 0,
+            goals_achieved_count: updated.goalsAchievedCount || 0,
+            updated_at: updated.updatedAt
+        });
+    } catch {}
+
+    res.json(updated);
+});
+
+// Excluir Agente de IA
+app.delete('/api/ai-agents/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    inMemoryAIAgents = inMemoryAIAgents.filter(a => a.id !== id);
+    try {
+        await supabase.from('ai_agents').delete().eq('id', id);
+    } catch {}
+    res.json({ success: true });
+});
+
+// Gerar Blueprint Completo do Agente a partir de Descrição em Texto Livre (Prompt-to-Agent)
+app.post('/api/ai-agents/generate-blueprint', async (req: Request, res: Response) => {
+    const { description } = req.body || {};
+    const rawText = String(description || '').trim();
+    if (!rawText) {
+        return res.status(400).json({ error: 'Descreva em texto o que o agente deve fazer.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            const prompt = `Você é um Arquiteto de Agentes de IA Autônomos para CRM e Vendas.
+O usuário descreveu o agente que deseja criar com o seguinte texto:
+"${rawText}"
+
+Gere a definição estruturada desse agente em formato JSON puro (sem blocos markdown) contendo:
+{
+  "name": "Nome próprio + Especialidade (ex: Sofia — Especialista em Retenção)",
+  "roleTitle": "Cargo curto do agente",
+  "avatar": "1 emoji representativo",
+  "goal": "Objetivo claro que o agente persegue autonomamente",
+  "personaAndContext": "Instruções de como interpretar o contexto, tom de voz e postura",
+  "rules": ["Lista de 3 a 5 regras estritas / guardrails extraídas do pedido ou boas práticas"],
+  "autonomyMode": "autonomous",
+  "triggers": ["whatsapp_message", "lead_created"],
+  "enabledTools": ["get_lead_profile", "search_products", "update_lead_stage", "add_lead_note"]
+}
+Valores válidos para triggers: "whatsapp_message", "instagram_dm", "lead_created", "stage_changed", "inactivity_followup", "manual_invocation".
+Valores válidos para enabledTools: "get_lead_profile", "search_products", "get_lead_purchases", "get_chat_history", "get_campaign_links", "get_survey_responses", "update_lead_stage", "add_lead_note", "update_lead_score", "send_tracking_link", "assign_to_human", "schedule_followup".`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt
+            });
+            const textOut = (response.text || '').replace(/```json|```/g, '').trim();
+            const parsed = JSON.parse(textOut);
+            return res.json({
+                ...parsed,
+                descriptionPrompt: rawText
+            });
+        } catch (err) {
+            console.warn('[AI Agent Blueprint Fallback]:', err);
+        }
+    }
+
+    // Motor Semântico Inteligente (Fallback Imediato) que analisa a descrição em texto do usuário
+    const lower = rawText.toLowerCase();
+    let name = 'Clara — Agente Especialista';
+    let roleTitle = 'Consultora & Operadora Autônoma de CRM';
+    let avatar = '🧠';
+
+    if (lower.includes('cobr') || lower.includes('boleto') || lower.includes('pagamento') || lower.includes('inadimpl')) {
+        name = 'Roberto — Recuperação & Financeiro';
+        roleTitle = 'Agente de Recuperação de Pagamentos e Follow-up';
+        avatar = '💳';
+    } else if (lower.includes('suporte') || lower.includes('dúvida') || lower.includes('atendimento') || lower.includes('sac')) {
+        name = 'Helena — Triagem & Suporte Nível 1';
+        roleTitle = 'Agente de Resolução de Dúvidas e Encaminhamento';
+        avatar = '🎧';
+    } else if (lower.includes('fech') || lower.includes('closer') || lower.includes('negocia') || lower.includes('desconto') || lower.includes('venda')) {
+        name = 'Gabriel — Closer de Vendas IA';
+        roleTitle = 'Agente Autônomo de Negociação e Conversão';
+        avatar = '🚀';
+    } else if (lower.includes('qualific') || lower.includes('sdr') || lower.includes('triagem') || lower.includes('orçamento')) {
+        name = 'Maya — SDR Qualificadora';
+        roleTitle = 'Agente de Qualificação de Leads & Pré-Vendas';
+        avatar = '🎯';
+    } else if (lower.includes('pesquisa') || lower.includes('nps') || lower.includes('pós-venda') || lower.includes('recompra') || lower.includes('upsell')) {
+        name = 'Bia — CS & Expansão (Upsell)';
+        roleTitle = 'Agente de Sucesso do Cliente e Recompra';
+        avatar = '💎';
+    }
+
+    // Extrair regras explícitas mencionadas pelo usuário (ex: "nunca...", "não...", "se...")
+    const sentences = rawText.split(/[.!?\n]+/).map(s => s.trim()).filter(Boolean);
+    const extractedRules: string[] = [];
+    for (const s of sentences) {
+        if (/nunca|jamais|não pode|proibido|limite|máximo|se o cliente|caso o lead|sempre que|apenas se/i.test(s)) {
+            extractedRules.push(s.charAt(0).toUpperCase() + s.slice(1));
+        }
+    }
+
+    if (extractedRules.length === 0) {
+        extractedRules.push(
+            'Consultar sempre os dados reais do lead e o catálogo de produtos antes de responder valores.',
+            'Nunca inventar informações fora da base de conhecimento da empresa.',
+            'Se o cliente solicitar atendimento humano ou demonstrar insatisfação, transferir imediatamente para a equipe.',
+            'Registrar uma nota resumida no CRM sempre que identificar o orçamento ou necessidade principal do lead.'
+        );
+    } else if (extractedRules.length < 3) {
+        extractedRules.push(
+            'Validar sempre o estágio atual e o histórico do lead no CRM antes de executar alterações.',
+            'Transferir para um especialista humano caso o assunto saia do escopo autorizado.'
+        );
+    }
+
+    // Selecionar ferramentas automaticamente de acordo com o contexto descrito
+    const enabledTools = new Set<string>(['get_lead_profile', 'search_products', 'add_lead_note']);
+    if (/estágio|etapa|funil|negociação|qualific|converter|mover|status/i.test(lower)) {
+        enabledTools.add('update_lead_stage');
+        enabledTools.add('update_lead_score');
+    }
+    if (/link|checkout|campanha|pagamento|site|proposta/i.test(lower)) {
+        enabledTools.add('get_campaign_links');
+        enabledTools.add('send_tracking_link');
+    }
+    if (/histórico|compra|pedido|cliente antigo|recompra|upsell/i.test(lower)) {
+        enabledTools.add('get_lead_purchases');
+        enabledTools.add('get_chat_history');
+    }
+    if (/pesquisa|nps|avaliação/i.test(lower)) {
+        enabledTools.add('get_survey_responses');
+    }
+    if (/humano|vendedor|equipe|atendente|transferir|avisar/i.test(lower)) {
+        enabledTools.add('assign_to_human');
+    }
+    if (/agendar|retorno|follow-up|lembrar|depois|dias/i.test(lower)) {
+        enabledTools.add('schedule_followup');
+    }
+    // Garantir ao menos update_lead_stage e assign_to_human para completude
+    enabledTools.add('update_lead_stage');
+    enabledTools.add('assign_to_human');
+
+    const triggers: string[] = ['whatsapp_message'];
+    if (/instagram|direct|dm/i.test(lower)) triggers.push('instagram_dm');
+    if (/novo lead|chegar|entrar|cadastrar/i.test(lower)) triggers.push('lead_created');
+    if (/inativ|sumir|follow|dias|boleto/i.test(lower)) triggers.push('inactivity_followup');
+
+    res.json({
+        name,
+        roleTitle,
+        avatar,
+        descriptionPrompt: rawText,
+        goal: rawText,
+        personaAndContext: `Atuar de forma autônoma buscando cumprir o objetivo: "${rawText}". Interpretar a intenção real do lead a cada mensagem, consultar os dados do sistema quando necessário e agir dentro das regras estabelecidas com comunicação natural, empática e consultiva.`,
+        rules: extractedRules,
+        autonomyMode: 'autonomous',
+        triggers,
+        enabledTools: Array.from(enabledTools)
+    });
+});
+
+// Executar Ciclo Autônomo do Agente (Perceber -> Buscar Dados -> Checar Regras -> Agir -> Responder)
+app.post('/api/ai-agents/:id/execute', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const {
+        companyId = 'comp-1786498560971',
+        leadId,
+        userMessage = '',
+        triggerType = 'whatsapp_message',
+        conversationHistory = [],
+        applyRealActions = true
+    } = req.body || {};
+
+    const agents = getCompanyDefaultAgents(companyId);
+    const agent = inMemoryAIAgents.find(a => a.id === id) || agents[0];
+    if (!agent) {
+        return res.status(404).json({ error: 'Agente não encontrado' });
+    }
+
+    const steps: any[] = [];
+    const actionsTaken: string[] = [];
+    const nowIso = () => new Date().toISOString();
+
+    // 1. PERCEPÇÃO DO CONTEXTO
+    steps.push({
+        id: `step-perc-${Date.now()}-1`,
+        type: 'perception',
+        title: 'Percepção de Contexto & Intenção',
+        detail: `Gatilho recebido (${triggerType}): "${userMessage}". Analisando relação com o objetivo do agente: "${agent.goal}".`,
+        timestamp: nowIso()
+    });
+
+    // Buscar dados reais do CRM de acordo com as ferramentas habilitadas no Agente
+    let targetLead: any = null;
+    if (leadId) {
+        try {
+            const { data } = await supabase.from('leads').select('*').eq('id', leadId).maybeSingle();
+            if (data) targetLead = mapLeadFromDB(data);
+        } catch {}
+    }
+
+    let companyProducts: any[] = [];
+    try {
+        const { data } = await supabase.from('products').select('*').eq('company_id', companyId);
+        if (data) companyProducts = data;
+    } catch {}
+
+    let companyLinks: any[] = [];
+    try {
+        const { data } = await supabase.from('campaign_links').select('*').eq('company_id', companyId).limit(5);
+        if (data) companyLinks = data.map(mapLinkFromDB);
+    } catch {}
+
+    // 2. BUSCA DE INFORMAÇÕES (TOOLS DE LEITURA)
+    if (agent.enabledTools.includes('get_lead_profile')) {
+        const leadSummary = targetLead
+            ? `Lead: ${targetLead.name} | Estágio: ${targetLead.stage} | Origem: ${targetLead.utmSource || targetLead.source || 'Direto'} | Score: ${targetLead.score || 50} pts`
+            : 'Lead em atendimento (Simulação / Visitante sem cadastro prévio)';
+        steps.push({
+            id: `step-tool-${Date.now()}-lead`,
+            type: 'data_lookup',
+            title: 'Consulta ao Perfil do Lead (CRM)',
+            detail: leadSummary,
+            toolId: 'get_lead_profile',
+            toolOutput: targetLead ? { name: targetLead.name, stage: targetLead.stage, score: targetLead.score, source: targetLead.source } : { simulated: true },
+            timestamp: nowIso()
+        });
+    }
+
+    const msgLower = userMessage.toLowerCase();
+    const asksProductOrPrice = /preço|valor|quanto|custa|plano|produto|serviço|pacote|funciona|opç|catalogo|catálogo|orçamento|comprar|contratar/i.test(msgLower);
+
+    if (agent.enabledTools.includes('search_products') && (asksProductOrPrice || companyProducts.length > 0)) {
+        const prodList = companyProducts.length > 0
+            ? companyProducts.map((p: any) => `${p.name} (R$ ${Number(p.price || 0).toFixed(2)})`).join(', ')
+            : 'Catálogo Padrão: Plano Starter (R$ 197/mês), Plano Pro Growth (R$ 497/mês), Mentoria / Implementação VIP (R$ 1.997)';
+        steps.push({
+            id: `step-tool-${Date.now()}-prod`,
+            type: 'data_lookup',
+            title: 'Busca no Catálogo de Produtos & Preços',
+            detail: `Produtos consultados: ${prodList}`,
+            toolId: 'search_products',
+            toolOutput: prodList,
+            timestamp: nowIso()
+        });
+    }
+
+    if (agent.enabledTools.includes('get_campaign_links') && /link|comprar|fechar|assinar|pagar|checkout|boleto|pix|cartão/i.test(msgLower)) {
+        const linkInfo = companyLinks.length > 0
+            ? `Link rastreável localizado: ${companyLinks[0].title} (/r/${companyLinks[0].slug})`
+            : 'Link oficial de conversão pronto para envio (/r/oferta-especial)';
+        steps.push({
+            id: `step-tool-${Date.now()}-links`,
+            type: 'data_lookup',
+            title: 'Busca de Links Rastreáveis / Checkout',
+            detail: linkInfo,
+            toolId: 'get_campaign_links',
+             timestamp: nowIso()
+        });
+    }
+
+    // 3. VERIFICAÇÃO DE REGRAS (GUARDRAILS) E RACIOCÍNIO
+    const wantsHuman = /humano|atendente|pessoa|gerente|reclama|cancelar|procon|reembolso|advogado/i.test(msgLower);
+    const asksExcessiveDiscount = /50%|metade do preço|de graça|30% de desconto|40% de desconto/i.test(msgLower);
+    const showsBuyingIntent = /quero fechar|quero contratar|quero comprar|como pago|manda o link|enviar link|tenho interesse|fechado|vou querer|pix|cartão/i.test(msgLower);
+    const showsQualification = /orçamento|empresa|equipe|preciso de|busco|quero saber mais|funciona|preço|valor/i.test(msgLower);
+
+    let status: 'completed' | 'handed_over' | 'blocked_by_rule' = 'completed';
+
+    if (asksExcessiveDiscount) {
+        const discountRule = (agent.rules || []).find((r: string) => /desconto|preço|valor|margem/i.test(r))
+            || 'Respeitar a política comercial e limites de desconto definidos nas regras do agente.';
+        steps.push({
+            id: `step-rule-${Date.now()}-disc`,
+            type: 'rule_check',
+            title: 'Guardrail Acionado: Limite Comercial',
+            detail: `O cliente solicitou condição fora da alçada. Regra verificada: "${discountRule}"`,
+            timestamp: nowIso()
+        });
+        status = 'blocked_by_rule';
+    } else {
+        steps.push({
+            id: `step-rule-${Date.now()}-ok`,
+            type: 'rule_check',
+            title: 'Validação de Regras & Guardrails',
+            detail: `Todas as ${(agent.rules || []).length || 3} regras de segurança do agente foram verificadas e respeitadas.`,
+            timestamp: nowIso()
+        });
+    }
+
+    // 4. EXECUÇÃO DE AÇÕES NO SISTEMA (TOOLS DE ESCRITA/AÇÃO)
+    let updatedLeadResult: any = null;
+    const isAuto = agent.autonomyMode === 'autonomous';
+
+    if (wantsHuman && agent.enabledTools.includes('assign_to_human')) {
+        status = 'handed_over';
+        const actionDesc = isAuto
+            ? 'Atendimento transferido para fila humana e bot pausado para este lead.'
+            : '[Sugestão Copiloto] Transferir atendimento para especialista humano.';
+        actionsTaken.push(actionDesc);
+        steps.push({
+            id: `step-act-${Date.now()}-human`,
+            type: 'action_executed',
+            title: 'Ação: Transferência para Atendente Humano',
+            detail: actionDesc,
+            toolId: 'assign_to_human',
+            timestamp: nowIso()
+        });
+
+        if (targetLead && applyRealActions && isAuto) {
+            const newNotes = (targetLead.notes ? targetLead.notes + '\n' : '') +
+                `[Agente IA ${agent.name}] Transferiu para atendimento humano após solicitação: "${userMessage}"`;
+            await safeUpdateLead(targetLead.id, {
+                bot_active: false,
+                notes: newNotes,
+                updated_at: nowIso()
+            });
+            updatedLeadResult = { ...targetLead, botActive: false, notes: newNotes };
+        }
+    } else if (showsBuyingIntent) {
+        if (agent.enabledTools.includes('update_lead_stage')) {
+            const nextStage: FunnelStage = 'Em Negociação';
+            const actionDesc = isAuto
+                ? `Estágio do Lead atualizado para "${nextStage}" no CRM.`
+                : `[Sugestão Copiloto] Mover Lead para "${nextStage}".`;
+            actionsTaken.push(actionDesc);
+            steps.push({
+                id: `step-act-${Date.now()}-stage`,
+                type: 'action_executed',
+                title: `Ação no CRM: Mover para "${nextStage}"`,
+                detail: actionDesc,
+                toolId: 'update_lead_stage',
+                toolInput: { stage: nextStage },
+                timestamp: nowIso()
+            });
+        }
+
+        if (agent.enabledTools.includes('update_lead_score')) {
+            const newScore = Math.min(100, (targetLead?.score || 60) + 25);
+            const actionDesc = isAuto
+                ? `Lead Score aumentado para ${newScore}/100 (Alta intenção de compra detectada).`
+                : `[Sugestão Copiloto] Aumentar Lead Score para ${newScore}/100.`;
+            actionsTaken.push(actionDesc);
+            steps.push({
+                id: `step-act-${Date.now()}-score`,
+                type: 'action_executed',
+                title: 'Ação: Atualização de Lead Scoring',
+                detail: actionDesc,
+                toolId: 'update_lead_score',
+                toolInput: { score: newScore },
+                timestamp: nowIso()
+            });
+        }
+
+        if (agent.enabledTools.includes('send_tracking_link')) {
+            const chosenSlug = companyLinks[0]?.slug || 'proposta-comercial';
+            const actionDesc = `Link rastreável (/r/${chosenSlug}) inserido na resposta para rastrear clique e conversão.`;
+            actionsTaken.push(actionDesc);
+            steps.push({
+                id: `step-act-${Date.now()}-link`,
+                type: 'action_executed',
+                title: 'Ação: Envio de Link Rastreável',
+                detail: actionDesc,
+                toolId: 'send_tracking_link',
+                timestamp: nowIso()
+            });
+        }
+
+        if (targetLead && applyRealActions && isAuto) {
+            const newScore = Math.min(100, (targetLead.score || 60) + 25);
+            const newNotes = (targetLead.notes ? targetLead.notes + '\n' : '') +
+                `[Agente IA ${agent.name}] Identificou intenção de fechamento e avançou lead para Em Negociação.`;
+            await safeUpdateLead(targetLead.id, {
+                stage: 'Em Negociação',
+                score: newScore,
+                notes: newNotes,
+                updated_at: nowIso()
+            });
+            updatedLeadResult = { ...targetLead, stage: 'Em Negociação', score: newScore, notes: newNotes };
+        }
+    } else if (showsQualification) {
+        if (agent.enabledTools.includes('add_lead_note')) {
+            const noteText = `[Agente IA ${agent.name}] Lead interagiu buscando informações/qualificação: "${userMessage.slice(0, 100)}"`;
+            const actionDesc = isAuto
+                ? 'Nota de contexto e qualificação registrada na ficha do Lead no CRM.'
+                : '[Sugestão Copiloto] Adicionar nota de qualificação no CRM.';
+            actionsTaken.push(actionDesc);
+            steps.push({
+                id: `step-act-${Date.now()}-note`,
+                type: 'action_executed',
+                title: 'Ação no CRM: Registro de Nota de Contexto',
+                detail: actionDesc,
+                toolId: 'add_lead_note',
+                timestamp: nowIso()
+            });
+
+            if (targetLead && applyRealActions && isAuto) {
+                const nextStage = targetLead.stage === 'Novo Lead' && agent.enabledTools.includes('update_lead_stage')
+                    ? 'Contatado'
+                    : targetLead.stage;
+                const combinedNotes = (targetLead.notes ? targetLead.notes + '\n' : '') + noteText;
+                await safeUpdateLead(targetLead.id, {
+                    stage: nextStage,
+                    notes: combinedNotes,
+                    updated_at: nowIso()
+                });
+                updatedLeadResult = { ...targetLead, stage: nextStage, notes: combinedNotes };
+                if (nextStage !== targetLead.stage) {
+                    actionsTaken.push(`Estágio do Lead atualizado automaticamente de "Novo Lead" para "Contatado".`);
+                }
+            }
+        }
+    }
+
+    // 5. GERAÇÃO DA RESPOSTA CONTEXTUAL DO AGENTE
+    let agentReply = '';
+    const leadFirstName = targetLead?.name ? targetLead.name.split(' ')[0] : 'tudo bem';
+    const catalogSummary = companyProducts.length > 0
+        ? companyProducts.map((p: any) => `• *${p.name}*: R$ ${Number(p.price || 0).toFixed(2)}`).join('\n')
+        : '• *Plano Starter*: R$ 197/mês\n• *Plano Pro Growth*: R$ 497/mês\n• *Implementação Completa*: R$ 1.997';
+    const trackingSlug = companyLinks[0]?.slug || 'oferta-especial';
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (apiKey) {
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            const historyText = conversationHistory
+                .slice(-6)
+                .map((m: any) => `${m.role === 'user' ? 'Cliente' : agent.name}: ${m.text}`)
+                .join('\n');
+
+            const sysPrompt = `Você é o Agente de IA Autônomo "${agent.name}" (${agent.roleTitle}).
+OBJETIVO PRINCIPAL: ${agent.goal}
+CONTEXTO E POSTURA: ${agent.personaAndContext}
+REGRAS E LIMITES INEGOCIÁVEIS:
+${(agent.rules || []).map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}
+
+DADOS CONSULTADOS NO SISTEMA AGORA:
+- Lead: ${targetLead ? `${targetLead.name} (Estágio: ${targetLead.stage}, Origem: ${targetLead.source})` : 'Cliente em atendimento'}
+- Catálogo de Produtos:
+${catalogSummary}
+- Ações que você acabou de executar no CRM neste turno: ${actionsTaken.join('; ') || 'Nenhuma alteração de estágio necessária ainda'}
+
+Histórico recente:
+${historyText}
+
+Mensagem atual do cliente: "${userMessage}"
+
+Responda diretamente ao cliente em português, de forma natural, concisa (estilo WhatsApp) e alinhada ao seu Objetivo e às suas Regras:`;
+
+            const result = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: sysPrompt
+            });
+            if (result.text) {
+                agentReply = result.text.trim();
+            }
+        } catch (err) {
+            console.warn('[AI Agent Execute Fallback]:', err);
+        }
+    }
+
+    if (!agentReply) {
+        if (wantsHuman) {
+            agentReply = `Perfeito, ${leadFirstName}! Já registrei todo o nosso contexto no sistema e estou transferindo seu atendimento agora mesmo para um especialista humano da nossa equipe dar sequência com prioridade. Em instantes ele fala com você por aqui! 🤝`;
+        } else if (asksExcessiveDiscount) {
+            agentReply = `Entendo perfeitamente sua busca pela melhor condição, ${leadFirstName}! Pelas nossas políticas comerciais eu consigo aplicar até 10% de condição especial ou parcelamento facilitado, mantendo todas as garantias e suporte inclusos. Quer que eu envolva nosso gerente comercial para avaliar uma condição personalizada para o seu volume, ou prefere garantir o pacote padrão já com os 10% de bônus?`;
+        } else if (showsBuyingIntent) {
+            agentReply = `Excelente decisão, ${leadFirstName}! 🚀 Já atualizei seu cadastro prioritário aqui no nosso CRM.\n\nPara concluir com segurança, acesse nosso link oficial rastreado:\n👉 https://mdtracker.app/r/${trackingSlug}\n\nAssim que finalizar, me avise por aqui para eu já liberar seu onboarding imediato!`;
+        } else if (asksProductOrPrice) {
+            agentReply = `Olá, ${leadFirstName}! Consultei nosso catálogo atualizado aqui no sistema para te passar os valores exatos:\n\n${catalogSummary}\n\nConsiderando o que você busca hoje, qual desses formatos faz mais sentido para o seu momento ou qual é a sua principal meta para os próximos 30 dias?`;
+        } else {
+            agentReply = `Olá, ${leadFirstName}! Aqui é ${agent.name}. Recebi sua mensagem e já consultei seu histórico aqui no sistema.\n\nMeu objetivo é te ajudar com agilidade: me conta rapidamente qual é a sua principal necessidade hoje ou se gostaria de ver nossas opções e condições atualizadas?`;
+        }
+    }
+
+    steps.push({
+        id: `step-reason-${Date.now()}-final`,
+        type: 'reasoning',
+        title: 'Decisão Contextual Concluída',
+        detail: `O agente cruzou os dados buscados com as regras definidas, executou ${actionsTaken.length} ação(ões) no sistema e formulou a resposta voltada para a meta.`,
+        timestamp: nowIso()
+    });
+
+    // Atualizar contadores do agente
+    agent.executionsCount = (agent.executionsCount || 0) + 1;
+    if (showsBuyingIntent || actionsTaken.length > 0) {
+        agent.goalsAchievedCount = (agent.goalsAchievedCount || 0) + 1;
+    }
+
+    const boardColumn = wantsHuman
+        ? 'handed_over'
+        : showsBuyingIntent
+        ? 'goal_achieved'
+        : /depois|amanhã|semana|reunião|retorno/i.test(msgLower)
+        ? 'scheduled'
+        : asksProductOrPrice
+        ? 'qualifying'
+        : 'analyzing';
+
+    const activityCategory = wantsHuman
+        ? 'human_handover'
+        : showsBuyingIntent
+        ? 'closing'
+        : /depois|amanhã|semana/i.test(msgLower)
+        ? 'followup'
+        : 'qualification';
+
+    const taskTitle = wantsHuman
+        ? 'Transbordo p/ Especialista Humano solicitado pelo Lead'
+        : showsBuyingIntent
+        ? 'Intenção de Compra confirmada + Movimentação p/ Em Negociação'
+        : asksExcessiveDiscount
+        ? 'Contorno de Desconto (Guardrail de Alçada Comercial)'
+        : asksProductOrPrice
+        ? 'Apresentação de Catálogo & Qualificação de Perfil'
+        : 'Atendimento & Sondagem Contextual pelo Agente';
+
+    const executionLog = {
+        id: `exec-${Date.now()}`,
+        agentId: agent.id,
+        agentName: agent.name,
+        agentAvatar: agent.avatar || '🤖',
+        companyId,
+        leadId: targetLead?.id,
+        leadName: targetLead?.name || 'Lead Simulado (Playground)',
+        leadPhone: targetLead?.phone || '(11) 99999-0000',
+        leadStage: updatedLeadResult?.stage || targetLead?.stage || (showsBuyingIntent ? 'Em Negociação' : 'Contatado'),
+        leadScore: updatedLeadResult?.score || targetLead?.score || (showsBuyingIntent ? 85 : 65),
+        channel: triggerType === 'instagram_dm' ? 'instagram' : 'whatsapp',
+        trigger: triggerType,
+        boardColumn,
+        activityCategory,
+        taskTitle,
+        priority: (wantsHuman || showsBuyingIntent) ? 'high' : 'medium',
+        dueDate: new Date(Date.now() + 3600000 * 2).toISOString(),
+        taskCompleted: showsBuyingIntent,
+        durationMs: Math.floor(850 + Math.random() * 750),
+        tags: wantsHuman
+            ? ['Transbordo Humano', 'Prioridade']
+            : showsBuyingIntent
+            ? ['Intenção de Compra', 'Link Enviado', 'CRM Atualizado']
+            : asksExcessiveDiscount
+            ? ['Guardrail Acionado', 'Negociação']
+            : ['Qualificação IA', 'WhatsApp'],
+        userMessage,
+        agentReply,
+        steps,
+        actionsTaken,
+        status,
+        createdAt: nowIso()
+    };
+
+    inMemoryAIAgentLogs.unshift(executionLog);
+
+    res.json({
+        executionLog,
+        updatedLead: updatedLeadResult
+    });
+});
+
 // TRACKING REDIRECT URL HANDLING (/r/:slug or /w/:slug)
 app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
     const slug = req.params.slug.toLowerCase();

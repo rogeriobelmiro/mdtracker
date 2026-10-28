@@ -25,6 +25,7 @@ import { SupervisorLiveMonitor } from './components/SupervisorLiveMonitor';
 import { SurveysManager } from './components/SurveysManager';
 import { CustomDomainsManager } from './components/CustomDomainsManager';
 import { EventGamificationManager } from './components/EventGamificationManager';
+import { AIAgentsManager } from './components/AIAgentsManager';
 import {
   fetchCompanies,
   fetchUsers,
@@ -789,6 +790,17 @@ export default function App() {
               <WorkflowsManager
                 currentCompany={currentCompany}
                 leads={companyLeads}
+                onNavigateToTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'ai_agents' && currentUser.role !== 'attendant' && (
+              <AIAgentsManager
+                currentCompany={currentCompany}
+                leads={companyLeads}
+                products={products}
+                links={companyLinks}
+                onUpdateLead={handleUpdateLead}
                 onNavigateToTab={(tab) => setActiveTab(tab)}
               />
             )}

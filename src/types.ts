@@ -1206,3 +1206,122 @@ export interface GamificationEvent {
   updatedAt?: string;
 }
 
+// ==============================================================================
+// PASSO 10: CRIADOR DE AGENTES DE IA AUTÔNOMOS (Goal-Driven AI Agents)
+// ==============================================================================
+
+export type AIAgentAutonomyMode = 'autonomous' | 'copilot';
+
+export type AIAgentTriggerType =
+  | 'whatsapp_message'
+  | 'instagram_dm'
+  | 'lead_created'
+  | 'stage_changed'
+  | 'inactivity_followup'
+  | 'manual_invocation';
+
+export type AIAgentToolId =
+  // Ferramentas de Busca de Informações (Leitura de Contexto)
+  | 'get_lead_profile'
+  | 'search_products'
+  | 'get_lead_purchases'
+  | 'get_chat_history'
+  | 'get_campaign_links'
+  | 'get_survey_responses'
+  // Ferramentas de Ação no Sistema (Execução)
+  | 'update_lead_stage'
+  | 'add_lead_note'
+  | 'update_lead_score'
+  | 'send_tracking_link'
+  | 'assign_to_human'
+  | 'schedule_followup';
+
+export interface AIAgentReasoningStep {
+  id: string;
+  type: 'perception' | 'data_lookup' | 'reasoning' | 'rule_check' | 'action_executed';
+  title: string;
+  detail: string;
+  toolId?: AIAgentToolId;
+  toolInput?: Record<string, any>;
+  toolOutput?: any;
+  timestamp: string;
+}
+
+export type AIAgentActivityColumn =
+  | 'analyzing'      // Recebido / Analisando Contexto
+  | 'qualifying'     // Em Atendimento / Qualificando (IA)
+  | 'scheduled'      // Follow-up / Tarefa Agendada
+  | 'goal_achieved'  // Objetivo Concluído pela IA
+  | 'handed_over';   // Escalonado p/ Humano (Transbordo)
+
+export type AIAgentActivityCategory =
+  | 'qualification'
+  | 'closing'
+  | 'followup'
+  | 'support_triage'
+  | 'crm_update'
+  | 'human_handover';
+
+export interface AIAgentExecutionLog {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentAvatar?: string;
+  companyId: string;
+  leadId?: string;
+  leadName?: string;
+  leadPhone?: string;
+  leadStage?: FunnelStage;
+  leadScore?: number;
+  channel?: 'whatsapp' | 'instagram' | 'webchat' | 'crm_trigger';
+  trigger: string;
+  userMessage?: string;
+  agentReply: string;
+  steps: AIAgentReasoningStep[];
+  actionsTaken: string[];
+  status: 'completed' | 'handed_over' | 'blocked_by_rule';
+  // Campos da Central de Atividades (Formato Hablla)
+  boardColumn?: AIAgentActivityColumn;
+  activityCategory?: AIAgentActivityCategory;
+  taskTitle?: string;
+  priority?: 'high' | 'medium' | 'low';
+  dueDate?: string;
+  taskCompleted?: boolean;
+  durationMs?: number;
+  tags?: string[];
+  createdAt: string;
+}
+
+export interface AIAgentRoom {
+  id: string;
+  companyId: string;
+  name: string;
+  slug: string;
+  color: 'sky' | 'rose' | 'emerald' | 'amber' | 'purple' | 'cyan';
+  description?: string;
+  createdAt: string;
+}
+
+export interface AIAgent {
+  id: string;
+  companyId: string;
+  roomId?: string;
+  roomName?: string;
+  name: string;
+  roleTitle: string;
+  avatar: string;
+  descriptionPrompt: string; // Descrição livre usada para criar/definir o agente
+  goal: string;              // Objetivo principal que o agente persegue
+  personaAndContext: string; // Como ele interpreta o contexto e se comunica
+  rules: string[];           // Regras estritas e limites (Guardrails)
+  autonomyMode: AIAgentAutonomyMode;
+  triggers: AIAgentTriggerType[];
+  enabledTools: AIAgentToolId[];
+  active: boolean;
+  executionsCount: number;
+  goalsAchievedCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
