@@ -641,7 +641,30 @@ CREATE TABLE IF NOT EXISTS public.instagram_comment_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_insta_comment_logs_company ON public.instagram_comment_logs(company_id);
 
--- 35. TABELA DE CONTROLE DE ATUALIZAÇÃO
+-- 35. CLIQUES DE LINK DE CAMPANHA (LINK CLICKS)
+CREATE TABLE IF NOT EXISTS public.link_clicks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  link_id TEXT NOT NULL REFERENCES public.campaign_links(id) ON DELETE CASCADE,
+  company_id TEXT NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_link_id ON public.link_clicks(link_id);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_company_id ON public.link_clicks(company_id);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_created_at ON public.link_clicks(created_at);
+
+-- 36. CRÉDITOS DE USUÁRIO (USER CREDITS)
+CREATE TABLE IF NOT EXISTS public.user_credits (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  credits INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_credits_company ON public.user_credits(company_id);
+
+-- 37. TABELA DE CONTROLE DE ATUALIZAÇÃO
 CREATE TABLE IF NOT EXISTS public.atualiza_bd (
   id SERIAL PRIMARY KEY,
   versao TEXT DEFAULT '1.0.0',
