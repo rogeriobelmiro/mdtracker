@@ -1,5 +1,6 @@
 -- ==============================================================================
 -- MIGRATION: CRIADOR DE AGENTES DE IA AUTÔNOMOS & CENTRAL DE ATIVIDADES (HABLLA)
+-- COM SUPORTE A MULTI-TENANT ISOLADO (company_id) E SALAS DO ESCRITÓRIO 2D
 -- ==============================================================================
 
 -- 1. Tabela de Agentes de IA (Configuração, Objetivo, Regras/Guardrails e Tools)
@@ -16,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.ai_agents (
   autonomy_mode TEXT DEFAULT 'autonomous',
   triggers JSONB DEFAULT '["whatsapp_message"]'::jsonb,
   enabled_tools JSONB DEFAULT '[]'::jsonb,
+  room_id TEXT,
   active BOOLEAN DEFAULT true,
   executions_count INTEGER DEFAULT 0,
   goals_achieved_count INTEGER DEFAULT 0,
@@ -23,7 +25,11 @@ CREATE TABLE IF NOT EXISTS public.ai_agents (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Garantir coluna room_id caso a tabela já tenha sido criada anteriormente
+ALTER TABLE public.ai_agents ADD COLUMN IF NOT EXISTS room_id TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_ai_agents_company_id ON public.ai_agents(company_id);
+CREATE INDEX IF NOT EXISTS idx_ai_agents_room_id ON public.ai_agents(room_id);
 
 ALTER TABLE public.ai_agents ENABLE ROW LEVEL SECURITY;
 
@@ -79,6 +85,31 @@ BEGIN
     SELECT 1 FROM pg_policies WHERE tablename = 'ai_agent_logs' AND policyname = 'Allow all operations on ai_agent_logs'
   ) THEN
     CREATE POLICY "Allow all operations on ai_agent_logs" ON public.ai_agent_logs FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END
+$$;
+
+-- 3. Tabela de Salas Customizáveis do Escritório Virtual Habblaud
+CREATE TABLE IF NOT EXISTS public.ai_agent_rooms (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT,
+  color TEXT DEFAULT 'sky',
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_agent_rooms_company_id ON public.ai_agent_rooms(company_id);
+
+ALTER TABLE public.ai_agent_rooms ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'ai_agent_rooms' AND policyname = 'Allow all operations on ai_agent_rooms'
+  ) THEN
+    CREATE POLICY "Allow all operations on ai_agent_rooms" ON public.ai_agent_rooms FOR ALL USING (true) WITH CHECK (true);
   END IF;
 END
 $$;
