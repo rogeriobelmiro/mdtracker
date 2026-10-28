@@ -12136,8 +12136,8 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
                     const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
                     const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
-                    const blockHeadline = b.headerHeadline || b.title || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
-                    const blockSubheadline = b.headerSubheadline || b.subtitle || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
+                    const blockHeadline = b.title || b.headerHeadline || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
+                    const blockSubheadline = b.subtitle || b.headerSubheadline || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
                     const blockPrimaryCta = b.headerPrimaryCtaText || 'Quero Meu Acesso Gratuito Agora →';
                     const formBadge = b.formCardBadge || 'CADASTRE-SE GRÁTIS';
                     const formTitle = b.formCardTitle || 'Garanta sua Condição Especial';
@@ -12151,13 +12151,13 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                           <!-- Integrated Brand Top Header -->
                           <div class="max-w-6xl mx-auto px-4 mb-8 sm:mb-12 flex items-center justify-between pb-4 border-b border-slate-200/60">
                             <div class="flex items-center gap-2.5">
-                              <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                              <div class="w-9 h-9 ${buttonShape} text-white font-bold flex items-center justify-center text-sm shadow-sm" style="background-color: ${primaryColor};">
                                 ${blockLogo.charAt(0).toUpperCase()}
                               </div>
                               <span class="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">${blockLogo}</span>
                             </div>
                             <div>
-                              <a href="#block-form-${b.id}" class="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5">
+                              <a href="#block-form-${b.id}" class="custom-primary-btn inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 ${buttonShape} text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5">
                                 <span>${blockNavCta}</span>
                               </a>
                             </div>
@@ -12211,7 +12211,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                               ` : ''}
 
                               <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
-                                <a href="#block-form-${b.id}" class="w-full sm:w-auto px-7 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base shadow-lg shadow-emerald-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                <a href="#block-form-${b.id}" class="custom-primary-btn w-full sm:w-auto px-7 py-4 ${buttonShape} font-extrabold text-base shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
                                   <span>${blockPrimaryCta}</span>
                                 </a>
                               </div>
@@ -12220,7 +12220,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                               <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs text-slate-600">
                                 ${trustBadges.map(badge => `
                                   <span class="flex items-center gap-1.5 font-medium">
-                                    <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                    <svg class="w-4 h-4 shrink-0" style="color: ${primaryColor};" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                     <span>${badge}</span>
                                   </span>
                                 `).join('')}
@@ -12231,7 +12231,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <div class="lg:col-span-5 ${isLeft ? 'lg:order-1' : 'lg:order-2'}">
                               <div id="block-form-${b.id}" class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-2xl relative">
                                 ${formBadge ? `
-                                  <div class="absolute -top-3.5 right-6 bg-emerald-600 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+                                  <div class="absolute -top-3.5 right-6 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md" style="background-color: ${primaryColor};">
                                     ${formBadge}
                                   </div>
                                 ` : ''}
@@ -12283,7 +12283,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
 
                                   <button 
                                     type="submit" 
-                                    class="w-full py-4 px-6 font-black text-base rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    class="custom-primary-btn w-full py-4 px-6 font-black text-base ${buttonShape} shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-50"
                                   >
                                     <span class="btn-text-label">${formBtnText}</span>
                                     <span class="btn-loading-spinner hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

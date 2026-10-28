@@ -2161,10 +2161,15 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     </label>
                                     <input
                                       type="text"
-                                      value={block.title || ''}
+                                      value={block.title || block.headerHeadline || ''}
                                       onChange={e => {
+                                        const val = e.target.value;
                                         const blocks = [...(editingPage.blocks || [])];
-                                        blocks[idx] = { ...block, title: e.target.value };
+                                        blocks[idx] = { 
+                                          ...block, 
+                                          title: val,
+                                          ...(block.type === 'header_form' ? { headerHeadline: val } : {})
+                                        };
                                         setEditingPage({ ...editingPage, blocks });
                                       }}
                                       placeholder="Ex: Conheça os diferenciais..."
@@ -2178,10 +2183,15 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     </label>
                                     <input
                                       type="text"
-                                      value={block.subtitle || ''}
+                                      value={block.subtitle || block.headerSubheadline || ''}
                                       onChange={e => {
+                                        const val = e.target.value;
                                         const blocks = [...(editingPage.blocks || [])];
-                                        blocks[idx] = { ...block, subtitle: e.target.value };
+                                        blocks[idx] = { 
+                                          ...block, 
+                                          subtitle: val,
+                                          ...(block.type === 'header_form' ? { headerSubheadline: val } : {})
+                                        };
                                         setEditingPage({ ...editingPage, blocks });
                                       }}
                                       placeholder="Ex: Assista ao vídeo de 2 minutos demonstrativo..."
@@ -4903,8 +4913,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
                             const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
                             const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
-                            const blockHeadline = b.headerHeadline || b.title || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
-                            const blockSubheadline = b.headerSubheadline || b.subtitle || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
+                            const blockHeadline = b.title || b.headerHeadline || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
+                            const blockSubheadline = b.subtitle || b.headerSubheadline || 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.';
                             const blockPrimaryCta = b.headerPrimaryCtaText || 'Quero Meu Acesso Gratuito Agora →';
                             const formBadge = b.formCardBadge || 'CADASTRE-SE GRÁTIS';
                             const formTitle = b.formCardTitle || 'Garanta sua Condição Especial';
@@ -4917,7 +4927,10 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                 {navEnabled && (
                                   <div className="max-w-6xl mx-auto px-6 sm:px-10 mb-8 sm:mb-12 flex items-center justify-between pb-4 border-b border-slate-200/60">
                                     <div className="flex items-center gap-2.5">
-                                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                                      <div 
+                                        className={`w-9 h-9 ${buttonShapeClass} text-white font-bold flex items-center justify-center text-sm shadow-sm`}
+                                        style={{ backgroundColor: primaryColor }}
+                                      >
                                         {blockLogo.charAt(0).toUpperCase()}
                                       </div>
                                       <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">{blockLogo}</span>
@@ -4929,7 +4942,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                           const el = document.getElementById(`preview-block-form-${b.id}`);
                                           el?.scrollIntoView({ behavior: 'smooth' });
                                         }}
-                                        className="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5"
+                                        className={`inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 ${buttonShapeClass} text-white text-xs sm:text-sm font-bold shadow-md transition transform hover:-translate-y-0.5 hover:opacity-90`}
+                                        style={{ backgroundColor: primaryColor }}
                                       >
                                         <span>{blockNavCta}</span>
                                       </button>
@@ -4990,7 +5004,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                                 <span className="block text-[10px] text-slate-400 uppercase font-normal">Min</span>
                                               </div>
                                               <div className="bg-slate-800/90 border border-slate-700/60 p-2 rounded-xl">
-                                                <span className="text-2xl font-black text-emerald-400">{cd.secs}</span>
+                                                <span className="text-2xl font-black" style={{ color: primaryColor }}>{cd.secs}</span>
                                                 <span className="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
                                               </div>
                                             </div>
@@ -5021,7 +5035,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                             const el = document.getElementById(`preview-block-form-${b.id}`);
                                             el?.scrollIntoView({ behavior: 'smooth' });
                                           }}
-                                          className="w-full sm:w-auto px-7 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-600/25 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                          className={`w-full sm:w-auto px-7 py-4 ${buttonShapeClass} text-white font-extrabold text-sm sm:text-base shadow-lg transition transform hover:-translate-y-0.5 hover:opacity-90 flex items-center justify-center gap-2`}
+                                          style={{ backgroundColor: primaryColor }}
                                         >
                                           <span>{blockPrimaryCta}</span>
                                         </button>
@@ -5031,7 +5046,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                       <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs text-slate-600">
                                         {trustBadges.map((badge, bIndex) => (
                                           <span key={bIndex} className="flex items-center gap-1.5 font-medium">
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: primaryColor }} />
                                             <span>{badge}</span>
                                           </span>
                                         ))}
@@ -5042,7 +5057,10 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     <div className={`${previewDevice === 'desktop' ? `lg:col-span-5 ${isLeft ? 'lg:order-1' : 'lg:order-2'}` : 'w-full'}`}>
                                       <div id={`preview-block-form-${b.id}`} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-2xl relative">
                                         {formBadge && (
-                                          <div className="absolute -top-3.5 right-6 bg-emerald-600 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+                                          <div 
+                                            className="absolute -top-3.5 right-6 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow-md"
+                                            style={{ backgroundColor: primaryColor }}
+                                          >
                                             {formBadge}
                                           </div>
                                         )}
@@ -5106,7 +5124,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
                                           <button
                                             type="submit"
-                                            className="w-full py-4 px-6 font-black text-sm sm:text-base rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                                            className={`w-full py-4 px-6 font-black text-sm sm:text-base ${buttonShapeClass} text-white shadow-lg transition transform hover:-translate-y-0.5 hover:opacity-90 flex items-center justify-center gap-2`}
+                                            style={{ backgroundColor: primaryColor }}
                                           >
                                             <span>{formBtnText}</span>
                                           </button>
