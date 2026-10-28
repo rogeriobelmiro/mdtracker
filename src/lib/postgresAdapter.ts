@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Pool, PoolConfig } from 'pg';
 
 let pgPool: Pool | null = null;

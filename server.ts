@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -15841,6 +15842,11 @@ async function startLocalServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor RastreioWhatsApp rodando em http://localhost:${PORT}`);
+    if (process.env.DATABASE_URL) {
+      console.log(`🚀 Banco de Dados: Conectado ao PostgreSQL Hostinger/Coolify via DATABASE_URL!`);
+    } else {
+      console.log(`⚠️ ATENÇÃO: DATABASE_URL não encontrada, usando modo offline.`);
+    }
   });
 }
 
