@@ -1165,6 +1165,12 @@ const mapSurveyToDB = (s: any) => ({
     thank_you: s.thankYou || {},
     responses_count: Number(s.responsesCount || 0),
     average_nps: Number(s.averageNps || 0),
+    workflow_id: s.workflowId || null,
+    auto_trigger_whatsapp: Boolean(s.autoTriggerWhatsApp),
+    whatsapp_template: s.whatsappTemplate || null,
+    auto_trigger_email: Boolean(s.autoTriggerEmail),
+    email_subject: s.emailSubject || null,
+    email_body: s.emailBody || null,
     created_at: s.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
 });
@@ -1190,6 +1196,12 @@ const mapSurveyFromDB = (db: any) => ({
     },
     responsesCount: Number(db.responses_count || 0),
     averageNps: Number(db.average_nps || 0),
+    workflowId: db.workflow_id || db.workflowId || '',
+    autoTriggerWhatsApp: Boolean(db.auto_trigger_whatsapp || db.autoTriggerWhatsApp),
+    whatsappTemplate: db.whatsapp_template || db.whatsappTemplate || '',
+    autoTriggerEmail: Boolean(db.auto_trigger_email || db.autoTriggerEmail),
+    emailSubject: db.email_subject || db.emailSubject || '',
+    emailBody: db.email_body || db.emailBody || '',
     createdAt: db.created_at || new Date().toISOString(),
     updatedAt: db.updated_at || new Date().toISOString()
 });
@@ -5919,6 +5931,54 @@ app.post('/api/surveys/:slug/submit', async (req: Request, res: Response) => {
                     formSource: 'survey'
                 }
             });
+            await triggerWorkflows('lead_created', {
+                lead: newLead,
+                companyId: survey.companyId
+            });
+
+            // Execute specific bound workflow if chosen
+            if (survey.workflowId) {
+                try {
+                    let boundWf: any = null;
+                    const { data } = await supabase.from('marketing_workflows').select('*').eq('id', survey.workflowId).maybeSingle();
+                    if (data) boundWf = mapWorkflowFromDB(data);
+                    if (!boundWf) {
+                        const mem = inMemoryWorkflows.find(w => w.id === survey.workflowId);
+                        if (mem) boundWf = mapWorkflowFromDB(mem);
+                    }
+                    if (boundWf) {
+                        await executeWorkflowForLead(boundWf, newLead, survey.companyId, survey.title, { surveyId: survey.id, slug: survey.slug });
+                    }
+                } catch (wfErr) {
+                    console.warn('Erro ao disparar workflow vinculado à pesquisa:', wfErr);
+                }
+            }
+
+            // Direct WhatsApp marketing trigger
+            if (survey.autoTriggerWhatsApp && cleanPhone) {
+                const rawTemplate = survey.whatsappTemplate || `Olá {nome}! Obrigado por responder à pesquisa "{empresa}". Suas respostas foram salvas e em instantes nossa equipe falará com você!`;
+                const formattedMsg = formatWorkflowText(rawTemplate, newLead, survey.title, { slug: survey.slug });
+                try {
+                    await sendWhatsAppMessage(survey.companyId, cleanPhone, formattedMsg, 'bot');
+                } catch (waErr) {
+                    console.warn('Erro ao disparar WhatsApp automático da pesquisa:', waErr);
+                }
+            }
+
+            // Direct Email marketing trigger
+            if (survey.autoTriggerEmail && leadEmail) {
+                const subject = formatWorkflowText(survey.emailSubject || `Obrigado pela sua resposta - {empresa}`, newLead, survey.title);
+                newLead.conversion_events = newLead.conversion_events || [];
+                newLead.conversion_events.push({
+                    id: `evt-email-${Date.now()}`,
+                    type: 'email',
+                    eventName: 'E-mail Marketing (Pesquisa) Disparado',
+                    status: 'sucesso',
+                    timestamp: new Date().toISOString(),
+                    details: `Assunto: "${subject}" enviado para ${leadEmail}`
+                });
+                console.log(`[EMAIL MARKETING DISPATCH] Para: ${leadEmail} | Assunto: ${subject} | Pesquisa: ${survey.title}`);
+            }
         }
 
         const responseId = `sr-${Date.now()}`;

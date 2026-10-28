@@ -36,7 +36,8 @@ import {
   MessageCircle,
   GripVertical,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -51,13 +52,14 @@ import {
   Pie, 
   Legend 
 } from 'recharts';
-import { Company, Survey, SurveyQuestion, SurveyOption, SurveyResponse } from '../types';
+import { Company, Survey, SurveyQuestion, SurveyOption, SurveyResponse, MarketingWorkflow } from '../types';
 import { 
   fetchSurveys, 
   createSurvey, 
   updateSurvey, 
   deleteSurvey, 
-  fetchSurveyResponses 
+  fetchSurveyResponses,
+  fetchWorkflows
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -79,6 +81,17 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
   const [editingSurvey, setEditingSurvey] = useState<Partial<Survey> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState<number | null>(null);
+
+  // Marketing Workflows for Survey Automation
+  const [availableWorkflows, setAvailableWorkflows] = useState<MarketingWorkflow[]>([]);
+
+  useEffect(() => {
+    if (currentCompany?.id) {
+      fetchWorkflows(currentCompany.id)
+        .then(setAvailableWorkflows)
+        .catch(err => console.warn('Erro ao carregar fluxos para pesquisas:', err));
+    }
+  }, [currentCompany?.id]);
 
   // Responses / Report Modal State
   const [isResponsesOpen, setIsResponsesOpen] = useState(false);
@@ -164,7 +177,13 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
         subtitle: 'Agradecemos muito pelo seu feedback. Nossa equipe entrará em contato em breve.',
         whatsappGroupUrl: 'https://chat.whatsapp.com/demo-mdtracker',
         ctaButtonText: 'Entrar no Grupo VIP do WhatsApp'
-      }
+      },
+      workflowId: '',
+      autoTriggerWhatsApp: false,
+      whatsappTemplate: 'Olá {nome}! Obrigado por responder à nossa pesquisa na {empresa}. Em instantes entraremos em contato com você!',
+      autoTriggerEmail: false,
+      emailSubject: 'Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker'),
+      emailBody: 'Olá {nome},\n\nRecebemos suas respostas para a pesquisa da {empresa}. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker')
     };
     setEditingSurvey(newSurvey);
     setIsEditorOpen(true);
@@ -172,7 +191,16 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
 
   // Open Edit
   const handleEdit = (survey: Survey) => {
-    setEditingSurvey(JSON.parse(JSON.stringify(survey)));
+    const s = JSON.parse(JSON.stringify(survey));
+    setEditingSurvey({
+      ...s,
+      workflowId: s.workflowId || '',
+      autoTriggerWhatsApp: Boolean(s.autoTriggerWhatsApp),
+      whatsappTemplate: s.whatsappTemplate || ('Olá {nome}! Obrigado por responder à nossa pesquisa na ' + (currentCompany.name || 'MDTracker') + '. Em instantes entraremos em contato com você!'),
+      autoTriggerEmail: Boolean(s.autoTriggerEmail),
+      emailSubject: s.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker')),
+      emailBody: s.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa da ' + (currentCompany.name || 'MDTracker') + '. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+    });
     setIsEditorOpen(true);
   };
 
@@ -556,6 +584,12 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
                       <span className="text-xs text-slate-400 font-medium">
                         {(s.questions || []).length} perguntas
                       </span>
+                      {(s.workflowId || s.autoTriggerWhatsApp || s.autoTriggerEmail) && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full">
+                          <Zap className="w-3 h-3 text-indigo-500 fill-indigo-500" />
+                          <span>Automação Ativa</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-right">
@@ -947,6 +981,162 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
                     placeholder="Nossa equipe analisará suas respostas e enviará o feedback."
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Disparos & Automação de Marketing */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Disparos & Automação de Marketing
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Configure ações de WhatsApp, E-mail e fluxos de nutrição disparadas assim que o lead responder à pesquisa
+                    </p>
+                  </div>
+                </div>
+
+                {/* 1. Fluxo de Automação / Workflow */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-1.5 shadow-xs">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Fluxo de Nutrição Automático (Workflow RD Style)
+                  </label>
+                  <select
+                    value={editingSurvey.workflowId || ''}
+                    onChange={e => setEditingSurvey({ ...editingSurvey, workflowId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">🚫 Nenhum fluxo de nutrição vinculado</option>
+                    {availableWorkflows.map(wf => (
+                      <option key={wf.id} value={wf.id}>
+                        ⚡ {wf.name} ({wf.steps?.length || 0} passos {wf.active ? '• Ativo' : '• Pausado'})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-500">
+                    O lead entrará automaticamente no fluxo selecionado, recebendo as sequências de e-mails, WhatsApps e mudanças de estágio configuradas.
+                  </p>
+                </div>
+
+                {/* 2. Disparo Imediato de WhatsApp Marketing */}
+                <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-emerald-900">
+                      <input
+                        type="checkbox"
+                        checked={editingSurvey.autoTriggerWhatsApp || false}
+                        onChange={e => setEditingSurvey({
+                          ...editingSurvey,
+                          autoTriggerWhatsApp: e.target.checked,
+                          whatsappTemplate: editingSurvey.whatsappTemplate || ('Olá {nome}! Obrigado por responder à pesquisa "' + (editingSurvey.title || 'Pesquisa') + '" da {empresa}. Em instantes entraremos em contato com você!')
+                        })}
+                        className="w-4 h-4 text-emerald-600 rounded"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-emerald-600" />
+                        <span>Disparar WhatsApp Marketing Imediato</span>
+                      </div>
+                    </label>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      editingSurvey.autoTriggerWhatsApp ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {editingSurvey.autoTriggerWhatsApp ? 'Ativado' : 'Desativado'}
+                    </span>
+                  </div>
+
+                  {editingSurvey.autoTriggerWhatsApp && (
+                    <div className="space-y-2 pt-1 border-t border-emerald-200/60">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[11px] font-semibold text-emerald-800">
+                          Mensagem do WhatsApp (via API do Sistema):
+                        </label>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                          <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200">{'{nome}'}</span>
+                          <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200">{'{empresa}'}</span>
+                        </div>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={editingSurvey.whatsappTemplate || ''}
+                        onChange={e => setEditingSurvey({ ...editingSurvey, whatsappTemplate: e.target.value })}
+                        placeholder="Olá {nome}! Obrigado por responder nossa pesquisa..."
+                        className="w-full px-3 py-2 border border-emerald-300 rounded-lg bg-white text-xs text-slate-800 focus:ring-1 focus:ring-emerald-400"
+                      />
+                      <p className="text-[10px] text-emerald-700">
+                        ⚡ Essa mensagem é disparada instantaneamente para o número de WhatsApp informado na pesquisa (questão de contato).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Disparo Imediato de E-mail Marketing */}
+                <div className="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-blue-900">
+                      <input
+                        type="checkbox"
+                        checked={editingSurvey.autoTriggerEmail || false}
+                        onChange={e => setEditingSurvey({
+                          ...editingSurvey,
+                          autoTriggerEmail: e.target.checked,
+                          emailSubject: editingSurvey.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker')),
+                          emailBody: editingSurvey.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa "' + (editingSurvey.title || 'Pesquisa') + '" da {empresa}. Muito obrigado por sua contribuição!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+                        })}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span>Disparar E-mail Marketing Imediato</span>
+                      </div>
+                    </label>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      editingSurvey.autoTriggerEmail ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {editingSurvey.autoTriggerEmail ? 'Ativado' : 'Desativado'}
+                    </span>
+                  </div>
+
+                  {editingSurvey.autoTriggerEmail && (
+                    <div className="space-y-2 pt-1 border-t border-blue-200/60">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-blue-800 mb-1">
+                          Assunto do E-mail:
+                        </label>
+                        <input
+                          type="text"
+                          value={editingSurvey.emailSubject || ''}
+                          onChange={e => setEditingSurvey({ ...editingSurvey, emailSubject: e.target.value })}
+                          placeholder="Assunto do e-mail..."
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-xs text-slate-800 focus:ring-1 focus:ring-blue-400"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-semibold text-blue-800">
+                            Corpo do E-mail:
+                          </label>
+                          <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                            <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">{'{nome}'}</span>
+                            <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">{'{empresa}'}</span>
+                          </div>
+                        </div>
+                        <textarea
+                          rows={4}
+                          value={editingSurvey.emailBody || ''}
+                          onChange={e => setEditingSurvey({ ...editingSurvey, emailBody: e.target.value })}
+                          placeholder="Corpo do e-mail..."
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-xs text-slate-800 font-sans focus:ring-1 focus:ring-blue-400"
+                        />
+                      </div>
+                      <p className="text-[10px] text-blue-700">
+                        ✉️ O e-mail é enviado imediatamente para o endereço de e-mail informado na questão de contato.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

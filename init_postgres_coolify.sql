@@ -482,6 +482,12 @@ CREATE TABLE IF NOT EXISTS public.surveys (
   thank_you JSONB DEFAULT '{"title": "🎉 Muito obrigado!", "subtitle": "Dados gravados.", "ctaButtonText": "Concluir"}'::jsonb,
   responses_count INTEGER DEFAULT 0,
   average_nps NUMERIC(4,2) DEFAULT 0,
+  workflow_id TEXT,
+  auto_trigger_whatsapp BOOLEAN DEFAULT FALSE,
+  whatsapp_template TEXT,
+  auto_trigger_email BOOLEAN DEFAULT FALSE,
+  email_subject TEXT,
+  email_body TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

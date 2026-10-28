@@ -1068,6 +1068,12 @@ export interface Survey {
   thankYou: SurveyThankYou;
   responsesCount?: number;
   averageNps?: number;
+  workflowId?: string;
+  autoTriggerWhatsApp?: boolean;
+  whatsappTemplate?: string;
+  autoTriggerEmail?: boolean;
+  emailSubject?: string;
+  emailBody?: string;
   createdAt?: string;
   updatedAt?: string;
 }
