@@ -19,7 +19,8 @@ import {
   Check,
   Trash2,
   Sparkles,
-  Terminal
+  Terminal,
+  Edit3
 } from 'lucide-react';
 import { AIAgent, AIAgentExecutionLog, AIAgentRoom, Company, Lead } from '../types';
 
@@ -413,6 +414,36 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
   // Presença e movimentação dos personagens pelo escritório (Banheiro, Recepção, Copa, Lounge ou Mesa na Sala)
   const [presenceMap, setPresenceMap] = useState<Record<string, AgentLivePresence>>({});
   const [roamingEnabled, setRoamingEnabled] = useState<boolean>(true);
+
+  // Edição rápida de nome do agente diretamente no escritório
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+
+  const handleSaveRename = async (agent: AIAgent) => {
+    if (!editingName.trim()) {
+      setEditingAgentId(null);
+      return;
+    }
+    const updated = { ...agent, name: editingName.trim() };
+    setEditingAgentId(null);
+    if (onUpdateAgent) {
+      await onUpdateAgent(updated).catch(() => null);
+    }
+  };
+
+  const handleRandomizeRename = (agent: AIAgent) => {
+    const RANDOM_FIRST_NAMES = [
+      'Sofia', 'Lucas', 'Maya', 'Gabriel', 'Larissa', 'Matheus', 'Camila',
+      'Rafael', 'Beatriz', 'Felipe', 'Renata', 'Gustavo', 'Letícia', 'Thiago',
+      'Isabela', 'Bruno', 'Juliana', 'Leonardo', 'Clara', 'Eduardo', 'Helena',
+      'Rodrigo', 'Mariana', 'Vinícius', 'Amanda', 'Alexandre'
+    ];
+    const currentSuffix = agent.name.includes('—')
+      ? agent.name.split('—')[1].trim()
+      : agent.roleTitle || 'Consultor Especialista';
+    const newFirstName = RANDOM_FIRST_NAMES[Math.floor(Math.random() * RANDOM_FIRST_NAMES.length)];
+    setEditingName(`${newFirstName} — ${currentSuffix}`);
+  };
 
   // Inicializar e atualizar movimentação autônoma dos personagens ociosos
   useEffect(() => {
@@ -1225,21 +1256,73 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
                               </div>
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1">
-                                  <div className="flex items-center gap-1 min-w-0">
-                                    <span className="text-xs font-bold text-white group-hover:text-amber-300 truncate">
-                                      {shortName}
-                                    </span>
-                                    <span className="w-3.5 h-3.5 rounded bg-orange-500/90 text-slate-950 font-black text-[9px] flex items-center justify-center shrink-0">
-                                      A
+                                {editingAgentId === agent.id ? (
+                                  <div className="flex items-center gap-1 my-0.5" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="text"
+                                      value={editingName}
+                                      onChange={(e) => setEditingName(e.target.value)}
+                                      className="bg-slate-800 text-white text-[11px] px-1.5 py-0.5 rounded border border-amber-400 focus:outline-none w-28 truncate"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveRename(agent);
+                                        if (e.key === 'Escape') setEditingAgentId(null);
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      title="Sortear outro nome"
+                                      onClick={() => handleRandomizeRename(agent)}
+                                      className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-300 text-[10px] cursor-pointer"
+                                    >
+                                      🎲
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Salvar"
+                                      onClick={() => handleSaveRename(agent)}
+                                      className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Cancelar"
+                                      onClick={() => setEditingAgentId(null)}
+                                      className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-400 text-[9px] cursor-pointer"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between gap-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <span className="text-xs font-bold text-white group-hover:text-amber-300 truncate">
+                                        {shortName}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        title="Configurar / Renomear Agente"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingAgentId(agent.id);
+                                          setEditingName(agent.name);
+                                        }}
+                                        className="text-slate-500 hover:text-amber-300 p-0.5 rounded cursor-pointer opacity-80 group-hover:opacity-100"
+                                      >
+                                        <Edit3 className="w-2.5 h-2.5" />
+                                      </button>
+                                      <span className="w-3.5 h-3.5 rounded bg-orange-500/90 text-slate-950 font-black text-[9px] flex items-center justify-center shrink-0">
+                                        A
+                                      </span>
+                                    </div>
+                                    <span className="text-[9px] text-slate-400 shrink-0">
+                                      {pres?.state === 'working'
+                                        ? 'trabalhando'
+                                        : `ocioso ${pres?.idleMinutes || 2}m (${ZONE_LABELS[pres?.zone || 'desk']})`}
                                     </span>
                                   </div>
-                                  <span className="text-[9px] text-slate-400 shrink-0">
-                                    {pres?.state === 'working'
-                                      ? 'trabalhando'
-                                      : `ocioso ${pres?.idleMinutes || 2}m (${ZONE_LABELS[pres?.zone || 'desk']})`}
-                                  </span>
-                                </div>
+                                )}
 
                                 <p className="text-[10px] text-slate-300 truncate mt-0.5">
                                   {lastLog?.taskTitle || agent.goal}
@@ -1291,6 +1374,18 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
                                   <option key={r.id} value={r.id}>📍 {r.name}</option>
                                 ))}
                               </select>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingAgentId(agent.id);
+                                  setEditingName(agent.name);
+                                }}
+                                className="py-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-bold cursor-pointer"
+                                title="Configurar Nome do Agente"
+                              >
+                                Nome
+                              </button>
                               <button
                                 type="button"
                                 onClick={(e) => {

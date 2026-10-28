@@ -14790,9 +14790,13 @@ Você NUNCA compartilha nem utiliza dados de outras empresas.${tenantProductsSum
 O usuário descreveu o agente que deseja criar com o seguinte texto:
 "${rawText}"
 
+Instruções sobre o nome do agente:
+- Se o usuário especificou um nome no texto (ex: "chamado Lucas", "chamada Sofia"), use exatamente o nome solicitado.
+- Se o usuário NÃO especificou um nome, crie um nome próprio brasileiro ALEATÓRIO, moderno e profissional (ex: Rafael, Camila, Thiago, Beatriz, Leonardo, Larissa, Gustavo, Mariana, Felipe, Letícia, Matheus, Renata, etc.) seguido da especialidade curta.
+
 Gere a definição estruturada desse agente em formato JSON puro (sem blocos markdown) contendo:
 {
-  "name": "Nome próprio + Especialidade (ex: Sofia — Especialista em Retenção)",
+  "name": "Nome próprio aleatório brasileiro + Especialidade (ex: Rafael — Closer Comercial)",
   "roleTitle": "Cargo curto do agente",
   "avatar": "1 emoji representativo",
   "goal": "Objetivo claro que o agente persegue autonomamente",
@@ -14820,30 +14824,46 @@ Valores válidos para enabledTools: "get_lead_profile", "search_products", "get_
         }
     }
 
-    // Motor Semântico Inteligente (Fallback Imediato) que analisa a descrição em texto do usuário
+    // Motor Semântico Inteligente com Nomes Aleatórios Brasileiros (Fallback Imediato)
     const lower = rawText.toLowerCase();
-    let name = 'Clara — Agente Especialista';
-    let roleTitle = 'Consultora & Operadora Autônoma de CRM';
+
+    // Pool de nomes brasileiros para geração aleatória
+    const RANDOM_POOL = [
+        'Larissa', 'Gabriel', 'Sofia', 'Matheus', 'Camila', 'Rafael', 'Beatriz',
+        'Felipe', 'Renata', 'Gustavo', 'Letícia', 'Thiago', 'Isabela', 'Bruno',
+        'Juliana', 'Leonardo', 'Clara', 'Eduardo', 'Helena', 'Alexandre', 'Mariana',
+        'Lucas', 'Bia', 'Roberto', 'Carolina', 'Vinícius', 'Amanda', 'Rodrigo'
+    ];
+    let chosenFirstName = RANDOM_POOL[Math.floor(Math.random() * RANDOM_POOL.length)];
+
+    // Se o usuário digitou explicitamente o nome no texto (ex: "chamado Pedro", "chamada Aline")
+    const explicitNameMatch = rawText.match(/chamad[oa]\s+([A-ZÁÉÍÓÚÂÊÔÃÕa-záéíóúâêôãõ]+)/i);
+    if (explicitNameMatch && explicitNameMatch[1]) {
+        chosenFirstName = explicitNameMatch[1].charAt(0).toUpperCase() + explicitNameMatch[1].slice(1);
+    }
+
+    let name = `${chosenFirstName} — Consultoria Especialista`;
+    let roleTitle = 'Consultor & Operador Autônomo de CRM';
     let avatar = '🧠';
 
     if (lower.includes('cobr') || lower.includes('boleto') || lower.includes('pagamento') || lower.includes('inadimpl')) {
-        name = 'Roberto — Recuperação & Financeiro';
+        name = `${chosenFirstName} — Recuperação & Financeiro`;
         roleTitle = 'Agente de Recuperação de Pagamentos e Follow-up';
         avatar = '💳';
     } else if (lower.includes('suporte') || lower.includes('dúvida') || lower.includes('atendimento') || lower.includes('sac')) {
-        name = 'Helena — Triagem & Suporte Nível 1';
+        name = `${chosenFirstName} — Triagem & Suporte Nível 1`;
         roleTitle = 'Agente de Resolução de Dúvidas e Encaminhamento';
         avatar = '🎧';
     } else if (lower.includes('fech') || lower.includes('closer') || lower.includes('negocia') || lower.includes('desconto') || lower.includes('venda')) {
-        name = 'Gabriel — Closer de Vendas IA';
+        name = `${chosenFirstName} — Closer de Vendas`;
         roleTitle = 'Agente Autônomo de Negociação e Conversão';
         avatar = '🚀';
     } else if (lower.includes('qualific') || lower.includes('sdr') || lower.includes('triagem') || lower.includes('orçamento')) {
-        name = 'Maya — SDR Qualificadora';
+        name = `${chosenFirstName} — SDR Qualificadora`;
         roleTitle = 'Agente de Qualificação de Leads & Pré-Vendas';
         avatar = '🎯';
     } else if (lower.includes('pesquisa') || lower.includes('nps') || lower.includes('pós-venda') || lower.includes('recompra') || lower.includes('upsell')) {
-        name = 'Bia — CS & Expansão (Upsell)';
+        name = `${chosenFirstName} — CS & Expansão (Upsell)`;
         roleTitle = 'Agente de Sucesso do Cliente e Recompra';
         avatar = '💎';
     }

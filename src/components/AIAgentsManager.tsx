@@ -482,16 +482,32 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
     }
   };
 
-  // Criar agente em branco / padrão
+  // Criar agente em branco com nome próprio brasileiro e avatar aleatórios
   const handleCreateBlankAgent = async () => {
+    const RANDOM_FIRST_NAMES = [
+      'Sofia', 'Lucas', 'Maya', 'Gabriel', 'Larissa', 'Matheus', 'Camila',
+      'Rafael', 'Beatriz', 'Felipe', 'Renata', 'Gustavo', 'Letícia', 'Thiago',
+      'Isabela', 'Bruno', 'Juliana', 'Leonardo', 'Clara', 'Eduardo', 'Helena',
+      'Rodrigo', 'Mariana', 'Vinícius', 'Amanda', 'Alexandre'
+    ];
+    const RANDOM_SPECIALTIES = [
+      { role: 'SDR & Qualificadora', title: 'Consultora de Triagem & Qualificação', avatar: '🎯', goal: 'Recepcionar novos leads, qualificar necessidade e avançar para Em Negociação.' },
+      { role: 'Closer de Vendas', title: 'Especialista em Negociação & Conversão', avatar: '🚀', goal: 'Contornar objeções de preço, apresentar vantagens e enviar link de fechamento.' },
+      { role: 'Recuperação & Cobrança', title: 'Consultor de Follow-up Financeiro', avatar: '💳', goal: 'Recuperar boletos e pedidos pendentes com empatia e agendar retorno.' },
+      { role: 'Sucesso do Cliente', title: 'Agente de CS, Onboarding & Upsell', avatar: '💎', goal: 'Acompanhar a satisfação dos clientes e apresentar novas oportunidades de plano.' },
+      { role: 'Triagem & Suporte Nível 1', title: 'Agente de Resolução Rápida & SAC', avatar: '🎧', goal: 'Esclarecer dúvidas frequentes e transferir casos complexos para a equipe humana.' }
+    ];
+    const firstName = RANDOM_FIRST_NAMES[Math.floor(Math.random() * RANDOM_FIRST_NAMES.length)];
+    const spec = RANDOM_SPECIALTIES[Math.floor(Math.random() * RANDOM_SPECIALTIES.length)];
+
     try {
       const created = await createAIAgent({
         companyId: currentCompany.id,
-        name: 'Novo Agente Autônomo',
-        roleTitle: 'Consultor & Operador de CRM',
-        avatar: '🤖',
-        descriptionPrompt: 'Atender leads, consultar produtos e qualificar oportunidades no funil.',
-        goal: 'Identificar a necessidade do cliente, responder dúvidas consultando o catálogo e avançar leads qualificados para Em Negociação.',
+        name: `${firstName} — ${spec.role}`,
+        roleTitle: spec.title,
+        avatar: spec.avatar,
+        descriptionPrompt: spec.goal,
+        goal: spec.goal,
         personaAndContext: 'Comunicação consultiva, clara e empática. Faz perguntas abertas para entender o contexto antes de agir.',
         rules: [
           'Sempre consultar o catálogo antes de informar preços.',
@@ -510,6 +526,25 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
     } catch (err: any) {
       await alert({ title: 'Erro', message: err.message });
     }
+  };
+
+  // Sortear outro nome para o agente atual
+  const handleRandomizeCurrentName = () => {
+    if (!draftAgent) return;
+    const RANDOM_FIRST_NAMES = [
+      'Sofia', 'Lucas', 'Maya', 'Gabriel', 'Larissa', 'Matheus', 'Camila',
+      'Rafael', 'Beatriz', 'Felipe', 'Renata', 'Gustavo', 'Letícia', 'Thiago',
+      'Isabela', 'Bruno', 'Juliana', 'Leonardo', 'Clara', 'Eduardo', 'Helena',
+      'Rodrigo', 'Mariana', 'Vinícius', 'Amanda', 'Alexandre'
+    ];
+    const currentSuffix = draftAgent.name.includes('—')
+      ? draftAgent.name.split('—')[1].trim()
+      : draftAgent.roleTitle || 'Consultor Especialista';
+    const newFirstName = RANDOM_FIRST_NAMES[Math.floor(Math.random() * RANDOM_FIRST_NAMES.length)];
+    setDraftAgent({
+      ...draftAgent,
+      name: `${newFirstName} — ${currentSuffix}`
+    });
   };
 
   // Salvar alterações do Agente atual
@@ -1508,13 +1543,24 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
                   <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Nome do Agente
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-slate-700">
+                            Nome do Agente
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleRandomizeCurrentName}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                            title="Gerar outro nome aleatório brasileiro"
+                          >
+                            <span>🎲</span> Sortear Nome
+                          </button>
+                        </div>
                         <input
                           type="text"
                           value={draftAgent.name}
                           onChange={(e) => setDraftAgent({ ...draftAgent, name: e.target.value })}
+                          placeholder="Ex: Sofia — SDR Qualificadora"
                           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
                         />
                       </div>
