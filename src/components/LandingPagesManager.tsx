@@ -71,47 +71,203 @@ import {
   MarketingWorkflow
 } from '../types';
 
-// Curated High-Converting Stock Images for Non-Technical Users
-const PRESET_STOCK_IMAGES = [
+// Curated High-Converting Stock Images for Non-Technical Users with Search Tags
+export interface PresetStockImage {
+  title: string;
+  url: string;
+  category: string;
+  tags: string[];
+}
+
+const PRESET_STOCK_IMAGES: PresetStockImage[] = [
+  // Tecnologia & Software
   {
-    title: 'Negócios & Reunião Comercial',
-    url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80',
-    category: 'Consultoria'
+    title: 'Equipe Tech, Programação & Startup',
+    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
+    category: 'Tecnologia',
+    tags: ['tecnologia', 'tech', 'startup', 'programador', 'software', 'equipe', 'desenvolvimento', 'computador']
   },
   {
-    title: 'Equipe Tech & Startup',
-    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80',
-    category: 'Tecnologia'
+    title: 'Dashboard de Analytics, Dados & Métricas',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+    category: 'Tecnologia',
+    tags: ['dashboard', 'analytics', 'dados', 'métricas', 'gráficos', 'tecnologia', 'software', 'telas']
   },
   {
-    title: 'Analytics & Gráficos de Vendas',
-    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1000&q=80',
-    category: 'Resultados'
+    title: 'Inteligência Artificial, Automação & Futuro',
+    url: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80',
+    category: 'Tecnologia',
+    tags: ['inteligência artificial', 'ia', 'ai', 'robô', 'inovação', 'automação', 'tecnologia', 'futuro']
   },
   {
-    title: 'Apresentação no Escritório Moderno',
-    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1000&q=80',
-    category: 'Estratégia'
+    title: 'Aplicativo Mobile & Smartphone Moderno',
+    url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
+    category: 'Tecnologia',
+    tags: ['mobile', 'celular', 'smartphone', 'aplicativo', 'app', 'notificações', 'whatsapp', 'tela']
+  },
+
+  // Negócios & Consultoria
+  {
+    title: 'Reunião de Diretoria & Consultoria Estratégica',
+    url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80',
+    category: 'Negócios',
+    tags: ['reunião', 'consultoria', 'negócios', 'estratégia', 'diretoria', 'empresas', 'executivos']
   },
   {
-    title: 'Atendimento & Relacionamento',
-    url: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=1000&q=80',
-    category: 'Suporte'
+    title: 'Apresentação em Escritório Corporativo',
+    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80',
+    category: 'Negócios',
+    tags: ['apresentação', 'palestra', 'reunião', 'escritório', 'equipe', 'pitch', 'treinamento', 'negócios']
   },
   {
-    title: 'Workspace Criativo & Foco',
-    url: 'https://images.unsplash.com/photo-1581291518655-9523c932deb4?auto=format&fit=crop&w=1000&q=80',
-    category: 'Produtividade'
+    title: 'Aperto de Mãos & Fechamento de Contrato',
+    url: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80',
+    category: 'Negócios',
+    tags: ['contrato', 'acordo', 'parceria', 'fechamento', 'aperto de mãos', 'negócios', 'vendas']
   },
   {
-    title: 'E-commerce & Pacote de Entrega',
-    url: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=1000&q=80',
-    category: 'Vendas'
+    title: 'Planejamento Estratégico & Conversa de Negócios',
+    url: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80',
+    category: 'Negócios',
+    tags: ['planejamento', 'estratégia', 'conversa', 'sócios', 'networking', 'gestão', 'negócios']
+  },
+
+  // Vendas & Comercial
+  {
+    title: 'Atendimento Comercial & Sucesso do Cliente',
+    url: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=1200&q=80',
+    category: 'Vendas',
+    tags: ['vendas', 'comercial', 'atendimento', 'cliente', 'suporte', 'sorriso', 'vendedora']
   },
   {
-    title: 'Dispositivos Mobile & Aplicativo',
-    url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1000&q=80',
-    category: 'Mobile'
+    title: 'Inside Sales & Negociação por Voz / Call',
+    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=80',
+    category: 'Vendas',
+    tags: ['call', 'inside sales', 'vendas', 'headset', 'atendimento', 'negociação', 'prospecção']
+  },
+  {
+    title: 'Gráficos de Crescimento & Escala Financeira',
+    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80',
+    category: 'Vendas',
+    tags: ['crescimento', 'escala', 'faturamento', 'vendas', 'gráfico', 'lucro', 'resultados']
+  },
+  {
+    title: 'Equipe Celebrando Meta Batida',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+    category: 'Vendas',
+    tags: ['meta', 'sucesso', 'comemoração', 'vitória', 'equipe', 'resultado', 'vendas', 'motivação']
+  },
+
+  // Eventos & Workshop
+  {
+    title: 'Workshop Presencial com Grande Plateia',
+    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+    category: 'Eventos',
+    tags: ['workshop', 'evento', 'palestra', 'auditório', 'plateia', 'público', 'conferência', 'imersão']
+  },
+  {
+    title: 'Palestrante no Palco com Microfone',
+    url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80',
+    category: 'Eventos',
+    tags: ['palestrante', 'palco', 'microfone', 'evento', 'seminário', 'liderança', 'apresentador']
+  },
+  {
+    title: 'Treinamento Corporativo & Sala de Imersão',
+    url: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80',
+    category: 'Eventos',
+    tags: ['treinamento', 'aula', 'imersão', 'curso', 'mentor', 'mentoria', 'educação', 'estudos']
+  },
+  {
+    title: 'Estúdio de Gravação & Transmissão Ao Vivo (Live)',
+    url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+    category: 'Eventos',
+    tags: ['live', 'transmissão', 'webinar', 'estúdio', 'gravação', 'câmera', 'podcast', 'youtube']
+  },
+
+  // Escritório & Coworking
+  {
+    title: 'Escritório Moderno & Arquitetura Corporativa',
+    url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+    category: 'Escritório',
+    tags: ['escritório', 'moderno', 'arquitetura', 'espaço', 'corporativo', 'empresa', 'sala', 'design']
+  },
+  {
+    title: 'Mesa de Trabalho Minimalista com Laptop',
+    url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+    category: 'Escritório',
+    tags: ['mesa', 'computador', 'laptop', 'foco', 'produtividade', 'café', 'trabalho', 'home office']
+  },
+  {
+    title: 'Coworking Dinâmico & Ambiente Colaborativo',
+    url: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1200&q=80',
+    category: 'Escritório',
+    tags: ['coworking', 'ambiente', 'colaboração', 'pessoas', 'trabalho', 'escritório', 'integração']
+  },
+  {
+    title: 'Prédio Empresarial de Grande Porte',
+    url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+    category: 'Escritório',
+    tags: ['prédio', 'empresa', 'fachada', 'arranha-céu', 'corporativo', 'sede', 'autoridade']
+  },
+
+  // E-commerce & Logística
+  {
+    title: 'Caixas de Entrega & Envio Rápido',
+    url: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=1200&q=80',
+    category: 'E-commerce',
+    tags: ['e-commerce', 'entrega', 'pacote', 'logística', 'frete', 'caixa', 'envio', 'compras']
+  },
+  {
+    title: 'Compras Online & Pagamento Seguro no Celular',
+    url: 'https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=1200&q=80',
+    category: 'E-commerce',
+    tags: ['compras', 'pagamento', 'cartão', 'celular', 'loja', 'e-commerce', 'checkout', 'online']
+  },
+  {
+    title: 'Galpão Logístico & Centro de Distribuição',
+    url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+    category: 'E-commerce',
+    tags: ['galpão', 'estoque', 'logística', 'armazém', 'distribuição', 'caixas', 'escala']
+  },
+
+  // Saúde & Bem-estar
+  {
+    title: 'Clínica Médica & Consultório Moderno',
+    url: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80',
+    category: 'Saúde',
+    tags: ['saúde', 'médico', 'médica', 'clínica', 'consultório', 'medicina', 'hospital', 'doutor']
+  },
+  {
+    title: 'Atendimento Médico Humanizado & Cuidado',
+    url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80',
+    category: 'Saúde',
+    tags: ['cuidado', 'saúde', 'atendimento', 'paciente', 'médico', 'confiança', 'bem-estar']
+  },
+  {
+    title: 'Treinamento Físico, Academia & Performance',
+    url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80',
+    category: 'Saúde',
+    tags: ['academia', 'fitness', 'treino', 'exercício', 'saúde', 'performance', 'energia']
+  },
+
+  // Black Friday & Promoções
+  {
+    title: 'Black Friday: Sacolas de Compras & Descontos',
+    url: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1200&q=80',
+    category: 'Promoções',
+    tags: ['black friday', 'promoção', 'desconto', 'oferta', 'compras', 'sacola', 'liquidação', 'vendas']
+  },
+  {
+    title: 'Caixa de Presente & Oferta Especial Limitada',
+    url: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=1200&q=80',
+    category: 'Promoções',
+    tags: ['presente', 'oferta especial', 'desconto', 'black friday', 'promoção', 'bônus', 'oportunidade']
+  },
+  {
+    title: 'Foguete em Lançamento & Escala Acelerada',
+    url: 'https://images.unsplash.com/photo-1517976487502-5f6902f1af95?auto=format&fit=crop&w=1200&q=80',
+    category: 'Promoções',
+    tags: ['foguete', 'lançamento', 'escala', 'crescimento', 'oportunidade', 'futuro', 'alta conversão']
   }
 ];
 
@@ -629,6 +785,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [isAddBlockModalOpen, setIsAddBlockModalOpen] = useState(false);
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   const [activeStockGalleryBlockId, setActiveStockGalleryBlockId] = useState<string | null>(null);
+  const [imageSearchQuery, setImageSearchQuery] = useState('');
+  const [imageSearchCategory, setImageSearchCategory] = useState('Todos');
   const [availableSurveys, setAvailableSurveys] = useState<Survey[]>([]);
   const [availableWorkflows, setAvailableWorkflows] = useState<MarketingWorkflow[]>([]);
 
@@ -2651,104 +2809,271 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                   )}
 
                                   {/* Specific Fields: IMAGE */}
-                                  {block.type === 'image' && (
-                                    <div className="space-y-3 pt-2 border-t border-slate-200">
-                                      <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                          <label className="text-[11px] font-semibold text-slate-700 uppercase">
-                                            URL da Imagem
-                                          </label>
-                                          <button
-                                            type="button"
-                                            onClick={() => setActiveStockGalleryBlockId(activeStockGalleryBlockId === block.id ? null : block.id)}
-                                            className="text-blue-600 hover:text-blue-700 font-bold text-[11px] flex items-center gap-1"
-                                          >
-                                            <Sparkles className="w-3 h-3" />
-                                            <span>{activeStockGalleryBlockId === block.id ? 'Fechar Galeria' : 'Ver Galeria Pronta (8 Fotos)'}</span>
-                                          </button>
-                                        </div>
-                                        <input
-                                          type="text"
-                                          value={block.imageUrl || ''}
-                                          onChange={e => {
-                                            const blocks = [...(editingPage.blocks || [])];
-                                            blocks[idx] = { ...block, imageUrl: e.target.value };
-                                            setEditingPage({ ...editingPage, blocks });
-                                          }}
-                                          placeholder="https://..."
-                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
-                                        />
-                                      </div>
+                                  {block.type === 'image' && (() => {
+                                    const isGalleryOpen = activeStockGalleryBlockId === block.id;
+                                    
+                                    // Categories available
+                                    const stockCategories = ['Todos', 'Negócios', 'Tecnologia', 'Vendas', 'Eventos', 'Escritório', 'E-commerce', 'Saúde', 'Promoções'];
+                                    
+                                    // Filter images based on search query and category
+                                    const filteredStockImages = PRESET_STOCK_IMAGES.filter(img => {
+                                      const matchCategory = imageSearchCategory === 'Todos' || img.category.toLowerCase() === imageSearchCategory.toLowerCase();
+                                      if (!matchCategory) return false;
+                                      if (!imageSearchQuery.trim()) return true;
+                                      const q = imageSearchQuery.toLowerCase().trim();
+                                      return (
+                                        img.title.toLowerCase().includes(q) ||
+                                        img.category.toLowerCase().includes(q) ||
+                                        img.tags.some(t => t.toLowerCase().includes(q))
+                                      );
+                                    });
 
-                                      {/* Quick Stock Gallery Accordion */}
-                                      {activeStockGalleryBlockId === block.id && (
-                                        <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm space-y-2">
-                                          <div className="text-[11px] font-bold text-slate-800">
-                                            Clique em uma foto pronta para aplicar imediatamente:
-                                          </div>
-                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                            {PRESET_STOCK_IMAGES.map((img, sIdx) => (
-                                              <button
-                                                key={sIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                  const blocks = [...(editingPage.blocks || [])];
-                                                  blocks[idx] = { 
-                                                    ...block, 
-                                                    imageUrl: img.url,
-                                                    imageAlt: img.title
-                                                  };
-                                                  setEditingPage({ ...editingPage, blocks });
+                                    return (
+                                      <div className="space-y-4 pt-2 border-t border-slate-200">
+                                        {/* URL da Imagem com Botão de Pesquisa por Assunto */}
+                                        <div>
+                                          <div className="flex items-center justify-between mb-1.5">
+                                            <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                                              URL da Imagem
+                                            </label>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                if (isGalleryOpen) {
                                                   setActiveStockGalleryBlockId(null);
-                                                }}
-                                                className="group text-left border border-slate-200 rounded-lg overflow-hidden hover:border-blue-500 hover:ring-2 hover:ring-blue-100 transition"
-                                              >
-                                                <img src={img.url} alt={img.title} className="w-full h-16 object-cover group-hover:scale-105 transition" />
-                                                <div className="p-1.5 bg-slate-50">
-                                                  <span className="text-[10px] font-semibold text-slate-700 block truncate">{img.category}</span>
-                                                </div>
-                                              </button>
-                                            ))}
+                                                } else {
+                                                  setActiveStockGalleryBlockId(block.id);
+                                                }
+                                              }}
+                                              className={`font-bold text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-xs border ${
+                                                isGalleryOpen
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                  : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                              }`}
+                                            >
+                                              <Search className="w-3.5 h-3.5" />
+                                              <span>{isGalleryOpen ? 'Fechar Pesquisa' : 'Pesquisar por Assunto 🔍'}</span>
+                                            </button>
+                                          </div>
+                                          
+                                          <div className="relative">
+                                            <input
+                                              type="text"
+                                              value={block.imageUrl || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, imageUrl: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="https://images.unsplash.com/... ou cole qualquer link"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-500"
+                                            />
                                           </div>
                                         </div>
-                                      )}
 
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
-                                            Texto Alternativo (Alt)
+                                        {/* Pesquisador de Imagens por Assunto Integrado */}
+                                        {isGalleryOpen && (
+                                          <div className="bg-slate-50 p-3.5 rounded-2xl border-2 border-blue-200 shadow-sm space-y-3 animate-in fade-in duration-200">
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-1.5">
+                                                <Sparkles className="w-4 h-4 text-amber-500" />
+                                                <span className="text-xs font-bold text-slate-900">
+                                                  Banco de Fotos em Alta Resolução (Unsplash)
+                                                </span>
+                                              </div>
+                                              <span className="text-[11px] font-semibold text-slate-500">
+                                                {filteredStockImages.length} fotos encontradas
+                                              </span>
+                                            </div>
+
+                                            {/* Campo de Busca por Assunto */}
+                                            <div className="relative">
+                                              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                                              <input
+                                                type="text"
+                                                value={imageSearchQuery}
+                                                onChange={e => setImageSearchQuery(e.target.value)}
+                                                placeholder="Digite o assunto (ex: tecnologia, reunião, vendas, evento, saúde, escritório...)"
+                                                className="w-full pl-9 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                                autoFocus
+                                              />
+                                              {imageSearchQuery && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setImageSearchQuery('')}
+                                                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                                                >
+                                                  <X className="w-3.5 h-3.5" />
+                                                </button>
+                                              )}
+                                            </div>
+
+                                            {/* Filtro por Categorias / Assuntos Rápidos */}
+                                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                                              {stockCategories.map(cat => (
+                                                <button
+                                                  key={cat}
+                                                  type="button"
+                                                  onClick={() => setImageSearchCategory(cat)}
+                                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition cursor-pointer ${
+                                                    imageSearchCategory === cat
+                                                      ? 'bg-blue-600 text-white shadow-xs'
+                                                      : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200'
+                                                  }`}
+                                                >
+                                                  {cat}
+                                                </button>
+                                              ))}
+                                            </div>
+
+                                            {/* Grade de Fotos */}
+                                            {filteredStockImages.length > 0 ? (
+                                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                                                {filteredStockImages.map((img, sIdx) => (
+                                                  <button
+                                                    key={sIdx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                      const blocks = [...(editingPage.blocks || [])];
+                                                      blocks[idx] = { 
+                                                        ...block, 
+                                                        imageUrl: img.url,
+                                                        imageAlt: img.title
+                                                      };
+                                                      setEditingPage({ ...editingPage, blocks });
+                                                      setActiveStockGalleryBlockId(null);
+                                                    }}
+                                                    className="group text-left border border-slate-200 bg-white rounded-xl overflow-hidden hover:border-blue-500 hover:ring-2 hover:ring-blue-200 transition cursor-pointer shadow-xs"
+                                                    title={`Clique para aplicar: ${img.title}`}
+                                                  >
+                                                    <div className="relative aspect-video overflow-hidden bg-slate-100">
+                                                      <img 
+                                                        src={img.url} 
+                                                        alt={img.title} 
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                                                        loading="lazy"
+                                                      />
+                                                      <span className="absolute top-1 left-1 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                                        {img.category}
+                                                      </span>
+                                                    </div>
+                                                    <div className="p-1.5">
+                                                      <span className="text-[10px] font-semibold text-slate-700 block truncate group-hover:text-blue-600">
+                                                        {img.title}
+                                                      </span>
+                                                    </div>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <div className="p-4 bg-white rounded-xl border border-dashed border-slate-300 text-center space-y-2">
+                                                <p className="text-xs text-slate-600">
+                                                  Nenhuma foto cadastrada para "<span className="font-bold">{imageSearchQuery}</span>".
+                                                </p>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const blocks = [...(editingPage.blocks || [])];
+                                                    const autoUnsplashUrl = `https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80`;
+                                                    blocks[idx] = { 
+                                                      ...block, 
+                                                      imageUrl: autoUnsplashUrl,
+                                                      imageAlt: `Imagem sobre ${imageSearchQuery}`
+                                                    };
+                                                    setEditingPage({ ...editingPage, blocks });
+                                                    setActiveStockGalleryBlockId(null);
+                                                  }}
+                                                  className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                                >
+                                                  <Sparkles className="w-3.5 h-3.5" />
+                                                  <span>Aplicar foto de alta qualidade sobre "{imageSearchQuery}"</span>
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* OPÇÃO DE LARGURA / TAMANHO DA IMAGEM */}
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                                          <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                                            Largura & Enquadramento da Imagem
                                           </label>
-                                          <input
-                                            type="text"
-                                            value={block.imageAlt || ''}
-                                            onChange={e => {
-                                              const blocks = [...(editingPage.blocks || [])];
-                                              blocks[idx] = { ...block, imageAlt: e.target.value };
-                                              setEditingPage({ ...editingPage, blocks });
-                                            }}
-                                            placeholder="Ex: Foto do escritório"
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
-                                          />
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, imageWidth: 'contained' };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                (!block.imageWidth || block.imageWidth === 'contained')
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                              }`}
+                                            >
+                                              <span>🎯 Centralizada (Contida)</span>
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, imageWidth: 'full' };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                block.imageWidth === 'full'
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                              }`}
+                                            >
+                                              <span>📐 Estendida (Largura Inteira)</span>
+                                            </button>
+                                          </div>
+                                          <p className="text-[10px] text-slate-500 leading-snug">
+                                            {block.imageWidth === 'full'
+                                              ? 'A imagem preencherá 100% da largura da tela (formato banner estendido com visual impactante).'
+                                              : 'A imagem fica centralizada no meio da tela com bordas arredondadas e sombra elegante.'}
+                                          </p>
                                         </div>
-                                        <div>
-                                          <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
-                                            Legenda da Foto
-                                          </label>
-                                          <input
-                                            type="text"
-                                            value={block.imageCaption || ''}
-                                            onChange={e => {
-                                              const blocks = [...(editingPage.blocks || [])];
-                                              blocks[idx] = { ...block, imageCaption: e.target.value };
-                                              setEditingPage({ ...editingPage, blocks });
-                                            }}
-                                            placeholder="Ex: Sede em São Paulo"
-                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
-                                          />
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Texto Alternativo (Alt)
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.imageAlt || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, imageAlt: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Foto do escritório"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                              Legenda da Foto
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.imageCaption || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, imageCaption: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Sede em São Paulo"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
 
                                   {/* Specific Fields: TEXT */}
                                   {block.type === 'text' && (
@@ -6305,26 +6630,45 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           }
 
                           if (b.type === 'image') {
+                            const isFullWidth = b.imageWidth === 'full';
                             return (
-                              <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
-                                <div className="max-w-4xl mx-auto text-center">
-                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
-                                  {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mb-6 max-w-xl mx-auto">{b.subtitle}</p>}
-                                  {b.imageUrl ? (
-                                    <div className="inline-block rounded-2xl overflow-hidden shadow-xl border border-black/10 max-w-full">
-                                      <img
-                                        src={b.imageUrl}
-                                        alt={b.imageAlt || b.title || 'Imagem'}
-                                        className="max-h-[420px] w-auto max-w-full object-cover rounded-2xl mx-auto"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs">
-                                      <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                      Insira a URL da imagem ou escolha uma foto na galeria de banco de imagens
+                              <section key={b.id || bIdx} className={`${isFullWidth ? 'py-8 md:py-12 px-0' : 'py-12 md:py-16 px-6 sm:px-10'} ${bgClass}`}>
+                                <div className={isFullWidth ? 'w-full text-center' : 'max-w-4xl mx-auto text-center'}>
+                                  {(b.title || b.subtitle) && (
+                                    <div className="max-w-4xl mx-auto px-6 mb-6">
+                                      {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                      {b.subtitle && <p className="text-xs sm:text-sm opacity-80 max-w-xl mx-auto">{b.subtitle}</p>}
                                     </div>
                                   )}
-                                  {b.imageCaption && <p className="text-xs opacity-75 mt-3">{b.imageCaption}</p>}
+                                  {b.imageUrl ? (
+                                    isFullWidth ? (
+                                      <div className="w-full overflow-hidden shadow-md">
+                                        <img
+                                          src={b.imageUrl}
+                                          alt={b.imageAlt || b.title || 'Imagem'}
+                                          className="w-full max-h-[560px] object-cover"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="inline-block rounded-2xl overflow-hidden shadow-xl border border-black/10 max-w-full">
+                                        <img
+                                          src={b.imageUrl}
+                                          alt={b.imageAlt || b.title || 'Imagem'}
+                                          className="max-h-[440px] w-auto max-w-full object-cover rounded-2xl mx-auto"
+                                        />
+                                      </div>
+                                    )
+                                  ) : (
+                                    <div className="rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs mx-6">
+                                      <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                      Insira a URL da imagem ou pesquise uma foto por assunto no banco de imagens
+                                    </div>
+                                  )}
+                                  {b.imageCaption && (
+                                    <p className="text-xs opacity-75 mt-3 max-w-xl mx-auto px-6 italic">
+                                      {b.imageCaption}
+                                    </p>
+                                  )}
                                 </div>
                               </section>
                             );
