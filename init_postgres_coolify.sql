@@ -1,6 +1,6 @@
 -- ==============================================================================
--- MDTRACKER: SCRIPT COMPLETO DE INICIALIZAÇÃO - POSTGRESQL (COOLIFY / HOSTINGER)
--- Todas as tabelas, índices multi-tenant (company_id) e campos JSONB
+-- MDTRACKER: SCRIPT MESTRE COMPLETO (35 TABELAS) - POSTGRESQL (COOLIFY / HOSTINGER)
+-- 100% DAS TABELAS DO SUPABASE, ÍNDICES MULTI-TENANT, JSONB E CARGA DE DADOS
 -- ==============================================================================
 
 -- 1. EMPRESAS (MULTI-TENANT)
@@ -27,14 +27,50 @@ CREATE TABLE IF NOT EXISTS public.users (
   password TEXT,
   role TEXT DEFAULT 'attendant',
   avatar_url TEXT,
+  phone TEXT,
+  extension TEXT,
+  is_external BOOLEAN DEFAULT FALSE,
+  status TEXT DEFAULT 'online',
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_users_company_id ON public.users(company_id);
 
--- 3. LINKS DE CAMPANHA & WHATSAPP
+-- 3. EQUIPES & CONTACT CENTER (TEAMS)
+CREATE TABLE IF NOT EXISTS public.teams (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  type TEXT NOT NULL DEFAULT 'active_sales',
+  color TEXT DEFAULT '#3B82F6',
+  distribution_strategy TEXT DEFAULT 'round_robin',
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_teams_company ON public.teams(company_id, active);
+
+-- 4. MEMBROS DA EQUIPE (TEAM MEMBERS)
+CREATE TABLE IF NOT EXISTS public.team_members (
+  id TEXT PRIMARY KEY,
+  team_id TEXT REFERENCES public.teams(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member',
+  is_external BOOLEAN DEFAULT FALSE,
+  phone_number TEXT,
+  extension TEXT,
+  status TEXT DEFAULT 'online',
+  max_concurrent_leads INTEGER DEFAULT 15,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_team_members_team ON public.team_members(team_id, active);
+CREATE INDEX IF NOT EXISTS idx_team_members_company ON public.team_members(company_id);
+
+-- 5. LINKS DE CAMPANHA & WHATSAPP
 CREATE TABLE IF NOT EXISTS public.campaign_links (
   id TEXT PRIMARY KEY,
   company_id TEXT,
@@ -49,6 +85,9 @@ CREATE TABLE IF NOT EXISTS public.campaign_links (
   utm_term TEXT,
   custom_tags JSONB DEFAULT '[]'::jsonb,
   capture_lead_form BOOLEAN DEFAULT FALSE,
+  assigned_team_id TEXT REFERENCES public.teams(id) ON DELETE SET NULL,
+  phone_numbers JSONB DEFAULT '[]'::jsonb,
+  rotation_mode TEXT DEFAULT 'round_robin',
   meta_pixel_id TEXT,
   meta_event_name TEXT,
   google_ads_conversion_id TEXT,
@@ -60,11 +99,10 @@ CREATE TABLE IF NOT EXISTS public.campaign_links (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_campaign_links_company_id ON public.campaign_links(company_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_links_slug ON public.campaign_links(slug);
 
--- 4. LEADS DO CRM
+-- 6. LEADS DO CRM
 CREATE TABLE IF NOT EXISTS public.leads (
   id TEXT PRIMARY KEY,
   company_id TEXT,
@@ -91,16 +129,18 @@ CREATE TABLE IF NOT EXISTS public.leads (
   active_flow_id TEXT,
   flow_step_node_id TEXT,
   proactive_scheduled_at TIMESTAMPTZ,
+  assigned_user_id TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+  assigned_team_id TEXT REFERENCES public.teams(id) ON DELETE SET NULL,
+  assigned_at TIMESTAMPTZ,
   conversion_events JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_leads_company_id ON public.leads(company_id);
 CREATE INDEX IF NOT EXISTS idx_leads_stage ON public.leads(stage);
 CREATE INDEX IF NOT EXISTS idx_leads_phone ON public.leads(phone);
 
--- 5. PRODUTOS & CATÁLOGO
+-- 7. PRODUTOS & CATÁLOGO
 CREATE TABLE IF NOT EXISTS public.products (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -111,10 +151,9 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_products_company_id ON public.products(company_id);
 
--- 6. VENDAS E COMPRAS DE LEADS
+-- 8. VENDAS E COMPRAS DE LEADS
 CREATE TABLE IF NOT EXISTS public.lead_purchases (
   id TEXT PRIMARY KEY,
   lead_id TEXT NOT NULL,
@@ -127,11 +166,10 @@ CREATE TABLE IF NOT EXISTS public.lead_purchases (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_lead_purchases_company_id ON public.lead_purchases(company_id);
 CREATE INDEX IF NOT EXISTS idx_lead_purchases_lead_id ON public.lead_purchases(lead_id);
 
--- 7. CONFIGURAÇÕES DA EMPRESA
+-- 9. CONFIGURAÇÕES DA EMPRESA
 CREATE TABLE IF NOT EXISTS public.settings (
   company_id TEXT PRIMARY KEY,
   meta_pixel_id TEXT,
@@ -146,7 +184,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. LOGS DE WEBHOOK
+-- 10. LOGS DE WEBHOOK
 CREATE TABLE IF NOT EXISTS public.webhook_logs (
   id TEXT PRIMARY KEY,
   company_id TEXT,
@@ -154,10 +192,165 @@ CREATE TABLE IF NOT EXISTS public.webhook_logs (
   status TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_company_id ON public.webhook_logs(company_id);
 
--- 9. AGENTES DE IA AUTÔNOMOS
+-- 11. MENSAGENS WHATSAPP
+CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
+  id TEXT PRIMARY KEY,
+  company_id TEXT,
+  lead_phone TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  text TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  status TEXT DEFAULT 'entregue'
+);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_company ON public.whatsapp_messages(company_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_phone ON public.whatsapp_messages(lead_phone);
+
+-- 12. POPUPS DE CAPTURA
+CREATE TABLE IF NOT EXISTS public.popups (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  active BOOLEAN DEFAULT TRUE,
+  trigger_type TEXT DEFAULT 'exit_intent',
+  trigger_value INTEGER DEFAULT 0,
+  show_once_per_user BOOLEAN DEFAULT TRUE,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  badge_text TEXT,
+  cta_text TEXT DEFAULT 'Quero Aproveitar',
+  fields JSONB DEFAULT '[]'::jsonb,
+  theme_color TEXT DEFAULT '#2563eb',
+  background_color TEXT DEFAULT 'light',
+  button_color TEXT DEFAULT '#2563eb',
+  button_text_color TEXT DEFAULT '#ffffff',
+  border_radius TEXT DEFAULT 'md',
+  action_type TEXT DEFAULT 'whatsapp_redirect',
+  whatsapp_phone TEXT,
+  whatsapp_message TEXT,
+  redirect_url TEXT,
+  success_message TEXT DEFAULT 'Obrigado! Recebemos suas informações.',
+  target_stage TEXT DEFAULT 'Novo Lead',
+  tags JSONB DEFAULT '[]'::jsonb,
+  link_id TEXT REFERENCES public.campaign_links(id) ON DELETE SET NULL,
+  impressions_count INTEGER DEFAULT 0,
+  leads_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_popups_company_id ON public.popups(company_id);
+
+-- 13. FLUXOS DE MARKETING (WORKFLOWS)
+CREATE TABLE IF NOT EXISTS public.marketing_workflows (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  trigger_type TEXT DEFAULT 'lead_created',
+  trigger_config JSONB DEFAULT '{}'::jsonb,
+  steps JSONB DEFAULT '[]'::jsonb,
+  enrolled_count INTEGER DEFAULT 0,
+  executed_count INTEGER DEFAULT 0,
+  conversions_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_marketing_workflows_company ON public.marketing_workflows(company_id);
+
+-- 14. LOGS DOS FLUXOS DE MARKETING
+CREATE TABLE IF NOT EXISTS public.workflow_logs (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  workflow_id TEXT REFERENCES public.marketing_workflows(id) ON DELETE CASCADE,
+  workflow_name TEXT NOT NULL,
+  lead_id TEXT,
+  lead_name TEXT,
+  lead_phone TEXT,
+  action_type TEXT NOT NULL,
+  status TEXT DEFAULT 'success',
+  detail TEXT,
+  executed_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_logs_company ON public.workflow_logs(company_id);
+
+-- 15. DISPAROS EM MASSA (BROADCAST CAMPAIGNS)
+CREATE TABLE IF NOT EXISTS public.broadcast_campaigns (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  channel TEXT DEFAULT 'email',
+  channels JSONB DEFAULT '["email"]'::jsonb,
+  target_stage TEXT DEFAULT 'Todos',
+  target_source TEXT DEFAULT 'Todas',
+  target_tag TEXT DEFAULT 'Todas',
+  message_template TEXT,
+  whatsapp_scheduled_at TIMESTAMPTZ,
+  email_subject TEXT,
+  email_preheader TEXT,
+  email_sender_name TEXT,
+  email_sender_email TEXT,
+  email_body_html TEXT,
+  email_scheduled_at TIMESTAMPTZ,
+  sms_text TEXT,
+  sms_scheduled_at TIMESTAMPTZ,
+  tracking_link_id TEXT,
+  cta_url TEXT,
+  cta_text TEXT,
+  status TEXT DEFAULT 'rascunho',
+  total_leads INTEGER DEFAULT 0,
+  sent_count INTEGER DEFAULT 0,
+  delivered_count INTEGER DEFAULT 0,
+  opened_count INTEGER DEFAULT 0,
+  clicked_count INTEGER DEFAULT 0,
+  provider TEXT DEFAULT 'simulado',
+  delay_seconds INTEGER DEFAULT 5,
+  scheduled_at TIMESTAMPTZ,
+  recipients JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_company ON public.broadcast_campaigns(company_id);
+
+-- 16. LIGAÇÕES DO CRM (LEAD CALLS)
+CREATE TABLE IF NOT EXISTS public.lead_calls (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  lead_id TEXT REFERENCES public.leads(id) ON DELETE CASCADE,
+  team_id TEXT REFERENCES public.teams(id) ON DELETE SET NULL,
+  lead_name TEXT NOT NULL,
+  lead_phone TEXT NOT NULL,
+  user_id TEXT,
+  user_name TEXT NOT NULL,
+  duration_seconds INTEGER DEFAULT 0,
+  outcome TEXT DEFAULT 'atendeu_positivo',
+  notes TEXT,
+  recording_url TEXT,
+  transcript_summary TEXT,
+  sentiment TEXT DEFAULT 'neutro',
+  next_steps TEXT,
+  caller_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_lead_calls_company ON public.lead_calls(company_id);
+
+-- 17. LISTAS INTELIGENTES (SMART LISTS)
+CREATE TABLE IF NOT EXISTS public.smart_lists (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT '#2563eb',
+  conditions JSONB DEFAULT '[]'::jsonb,
+  match_type TEXT DEFAULT 'all',
+  leads_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_smart_lists_company ON public.smart_lists(company_id);
+
+-- 18. AGENTES DE IA AUTÔNOMOS
 CREATE TABLE IF NOT EXISTS public.ai_agents (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -178,10 +371,9 @@ CREATE TABLE IF NOT EXISTS public.ai_agents (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_ai_agents_company_id ON public.ai_agents(company_id);
 
--- 10. CENTRAL DE ATIVIDADES DOS AGENTES (HABLLA STYLE)
+-- 19. CENTRAL DE ATIVIDADES DOS AGENTES
 CREATE TABLE IF NOT EXISTS public.ai_agent_logs (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
@@ -210,12 +402,10 @@ CREATE TABLE IF NOT EXISTS public.ai_agent_logs (
   status TEXT DEFAULT 'completed',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_ai_agent_logs_company_id ON public.ai_agent_logs(company_id);
-CREATE INDEX IF NOT EXISTS idx_ai_agent_logs_agent_id ON public.ai_agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_ai_agent_logs_board_column ON public.ai_agent_logs(board_column);
 
--- 11. SALAS DO ESCRITÓRIO VIRTUAL HABBLAUD
+-- 20. SALAS DO ESCRITÓRIO VIRTUAL HABBLAUD
 CREATE TABLE IF NOT EXISTS public.ai_agent_rooms (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -225,10 +415,55 @@ CREATE TABLE IF NOT EXISTS public.ai_agent_rooms (
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_ai_agent_rooms_company_id ON public.ai_agent_rooms(company_id);
 
--- 12. PESQUISAS E FORMULÁRIOS DE QUALIFICAÇÃO (SURVEYS)
+-- 21. PROJETOS DE CHATBOT
+CREATE TABLE IF NOT EXISTS public.chatbot_projects (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT DEFAULT 'blue',
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chatbot_projects_company ON public.chatbot_projects(company_id);
+
+-- 22. FLUXOS DE CHATBOT (FLOWS)
+CREATE TABLE IF NOT EXISTS public.chatbot_flows (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  project_id TEXT,
+  name TEXT NOT NULL,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  trigger_type TEXT DEFAULT 'instant_reply',
+  trigger_config JSONB DEFAULT '{}'::jsonb,
+  nodes JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chatbot_flows_company ON public.chatbot_flows(company_id, active);
+
+-- 23. LOGS DE EXECUÇÃO DO CHATBOT
+CREATE TABLE IF NOT EXISTS public.chatbot_execution_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  lead_id TEXT REFERENCES public.leads(id) ON DELETE CASCADE,
+  channel TEXT NOT NULL,
+  flow_id TEXT,
+  node_id TEXT,
+  direction TEXT NOT NULL,
+  message_text TEXT,
+  link_url TEXT,
+  is_proactive BOOLEAN DEFAULT FALSE,
+  is_handover BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chatbot_logs_company ON public.chatbot_execution_logs(company_id);
+
+-- 24. PESQUISAS E FORMULÁRIOS (SURVEYS)
 CREATE TABLE IF NOT EXISTS public.surveys (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -244,11 +479,10 @@ CREATE TABLE IF NOT EXISTS public.surveys (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_surveys_company_id ON public.surveys(company_id);
 CREATE INDEX IF NOT EXISTS idx_surveys_slug ON public.surveys(slug);
 
--- 13. RESPOSTAS DAS PESQUISAS
+-- 25. RESPOSTAS DAS PESQUISAS
 CREATE TABLE IF NOT EXISTS public.survey_responses (
   id TEXT PRIMARY KEY,
   survey_id TEXT NOT NULL REFERENCES public.surveys(id) ON DELETE CASCADE,
@@ -264,11 +498,9 @@ CREATE TABLE IF NOT EXISTS public.survey_responses (
   utm_campaign TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_survey_responses_company_id ON public.survey_responses(company_id);
-CREATE INDEX IF NOT EXISTS idx_survey_responses_survey_id ON public.survey_responses(survey_id);
 
--- 14. LANDING PAGES
+-- 26. LANDING PAGES
 CREATE TABLE IF NOT EXISTS public.landing_pages (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -283,11 +515,10 @@ CREATE TABLE IF NOT EXISTS public.landing_pages (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_landing_pages_company_id ON public.landing_pages(company_id);
 CREATE INDEX IF NOT EXISTS idx_landing_pages_slug ON public.landing_pages(slug);
 
--- 15. DOMÍNIOS PERSONALIZADOS
+-- 27. DOMÍNIOS PERSONALIZADOS
 CREATE TABLE IF NOT EXISTS public.custom_domains (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -296,10 +527,78 @@ CREATE TABLE IF NOT EXISTS public.custom_domains (
   verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_custom_domains_company_id ON public.custom_domains(company_id);
 
--- 16. GAMIFICAÇÃO & EVENTOS DE CONVERSÃO
+-- 28. EVENTOS DE GAMIFICAÇÃO AO VIVO
+CREATE TABLE IF NOT EXISTS public.gamification_events (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  pin_code TEXT NOT NULL,
+  description TEXT,
+  theme JSONB DEFAULT '{"primaryColor": "#8b5cf6", "backgroundColor": "#1e1b4b", "accentColor": "#06b6d4"}'::jsonb,
+  status TEXT NOT NULL DEFAULT 'live',
+  current_activity_id TEXT,
+  require_phone BOOLEAN DEFAULT true,
+  require_email BOOLEAN DEFAULT false,
+  require_company BOOLEAN DEFAULT false,
+  require_role BOOLEAN DEFAULT false,
+  lead_magnet_url TEXT,
+  settings JSONB DEFAULT '{"allowAnonymous": false, "showLiveCount": true, "enableSounds": true}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gamification_events_company_id ON public.gamification_events(company_id);
+
+-- 29. ATIVIDADES DA GAMIFICAÇÃO
+CREATE TABLE IF NOT EXISTS public.gamification_activities (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES public.gamification_events(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  options JSONB DEFAULT '[]'::jsonb,
+  correct_option_id TEXT,
+  time_limit_seconds INT DEFAULT 30,
+  points INT DEFAULT 100,
+  order_index INT DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gamification_activities_event_id ON public.gamification_activities(event_id);
+
+-- 30. PARTICIPANTES DA GAMIFICAÇÃO
+CREATE TABLE IF NOT EXISTS public.gamification_participants (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES public.gamification_events(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  company TEXT,
+  role TEXT,
+  avatar TEXT,
+  score INT DEFAULT 0,
+  is_winner BOOLEAN DEFAULT false,
+  device_token TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_active_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gamification_participants_event_id ON public.gamification_participants(event_id);
+
+-- 31. RESPOSTAS DA GAMIFICAÇÃO
+CREATE TABLE IF NOT EXISTS public.gamification_responses (
+  id TEXT PRIMARY KEY,
+  activity_id TEXT NOT NULL REFERENCES public.gamification_activities(id) ON DELETE CASCADE,
+  participant_id TEXT NOT NULL REFERENCES public.gamification_participants(id) ON DELETE CASCADE,
+  response_data JSONB NOT NULL,
+  upvotes INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gamification_responses_activity_id ON public.gamification_responses(activity_id);
+
+-- 32. GAMIFICAÇÃO DE EVENTOS SIMPLES
 CREATE TABLE IF NOT EXISTS public.event_gamification (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -310,10 +609,9 @@ CREATE TABLE IF NOT EXISTS public.event_gamification (
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS idx_event_gamification_company_id ON public.event_gamification(company_id);
 
--- 17. AUTOMAÇÃO DE INSTAGRAM
+-- 33. AUTOMAÇÃO DE COMENTÁRIOS DO INSTAGRAM
 CREATE TABLE IF NOT EXISTS public.instagram_comment_automations (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -327,7 +625,9 @@ CREATE TABLE IF NOT EXISTS public.instagram_comment_automations (
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_insta_comment_company ON public.instagram_comment_automations(company_id);
 
+-- 34. LOGS DE COMENTÁRIOS DO INSTAGRAM
 CREATE TABLE IF NOT EXISTS public.instagram_comment_logs (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
@@ -339,12 +639,19 @@ CREATE TABLE IF NOT EXISTS public.instagram_comment_logs (
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_insta_comment_logs_company ON public.instagram_comment_logs(company_id);
 
--- ==============================================================================
+-- 35. TABELA DE CONTROLE DE ATUALIZAÇÃO
+CREATE TABLE IF NOT EXISTS public.atualiza_bd (
+  id SERIAL PRIMARY KEY,
+  versao TEXT DEFAULT '1.0.0',
+  descricao TEXT,
+  executado_em TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO public.atualiza_bd (versao, descricao) VALUES ('1.0.0', 'Migração completa de 35 tabelas para PostgreSQL Coolify/Hostinger') ON CONFLICT DO NOTHING;
 
 -- ==============================================================================
 -- CARGA DE DADOS DE TESTE E HISTÓRICO COMPLETO (MULTI-TENANT)
--- Empresas, Usuários, Links, Leads, Agentes IA, Salas e Configurações
 -- ==============================================================================
 
 -- 1. EMPRESAS
@@ -390,7 +697,18 @@ INSERT INTO public.users (id, company_id, name, email, password, role, active, c
 VALUES ('usr-1788784655993', 'comp-1788784548541', 'Rogerio', 'rogerio@fachinettiabdalla.com.br', '$2b$10$nlHs18Jr87CGJVSbQQ2D0.4iNUqwvD1OTvRzc/BGR.rlYf.aDasii', 'admin', TRUE, NOW())
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, password = EXCLUDED.password, role = EXCLUDED.role;
 
--- 3. CONFIGURAÇÕES DAS EMPRESAS
+-- 3. EQUIPES DE ATENDIMENTO
+INSERT INTO public.teams (id, company_id, name, description, type, color, distribution_strategy, active, created_at)
+VALUES ('team-vendas-comp-1788784548541', 'comp-1788784548541', 'Vendas & Fechamento', 'Equipe de closers e SDRs de alta conversão', 'active_sales', '#10B981', 'round_robin', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.teams (id, company_id, name, description, type, color, distribution_strategy, active, created_at)
+VALUES ('team-vendas-comp-1786498560971', 'comp-1786498560971', 'Vendas & Fechamento', 'Equipe de closers e SDRs de alta conversão', 'active_sales', '#10B981', 'round_robin', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.teams (id, company_id, name, description, type, color, distribution_strategy, active, created_at)
+VALUES ('team-vendas-comp-alfa', 'comp-alfa', 'Vendas & Fechamento', 'Equipe de closers e SDRs de alta conversão', 'active_sales', '#10B981', 'round_robin', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. CONFIGURAÇÕES DAS EMPRESAS
 INSERT INTO public.settings (company_id, meta_pixel_id, google_ads_conversion_id, webhook_url, updated_at)
 VALUES ('comp-1788784548541', '1234567890987654', 'AW-987654321', 'https://webhook.site/demo-rastreamento-whatsapp', NOW())
 ON CONFLICT (company_id) DO NOTHING;
@@ -407,7 +725,7 @@ INSERT INTO public.settings (company_id, meta_pixel_id, google_ads_conversion_id
 VALUES ('comp-beta', '1234567890987654', 'AW-987654321', 'https://webhook.site/demo-rastreamento-whatsapp', NOW())
 ON CONFLICT (company_id) DO NOTHING;
 
--- 4. LINKS DE CAMPANHA & WHATSAPP
+-- 5. LINKS DE CAMPANHA & WHATSAPP
 INSERT INTO public.campaign_links (id, company_id, title, phone, message, slug, utm_source, utm_medium, utm_campaign, utm_content, utm_term, clicks_count, leads_count, conversions_count, capture_lead_form, created_at)
 VALUES ('link-1-1788784548541', 'comp-1788784548541', 'Campanha Meta Ads - Oferta VIP Black Friday', '5511987654321', 'Olá! Vi a oferta no Instagram ({utm_campaign}) e quero garantir meu desconto VIP.', 'vip-blackfriday-1788784548541', 'meta_ads', 'cpc', 'black_friday_2026', 'carrossel_v2', 'desconto_exclusivo', 142, 89, 28, TRUE, NOW())
 ON CONFLICT (id) DO NOTHING;
@@ -448,7 +766,7 @@ INSERT INTO public.campaign_links (id, company_id, title, phone, message, slug, 
 VALUES ('link-beta-1', 'comp-beta', 'TechSolutions - Consultoria de Software Enterprise', '5521998877665', 'Olá TechSolutions! Quero agendar uma demonstração de software.', 'consultoria-beta', 'linkedin', 'cpc', 'b2b_enterprise_2026', 'video_cases', 'gestao_empresarial', 52, 18, 5, TRUE, NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 5. LEADS DO CRM
+-- 6. LEADS DO CRM
 INSERT INTO public.leads (id, company_id, name, phone, email, location, source, utm_source, utm_medium, utm_campaign, utm_content, utm_term, link_title, stage, value, device, browser, score, conversion_events, created_at)
 VALUES ('lead-101-1788784548541', 'comp-1788784548541', 'Carlos Eduardo Silva', '5511991234567', 'carlos.silva@empresa.com.br', '{"city":"São Paulo","state":"SP","country":"Brasil","ip":"177.138.45.12"}'::jsonb, 'Meta Ads', 'meta_ads', 'cpc', 'black_friday_2026', 'carrossel_v2', 'desconto_exclusivo', 'Campanha Meta Ads - Oferta VIP Black Friday', 'Convertido', 1490, 'Mobile (iPhone 14 Pro)', 'Safari 17.4', 50, '[{"id":"evt-1","type":"meta_pixel","eventName":"Lead","status":"sucesso","timestamp":"2026-08-10T09:12:05.000Z","details":"Pixel Meta disparado com sucesso no clique do link"},{"id":"evt-2","type":"meta_capi","eventName":"Purchase","status":"sucesso","timestamp":"2026-08-10T11:20:00.000Z","details":"Conversão de R$ 1.490,00 enviada via Conversion API"},{"id":"evt-3","type":"webhook","eventName":"lead_converted","status":"sucesso","timestamp":"2026-08-10T11:20:01.000Z","details":"Webhook enviado para CRM externo (HTTP 200 OK)"}]'::jsonb, NOW())
 ON CONFLICT (id) DO NOTHING;
@@ -513,7 +831,7 @@ INSERT INTO public.leads (id, company_id, name, phone, email, location, source, 
 VALUES ('lead-beta-201', 'comp-alfa', 'Roberto Vianna (TechSolutions Beta Client)', '5521998877665', 'roberto@multinacional.com', '{"city":"Rio de Janeiro","state":"RJ","country":"Brasil","ip":"200.150.10.5"}'::jsonb, 'LinkedIn', 'linkedin', 'cpc', 'b2b_enterprise_2026', 'video_cases', 'gestao_empresarial', 'TechSolutions - Consultoria de Software Enterprise', 'Em Negociação', 12500, 'Desktop (Windows 11)', 'Edge 125', 50, '[]'::jsonb, NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 6. SALAS DO ESCRITÓRIO VIRTUAL HABBLAUD
+-- 7. SALAS DO ESCRITÓRIO VIRTUAL HABBLAUD
 INSERT INTO public.ai_agent_rooms (id, company_id, name, slug, color, description, created_at)
 VALUES ('squad-sdr-qualificacao-comp-1788784548541', 'comp-1788784548541', 'SQUAD SDR & TRIAGEM', 'squad-sdr-qualificacao', 'amber', 'Recepção, triagem de leads e catálogo', NOW())
 ON CONFLICT (id) DO NOTHING;
@@ -551,7 +869,7 @@ INSERT INTO public.ai_agent_rooms (id, company_id, name, slug, color, descriptio
 VALUES ('sala-maya-comp-alfa', 'comp-alfa', 'SALA MAYA', 'sala-maya', 'purple', 'Sala de qualificação autônoma', NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 7. AGENTES DE IA AUTÔNOMOS
+-- 8. AGENTES DE IA AUTÔNOMOS
 INSERT INTO public.ai_agents (id, company_id, name, role_title, avatar, goal, persona_and_context, rules, autonomy_mode, enabled_tools, room_id, executions_count, goals_achieved_count, active, created_at)
 VALUES ('agent-maya-comp-1788784548541', 'comp-1788784548541', 'Maya', 'SDR & Qualificação de Leads', '🤖', 'Descobrir o orçamento e necessidade do lead e avançar para Em Negociação.', 'Consultora de pré-vendas simpática, ágil e focada em valor.', '["Nunca inventar produtos fora do catálogo.","Não dar mais de 10% de desconto sem aprovação humana."]'::jsonb, 'autonomous', '["get_lead_profile","search_products","update_lead_stage","add_lead_note"]'::jsonb, 'squad-sdr-qualificacao-comp-1788784548541', 48, 19, TRUE, NOW())
 ON CONFLICT (id) DO NOTHING;
@@ -571,7 +889,7 @@ INSERT INTO public.ai_agents (id, company_id, name, role_title, avatar, goal, pe
 VALUES ('agent-lucas-comp-alfa', 'comp-alfa', 'Lucas', 'Closer & Fechamento de Vendas', '⚡', 'Converter leads indecisos contornando objeções de preço e prazo.', 'Especialista em fechamento consultivo e argumentos de ROI.', '["Consultar histórico de compras antes de ofertar.","Enviar link rastreável."]'::jsonb, 'autonomous', '["get_lead_profile","search_products","get_campaign_links","update_lead_stage"]'::jsonb, 'squad-closer-vendas-comp-alfa', 31, 12, TRUE, NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 8. CENTRAL DE ATIVIDADES DOS AGENTES (HABLLA FORMAT)
+-- 9. CENTRAL DE ATIVIDADES DOS AGENTES (HABLLA FORMAT)
 INSERT INTO public.ai_agent_logs (id, agent_id, agent_name, agent_avatar, company_id, task_title, agent_reply, activity_category, board_column, status, created_at)
 VALUES ('log-1-comp-1788784548541', 'agent-maya-comp-1788784548541', 'Maya', '🤖', 'comp-1788784548541', 'Percepção de Contexto & Intenção BANT', 'Identifiquei que o lead busca automação de WhatsApp para o setor imobiliário.', 'qualification', 'qualifying', 'completed', NOW() - interval '2 minutes')
 ON CONFLICT (id) DO NOTHING;
@@ -616,5 +934,25 @@ VALUES ('log-14-comp-alfa', 'agent-maya-comp-alfa', 'Maya', '🤖', 'comp-alfa',
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.ai_agent_logs (id, agent_id, agent_name, agent_avatar, company_id, task_title, agent_reply, activity_category, board_column, status, created_at)
 VALUES ('log-15-comp-alfa', 'agent-maya-comp-alfa', 'Maya', '🤖', 'comp-alfa', 'Escrevendo a resposta com gatilho de fechamento', 'Olá! Preparei uma proposta especial com o plano Pro para a sua equipe.', 'closing', 'goal_achieved', 'completed', NOW() - interval '30 minutes')
+ON CONFLICT (id) DO NOTHING;
+
+-- 10. PROJETOS E FLUXOS DO CHATBOT
+INSERT INTO public.chatbot_projects (id, company_id, name, description, color, active, created_at)
+VALUES ('proj-vendas-comp-1788784548541', 'comp-1788784548541', 'Fluxo Comercial Principal', 'Funil de recepção, qualificação e direcionamento de vendas', 'blue', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.chatbot_flows (id, company_id, project_id, name, description, active, trigger_type, created_at)
+VALUES ('flow-triagem-comp-1788784548541', 'comp-1788784548541', 'proj-vendas-comp-1788784548541', 'Triagem Inteligente WhatsApp', 'Qualifica o lead e descobre o interesse', TRUE, 'instant_reply', NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.chatbot_projects (id, company_id, name, description, color, active, created_at)
+VALUES ('proj-vendas-comp-1786498560971', 'comp-1786498560971', 'Fluxo Comercial Principal', 'Funil de recepção, qualificação e direcionamento de vendas', 'blue', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.chatbot_flows (id, company_id, project_id, name, description, active, trigger_type, created_at)
+VALUES ('flow-triagem-comp-1786498560971', 'comp-1786498560971', 'proj-vendas-comp-1786498560971', 'Triagem Inteligente WhatsApp', 'Qualifica o lead e descobre o interesse', TRUE, 'instant_reply', NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.chatbot_projects (id, company_id, name, description, color, active, created_at)
+VALUES ('proj-vendas-comp-alfa', 'comp-alfa', 'Fluxo Comercial Principal', 'Funil de recepção, qualificação e direcionamento de vendas', 'blue', TRUE, NOW())
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.chatbot_flows (id, company_id, project_id, name, description, active, trigger_type, created_at)
+VALUES ('flow-triagem-comp-alfa', 'comp-alfa', 'proj-vendas-comp-alfa', 'Triagem Inteligente WhatsApp', 'Qualifica o lead e descobre o interesse', TRUE, 'instant_reply', NOW())
 ON CONFLICT (id) DO NOTHING;
 
