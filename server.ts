@@ -12071,17 +12071,28 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 }
 
                 if (b.type === 'image') {
+                    const isFullWidth = b.imageWidth === 'full';
                     return `
-                      <section class="py-14 md:py-20 ${bgClass}">
-                        <div class="max-w-5xl mx-auto px-4 text-center">
-                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
-                          ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
-                          ${b.imageUrl ? `
-                            <div class="inline-block rounded-2xl overflow-hidden shadow-2xl border border-black/10">
-                              <img src="${b.imageUrl}" alt="${b.imageAlt || b.title || 'Imagem'}" class="max-h-[520px] w-auto max-w-full object-cover rounded-2xl mx-auto" />
+                      <section class="${isFullWidth ? 'py-8 md:py-14 px-0 w-full' : 'py-14 md:py-20 px-4'} ${bgClass}">
+                        <div class="${isFullWidth ? 'w-full text-center' : 'max-w-5xl mx-auto px-4 text-center'}">
+                          ${(b.title || b.subtitle) ? `
+                            <div class="max-w-4xl mx-auto px-6 mb-8 text-center">
+                              ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                              ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
                             </div>
                           ` : ''}
-                          ${b.imageCaption ? `<p class="text-xs opacity-75 mt-3">${b.imageCaption}</p>` : ''}
+                          ${b.imageUrl ? (
+                            isFullWidth ? `
+                              <div class="w-full overflow-hidden shadow-xl">
+                                <img src="${b.imageUrl}" alt="${b.imageAlt || b.title || 'Imagem'}" class="w-full h-auto max-h-[640px] object-cover" />
+                              </div>
+                            ` : `
+                              <div class="inline-block rounded-2xl overflow-hidden shadow-2xl border border-black/10 max-w-full">
+                                <img src="${b.imageUrl}" alt="${b.imageAlt || b.title || 'Imagem'}" class="max-h-[520px] w-auto max-w-full object-cover rounded-2xl mx-auto" />
+                              </div>
+                            `
+                          ) : ''}
+                          ${b.imageCaption ? `<p class="text-xs opacity-75 mt-3 px-4">${b.imageCaption}</p>` : ''}
                         </div>
                       </section>
                     `;
