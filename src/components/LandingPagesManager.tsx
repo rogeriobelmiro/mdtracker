@@ -46,7 +46,9 @@ import {
   ChevronUp,
   ChevronDown,
   Flame,
-  LayoutTemplate
+  LayoutTemplate,
+  Mail,
+  Send
 } from 'lucide-react';
 import { 
   LandingPage, 
@@ -315,7 +317,8 @@ import {
   generateLandingPageAI,
   submitLandingPageLead,
   fetchSurveys,
-  fetchWorkflows
+  fetchWorkflows,
+  sendTestPhaseEmail
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { NavTabId } from './Sidebar';
@@ -802,6 +805,38 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [aiTone, setAiTone] = useState<'persuasivo' | 'profissional' | 'urgente' | 'amigavel'>('persuasivo');
   const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  // Email Marketing Phase Test State
+  const [lpTestEmail, setLpTestEmail] = useState('');
+  const [lpTestEmailLoading, setLpTestEmailLoading] = useState(false);
+  const [lpTestFeedback, setLpTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestLpEmail = async () => {
+    if (!lpTestEmail || !lpTestEmail.includes('@')) {
+      setLpTestFeedback({ success: false, message: 'Digite um e-mail válido para receber o teste.' });
+      return;
+    }
+    setLpTestEmailLoading(true);
+    setLpTestFeedback({ success: true, message: 'Disparando e-mail de teste...' });
+    try {
+      const res = await sendTestPhaseEmail({
+        companyId: currentCompany.id,
+        targetEmail: lpTestEmail.trim(),
+        subject: editingPage?.form?.emailSubject || `Confirmação de Cadastro - ${editingPage?.title || currentCompany.name}`,
+        body: editingPage?.form?.emailBody || 'Olá {nome}!\n\nRecebemos seu cadastro na página "{empresa}". Em breve nossa equipe entrará em contato!',
+        phaseName: `Landing Page: ${editingPage?.title || 'Captura'}`
+      });
+      if (res.success) {
+        setLpTestFeedback({ success: true, message: `✅ E-mail enviado com sucesso para ${lpTestEmail}!` });
+      } else {
+        setLpTestFeedback({ success: false, message: `❌ ${res.error || 'Falha ao enviar e-mail.'}` });
+      }
+    } catch (err: any) {
+      setLpTestFeedback({ success: false, message: `❌ Erro: ${err.message}` });
+    } finally {
+      setLpTestEmailLoading(false);
+    }
+  };
 
   // 1-second interval ticker for live countdown timers on cards and preview
   const [, setTimerTick] = useState(0);
@@ -4475,6 +4510,47 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             <p className="text-[10px] text-blue-700">
                               ✉️ O e-mail de confirmação ou entrega de material será disparado para o endereço fornecido pelo lead.
                             </p>
+
+                            {/* Direct Test Bar for This Landing Page Email */}
+                            <div className="pt-2 border-t border-blue-200/60 bg-blue-100/60 p-2.5 rounded-lg space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+                                  Testar Disparo Deste E-mail (Fase de Confirmação)
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="email"
+                                  placeholder="Digite seu e-mail para receber este teste..."
+                                  value={lpTestEmail}
+                                  onChange={e => setLpTestEmail(e.target.value)}
+                                  className="flex-1 bg-white border border-blue-300 rounded px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleTestLpEmail}
+                                  disabled={lpTestEmailLoading}
+                                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold px-3 py-1 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                                >
+                                  {lpTestEmailLoading ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                  <span>Testar Fase</span>
+                                </button>
+                              </div>
+                              {lpTestFeedback && (
+                                <div className={`text-[11px] p-1.5 rounded font-medium ${
+                                  lpTestFeedback.success 
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                    : 'bg-red-100 text-red-800 border border-red-200'
+                                }`}>
+                                  {lpTestFeedback.message}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

@@ -1440,4 +1440,19 @@ export async function testSmtpEmail(data: {
   return res.json();
 }
 
+export async function sendTestPhaseEmail(payload: {
+  companyId?: string;
+  targetEmail: string;
+  subject: string;
+  body: string;
+  phaseName?: string;
+}): Promise<{ success: boolean; messageId?: string; message?: string; error?: string }> {
+  const res = await fetch('/api/email/test-send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
 

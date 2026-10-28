@@ -4,10 +4,10 @@ import {
   Plus, Edit3, Trash2, Copy, Check, Eye, Sparkles, Clock, 
   ArrowDown, LogOut, MessageCircle, X, Search, Sliders, Palette, 
   Settings2, Smartphone, CheckCircle2, AlertCircle, Play, Code,
-  Users, ExternalLink, MessageSquare, FileText
+  Users, ExternalLink, MessageSquare, FileText, Mail, Send, RefreshCw
 } from 'lucide-react';
 import { useDialog } from '../contexts/DialogContext';
-import { submitPopupLead, generateAICopy, fetchWorkflows } from '../services/api';
+import { submitPopupLead, generateAICopy, fetchWorkflows, sendTestPhaseEmail } from '../services/api';
 import { NavTabId } from './Sidebar';
 
 interface SmartPopupsManagerProps {
@@ -62,6 +62,38 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
   const [testingPopup, setTestingPopup] = useState<SmartPopup | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
+
+  // Email Phase Test State
+  const [popupTestEmail, setPopupTestEmail] = useState('');
+  const [popupTestEmailLoading, setPopupTestEmailLoading] = useState(false);
+  const [popupTestFeedback, setPopupTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestPopupEmail = async () => {
+    if (!popupTestEmail || !popupTestEmail.includes('@')) {
+      setPopupTestFeedback({ success: false, message: 'Digite um e-mail válido para receber o teste.' });
+      return;
+    }
+    setPopupTestEmailLoading(true);
+    setPopupTestFeedback({ success: true, message: 'Disparando e-mail de teste...' });
+    try {
+      const res = await sendTestPhaseEmail({
+        companyId: currentCompany.id,
+        targetEmail: popupTestEmail.trim(),
+        subject: formData.emailSubject || `Confirmação de Contato - ${formData.name || currentCompany.name}`,
+        body: formData.emailBody || 'Olá {nome}!\n\nRecebemos suas informações enviadas pelo nosso site e entraremos em contato em breve.\n\nAtenciosamente,\n{empresa}',
+        phaseName: `Pop-up: ${formData.name || 'Captura'}`
+      });
+      if (res.success) {
+        setPopupTestFeedback({ success: true, message: `✅ E-mail enviado com sucesso para ${popupTestEmail}!` });
+      } else {
+        setPopupTestFeedback({ success: false, message: `❌ ${res.error || 'Falha ao enviar e-mail.'}` });
+      }
+    } catch (err: any) {
+      setPopupTestFeedback({ success: false, message: `❌ Erro: ${err.message}` });
+    } finally {
+      setPopupTestEmailLoading(false);
+    }
+  };
 
   // Form State for Create/Edit
   const [formData, setFormData] = useState<Partial<SmartPopup>>({
@@ -1255,6 +1287,47 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
                               <p className="text-[10px] text-blue-700">
                                 ✉️ O e-mail é enviado imediatamente se o campo de e-mail estiver habilitado e preenchido no pop-up.
                               </p>
+
+                              {/* Direct Test Bar for This Pop-up Email */}
+                              <div className="pt-2 border-t border-blue-200/60 bg-blue-100/60 p-2.5 rounded-lg space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                                    <Mail className="w-3.5 h-3.5 text-blue-600" />
+                                    Testar Disparo Deste E-mail (Fase de Pop-up)
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="email"
+                                    placeholder="Digite seu e-mail para receber este teste..."
+                                    value={popupTestEmail}
+                                    onChange={e => setPopupTestEmail(e.target.value)}
+                                    className="flex-1 bg-white border border-blue-300 rounded px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleTestPopupEmail}
+                                    disabled={popupTestEmailLoading}
+                                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold px-3 py-1 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                                  >
+                                    {popupTestEmailLoading ? (
+                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Send className="w-3 h-3" />
+                                    )}
+                                    <span>Testar Fase</span>
+                                  </button>
+                                </div>
+                                {popupTestFeedback && (
+                                  <div className={`text-[11px] p-1.5 rounded font-medium ${
+                                    popupTestFeedback.success 
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                      : 'bg-red-100 text-red-800 border border-red-200'
+                                  }`}>
+                                    {popupTestFeedback.message}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

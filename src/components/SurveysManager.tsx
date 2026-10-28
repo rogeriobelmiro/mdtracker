@@ -37,7 +37,8 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
-  FileText
+  FileText,
+  Send
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -59,7 +60,8 @@ import {
   updateSurvey, 
   deleteSurvey, 
   fetchSurveyResponses,
-  fetchWorkflows
+  fetchWorkflows,
+  sendTestPhaseEmail
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -81,6 +83,38 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
   const [editingSurvey, setEditingSurvey] = useState<Partial<Survey> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState<number | null>(null);
+
+  // Email Marketing Phase Test State
+  const [surveyTestEmail, setSurveyTestEmail] = useState('');
+  const [surveyTestEmailLoading, setSurveyTestEmailLoading] = useState(false);
+  const [surveyTestFeedback, setSurveyTestFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestSurveyEmail = async () => {
+    if (!surveyTestEmail || !surveyTestEmail.includes('@')) {
+      setSurveyTestFeedback({ success: false, message: 'Digite um e-mail válido para receber o teste.' });
+      return;
+    }
+    setSurveyTestEmailLoading(true);
+    setSurveyTestFeedback({ success: true, message: 'Disparando e-mail de teste...' });
+    try {
+      const res = await sendTestPhaseEmail({
+        companyId: currentCompany.id,
+        targetEmail: surveyTestEmail.trim(),
+        subject: editingSurvey?.emailSubject || `Obrigado pela sua resposta - ${editingSurvey?.title || currentCompany.name}`,
+        body: editingSurvey?.emailBody || 'Olá {nome}!\n\nMuito obrigado por responder à nossa pesquisa "{empresa}". Suas respostas foram salvas e nossa equipe entrará em contato em breve.\n\nAtenciosamente,\n{empresa}',
+        phaseName: `Pesquisa: ${editingSurvey?.title || 'Qualificação'}`
+      });
+      if (res.success) {
+        setSurveyTestFeedback({ success: true, message: `✅ E-mail enviado com sucesso para ${surveyTestEmail}!` });
+      } else {
+        setSurveyTestFeedback({ success: false, message: `❌ ${res.error || 'Falha ao enviar e-mail.'}` });
+      }
+    } catch (err: any) {
+      setSurveyTestFeedback({ success: false, message: `❌ Erro: ${err.message}` });
+    } finally {
+      setSurveyTestEmailLoading(false);
+    }
+  };
 
   // Marketing Workflows for Survey Automation
   const [availableWorkflows, setAvailableWorkflows] = useState<MarketingWorkflow[]>([]);
@@ -1135,6 +1169,47 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
                       <p className="text-[10px] text-blue-700">
                         ✉️ O e-mail é enviado imediatamente para o endereço de e-mail informado na questão de contato.
                       </p>
+
+                      {/* Direct Test Bar for This Survey Email */}
+                      <div className="pt-2 border-t border-blue-200/60 bg-blue-100/60 p-2.5 rounded-lg space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-blue-600" />
+                            Testar Disparo Deste E-mail (Fase de Pesquisa)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="email"
+                            placeholder="Digite seu e-mail para receber este teste..."
+                            value={surveyTestEmail}
+                            onChange={e => setSurveyTestEmail(e.target.value)}
+                            className="flex-1 bg-white border border-blue-300 rounded px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleTestSurveyEmail}
+                            disabled={surveyTestEmailLoading}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold px-3 py-1 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                          >
+                            {surveyTestEmailLoading ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Send className="w-3 h-3" />
+                            )}
+                            <span>Testar Fase</span>
+                          </button>
+                        </div>
+                        {surveyTestFeedback && (
+                          <div className={`text-[11px] p-1.5 rounded font-medium ${
+                            surveyTestFeedback.success 
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                              : 'bg-red-100 text-red-800 border border-red-200'
+                          }`}>
+                            {surveyTestFeedback.message}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -7291,6 +7291,21 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
         }
 
         const cleanDest = effectiveChannel === 'email' ? targetEmail : targetPhone;
+
+        if (effectiveChannel === 'email' && targetEmail) {
+            const companyId = camp?.company_id || camp?.companyId || 'comp-alfa';
+            const subject = camp?.email_subject || camp?.emailSubject || `[TESTE] ${name}`;
+            const body = camp?.email_body_html || camp?.emailBodyHtml || camp?.message || 'Olá {nome}, este é um e-mail de teste da campanha.';
+            await sendMarketingEmail({
+                to: targetEmail,
+                subject,
+                body,
+                companyId,
+                companyName: name,
+                lead: { name: 'Lead de Teste', email: targetEmail }
+            });
+        }
+
         res.json({
             success: true,
             message: `Disparo de teste de ${effectiveChannel.toUpperCase()} processado com sucesso para "${cleanDest}".`,
@@ -11671,6 +11686,61 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
             success: false,
             error: err.message || 'Falha ao conectar ou autenticar no servidor SMTP. Verifique host, porta, usuário e senha.'
         });
+    }
+});
+
+// Test Phase Email Dispatch (used in Workflows, Landing Pages, Pop-ups and Surveys)
+app.post('/api/email/test-send', async (req: Request, res: Response) => {
+    try {
+        const { companyId, targetEmail, subject, body, phaseName } = req.body;
+        if (!targetEmail || !targetEmail.includes('@')) {
+            return res.status(400).json({ success: false, error: 'Por favor, informe um endereço de e-mail válido para o teste.' });
+        }
+
+        const effectiveCompanyId = companyId || 'comp-alfa';
+        let companyName = 'MDTracker';
+        try {
+            const { data: comp } = await supabase.from('companies').select('name').eq('id', effectiveCompanyId).maybeSingle();
+            if (comp?.name) companyName = comp.name;
+        } catch {}
+
+        const testLead = {
+            id: 'lead-test-simulated',
+            name: 'Cliente de Teste',
+            email: targetEmail,
+            phone: '(11) 99999-8888',
+            productName: 'Plano / Produto Demonstração',
+            source: 'Teste de E-mail Marketing'
+        };
+
+        const finalSubject = subject ? `[TESTE - ${phaseName || 'Fase'}] ${subject}` : `[TESTE] E-mail Marketing - ${companyName}`;
+        const finalBody = body || 'Olá {nome}!\n\nEste é um e-mail de teste para validação desta fase da régua de marketing.\n\nAtenciosamente,\n{empresa}';
+
+        const result = await sendMarketingEmail({
+            to: targetEmail,
+            subject: finalSubject,
+            body: finalBody,
+            companyId: effectiveCompanyId,
+            companyName,
+            lead: testLead,
+            context: { formName: phaseName || 'Fase de E-mail Marketing' }
+        });
+
+        if (result.success) {
+            res.json({
+                success: true,
+                messageId: result.messageId,
+                message: `E-mail de teste da fase "${phaseName || 'E-mail Marketing'}" disparado com sucesso para ${targetEmail}!`
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error || 'Falha ao disparar e-mail de teste. Verifique as configurações de SMTP em Integrações.'
+            });
+        }
+    } catch (err: any) {
+        console.error('[test-send-phase-email] Erro:', err);
+        res.status(500).json({ success: false, error: err.message || 'Erro interno ao processar disparo de teste.' });
     }
 });
 
