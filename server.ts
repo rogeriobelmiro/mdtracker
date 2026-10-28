@@ -7790,7 +7790,7 @@ app.get('/api/smart-lists', async (req: Request, res: Response) => {
         let lists = inMemorySmartLists.filter(l => l.company_id === companyId);
         try {
             const { data } = await supabase.from('smart_lists').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
-            if (data && data.length > 0) {
+            if (Array.isArray(data)) {
                 lists = data;
             }
         } catch {}
@@ -7821,7 +7821,7 @@ app.post('/api/smart-lists', async (req: Request, res: Response) => {
     try {
         const body = req.body;
         const newList = {
-            id: 'list-' + Date.now(),
+            id: 'list-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
             company_id: body.companyId || 'comp-alfa',
             name: body.name || 'Nova Lista Inteligente',
             description: body.description || '',

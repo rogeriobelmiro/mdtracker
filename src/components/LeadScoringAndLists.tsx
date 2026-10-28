@@ -153,10 +153,12 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
             return leadScore === Number(val);
           }
           case 'qualificationLevel': {
-            return String(lead.qualificationLevel || 'Lead').toLowerCase() === String(val).toLowerCase();
+            const matches = String(lead.qualificationLevel || 'Lead').toLowerCase() === String(val).toLowerCase();
+            return op === 'not_equals' ? !matches : matches;
           }
           case 'stage': {
-            return String(lead.stage || '').toLowerCase() === String(val).toLowerCase();
+            const matches = String(lead.stage || '').toLowerCase() === String(val).toLowerCase();
+            return op === 'not_equals' ? !matches : matches;
           }
           case 'utmSource': {
             const src = (lead.utmSource || lead.source || '').toLowerCase();
@@ -201,6 +203,73 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
       setListConditions([{ field: 'score', operator: 'greater_than', value: 40 }]);
     }
     setIsListModalOpen(true);
+  };
+
+  // Apply Quick Template in Modal
+  const handleApplyTemplate = (tmpl: {
+    name: string;
+    description: string;
+    color: string;
+    matchType: 'all' | 'any';
+    conditions: SmartListCondition[];
+  }) => {
+    setListName(tmpl.name);
+    setListDescription(tmpl.description);
+    setListColor(tmpl.color);
+    setListMatchType(tmpl.matchType);
+    setListConditions(tmpl.conditions);
+  };
+
+  // Generate 4 Default Recommended Smart Lists in 1 Click
+  const handleGenerateDefaultLists = async () => {
+    setIsSavingList(true);
+    try {
+      const companyId = currentCompany?.id || 'comp-alfa';
+      const defaults = [
+        {
+          companyId,
+          name: '🔥 Leads Quentes (SQL - Score ≥ 70)',
+          description: 'Leads prontos para abordagem comercial com máxima pontuação de engajamento.',
+          color: '#ef4444',
+          matchType: 'all' as const,
+          conditions: [{ field: 'score' as const, operator: 'greater_than' as const, value: scoringConfig.sqlThreshold || 70 }]
+        },
+        {
+          companyId,
+          name: '⭐ Leads Qualificados (MQL - Score 40 a 69)',
+          description: 'Leads qualificados para campanhas de nutrição e aceleração no funil.',
+          color: '#8b5cf6',
+          matchType: 'all' as const,
+          conditions: [
+            { field: 'score' as const, operator: 'greater_than' as const, value: scoringConfig.mqlThreshold || 40 },
+            { field: 'score' as const, operator: 'less_than' as const, value: (scoringConfig.sqlThreshold || 70) - 1 }
+          ]
+        },
+        {
+          companyId,
+          name: '💬 Leads com WhatsApp Válido',
+          description: 'Contatos higienizados com telefone cadastrado para disparos de WhatsApp Marketing.',
+          color: '#10b981',
+          matchType: 'all' as const,
+          conditions: [{ field: 'hasPhone' as const, operator: 'is_true' as const, value: true }]
+        },
+        {
+          companyId,
+          name: '🎯 Leads em Negociação no CRM',
+          description: 'Oportunidades ativas na etapa de negociação para acompanhamento pelo time de vendas.',
+          color: '#f59e0b',
+          matchType: 'all' as const,
+          conditions: [{ field: 'stage' as const, operator: 'equals' as const, value: 'Em Negociação' }]
+        }
+      ];
+
+      const createdLists = await Promise.all(defaults.map(d => createSmartList(d)));
+      setSmartLists(createdLists);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao gerar listas recomendadas');
+    } finally {
+      setIsSavingList(false);
+    }
   };
 
   // Save Smart List
@@ -470,100 +539,205 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
       {/* TAB 1: LISTAS INTELIGENTES */}
       {activeTab === 'smart_lists' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {smartLists.map(list => {
-              const liveCount = filterLeadsByConditions(leads, list.conditions, list.matchType).length;
-              const isSelected = selectedListToView?.id === list.id;
+          {smartLists.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 text-center max-w-3xl mx-auto shadow-sm space-y-6">
+              <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+                <Sparkles className="w-8 h-8 text-blue-600 animate-pulse" />
+              </div>
 
-              return (
-                <div
-                  key={list.id}
-                  className={`bg-white dark:bg-slate-900 border rounded-3xl p-6 shadow-sm hover:shadow-md transition space-y-4 flex flex-col justify-between ${
-                    isSelected ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200 dark:border-slate-800'
-                  }`}
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                  Crie suas Primeiras Listas Inteligentes de Segmentação
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
+                  Segmentação dinâmica estilo RD Station. Crie listas dinâmicas com regras de Lead Scoring (MQL/SQL), canais de aquisição e dados de contato para disparos de WhatsApp e atendimento prioritário.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={handleGenerateDefaultLists}
+                  disabled={isSavingList}
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-6 py-3 rounded-2xl transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 text-sm disabled:opacity-50 active:scale-95 cursor-pointer"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div 
-                          className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" 
-                          style={{ backgroundColor: list.color || '#2563eb' }} 
-                        />
-                        <h4 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
-                          {list.name}
-                        </h4>
-                      </div>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>{isSavingList ? 'Gerando Listas...' : '⚡ Gerar 4 Listas Inteligentes com 1 Clique'}</span>
+                </button>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenListModal(list)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                          title="Editar lista"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteList(list.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
-                          title="Excluir lista"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                <button
+                  onClick={() => handleOpenListModal()}
+                  className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold px-6 py-3 rounded-2xl transition flex items-center justify-center gap-2 text-sm border border-slate-200 dark:border-slate-700 active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Criar Lista Personalizada</span>
+                </button>
+              </div>
+
+              {/* Previews / Templates */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  Exemplos de Listas Inteligentes Recomendadas:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">🔥 Leads Quentes (SQL)</p>
+                      <p className="text-[10px] text-slate-400">Score ≥ {scoringConfig.sqlThreshold || 70} pontos</p>
                     </div>
-
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed min-h-[36px]">
-                      {list.description || 'Segmentação dinâmica baseada em regras comportamentais.'}
-                    </p>
-
-                    {/* Filter Tags */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {list.conditions.map((cond, idx) => (
-                        <span 
-                          key={idx}
-                          className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700"
-                        >
-                          {cond.field} {cond.operator} {String(cond.value)}
-                        </span>
-                      ))}
-                    </div>
+                    <span className="text-xs font-mono font-bold text-red-500 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-md">
+                      {sqlCount} leads
+                    </span>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Alcance Atual</span>
-                      <span className="text-base font-black text-slate-900 dark:text-white font-mono">
-                        {liveCount} {liveCount === 1 ? 'lead' : 'leads'}
-                      </span>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">⭐ Leads Qualificados (MQL)</p>
+                      <p className="text-[10px] text-slate-400">Score entre {scoringConfig.mqlThreshold || 40} e {(scoringConfig.sqlThreshold || 70) - 1} pts</p>
                     </div>
+                    <span className="text-xs font-mono font-bold text-purple-500 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.5 rounded-md">
+                      {mqlCount} leads
+                    </span>
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedListToView(isSelected ? null : list);
-                          setActiveTab('leads_ranking');
-                        }}
-                        className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1"
-                      >
-                        Ver Leads
-                      </button>
-
-                      {onNavigateToTab && (
-                        <button
-                          onClick={() => onNavigateToTab('broadcast')}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1"
-                          title="Criar disparo para esta lista"
-                        >
-                          <Send className="w-3 h-3" />
-                          Disparar
-                        </button>
-                      )}
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">💬 Leads com WhatsApp Válido</p>
+                      <p className="text-[10px] text-slate-400">Telefone pronto para disparo</p>
                     </div>
+                    <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                      {leads.filter(l => Boolean(l.phone && l.phone.replace(/\D/g, '').length >= 8)).length} leads
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">🎯 Leads em Negociação</p>
+                      <p className="text-[10px] text-slate-400">Etapa 'Em Negociação' no CRM</p>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-amber-500 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md">
+                      {leads.filter(l => (l.stage || '').toLowerCase() === 'em negociação').length} leads
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    Suas Listas Inteligentes ({smartLists.length})
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Segmentações dinâmicas atualizadas em tempo real conforme o comportamento dos leads.
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleOpenListModal()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Nova Lista Inteligente
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {smartLists.map(list => {
+                  const liveCount = filterLeadsByConditions(leads, list.conditions, list.matchType).length;
+                  const isSelected = selectedListToView?.id === list.id;
+
+                  return (
+                    <div
+                      key={list.id}
+                      className={`bg-white dark:bg-slate-900 border rounded-3xl p-6 shadow-sm hover:shadow-md transition space-y-4 flex flex-col justify-between ${
+                        isSelected ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" 
+                              style={{ backgroundColor: list.color || '#2563eb' }} 
+                            />
+                            <h4 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                              {list.name}
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenListModal(list)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Editar lista"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteList(list.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
+                              title="Excluir lista"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed min-h-[36px]">
+                          {list.description || 'Segmentação dinâmica baseada em regras comportamentais.'}
+                        </p>
+
+                        {/* Filter Tags */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {list.conditions.map((cond, idx) => (
+                            <span 
+                              key={idx}
+                              className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700"
+                            >
+                              {cond.field} {cond.operator} {String(cond.value)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Alcance Atual</span>
+                          <span className="text-base font-black text-slate-900 dark:text-white font-mono">
+                            {liveCount} {liveCount === 1 ? 'lead' : 'leads'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedListToView(isSelected ? null : list);
+                              setActiveTab('leads_ranking');
+                            }}
+                            className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            Ver Leads
+                          </button>
+
+                          {onNavigateToTab && (
+                            <button
+                              onClick={() => onNavigateToTab('broadcast')}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1 cursor-pointer"
+                              title="Criar disparo para esta lista"
+                            >
+                              <Send className="w-3 h-3" />
+                              Disparar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -862,6 +1036,57 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
             </div>
 
             <div className="space-y-4">
+              {/* Quick Templates Bar in Modal */}
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  ⚡ Modelos Rápidos de Segmentação
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    {
+                      name: '🔥 Leads Quentes (SQL - Score ≥ 70)',
+                      description: 'Leads prontos para abordagem comercial com máxima pontuação de engajamento.',
+                      color: '#ef4444',
+                      matchType: 'all' as const,
+                      conditions: [{ field: 'score' as const, operator: 'greater_than' as const, value: scoringConfig.sqlThreshold || 70 }]
+                    },
+                    {
+                      name: '⭐ Leads Qualificados (MQL - Score 40 a 69)',
+                      description: 'Leads qualificados para campanhas de nutrição e aceleração no funil.',
+                      color: '#8b5cf6',
+                      matchType: 'all' as const,
+                      conditions: [
+                        { field: 'score' as const, operator: 'greater_than' as const, value: scoringConfig.mqlThreshold || 40 },
+                        { field: 'score' as const, operator: 'less_than' as const, value: (scoringConfig.sqlThreshold || 70) - 1 }
+                      ]
+                    },
+                    {
+                      name: '💬 Leads com WhatsApp Válido',
+                      description: 'Contatos higienizados com telefone cadastrado para disparos de WhatsApp Marketing.',
+                      color: '#10b981',
+                      matchType: 'all' as const,
+                      conditions: [{ field: 'hasPhone' as const, operator: 'is_true' as const, value: true }]
+                    },
+                    {
+                      name: '🎯 Leads em Negociação no CRM',
+                      description: 'Oportunidades ativas na etapa de negociação para acompanhamento pelo time de vendas.',
+                      color: '#f59e0b',
+                      matchType: 'all' as const,
+                      conditions: [{ field: 'stage' as const, operator: 'equals' as const, value: 'Em Negociação' }]
+                    }
+                  ].map((tmpl, tIdx) => (
+                    <button
+                      key={tIdx}
+                      type="button"
+                      onClick={() => handleApplyTemplate(tmpl)}
+                      className="text-[11px] font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-400 transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                    >
+                      <span>{tmpl.name.split(' (')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Nome da Lista *
@@ -945,8 +1170,17 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                     >
                       <select
                         value={cond.field}
-                        onChange={(e) => handleUpdateCondition(idx, { field: e.target.value as any })}
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none flex-1"
+                        onChange={(e) => {
+                          const f = e.target.value as any;
+                          let defaultVal: any = 40;
+                          let defaultOp: any = 'greater_than';
+                          if (f === 'qualificationLevel') { defaultVal = 'SQL'; defaultOp = 'equals'; }
+                          else if (f === 'stage') { defaultVal = 'Em Negociação'; defaultOp = 'equals'; }
+                          else if (f === 'hasPhone' || f === 'hasEmail') { defaultVal = true; defaultOp = 'is_true'; }
+                          else if (f === 'utmSource') { defaultVal = ''; defaultOp = 'contains'; }
+                          handleUpdateCondition(idx, { field: f, operator: defaultOp, value: defaultVal });
+                        }}
+                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none flex-1 min-w-[130px]"
                       >
                         <option value="score">Pontuação Score</option>
                         <option value="qualificationLevel">Nível (SQL / MQL / Lead)</option>
@@ -960,22 +1194,72 @@ export const LeadScoringAndLists: React.FC<LeadScoringAndListsProps> = ({
                       <select
                         value={cond.operator}
                         onChange={(e) => handleUpdateCondition(idx, { operator: e.target.value as any })}
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none w-28"
+                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none w-28 shrink-0"
                       >
-                        <option value="greater_than">Maior ou =</option>
-                        <option value="less_than">Menor ou =</option>
-                        <option value="equals">Igual a</option>
-                        <option value="contains">Contém texto</option>
-                        <option value="is_true">É verdadeiro</option>
+                        {cond.field === 'score' || cond.field === 'minLtv' ? (
+                          <>
+                            <option value="greater_than">Maior ou =</option>
+                            <option value="less_than">Menor ou =</option>
+                            <option value="equals">Igual a</option>
+                          </>
+                        ) : cond.field === 'qualificationLevel' || cond.field === 'stage' ? (
+                          <>
+                            <option value="equals">Igual a</option>
+                            <option value="not_equals">Diferente de</option>
+                          </>
+                        ) : cond.field === 'hasPhone' || cond.field === 'hasEmail' ? (
+                          <>
+                            <option value="is_true">Verificação</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="contains">Contém texto</option>
+                            <option value="equals">Igual a</option>
+                          </>
+                        )}
                       </select>
 
-                      <input
-                        type="text"
-                        value={String(cond.value)}
-                        onChange={(e) => handleUpdateCondition(idx, { value: e.target.value })}
-                        placeholder="Valor..."
-                        className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white w-24 font-mono focus:outline-none"
-                      />
+                      {/* Dynamic Value Input */}
+                      {cond.field === 'qualificationLevel' ? (
+                        <select
+                          value={String(cond.value || 'SQL')}
+                          onChange={(e) => handleUpdateCondition(idx, { value: e.target.value })}
+                          className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none flex-1"
+                        >
+                          <option value="SQL">🔥 SQL (Pronto para Venda)</option>
+                          <option value="MQL">⭐ MQL (Qualificado)</option>
+                          <option value="Lead">🌱 Lead em Nutrição</option>
+                        </select>
+                      ) : cond.field === 'stage' ? (
+                        <select
+                          value={String(cond.value || 'Novo Lead')}
+                          onChange={(e) => handleUpdateCondition(idx, { value: e.target.value })}
+                          className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none flex-1"
+                        >
+                          <option value="Novo Lead">Novo Lead</option>
+                          <option value="Contatado">Contatado</option>
+                          <option value="Em Negociação">Em Negociação</option>
+                          <option value="Convertido">Convertido</option>
+                          <option value="Perdido">Perdido</option>
+                        </select>
+                      ) : cond.field === 'hasPhone' || cond.field === 'hasEmail' ? (
+                        <select
+                          value={String(cond.value)}
+                          onChange={(e) => handleUpdateCondition(idx, { value: e.target.value === 'true' || e.target.value === true })}
+                          className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:outline-none flex-1"
+                        >
+                          <option value="true">Sim (Possui)</option>
+                          <option value="false">Não (Não Possui)</option>
+                        </select>
+                      ) : (
+                        <input
+                          type={cond.field === 'score' || cond.field === 'minLtv' ? 'number' : 'text'}
+                          value={String(cond.value ?? '')}
+                          onChange={(e) => handleUpdateCondition(idx, { value: cond.field === 'score' || cond.field === 'minLtv' ? Number(e.target.value) : e.target.value })}
+                          placeholder="Valor..."
+                          className="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono focus:outline-none flex-1"
+                        />
+                      )}
 
                       <button
                         type="button"
