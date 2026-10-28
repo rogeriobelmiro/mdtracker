@@ -11955,9 +11955,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mt-3">Tudo que você precisa para acelerar seu negócio</h2>
                           </div>
 
-                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <div class="flex flex-wrap justify-center gap-6 items-stretch">
                             ${lp.features.map((feat: any, idx: number) => `
-                              <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
+                              <div class="w-full sm:w-[calc(50%-16px)] lg:w-[calc(33.333%-16px)] max-w-sm p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between">
                                 <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm" style="background-color: ${primaryColor}">
                                   ${idx + 1}
                                 </div>
@@ -12112,9 +12112,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <h2 class="text-3xl font-extrabold tracking-tight mt-3">${b.title || 'Tudo que você precisa para acelerar seu negócio'}</h2>
                             ${b.subtitle ? `<p class="text-sm opacity-80 mt-2">${b.subtitle}</p>` : ''}
                           </div>
-                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <div class="flex flex-wrap justify-center gap-6 items-stretch">
                             ${feats.map((feat: any, idx: number) => `
-                              <div class="p-6 rounded-2xl bg-white/90 border border-slate-200/80 hover:border-blue-400 hover:shadow-xl transition text-slate-800">
+                              <div class="w-full sm:w-[calc(50%-16px)] lg:w-[calc(33.333%-16px)] max-w-sm p-6 rounded-2xl bg-white/90 border border-slate-200/80 hover:border-blue-400 hover:shadow-xl transition text-slate-800 flex flex-col justify-between">
                                 <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm" style="background-color: ${primaryColor}">
                                   ${idx + 1}
                                 </div>
@@ -12135,9 +12135,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                       <section class="py-16 md:py-24 ${bgClass}">
                         <div class="max-w-6xl mx-auto px-4">
                           ${stats.length > 0 ? `
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-16 text-center border-b border-white/10 pb-12">
+                            <div class="flex flex-wrap justify-center items-center gap-8 sm:gap-14 mb-16 text-center border-b border-white/10 pb-12">
                               ${stats.map((s: any) => `
-                                <div>
+                                <div class="min-w-[120px]">
                                   <div class="text-3xl sm:text-4xl font-black text-amber-400 mb-1">${s.value}</div>
                                   <div class="text-xs sm:text-sm opacity-80 font-medium">${s.label}</div>
                                 </div>
@@ -12148,9 +12148,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">${b.title || 'O que dizem os nossos clientes'}</h2>
                             ${b.subtitle ? `<p class="text-sm opacity-80 mt-2">${b.subtitle}</p>` : ''}
                           </div>
-                          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div class="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto">
                             ${testimonials.map((t: any) => `
-                              <div class="p-6 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-md text-white">
+                              <div class="w-full md:w-[calc(50%-16px)] max-w-md p-6 rounded-2xl bg-slate-800/90 border border-slate-700 shadow-md text-white flex flex-col justify-between">
                                 <div class="flex items-center gap-1 text-amber-400 mb-3">
                                   ${'★'.repeat(t.rating || 5)}
                                 </div>
@@ -12182,9 +12182,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <h2 class="text-3xl font-extrabold tracking-tight mt-3">${b.title || 'Escolha o Plano Ideal'}</h2>
                             <p class="opacity-80 mt-2">${b.subtitle || 'Transparência total e sem taxas escondidas'}</p>
                           </div>
-                          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                          <div class="flex flex-wrap justify-center gap-8 items-stretch max-w-5xl mx-auto">
                             ${plans.map((plan: any) => `
-                              <div class="p-6 rounded-2xl border ${plan.highlighted ? 'border-2 border-blue-600 shadow-2xl relative bg-white scale-105' : 'border-slate-200 bg-white shadow-md'} flex flex-col justify-between text-slate-800">
+                              <div class="w-full sm:w-[320px] md:w-[360px] max-w-sm p-6 sm:p-8 rounded-3xl border ${plan.highlighted ? 'border-2 border-blue-600 shadow-2xl relative bg-white scale-105' : 'border-slate-200 bg-white shadow-md'} flex flex-col justify-between text-slate-800">
                                 <div>
                                   ${plan.highlighted ? `<span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">${plan.badge || 'Mais Escolhido'}</span>` : ''}
                                   <h3 class="font-bold text-xl text-slate-900 mb-1">${plan.name}</h3>

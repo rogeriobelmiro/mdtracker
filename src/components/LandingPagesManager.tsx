@@ -6703,17 +6703,19 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     </h2>
                                     {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mt-1">{b.subtitle}</p>}
                                   </div>
-                                  <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                                  <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                                     {feats.map((feat, fIdx) => (
-                                      <div key={feat.id || fIdx} className="p-5 rounded-2xl bg-white/95 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition text-slate-800">
-                                        <div
-                                          className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white mb-3 shadow-xs text-sm"
-                                          style={{ backgroundColor: primaryColor }}
-                                        >
-                                          {fIdx + 1}
+                                      <div key={feat.id || fIdx} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm flex-1 min-w-[240px] p-5 rounded-2xl bg-white/95 border border-slate-200/80 shadow-xs hover:border-blue-400 hover:shadow-md transition text-slate-800 flex flex-col justify-between">
+                                        <div>
+                                          <div
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white mb-3 shadow-xs text-sm"
+                                            style={{ backgroundColor: primaryColor }}
+                                          >
+                                            {fIdx + 1}
+                                          </div>
+                                          <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-1">{feat.title}</h3>
+                                          <p className="text-xs text-slate-600 leading-relaxed">{feat.description}</p>
                                         </div>
-                                        <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-1">{feat.title}</h3>
-                                        <p className="text-xs text-slate-600 leading-relaxed">{feat.description}</p>
                                       </div>
                                     ))}
                                   </div>
@@ -6729,9 +6731,9 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                               <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
                                 <div className="max-w-5xl mx-auto">
                                   {stats.length > 0 && (
-                                    <div className={`grid gap-6 mb-10 text-center border-b ${b.backgroundColor === 'dark' ? 'border-slate-800' : 'border-slate-200'} pb-8 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                                    <div className={`flex flex-wrap justify-center items-center gap-6 sm:gap-10 mb-10 text-center border-b ${b.backgroundColor === 'dark' ? 'border-slate-800' : 'border-slate-200'} pb-8`}>
                                       {stats.map((s, sIdx) => (
-                                        <div key={sIdx}>
+                                        <div key={sIdx} className="min-w-[100px]">
                                           <div className="text-2xl sm:text-3xl font-black text-amber-400 mb-0.5">{s.value}</div>
                                           <div className="text-xs opacity-80 font-medium">{s.label}</div>
                                         </div>
@@ -6742,13 +6744,15 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{b.title || 'O que dizem os nossos clientes'}</h2>
                                     {b.subtitle && <p className="text-xs opacity-80 mt-1">{b.subtitle}</p>}
                                   </div>
-                                  <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                  <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                                     {testimonials.map((t, tIdx) => (
-                                      <div key={t.id || tIdx} className={`p-5 rounded-2xl border shadow-xs ${b.backgroundColor === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-                                        <div className="flex items-center gap-1 text-amber-400 mb-2 text-xs">
-                                          {'★'.repeat(t.rating || 5)}
+                                      <div key={t.id || tIdx} className={`w-full sm:w-[calc(50%-12px)] max-w-md p-5 rounded-2xl border shadow-xs ${b.backgroundColor === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'} flex flex-col justify-between`}>
+                                        <div>
+                                          <div className="flex items-center gap-1 text-amber-400 mb-2 text-xs">
+                                            {'★'.repeat(t.rating || 5)}
+                                          </div>
+                                          <p className="text-xs italic mb-3 opacity-90">"{t.text}"</p>
                                         </div>
-                                        <p className="text-xs italic mb-3 opacity-90">"{t.text}"</p>
                                         <div className="flex items-center gap-2.5">
                                           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs shadow-xs">
                                             {(t.name || 'C').charAt(0)}
@@ -6780,11 +6784,11 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                     </h2>
                                     <p className="text-xs sm:text-sm opacity-80 mt-1">{b.subtitle || 'Transparência total e sem taxas escondidas'}</p>
                                   </div>
-                                  <div className={`grid gap-6 items-stretch ${previewDevice === 'desktop' ? (plans.length === 2 ? 'grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 md:grid-cols-3') : 'grid-cols-1'}`}>
+                                  <div className="flex flex-wrap justify-center gap-6 items-stretch max-w-4xl mx-auto">
                                     {plans.map((plan, pIdx) => (
                                       <div
                                         key={plan.id || pIdx}
-                                        className={`p-6 rounded-2xl border flex flex-col justify-between transition text-slate-800 ${
+                                        className={`w-full sm:w-[320px] max-w-sm p-6 rounded-2xl border flex flex-col justify-between transition text-slate-800 ${
                                           plan.highlighted
                                             ? 'border-2 border-blue-600 shadow-xl relative bg-white sm:-translate-y-2'
                                             : 'border-slate-200 bg-white shadow-xs'
@@ -6981,9 +6985,9 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                               </h2>
                             </div>
 
-                            <div className={`grid gap-4 sm:gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'}`}>
+                            <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
                               {editingPage.features.map((feat, idx) => (
-                                <div key={feat.id || idx} className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition">
+                                <div key={feat.id || idx} className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] max-w-sm flex-1 min-w-[240px] p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between">
                                   <div 
                                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white mb-4 shadow-sm text-sm sm:text-base"
                                     style={{ backgroundColor: primaryColor }}
@@ -7002,9 +7006,9 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                         {editingPage.socialProof?.enabled && ((editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0) || (editingPage.socialProof.testimonials && editingPage.socialProof.testimonials.length > 0)) && (
                           <section className="py-12 md:py-16 px-6 sm:px-10 bg-slate-900 text-white">
                             {editingPage.socialProof.stats && editingPage.socialProof.stats.length > 0 && (
-                              <div className={`grid gap-6 mb-12 text-center border-b border-slate-800 pb-10 ${previewDevice === 'desktop' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                              <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-12 mb-12 text-center border-b border-slate-800 pb-10">
                                 {editingPage.socialProof.stats.map((s, idx) => (
-                                  <div key={idx}>
+                                  <div key={idx} className="min-w-[120px]">
                                     <div className="text-3xl sm:text-4xl font-black text-amber-400 mb-1">{s.value}</div>
                                     <div className="text-xs sm:text-sm text-slate-400 font-medium">{s.label}</div>
                                   </div>
@@ -7017,9 +7021,9 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                 <div className="text-center max-w-xl mx-auto mb-8">
                                   <h2 className="text-xl sm:text-2xl font-bold tracking-tight">O que dizem os nossos clientes</h2>
                                 </div>
-                                <div className={`grid gap-6 ${previewDevice === 'desktop' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                <div className="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto">
                                   {editingPage.socialProof.testimonials.map((t, idx) => (
-                                    <div key={t.id || idx} className="p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md">
+                                    <div key={t.id || idx} className="w-full sm:w-[calc(50%-12px)] max-w-md p-6 rounded-2xl bg-slate-800 border border-slate-700 shadow-md flex flex-col justify-between">
                                       <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
                                         {'★'.repeat(t.rating || 5)}
                                       </div>
