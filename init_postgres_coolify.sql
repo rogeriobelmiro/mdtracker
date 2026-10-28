@@ -684,6 +684,7 @@ CREATE TABLE IF NOT EXISTS public.user_credits (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public.user_credits ADD COLUMN IF NOT EXISTS company_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_user_credits_company ON public.user_credits(company_id);
 
 -- 37. TABELA DE CONTROLE DE ATUALIZAÇÃO
