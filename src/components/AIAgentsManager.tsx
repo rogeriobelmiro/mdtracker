@@ -338,12 +338,21 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
         fetchAIAgents(currentCompany.id),
         fetchAIAgentLogs(currentCompany.id)
       ]);
-      const cleanAgents = (fetchedAgents || []).map(sanitizeAgent);
+      // Garantir blindagem multi-tenant também no cliente: apenas registros da empresa logada
+      const cleanAgents = (fetchedAgents || [])
+        .filter((a: any) => !a.companyId || a.companyId === currentCompany.id)
+        .map(sanitizeAgent);
+      const cleanLogs = (fetchedLogs || []).filter(
+        (l: any) => !l.companyId || l.companyId === currentCompany.id
+      );
       setAgents(cleanAgents);
-      setLogs(fetchedLogs || []);
-      if (cleanAgents.length > 0 && !selectedAgentId) {
+      setLogs(cleanLogs);
+      if (cleanAgents.length > 0) {
         setSelectedAgentId(cleanAgents[0].id);
         setDraftAgent(cleanAgents[0]);
+      } else {
+        setSelectedAgentId(null);
+        setDraftAgent(null);
       }
     } catch (err) {
       console.error('Erro ao carregar agentes:', err);
@@ -353,6 +362,14 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
   };
 
   useEffect(() => {
+    // Ao trocar de empresa, limpar imediatamente estados da empresa anterior (isolamento total)
+    setSelectedAgentId(null);
+    setDraftAgent(null);
+    setSelectedActivityCard(null);
+    setSimConversation([]);
+    setInspectedLog(null);
+    setSimLeadId('');
+    setFilterAgentId('ALL');
     loadAgentsAndLogs();
   }, [currentCompany.id]);
 
@@ -363,9 +380,14 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
     }
   }, [selectedAgentId, agents]);
 
+  // Isolar estritamente os leads apenas da empresa atual
+  const companyLeads = useMemo(() => {
+    return leads.filter(l => !l.companyId || l.companyId === currentCompany.id);
+  }, [leads, currentCompany.id]);
+
   const selectedSimLead = useMemo(() => {
-    return leads.find(l => l.id === simLeadId) || null;
-  }, [leads, simLeadId]);
+    return companyLeads.find(l => l.id === simLeadId) || null;
+  }, [companyLeads, simLeadId]);
 
   // Atividades filtradas para a Central de Atividades (Estilo Hablla)
   const filteredActivities = useMemo(() => {
@@ -411,7 +433,7 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
       await updateAIAgentLog(logItem.id, {
         boardColumn: newCol,
         taskCompleted: optimistic.taskCompleted
-      });
+      }, currentCompany.id);
     } catch {}
   };
 
@@ -426,17 +448,17 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
       setSelectedActivityCard(optimistic);
     }
     try {
-      await updateAIAgentLog(logItem.id, { taskCompleted: nextVal });
+      await updateAIAgentLog(logItem.id, { taskCompleted: nextVal }, currentCompany.id);
     } catch {}
   };
 
-  // Gerar Agente Completo a partir de Texto Livre
+  // Gerar Agente Completo a partir de Texto Livre (Exclusivo da Empresa Atual)
   const handleGenerateFromText = async () => {
     const promptToUse = magicPrompt.trim() || PROMPT_PRESETS[0].prompt;
 
     setIsGeneratingBlueprint(true);
     try {
-      const blueprint = await generateAIAgentBlueprint(promptToUse, currentCompany.id);
+      const blueprint = await generateAIAgentBlueprint(promptToUse, currentCompany.id, currentCompany.name);
       const rawCreated = await createAIAgent({
         ...blueprint,
         companyId: currentCompany.id,
@@ -450,7 +472,7 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
       setShowMagicModal(false);
       setActiveSubTab('builder');
       await alert(
-        `O agente "${created.name}" foi estruturado com objetivo, regras (guardrails) e ferramentas de leitura/ação.`,
+        `O agente "${created.name}" foi estruturado exclusivamente para a empresa "${currentCompany.name}" com objetivo, regras e permissões de CRM isoladas.`,
         'Agente de IA Criado com Sucesso! ✨'
       );
     } catch (err: any) {
@@ -495,11 +517,14 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
     if (!draftAgent) return;
     setIsSaving(true);
     try {
-      const updated = await updateAIAgent(draftAgent.id, draftAgent);
+      const updated = await updateAIAgent(draftAgent.id, {
+        ...draftAgent,
+        companyId: currentCompany.id
+      });
       setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
       await alert({
         title: 'Agente Salvo!',
-        message: `As configurações, objetivo, regras e permissões de "${updated.name}" foram atualizadas.`
+        message: `As configurações, objetivo, regras e permissões de "${updated.name}" foram atualizadas na empresa ${currentCompany.name}.`
       });
     } catch (err: any) {
       await alert({ title: 'Erro ao salvar', message: err.message });
@@ -509,19 +534,19 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
   };
 
   const handleToggleAgentActive = async (agent: AIAgent) => {
-    const updated = await updateAIAgent(agent.id, { ...agent, active: !agent.active });
+    const updated = await updateAIAgent(agent.id, { ...agent, companyId: currentCompany.id, active: !agent.active });
     setAgents(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
 
   const handleDeleteAgent = async (agent: AIAgent) => {
     const ok = await confirm({
       title: 'Excluir Agente de IA',
-      message: `Tem certeza que deseja excluir o agente "${agent.name}"?`,
+      message: `Tem certeza que deseja excluir o agente "${agent.name}" da empresa "${currentCompany.name}"?`,
       confirmText: 'Sim, Excluir',
       cancelText: 'Cancelar'
     });
     if (!ok) return;
-    await deleteAIAgent(agent.id);
+    await deleteAIAgent(agent.id, currentCompany.id);
     const remaining = agents.filter(a => a.id !== agent.id);
     setAgents(remaining);
     if (selectedAgentId === agent.id) {
@@ -752,7 +777,7 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
           agents={agents}
           logs={logs}
           currentCompany={currentCompany}
-          leads={leads}
+          leads={companyLeads}
           selectedAgentId={selectedAgentId}
           onSelectAgent={(id) => setSelectedAgentId(id)}
           onOpenMagicCreator={() => setShowMagicModal(true)}
@@ -761,7 +786,10 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
             setActiveSubTab('builder');
           }}
           onUpdateAgent={async (updatedAgent) => {
-            const saved = await updateAIAgent(updatedAgent.id, updatedAgent);
+            const saved = await updateAIAgent(updatedAgent.id, {
+              ...updatedAgent,
+              companyId: currentCompany.id
+            });
             setAgents(prev => prev.map(a => a.id === saved.id ? sanitizeAgent(saved) : a));
           }}
           onQuickExecuteAgent={async (agentId, promptText, leadId) => {
@@ -1796,7 +1824,7 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
                     className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2"
                   >
                     <option value="">👤 Lead Visitante (Modo Simulação Livre)</option>
-                    {leads.slice(0, 30).map((l) => (
+                    {companyLeads.slice(0, 30).map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.name} — [{l.stage}] ({l.utmSource || l.source || 'Direto'})
                       </option>
@@ -2174,11 +2202,16 @@ export const AIAgentsManager: React.FC<AIAgentsManagerProps> = ({
                   <Wand2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">
-                    Criar Agente de IA Descrevendo em Texto
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900">
+                      Criar Agente de IA Descrevendo em Texto
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
+                      🏢 {currentCompany.name}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500">
-                    Diga qual é o objetivo do agente, o que ele deve buscar e quais regras seguir.
+                    O agente gerado pertencerá exclusivamente à sua empresa e só terá acesso aos seus produtos e leads.
                   </p>
                 </div>
               </div>

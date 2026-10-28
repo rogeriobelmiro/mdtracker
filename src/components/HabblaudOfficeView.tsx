@@ -242,6 +242,27 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
 }) => {
   const storageRoomsKey = `mdtracker_office_rooms_${currentCompany.id}`;
 
+  const getDefaultRoomsForCompany = (compId: string): AIAgentRoom[] => [
+    {
+      id: `room-sdr-${compId.slice(-6)}`,
+      companyId: compId,
+      name: 'Squad SDR & Triagem',
+      slug: 'squad-sdr-qualificacao',
+      color: 'sky',
+      description: 'Sala de recepção e qualificação de leads',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: `room-closer-${compId.slice(-6)}`,
+      companyId: compId,
+      name: 'Squad Closer & Fechamento',
+      slug: 'squad-closer-vendas',
+      color: 'rose',
+      description: 'Sala de negociação, contorno de objeções e checkout',
+      createdAt: new Date().toISOString()
+    }
+  ];
+
   // Salas de trabalho customizáveis (permite criar salas e juntar vários agentes na mesma sala)
   const [rooms, setRooms] = useState<AIAgentRoom[]>(() => {
     try {
@@ -251,26 +272,7 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return [
-      {
-        id: 'room-sdr-aquisi',
-        companyId: currentCompany.id,
-        name: 'Squad SDR & Triagem',
-        slug: 'squad-sdr-qualificacao',
-        color: 'sky',
-        description: 'Sala de recepção e qualificação de leads',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'room-closer-vendas',
-        companyId: currentCompany.id,
-        name: 'Squad Closer & Fechamento',
-        slug: 'squad-closer-vendas',
-        color: 'rose',
-        description: 'Sala de negociação, contorno de objeções e checkout',
-        createdAt: new Date().toISOString()
-      }
-    ];
+    return getDefaultRoomsForCompany(currentCompany.id);
   });
 
   // Vínculo Agente -> Sala (persistido no localStorage e sincronizado com roomId do agente)
@@ -282,6 +284,31 @@ export const HabblaudOfficeView: React.FC<HabblaudOfficeViewProps> = ({
     } catch {}
     return {};
   });
+
+  // Ao alternar empresa, sincronizar salas e vínculos exclusivos daquela empresa
+  useEffect(() => {
+    try {
+      const savedRooms = localStorage.getItem(`mdtracker_office_rooms_${currentCompany.id}`);
+      if (savedRooms) {
+        const parsed = JSON.parse(savedRooms);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setRooms(parsed);
+        } else {
+          setRooms(getDefaultRoomsForCompany(currentCompany.id));
+        }
+      } else {
+        setRooms(getDefaultRoomsForCompany(currentCompany.id));
+      }
+
+      const savedAssign = localStorage.getItem(`mdtracker_office_assignments_${currentCompany.id}`);
+      if (savedAssign) {
+        setAgentRoomMap(JSON.parse(savedAssign));
+      } else {
+        setAgentRoomMap({});
+      }
+    } catch {}
+    setPresenceMap({});
+  }, [currentCompany.id]);
 
   // Garantir que todo agente tenha uma sala atribuída (e se criar agentes novos sem sala, cria uma sala para ele ou aloca)
   useEffect(() => {

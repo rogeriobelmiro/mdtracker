@@ -14388,12 +14388,12 @@ app.get(['/evento/:slugOrPin', '/e/:slugOrPin', '/live/:slugOrPin'], async (req:
 
 // ============================================================================
 // PASSO 10: CRIADOR DE AGENTES DE IA AUTÔNOMOS (Goal-Driven AI Agents Engine)
+// ISOLAMENTO MULTI-TENANT ESTRITO POR EMPRESA (companyId)
 // ============================================================================
 
-let inMemoryAIAgents: any[] = [
+const DEFAULT_AI_AGENT_TEMPLATES = [
     {
-        id: 'agent-sdr-maya',
-        companyId: 'comp-1786498560971',
+        slug: 'agent-sdr-maya',
         name: 'Maya — SDR & Qualificadora',
         roleTitle: 'Agente de Qualificação & Triagem Comercial',
         avatar: '🤖',
@@ -14419,13 +14419,10 @@ let inMemoryAIAgents: any[] = [
         ],
         active: true,
         executionsCount: 48,
-        goalsAchievedCount: 19,
-        createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-        updatedAt: new Date().toISOString()
+        goalsAchievedCount: 19
     },
     {
-        id: 'agent-closer-lucas',
-        companyId: 'comp-1786498560971',
+        slug: 'agent-closer-lucas',
         name: 'Lucas — Closer & Quebra de Objeções',
         roleTitle: 'Especialista em Fechamento & Conversão',
         avatar: '⚡',
@@ -14451,31 +14448,66 @@ let inMemoryAIAgents: any[] = [
         ],
         active: true,
         executionsCount: 31,
-        goalsAchievedCount: 12,
-        createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-        updatedAt: new Date().toISOString()
+        goalsAchievedCount: 12
     }
 ];
 
+let inMemoryAIAgents: any[] = [];
 let inMemoryAIAgentLogs: any[] = [];
+const seededAgentCompanies = new Set<string>();
+const seededLogCompanies = new Set<string>();
+
+function getCompanyDefaultAgents(companyId: string) {
+    if (!companyId) return [];
+    const existing = inMemoryAIAgents.filter(a => a.companyId === companyId);
+    if (existing.length > 0 || seededAgentCompanies.has(companyId)) {
+        return existing;
+    }
+    seededAgentCompanies.add(companyId);
+    const suffix = companyId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-8) || 'tenant';
+    const seeded = DEFAULT_AI_AGENT_TEMPLATES.map((tpl, idx) => ({
+        id: `${tpl.slug}-${suffix}`,
+        companyId,
+        name: tpl.name,
+        roleTitle: tpl.roleTitle,
+        avatar: tpl.avatar,
+        descriptionPrompt: tpl.descriptionPrompt,
+        goal: tpl.goal,
+        personaAndContext: tpl.personaAndContext,
+        rules: [...tpl.rules],
+        autonomyMode: tpl.autonomyMode,
+        triggers: [...tpl.triggers],
+        enabledTools: [...tpl.enabledTools],
+        active: tpl.active,
+        executionsCount: tpl.executionsCount,
+        goalsAchievedCount: tpl.goalsAchievedCount,
+        createdAt: new Date(Date.now() - 86400000 * (7 - idx * 3)).toISOString(),
+        updatedAt: new Date().toISOString()
+    }));
+    inMemoryAIAgents.push(...seeded);
+    return seeded;
+}
 
 function getCompanyDefaultAgentLogs(companyId: string) {
+    if (!companyId) return [];
     const existing = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
-    if (existing.length > 0) return existing;
+    if (existing.length > 0 || seededLogCompanies.has(companyId)) return existing;
+    seededLogCompanies.add(companyId);
 
     const agents = getCompanyDefaultAgents(companyId);
-    const sdr = agents[0] || { id: 'agent-sdr-maya', name: 'Maya — SDR & Qualificadora', avatar: '🤖' };
-    const closer = agents[1] || { id: 'agent-closer-lucas', name: 'Lucas — Closer & Quebra de Objeções', avatar: '⚡' };
+    const sdr = agents[0] || { id: `agent-sdr-maya-${companyId.slice(-6)}`, name: 'Maya — SDR & Qualificadora', avatar: '🤖' };
+    const closer = agents[1] || { id: `agent-closer-lucas-${companyId.slice(-6)}`, name: 'Lucas — Closer & Quebra de Objeções', avatar: '⚡' };
 
     const now = Date.now();
+    const suffix = companyId.replace(/[^a-zA-Z0-9_-]/g, '').slice(-6) || 'tenant';
     const seededLogs = [
         {
-            id: `act-hablla-1-${companyId.slice(-4)}`,
+            id: `act-hablla-1-${suffix}`,
             agentId: sdr.id,
             agentName: sdr.name,
             agentAvatar: sdr.avatar || '🤖',
             companyId,
-            leadId: 'lead-demo-1',
+            leadId: `lead-demo-1-${suffix}`,
             leadName: 'Mariana Costa (Clínica Vida)',
             leadPhone: '(11) 99812-4430',
             leadStage: 'Em Negociação',
@@ -14533,12 +14565,12 @@ function getCompanyDefaultAgentLogs(companyId: string) {
             createdAt: new Date(now - 900000).toISOString()
         },
         {
-            id: `act-hablla-2-${companyId.slice(-4)}`,
+            id: `act-hablla-2-${suffix}`,
             agentId: closer.id,
             agentName: closer.name,
             agentAvatar: closer.avatar || '⚡',
             companyId,
-            leadId: 'lead-demo-2',
+            leadId: `lead-demo-2-${suffix}`,
             leadName: 'Ricardo Almeida (TechSolutions)',
             leadPhone: '(21) 98741-9012',
             leadStage: 'Em Negociação',
@@ -14595,12 +14627,12 @@ function getCompanyDefaultAgentLogs(companyId: string) {
             createdAt: new Date(now - 2400000).toISOString()
         },
         {
-            id: `act-hablla-3-${companyId.slice(-4)}`,
+            id: `act-hablla-3-${suffix}`,
             agentId: closer.id,
             agentName: closer.name,
             agentAvatar: closer.avatar || '⚡',
             companyId,
-            leadId: 'lead-demo-3',
+            leadId: `lead-demo-3-${suffix}`,
             leadName: 'Fernanda Rocha (Grupo Horizonte)',
             leadPhone: '(31) 99104-5581',
             leadStage: 'Contatado',
@@ -14642,12 +14674,12 @@ function getCompanyDefaultAgentLogs(companyId: string) {
             createdAt: new Date(now - 5400000).toISOString()
         },
         {
-            id: `act-hablla-4-${companyId.slice(-4)}`,
+            id: `act-hablla-4-${suffix}`,
             agentId: sdr.id,
             agentName: sdr.name,
             agentAvatar: sdr.avatar || '🤖',
             companyId,
-            leadId: 'lead-demo-4',
+            leadId: `lead-demo-4-${suffix}`,
             leadName: 'Carlos Eduardo Mendes',
             leadPhone: '(41) 99652-1190',
             leadStage: 'Em Negociação',
@@ -14696,12 +14728,12 @@ function getCompanyDefaultAgentLogs(companyId: string) {
             createdAt: new Date(now - 7200000).toISOString()
         },
         {
-            id: `act-hablla-5-${companyId.slice(-4)}`,
+            id: `act-hablla-5-${suffix}`,
             agentId: sdr.id,
             agentName: sdr.name,
             agentAvatar: sdr.avatar || '🤖',
             companyId,
-            leadId: 'lead-demo-5',
+            leadId: `lead-demo-5-${suffix}`,
             leadName: 'Juliana Paiva (Estética Avançada)',
             leadPhone: '(85) 98821-3304',
             leadStage: 'Novo Lead',
@@ -14748,23 +14780,12 @@ function getCompanyDefaultAgentLogs(companyId: string) {
     return seededLogs;
 }
 
-function getCompanyDefaultAgents(companyId: string) {
-    const existing = inMemoryAIAgents.filter(a => a.companyId === companyId);
-    if (existing.length > 0) return existing;
-    const seeded = inMemoryAIAgents
-        .filter(a => a.companyId === 'comp-1786498560971')
-        .map(a => ({
-            ...a,
-            id: `${a.id}-${companyId.slice(-5)}`,
-            companyId
-        }));
-    inMemoryAIAgents.push(...seeded);
-    return seeded;
-}
-
-// Listar Agentes de IA
+// Listar Agentes de IA (Estritamente isolado por companyId)
 app.get('/api/ai-agents', async (req: Request, res: Response) => {
-    const companyId = (req.query.companyId as string) || 'comp-1786498560971';
+    const companyId = String(req.query.companyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para isolamento multi-empresa.' });
+    }
     try {
         const { data, error } = await supabase
             .from('ai_agents')
@@ -14773,7 +14794,8 @@ app.get('/api/ai-agents', async (req: Request, res: Response) => {
             .order('created_at', { ascending: false });
 
         if (!error && data && data.length > 0) {
-            return res.json(data.map((row: any) => ({
+            seededAgentCompanies.add(companyId);
+            const dbAgents = data.map((row: any) => ({
                 id: row.id,
                 companyId: row.company_id,
                 name: row.name,
@@ -14791,41 +14813,127 @@ app.get('/api/ai-agents', async (req: Request, res: Response) => {
                 goalsAchievedCount: row.goals_achieved_count || 0,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at
-            })));
+            }));
+            // Sincronizar cache em memória apenas desta empresa
+            inMemoryAIAgents = [
+                ...inMemoryAIAgents.filter(a => a.companyId !== companyId),
+                ...dbAgents
+            ];
+            return res.json(dbAgents);
         }
     } catch {}
     return res.json(getCompanyDefaultAgents(companyId));
 });
 
-// Listar Logs de Execução / Central de Atividades dos Agentes
+// Listar Logs de Execução / Central de Atividades dos Agentes (Estritamente isolado por companyId)
 app.get('/api/ai-agents/logs', async (req: Request, res: Response) => {
-    const companyId = (req.query.companyId as string) || 'comp-1786498560971';
+    const companyId = String(req.query.companyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para isolamento multi-empresa.' });
+    }
     const agentId = req.query.agentId as string;
+
+    try {
+        let query = supabase
+            .from('ai_agent_logs')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false })
+            .limit(80);
+        if (agentId) {
+            query = query.eq('agent_id', agentId);
+        }
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+            seededLogCompanies.add(companyId);
+            const dbLogs = data.map((row: any) => ({
+                id: row.id,
+                agentId: row.agent_id,
+                agentName: row.agent_name,
+                agentAvatar: row.agent_avatar || '🤖',
+                companyId: row.company_id,
+                leadId: row.lead_id,
+                leadName: row.lead_name,
+                leadPhone: row.lead_phone,
+                leadStage: row.lead_stage,
+                leadScore: row.lead_score,
+                channel: row.channel || 'whatsapp',
+                trigger: row.trigger_type || 'whatsapp_message',
+                boardColumn: row.board_column || 'analyzing',
+                activityCategory: row.activity_category || 'qualification',
+                taskTitle: row.task_title || '',
+                priority: row.priority || 'medium',
+                dueDate: row.due_date,
+                taskCompleted: Boolean(row.task_completed),
+                durationMs: row.duration_ms || 950,
+                tags: Array.isArray(row.tags) ? row.tags : [],
+                userMessage: row.user_message || '',
+                agentReply: row.agent_reply || '',
+                steps: Array.isArray(row.steps) ? row.steps : [],
+                actionsTaken: Array.isArray(row.actions_taken) ? row.actions_taken : [],
+                status: row.status || 'completed',
+                createdAt: row.created_at
+            }));
+            return res.json(dbLogs);
+        }
+    } catch {}
+
     getCompanyDefaultAgentLogs(companyId);
     let logs = inMemoryAIAgentLogs.filter(l => l.companyId === companyId);
     if (agentId) logs = logs.filter(l => l.agentId === agentId);
     res.json(logs.slice(0, 80));
 });
 
-// Atualizar Card/Tarefa na Central de Atividades dos Agentes (Estilo Hablla)
+// Atualizar Card/Tarefa na Central de Atividades dos Agentes (Estilo Hablla - Isolado por companyId)
 app.put('/api/ai-agents/logs/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const body = req.body || {};
-    const idx = inMemoryAIAgentLogs.findIndex(l => l.id === id);
-    if (idx < 0) {
-        return res.status(404).json({ error: 'Atividade não encontrada' });
+    const companyId = String(body.companyId || req.query.companyId || '').trim();
+
+    const idx = inMemoryAIAgentLogs.findIndex(l => l.id === id && (!companyId || l.companyId === companyId));
+    if (idx >= 0) {
+        inMemoryAIAgentLogs[idx] = {
+            ...inMemoryAIAgentLogs[idx],
+            ...body,
+            companyId: inMemoryAIAgentLogs[idx].companyId,
+            id
+        };
     }
-    inMemoryAIAgentLogs[idx] = {
-        ...inMemoryAIAgentLogs[idx],
-        ...body,
-        id
-    };
+
+    if (companyId) {
+        try {
+            const updatePayload: Record<string, any> = {};
+            if (body.boardColumn !== undefined) updatePayload.board_column = body.boardColumn;
+            if (body.taskCompleted !== undefined) updatePayload.task_completed = body.taskCompleted;
+            if (body.priority !== undefined) updatePayload.priority = body.priority;
+            if (body.taskTitle !== undefined) updatePayload.task_title = body.taskTitle;
+            if (Object.keys(updatePayload).length > 0) {
+                await supabase
+                    .from('ai_agent_logs')
+                    .update(updatePayload)
+                    .eq('id', id)
+                    .eq('company_id', companyId);
+            }
+        } catch {}
+    }
+
+    if (idx < 0) {
+        return res.status(404).json({ error: 'Atividade não encontrada para esta empresa.' });
+    }
     res.json(inMemoryAIAgentLogs[idx]);
 });
 
-// Criar Novo Agente de IA
+// Criar Novo Agente de IA (Estritamente vinculado ao companyId da empresa autenticada)
 app.post('/api/ai-agents', async (req: Request, res: Response) => {
     const body = req.body || {};
+    const companyId = String(body.companyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para criar um agente.' });
+    }
+
+    // Garantir que os defaults da empresa já foram inicializados antes de adicionar o novo
+    getCompanyDefaultAgents(companyId);
+
     const safeRules = Array.isArray(body.rules)
         ? body.rules.map((r: any) => typeof r === 'string' ? r : (r?.rule || r?.text || JSON.stringify(r)))
         : [];
@@ -14837,8 +14945,8 @@ app.post('/api/ai-agents', async (req: Request, res: Response) => {
         : ['get_lead_profile', 'search_products', 'update_lead_stage', 'add_lead_note'];
 
     const newAgent = {
-        id: String(body.id || `agent-${Date.now()}`),
-        companyId: String(body.companyId || 'comp-1786498560971'),
+        id: String(body.id || `agent-${Date.now()}-${companyId.slice(-4)}`),
+        companyId,
         name: String(body.name || 'Novo Agente de IA'),
         roleTitle: String(body.roleTitle || 'Agente Autônomo Especialista'),
         avatar: String(body.avatar || '🤖'),
@@ -14883,15 +14991,34 @@ app.post('/api/ai-agents', async (req: Request, res: Response) => {
     res.json(newAgent);
 });
 
-// Atualizar Agente de IA
+// Atualizar Agente de IA (Valida propriedade por companyId para impedir edição cruzada entre empresas)
 app.put('/api/ai-agents/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const body = req.body || {};
-    const idx = inMemoryAIAgents.findIndex(a => a.id === id);
+    const companyId = String(body.companyId || req.query.companyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para atualizar o agente.' });
+    }
+
+    const idx = inMemoryAIAgents.findIndex(a => a.id === id && a.companyId === companyId);
+    if (idx < 0) {
+        // Verificar se existe para outra empresa -> bloquear acesso cruzado!
+        const belongsToOther = inMemoryAIAgents.some(a => a.id === id && a.companyId !== companyId);
+        if (belongsToOther) {
+            return res.status(403).json({ error: 'Acesso negado: este agente pertence a outra empresa.' });
+        }
+    }
+
+    const safeRules = Array.isArray(body.rules)
+        ? body.rules.map((r: any) => typeof r === 'string' ? r : (r?.rule || r?.text || JSON.stringify(r)))
+        : (idx >= 0 ? inMemoryAIAgents[idx].rules : []);
+
     const updated = {
-        ...(idx >= 0 ? inMemoryAIAgents[idx] : { id }),
+        ...(idx >= 0 ? inMemoryAIAgents[idx] : { id, companyId }),
         ...body,
         id,
+        companyId, // Imutável: nunca permite transferir agente de uma empresa para outra
+        rules: safeRules,
         updatedAt: new Date().toISOString()
     };
     if (idx >= 0) {
@@ -14901,52 +15028,80 @@ app.put('/api/ai-agents/:id', async (req: Request, res: Response) => {
     }
 
     try {
-        await supabase.from('ai_agents').upsert({
-            id: updated.id,
-            company_id: updated.companyId,
-            name: updated.name,
-            role_title: updated.roleTitle,
-            avatar: updated.avatar,
-            description_prompt: updated.descriptionPrompt,
-            goal: updated.goal,
-            persona_and_context: updated.personaAndContext,
-            rules: updated.rules,
-            autonomy_mode: updated.autonomyMode,
-            triggers: updated.triggers,
-            enabled_tools: updated.enabledTools,
-            active: updated.active,
-            executions_count: updated.executionsCount || 0,
-            goals_achieved_count: updated.goalsAchievedCount || 0,
-            updated_at: updated.updatedAt
-        });
+        await supabase
+            .from('ai_agents')
+            .update({
+                name: updated.name,
+                role_title: updated.roleTitle,
+                avatar: updated.avatar,
+                description_prompt: updated.descriptionPrompt,
+                goal: updated.goal,
+                persona_and_context: updated.personaAndContext,
+                rules: updated.rules,
+                autonomy_mode: updated.autonomyMode,
+                triggers: updated.triggers,
+                enabled_tools: updated.enabledTools,
+                active: updated.active,
+                executions_count: updated.executionsCount || 0,
+                goals_achieved_count: updated.goalsAchievedCount || 0,
+                updated_at: updated.updatedAt
+            })
+            .eq('id', updated.id)
+            .eq('company_id', companyId);
     } catch {}
 
     res.json(updated);
 });
 
-// Excluir Agente de IA
+// Excluir Agente de IA (Restrito ao companyId proprietário)
 app.delete('/api/ai-agents/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
-    inMemoryAIAgents = inMemoryAIAgents.filter(a => a.id !== id);
+    const companyId = String(req.query.companyId || req.body?.companyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para excluir o agente.' });
+    }
+
+    const target = inMemoryAIAgents.find(a => a.id === id);
+    if (target && target.companyId !== companyId) {
+        return res.status(403).json({ error: 'Acesso negado: este agente pertence a outra empresa.' });
+    }
+
+    inMemoryAIAgents = inMemoryAIAgents.filter(a => !(a.id === id && a.companyId === companyId));
     try {
-        await supabase.from('ai_agents').delete().eq('id', id);
+        await supabase.from('ai_agents').delete().eq('id', id).eq('company_id', companyId);
     } catch {}
     res.json({ success: true });
 });
 
-// Gerar Blueprint Completo do Agente a partir de Descrição em Texto Livre (Prompt-to-Agent)
+// Gerar Blueprint Completo do Agente a partir de Descrição em Texto Livre (Prompt-to-Agent Isolado por Empresa)
 app.post('/api/ai-agents/generate-blueprint', async (req: Request, res: Response) => {
-    const { description } = req.body || {};
+    const { description, companyId, companyName } = req.body || {};
     const rawText = String(description || '').trim();
     if (!rawText) {
         return res.status(400).json({ error: 'Descreva em texto o que o agente deve fazer.' });
+    }
+
+    // Buscar apenas produtos da própria empresa logada para contextualizar o Agente Criador (sem vazar dados de outras empresas)
+    let tenantProductsSummary = '';
+    if (companyId) {
+        try {
+            const { data: prods } = await supabase
+                .from('products')
+                .select('name, price')
+                .eq('company_id', String(companyId))
+                .limit(10);
+            if (prods && prods.length > 0) {
+                tenantProductsSummary = `\nCatálogo exclusivo da empresa "${companyName || companyId}": ${prods.map((p: any) => `${p.name} (R$ ${Number(p.price || 0).toFixed(2)})`).join(', ')}.`;
+            }
+        } catch {}
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
         try {
             const ai = new GoogleGenAI({ apiKey });
-            const prompt = `Você é um Arquiteto de Agentes de IA Autônomos para CRM e Vendas.
+            const prompt = `Você é o Agente Criador de IA exclusivo da empresa "${companyName || companyId || 'Empresa Atual'}".
+Você NUNCA compartilha nem utiliza dados de outras empresas.${tenantProductsSummary}
 O usuário descreveu o agente que deseja criar com o seguinte texto:
 "${rawText}"
 
@@ -15078,10 +15233,11 @@ Valores válidos para enabledTools: "get_lead_profile", "search_products", "get_
 });
 
 // Executar Ciclo Autônomo do Agente (Perceber -> Buscar Dados -> Checar Regras -> Agir -> Responder)
+// ISOLAMENTO ESTRITO MULTI-EMPRESA: O agente só enxerga e altera dados da própria empresa (companyId)
 app.post('/api/ai-agents/:id/execute', async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
-        companyId = 'comp-1786498560971',
+        companyId: rawCompanyId,
         leadId,
         userMessage = '',
         triggerType = 'whatsapp_message',
@@ -15089,10 +15245,21 @@ app.post('/api/ai-agents/:id/execute', async (req: Request, res: Response) => {
         applyRealActions = true
     } = req.body || {};
 
+    const companyId = String(rawCompanyId || '').trim();
+    if (!companyId) {
+        return res.status(400).json({ error: 'companyId é obrigatório para executar um agente (isolamento multi-empresa).' });
+    }
+
     const agents = getCompanyDefaultAgents(companyId);
-    const agent = inMemoryAIAgents.find(a => a.id === id) || agents[0];
+    // Verificar se o agente solicitado pertence a outra empresa
+    const foreignAgent = inMemoryAIAgents.find(a => a.id === id && a.companyId !== companyId);
+    if (foreignAgent) {
+        return res.status(403).json({ error: 'Acesso negado: este agente pertence a outra empresa.' });
+    }
+
+    const agent = inMemoryAIAgents.find(a => a.id === id && a.companyId === companyId) || agents[0];
     if (!agent) {
-        return res.status(404).json({ error: 'Agente não encontrado' });
+        return res.status(404).json({ error: 'Agente não encontrado nesta empresa.' });
     }
 
     const steps: any[] = [];
@@ -15108,11 +15275,16 @@ app.post('/api/ai-agents/:id/execute', async (req: Request, res: Response) => {
         timestamp: nowIso()
     });
 
-    // Buscar dados reais do CRM de acordo com as ferramentas habilitadas no Agente
+    // Buscar dados reais do CRM estritamente filtrados pelo companyId da empresa atual
     let targetLead: any = null;
     if (leadId) {
         try {
-            const { data } = await supabase.from('leads').select('*').eq('id', leadId).maybeSingle();
+            const { data } = await supabase
+                .from('leads')
+                .select('*')
+                .eq('id', leadId)
+                .eq('company_id', companyId)
+                .maybeSingle();
             if (data) targetLead = mapLeadFromDB(data);
         } catch {}
     }
@@ -15470,6 +15642,37 @@ Responda diretamente ao cliente em português, de forma natural, concisa (estilo
     };
 
     inMemoryAIAgentLogs.unshift(executionLog);
+
+    try {
+        await supabase.from('ai_agent_logs').upsert({
+            id: executionLog.id,
+            company_id: companyId,
+            agent_id: executionLog.agentId,
+            agent_name: executionLog.agentName,
+            agent_avatar: executionLog.agentAvatar,
+            lead_id: executionLog.leadId || null,
+            lead_name: executionLog.leadName,
+            lead_phone: executionLog.leadPhone,
+            lead_stage: executionLog.leadStage,
+            lead_score: executionLog.leadScore,
+            channel: executionLog.channel,
+            trigger_type: executionLog.trigger,
+            board_column: executionLog.boardColumn,
+            activity_category: executionLog.activityCategory,
+            task_title: executionLog.taskTitle,
+            priority: executionLog.priority,
+            due_date: executionLog.dueDate,
+            task_completed: executionLog.taskCompleted,
+            duration_ms: executionLog.durationMs,
+            tags: executionLog.tags,
+            user_message: executionLog.userMessage,
+            agent_reply: executionLog.agentReply,
+            steps: executionLog.steps,
+            actions_taken: executionLog.actionsTaken,
+            status: executionLog.status,
+            created_at: executionLog.createdAt
+        });
+    } catch {}
 
     res.json({
         executionLog,

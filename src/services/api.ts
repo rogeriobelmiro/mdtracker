@@ -1352,16 +1352,17 @@ export async function updateAIAgent(id: string, data: Partial<AIAgent>): Promise
   return res.json();
 }
 
-export async function deleteAIAgent(id: string): Promise<void> {
-  const res = await fetch(`/api/ai-agents/${id}`, { method: 'DELETE' });
+export async function deleteAIAgent(id: string, companyId?: string): Promise<void> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/ai-agents/${id}${query}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Erro ao excluir agente de IA');
 }
 
-export async function generateAIAgentBlueprint(description: string, companyId?: string): Promise<Partial<AIAgent>> {
+export async function generateAIAgentBlueprint(description: string, companyId?: string, companyName?: string): Promise<Partial<AIAgent>> {
   const res = await fetch('/api/ai-agents/generate-blueprint', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ description, companyId })
+    body: JSON.stringify({ description, companyId, companyName })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -1406,11 +1407,12 @@ export async function fetchAIAgentLogs(companyId?: string, agentId?: string): Pr
   return res.json();
 }
 
-export async function updateAIAgentLog(logId: string, data: Partial<AIAgentExecutionLog>): Promise<AIAgentExecutionLog> {
-  const res = await fetch(`/api/ai-agents/logs/${logId}`, {
+export async function updateAIAgentLog(logId: string, data: Partial<AIAgentExecutionLog>, companyId?: string): Promise<AIAgentExecutionLog> {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : '';
+  const res = await fetch(`/api/ai-agents/logs/${logId}${query}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify({ ...data, companyId })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
