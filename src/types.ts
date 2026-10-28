@@ -410,6 +410,13 @@ export interface SmartPopup {
   leadsCount: number;
   createdAt: string;
   updatedAt: string;
+  // Disparos e Automação de Marketing
+  workflowId?: string;
+  autoTriggerWhatsApp?: boolean;
+  whatsappTemplate?: string;
+  autoTriggerEmail?: boolean;
+  emailSubject?: string;
+  emailBody?: string;
 }
 
 export type AICopyType = 'headlines' | 'ctas' | 'email' | 'whatsapp' | 'smart_lists';

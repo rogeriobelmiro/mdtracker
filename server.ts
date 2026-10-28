@@ -728,6 +728,12 @@ const mapPopupToDB = (p: any) => ({
     link_id: p.linkId || null,
     impressions_count: p.impressionsCount || 0,
     leads_count: p.leadsCount || 0,
+    workflow_id: p.workflowId || null,
+    auto_trigger_whatsapp: Boolean(p.autoTriggerWhatsApp),
+    whatsapp_template: p.whatsappTemplate || null,
+    auto_trigger_email: Boolean(p.autoTriggerEmail),
+    email_subject: p.emailSubject || null,
+    email_body: p.emailBody || null,
     created_at: p.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
 });
@@ -764,6 +770,12 @@ const mapPopupFromDB = (db: any) => ({
     linkId: db.link_id || '',
     impressionsCount: db.impressions_count || 0,
     leadsCount: db.leads_count || 0,
+    workflowId: db.workflow_id || db.workflowId || '',
+    autoTriggerWhatsApp: Boolean(db.auto_trigger_whatsapp || db.autoTriggerWhatsApp),
+    whatsappTemplate: db.whatsapp_template || db.whatsappTemplate || '',
+    autoTriggerEmail: Boolean(db.auto_trigger_email || db.autoTriggerEmail),
+    emailSubject: db.email_subject || db.emailSubject || '',
+    emailBody: db.email_body || db.emailBody || '',
     createdAt: db.created_at || new Date().toISOString(),
     updatedAt: db.updated_at || new Date().toISOString()
 });
@@ -3870,6 +3882,49 @@ app.post('/api/popups/:id/submit', async (req: Request, res: Response) => {
         triggerWorkflows('popup_submitted', { companyId, lead: leadObj, context: { popup } }).catch(() => null);
         triggerWorkflows('lead_created', { companyId, lead: leadObj }).catch(() => null);
 
+        // Execute specific bound workflow if chosen
+        if (popup.workflowId) {
+            try {
+                let boundWf: any = null;
+                const { data } = await supabase.from('marketing_workflows').select('*').eq('id', popup.workflowId).maybeSingle();
+                if (data) boundWf = mapWorkflowFromDB(data);
+                if (!boundWf) {
+                    const mem = inMemoryWorkflows.find(w => w.id === popup.workflowId);
+                    if (mem) boundWf = mapWorkflowFromDB(mem);
+                }
+                if (boundWf) {
+                    await executeWorkflowForLead(boundWf, leadObj, companyId, popup.name, { popupId: popup.id });
+                }
+            } catch (wfErr) {
+                console.warn('Erro ao disparar workflow vinculado ao popup:', wfErr);
+            }
+        }
+
+        // Direct WhatsApp marketing trigger
+        if (popup.autoTriggerWhatsApp && sanitizedPhone) {
+            const rawTemplate = popup.whatsappTemplate || `Olá {nome}! Obrigado pelo contato no nosso site através do pop-up. Como podemos te ajudar hoje?`;
+            const formattedMsg = formatWorkflowText(rawTemplate, leadObj, popup.name);
+            try {
+                await sendWhatsAppMessage(companyId, sanitizedPhone, formattedMsg, 'bot');
+            } catch (waErr) {
+                console.warn('Erro ao disparar WhatsApp automático do popup:', waErr);
+            }
+        }
+
+        // Direct Email marketing trigger
+        if (popup.autoTriggerEmail && leadEmail) {
+            const subject = formatWorkflowText(popup.emailSubject || `Obrigado pelo seu contato`, leadObj, popup.name);
+            leadObj.conversion_events = leadObj.conversion_events || [];
+            leadObj.conversion_events.push({
+                id: `evt-email-${Date.now()}`,
+                type: 'email',
+                eventName: 'E-mail Marketing (Pop-up) Disparado',
+                status: 'sucesso',
+                timestamp: new Date().toISOString(),
+                details: `Assunto: "${subject}" enviado para ${leadEmail}`
+            });
+        }
+
         // Prepare redirect / response
         let finalWhatsAppUrl = '';
         if (popup.actionType === 'whatsapp_redirect') {
@@ -5507,6 +5562,49 @@ app.post('/api/landing-pages/:slug/submit', async (req: Request, res: Response) 
             lead: newLead,
             companyId: lp.companyId
         });
+
+        // Execute specific bound workflow if chosen
+        if (lp.form?.workflowId) {
+            try {
+                let boundWf: any = null;
+                const { data } = await supabase.from('marketing_workflows').select('*').eq('id', lp.form.workflowId).maybeSingle();
+                if (data) boundWf = mapWorkflowFromDB(data);
+                if (!boundWf) {
+                    const mem = inMemoryWorkflows.find(w => w.id === lp.form.workflowId);
+                    if (mem) boundWf = mapWorkflowFromDB(mem);
+                }
+                if (boundWf) {
+                    await executeWorkflowForLead(boundWf, newLead, lp.companyId, lp.title, { landingPageId: lp.id, slug: lp.slug });
+                }
+            } catch (wfErr) {
+                console.warn('Erro ao disparar workflow vinculado à landing page:', wfErr);
+            }
+        }
+
+        // Direct WhatsApp marketing trigger
+        if (lp.form?.autoTriggerWhatsApp && leadPhone) {
+            const rawTemplate = lp.form.whatsappTemplate || `Olá {nome}! Recebemos seu cadastro na página "{empresa}". Em breve entraremos em contato com mais informações!`;
+            const formattedMsg = formatWorkflowText(rawTemplate, newLead, lp.title, { slug: lp.slug });
+            try {
+                await sendWhatsAppMessage(lp.companyId, leadPhone, formattedMsg, 'bot');
+            } catch (waErr) {
+                console.warn('Erro ao disparar WhatsApp automático da landing page:', waErr);
+            }
+        }
+
+        // Direct Email marketing trigger
+        if (lp.form?.autoTriggerEmail && leadEmail) {
+            const subject = formatWorkflowText(lp.form.emailSubject || `Confirmação de cadastro - {empresa}`, newLead, lp.title);
+            newLead.conversion_events = newLead.conversion_events || [];
+            newLead.conversion_events.push({
+                id: `evt-email-${Date.now()}`,
+                type: 'email',
+                eventName: 'E-mail Marketing (Landing Page) Disparado',
+                status: 'sucesso',
+                timestamp: new Date().toISOString(),
+                details: `Assunto: "${subject}" enviado para ${leadEmail}`
+            });
+        }
 
         // 6. Build response action
         let whatsappUrl = undefined;

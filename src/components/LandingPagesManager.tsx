@@ -67,7 +67,8 @@ import {
   ThankYouActionType,
   ThankYouActionButton,
   LandingPageThankYouPage,
-  Survey
+  Survey,
+  MarketingWorkflow
 } from '../types';
 
 // Curated High-Converting Stock Images for Non-Technical Users
@@ -157,7 +158,8 @@ import {
   toggleLandingPage, 
   generateLandingPageAI,
   submitLandingPageLead,
-  fetchSurveys
+  fetchSurveys,
+  fetchWorkflows
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { NavTabId } from './Sidebar';
@@ -628,6 +630,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
   const [activeStockGalleryBlockId, setActiveStockGalleryBlockId] = useState<string | null>(null);
   const [availableSurveys, setAvailableSurveys] = useState<Survey[]>([]);
+  const [availableWorkflows, setAvailableWorkflows] = useState<MarketingWorkflow[]>([]);
 
   // Preview Interactive Form State
   const [previewFormValues, setPreviewFormValues] = useState<Record<string, string>>({});
@@ -685,9 +688,17 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     } catch {}
   };
 
+  const loadWorkflows = async () => {
+    try {
+      const data = await fetchWorkflows(currentCompany.id);
+      setAvailableWorkflows(data);
+    } catch {}
+  };
+
   useEffect(() => {
     loadPages();
     loadSurveys();
+    loadWorkflows();
 
     // Check if visitor profile is cached in browser
     try {
@@ -3456,6 +3467,180 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           <option key={stage} value={stage}>{stage}</option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Automação & Disparos de Marketing */}
+                    <div className="pt-3 border-t border-slate-200 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                            Disparos & Automação de Marketing
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            Configure ações de WhatsApp e E-mail disparadas assim que o lead enviar o formulário
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 1. Fluxo de Automação / Workflow */}
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          Fluxo de Nutrição Automático (Workflow RD Style)
+                        </label>
+                        <select
+                          value={editingPage.form?.workflowId || ''}
+                          onChange={e => setEditingPage({
+                            ...editingPage,
+                            form: { ...editingPage.form, workflowId: e.target.value }
+                          })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-xs font-medium text-slate-800"
+                        >
+                          <option value="">🚫 Nenhum fluxo de nutrição vinculado</option>
+                          {availableWorkflows.map(wf => (
+                            <option key={wf.id} value={wf.id}>
+                              ⚡ {wf.name} ({wf.steps?.length || 0} passos {wf.active ? '• Ativo' : '• Pausado'})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-slate-500">
+                          O lead entrará automaticamente no fluxo selecionado, recebendo as sequências de e-mails, WhatsApps e mudanças de estágio configuradas.
+                        </p>
+                      </div>
+
+                      {/* 2. Disparo Imediato de WhatsApp Marketing */}
+                      <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/80 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-emerald-900">
+                            <input
+                              type="checkbox"
+                              checked={editingPage.form?.autoTriggerWhatsApp || false}
+                              onChange={e => setEditingPage({
+                                ...editingPage,
+                                form: { 
+                                  ...editingPage.form, 
+                                  autoTriggerWhatsApp: e.target.checked,
+                                  whatsappTemplate: editingPage.form?.whatsappTemplate || 'Olá {nome}! Recebemos seu cadastro na página "{empresa}". Em instantes nossa equipe entrará em contato com você!'
+                                }
+                              })}
+                              className="w-4 h-4 text-emerald-600 rounded"
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <MessageSquare className="w-4 h-4 text-emerald-600" />
+                              <span>Disparar WhatsApp Marketing Imediato</span>
+                            </div>
+                          </label>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            editingPage.form?.autoTriggerWhatsApp ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {editingPage.form?.autoTriggerWhatsApp ? 'Ativado' : 'Desativado'}
+                          </span>
+                        </div>
+
+                        {editingPage.form?.autoTriggerWhatsApp && (
+                          <div className="space-y-2 pt-1 border-t border-emerald-200/60">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-[11px] font-semibold text-emerald-800">
+                                Mensagem do WhatsApp (via API do Sistema):
+                              </label>
+                              <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200">{'{nome}'}</span>
+                                <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-200">{'{empresa}'}</span>
+                              </div>
+                            </div>
+                            <textarea
+                              rows={3}
+                              value={editingPage.form?.whatsappTemplate || ''}
+                              onChange={e => setEditingPage({
+                                ...editingPage,
+                                form: { ...editingPage.form, whatsappTemplate: e.target.value }
+                              })}
+                              placeholder="Olá {nome}! Obrigado por seu cadastro na página {empresa}..."
+                              className="w-full px-3 py-2 border border-emerald-300 rounded-lg bg-white text-xs text-slate-800 focus:ring-1 focus:ring-emerald-400"
+                            />
+                            <p className="text-[10px] text-emerald-700">
+                              ⚡ Essa mensagem é disparada instantaneamente para o número de WhatsApp preenchido pelo lead.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 3. Disparo Imediato de E-mail Marketing */}
+                      <div className="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-blue-900">
+                            <input
+                              type="checkbox"
+                              checked={editingPage.form?.autoTriggerEmail || false}
+                              onChange={e => setEditingPage({
+                                ...editingPage,
+                                form: { 
+                                  ...editingPage.form, 
+                                  autoTriggerEmail: e.target.checked,
+                                  emailSubject: editingPage.form?.emailSubject || 'Confirmação de Cadastro - {empresa}',
+                                  emailBody: editingPage.form?.emailBody || 'Olá {nome},\n\nRecebemos sua solicitação com sucesso na página "{empresa}".\n\nNossa equipe já está preparando seu material/atendimento.\n\nAtenciosamente,\nEquipe {empresa}'
+                                }
+                              })}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <div className="flex items-center gap-1.5">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              <span>Disparar E-mail Marketing Imediato</span>
+                            </div>
+                          </label>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            editingPage.form?.autoTriggerEmail ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {editingPage.form?.autoTriggerEmail ? 'Ativado' : 'Desativado'}
+                          </span>
+                        </div>
+
+                        {editingPage.form?.autoTriggerEmail && (
+                          <div className="space-y-2 pt-1 border-t border-blue-200/60">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-blue-800 mb-1">
+                                Assunto do E-mail:
+                              </label>
+                              <input
+                                type="text"
+                                value={editingPage.form?.emailSubject || ''}
+                                onChange={e => setEditingPage({
+                                  ...editingPage,
+                                  form: { ...editingPage.form, emailSubject: e.target.value }
+                                })}
+                                placeholder="Ex: Confirmação de Cadastro - {empresa}"
+                                className="w-full px-3 py-1.5 border border-blue-300 rounded-lg bg-white text-xs text-slate-800"
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] font-semibold text-blue-800">
+                                  Conteúdo do E-mail:
+                                </label>
+                                <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                  <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">{'{nome}'}</span>
+                                  <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">{'{empresa}'}</span>
+                                </div>
+                              </div>
+                              <textarea
+                                rows={4}
+                                value={editingPage.form?.emailBody || ''}
+                                onChange={e => setEditingPage({
+                                  ...editingPage,
+                                  form: { ...editingPage.form, emailBody: e.target.value }
+                                })}
+                                placeholder="Olá {nome}, seu cadastro foi confirmado..."
+                                className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-xs text-slate-800 focus:ring-1 focus:ring-blue-400 font-sans"
+                              />
+                            </div>
+                            <p className="text-[10px] text-blue-700">
+                              ✉️ O e-mail de confirmação ou entrega de material será disparado para o endereço fornecido pelo lead.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

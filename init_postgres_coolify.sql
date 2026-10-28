@@ -236,6 +236,12 @@ CREATE TABLE IF NOT EXISTS public.popups (
   link_id TEXT REFERENCES public.campaign_links(id) ON DELETE SET NULL,
   impressions_count INTEGER DEFAULT 0,
   leads_count INTEGER DEFAULT 0,
+  workflow_id TEXT,
+  auto_trigger_whatsapp BOOLEAN DEFAULT FALSE,
+  whatsapp_template TEXT,
+  auto_trigger_email BOOLEAN DEFAULT FALSE,
+  email_subject TEXT,
+  email_body TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
