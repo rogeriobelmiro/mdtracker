@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createPostgresClient, getPgPool } from './postgresAdapter.js';
 
 // URL and Anon Key are picked up from the environment or hardcoded fallback
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://mkeiblxfegxmriyutlbo.supabase.co';
@@ -87,9 +88,26 @@ const resilientFetch: typeof fetch = async (input, init) => {
   return executeTimedFetch(input, init);
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const rawSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     fetch: resilientFetch
   }
 });
 
+const postgresClient = createPostgresClient();
+
+// Seamless proxy: If DATABASE_URL is set (Hostinger/Coolify PostgreSQL), route queries directly to PostgreSQL.
+// Otherwise, transparently route to Supabase.
+export const supabase: any = new Proxy(rawSupabase, {
+  get(target, prop, receiver) {
+    if (prop === 'from') {
+      if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+        return (table: string) => postgresClient.from(table);
+      }
+      return target.from.bind(target);
+    }
+    return Reflect.get(target, prop, receiver);
+  }
+});
+
+export { getPgPool, createPostgresClient };
