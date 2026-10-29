@@ -303,28 +303,25 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
       </section>
 
       {/* ========================================================= */}
-      {/* SECTION: SOBRE O TRACKERMD (trackermd.mudadigital.com.br) */}
+      {/* SECTION: ECOSSISTEMA COMPLETO 360° - TODAS AS 24 FUNCIONALIDADES */}
       {/* ========================================================= */}
-      <section className="py-20 md:py-28 px-4 sm:px-6 relative border-t border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950" id="sobre-trackermd">
-        <div className="max-w-6xl mx-auto space-y-16">
+      <section className="py-20 md:py-28 px-4 sm:px-6 relative border-t border-slate-800/80 bg-slate-950" id="recursos">
+        <div id="sobre-trackermd" className="max-w-7xl mx-auto space-y-12">
           
           {/* Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>O QUE É O TRACKERMD • MÁQUINA DE CONVERSÃO 360°</span>
-            </div>
-
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-              A Única Plataforma Tudo-em-Um que Conecta seus Anúncios, WhatsApp e Vendas
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3.5 py-1.5 rounded-full border border-blue-500/20">
+              ECOSSISTEMA COMPLETO 360°
+            </span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
+              Tudo o que sua Operação Precisa para Vender Mais
             </h2>
-
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Descubra por que líderes de tráfego, agências e infoprodutores abandonaram 4 ferramentas fragmentadas para unificar suas operações no <strong>TrackerMD 360°</strong>: rastreamento CAPI cirúrgico, funil visual ao vivo, automações inteligentes e discador comercial.
+            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+              Construído de ponta a ponta para gestores de tráfego, agências, infoprodutores e times comerciais. Conheça cada um dos <strong>24 módulos integrados</strong> do sistema:
             </p>
           </div>
 
-          {/* Key Stats Bar (como no site oficial trackermd.mudadigital.com.br) */}
+          {/* Official Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-xl">
             <div className="text-center space-y-1 border-r border-slate-800/80 last:border-0">
               <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
@@ -360,204 +357,346 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             </div>
           </div>
 
-          {/* 6 Core Functionalities Grid (from trackermd.mudadigital.com.br) */}
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-800 pb-4">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-400">FUNCIONALIDADES ESSENCIAIS</span>
-                <h3 className="text-xl sm:text-2xl font-black text-white mt-1">
-                  Tudo o que sua Operação Precisa para Escalar em Uma Só Tela
-                </h3>
-              </div>
-              <p className="text-xs text-slate-400 max-w-sm">
-                Desenvolvido para eliminar gargalos e garantir 100% de precisão de dados entre anúncios e vendas.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-              {/* Feature 1 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <Zap className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
-                      01 • Rastreamento
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-blue-300 transition">
-                    Rastreamento CAPI Cirúrgico no WhatsApp
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Blindagem total contra bloqueadores e iOS 14.5. Envie eventos do primeiro clique, do formulário de entrada e do checkout diretamente para a API de Conversões do Meta e Google Ads com dados enriquecidos (FBP, FBC, IP, User-Agent, Nome e WhatsApp).
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-blue-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Substitui o Timtim com Menor Custo</span>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <Layers className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-                      02 • Canvas Visual
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-indigo-300 transition">
-                    Funil Visual 360° Interativo (Estilo Power UP)
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Mapeie toda a jornada do seu cliente em um canvas visual em tempo real. Conecte anúncios, páginas de vendas, pop-ups e links de WhatsApp, acompanhando taxas de conversão, CPL e faturamento gerado em cada anúncio.
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-indigo-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Clareza Total de Toda a Operação</span>
-                </div>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                      03 • Automação
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-emerald-300 transition">
-                    Automação com Prazos & Redistribuição
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Ideal para webinários e lançamentos: defina a data limite do evento. Se o lead entrar 5 dias antes ou 20 minutos antes, o sistema recalcula e redistribui as mensagens automaticamente no tempo que resta para que ninguém fique de fora.
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-emerald-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Salas Cheias e Zero Leads Perdidos</span>
-                </div>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                      04 • Conversão
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-amber-300 transition">
-                    Pop-up de Redirecionamento Seguro com Selos
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Captura obrigatória de Nome e WhatsApp antes de direcionar o lead para o chat oficial, com selos de segurança, verificação e identificação que qualificam o contato e aumentam em até 3x a taxa de resposta dos atendentes.
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-amber-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Leads Salvos Direto no CRM</span>
-                </div>
-              </div>
-
-              {/* Feature 5 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <Send className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
-                      05 • Nuvem 24/7
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-purple-300 transition">
-                    Motor Autônomo em Segundo Plano (Cron)
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Seus e-mails e mensagens de WhatsApp são disparados pontualmente pela nossa infraestrutura de servidores em nuvem, sem depender de deixar nenhuma aba ou computador ligado. Totalmente independente e resiliente.
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-purple-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Funciona 24 Horas sem Computador Aberto</span>
-                </div>
-              </div>
-
-              {/* Feature 6 */}
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center font-black group-hover:scale-110 transition">
-                      <PhoneCall className="w-6 h-6" />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded-full border border-teal-500/20">
-                      06 • Call Center
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-teal-300 transition">
-                    Discador Virtual VoIP & Call Center Integrado
-                  </h4>
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Ligue para os leads diretamente pelo navegador com 1 clique, grave as chamadas comerciais e distribua novas oportunidades automaticamente em fila round-robin entre seus vendedores com métricas de tempo e ligação.
-                  </p>
-                </div>
-                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-teal-400 gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Atendimento Ativo de Alta Eficiência</span>
-                </div>
-              </div>
-
-            </div>
+          {/* Category Filter Tabs */}
+          <div className="flex items-center justify-center gap-2 flex-wrap pb-2">
+            {[
+              { id: 'all', label: 'Todas as Funcionalidades (24)' },
+              { id: 'geral', label: 'Visão Geral & Funil (2)' },
+              { id: 'marketing', label: 'Atração & Marketing (8)' },
+              { id: 'vendas', label: 'Vendas & Atendimento (10)' },
+              { id: 'gestao', label: 'Configurações & Gestão (4)' }
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id as any)}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition shadow-xs ${
+                  selectedCategory === cat.id
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-105'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
 
-          {/* Pillars of Confidence & Direct Action */}
-          <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-blue-500/30 flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="space-y-3 text-center lg:text-left">
-              <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
+          {/* Modules Grid - 24 Modules */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {[
+              // 1. Visão Geral & Funil
+              {
+                id: 'dashboard',
+                category: 'geral',
+                title: 'Dashboard de Métricas',
+                icon: BarChart3,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'MÉTRICAS REAIS',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Painel executivo com gráficos em tempo real de visitantes, conversões, ROI, faturamento e custo por lead (CPL).'
+              },
+              {
+                id: 'visual_funnels',
+                category: 'geral',
+                title: 'Funil Visual 360°',
+                icon: GitBranch,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'POWER UP ⚡',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Canvas drag-and-drop para desenhar a jornada completa do anúncio até o checkout, com taxas de conversão por etapa ao vivo.'
+              },
+
+              // 2. Atração & Marketing
+              {
+                id: 'links',
+                category: 'marketing',
+                title: 'Gerador de Links UTM',
+                icon: LinkIcon,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'RASTREIO TOTAL',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Links inteligentes para WhatsApp com parâmetros UTM automáticos, proteção cloaker anti-bloqueio e rotação de atendentes.'
+              },
+              {
+                id: 'landing_pages',
+                category: 'marketing',
+                title: 'Landing Pages Integradas',
+                icon: Layout,
+                iconColor: 'text-indigo-400 bg-indigo-500/10',
+                badge: 'RD STYLE',
+                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+                description: 'Crie páginas de captura, vendas e obrigado de alta conversão sem programar, com formulários conectados diretamente ao WhatsApp e CRM.'
+              },
+              {
+                id: 'surveys',
+                category: 'marketing',
+                title: 'Pesquisas & NPS (Quiz)',
+                icon: ClipboardList,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'QUALIFICAÇÃO',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Formulários dinâmicos e quizzes para qualificar o perfil dos leads e disparar mensagens automáticas com base nas respostas.'
+              },
+              {
+                id: 'custom_domains',
+                category: 'marketing',
+                title: 'Domínios Próprios & DNS',
+                icon: Globe,
+                iconColor: 'text-emerald-400 bg-emerald-500/10',
+                badge: 'SSL GRÁTIS',
+                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                description: 'Conecte seus próprios domínios e subdomínios com certificado SSL automático para blindar suas páginas e links contra bloqueios.'
+              },
+              {
+                id: 'event_gamification',
+                category: 'marketing',
+                title: 'Eventos & Gamificação',
+                icon: Trophy,
+                iconColor: 'text-amber-400 bg-amber-500/10',
+                badge: 'TELÃO 🎮',
+                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                description: 'Gamificação para eventos presenciais ou lançamentos com telão ao vivo, placar de vendas em tempo real e ranking de engajamento.'
+              },
+              {
+                id: 'popups',
+                category: 'marketing',
+                title: 'Pop-ups com Selos Oficiais',
+                icon: Sliders,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'REDIRECIONAMENTO SEGURO',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Pop-ups inteligentes com identificação obrigatória de Nome e WhatsApp, selos de conformidade LGPD e recuperação de saída da página.'
+              },
+              {
+                id: 'workflows',
+                category: 'marketing',
+                title: 'Automações de Workflows',
+                icon: GitBranch,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'WEBINÁRIOS & PRAZOS',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Régua de mensagens omnicanal com redistribuição inteligente no tempo restante para webinários e eventos, sem deixar ninguém de fora.'
+              },
+              {
+                id: 'ai',
+                category: 'marketing',
+                title: 'Assistente IA Copywriter',
+                icon: Sparkles,
+                iconColor: 'text-amber-400 bg-amber-500/10',
+                badge: 'IA INTEGRADA',
+                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                description: 'Gere copys persuasivas de alta conversão para anúncios do Meta/Google, roteiros de abordagem no WhatsApp e sequências de e-mail.'
+              },
+
+              // 3. Vendas & Atendimento
+              {
+                id: 'leads',
+                category: 'vendas',
+                title: 'Gestão de Leads (CRM Kanban)',
+                icon: Users,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'FUNIL COMERCIAL',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Pipeline visual de vendas com histórico completo do lead, dados de UTMs, tags, anotações e movimentação rápida entre estágios de compra.'
+              },
+              {
+                id: 'smart_lists',
+                category: 'vendas',
+                title: 'Listas & Lead Scoring',
+                icon: Target,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'IA SCORING 🎯',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Pontuação preditiva automática por IA para priorizar leads com maior probabilidade de compra imediata para seus vendedores.'
+              },
+              {
+                id: 'virtual_phone',
+                category: 'vendas',
+                title: 'Telefone Virtual & VoIP',
+                icon: PhoneCall,
+                iconColor: 'text-emerald-400 bg-emerald-500/10',
+                badge: 'WEBRTC DIRETO',
+                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                description: 'Faça e receba ligações comerciais com 1 clique direto pelo navegador, com gravação automática de chamadas e registro no CRM.'
+              },
+              {
+                id: 'teams',
+                category: 'vendas',
+                title: 'Equipes & Filas de Vendas',
+                icon: Headphones,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'MULTI-ATENDIMENTO',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Distribuição automática e balanceada de novos leads em fila round-robin entre atendentes, corretores e consultores comerciais.'
+              },
+              {
+                id: 'supervisor_monitor',
+                category: 'vendas',
+                title: 'Torre de Supervisão',
+                icon: ShieldCheck,
+                iconColor: 'text-indigo-400 bg-indigo-500/10',
+                badge: 'AO VIVO 🔴',
+                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+                description: 'Painel em tempo real para gestores monitorarem o status de cada operador (em chamada, disponível, pausa), tempo de resposta e conversões.'
+              },
+              {
+                id: 'ai_agents',
+                category: 'vendas',
+                title: 'Agentes de IA Autônomos',
+                icon: BrainCircuit,
+                iconColor: 'text-amber-400 bg-amber-500/10',
+                badge: 'AUTÔNOMOS 🧠',
+                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                description: 'Crie colaboradores virtuais inteligentes capazes de realizar prospecção, qualificar leads e interagir 24 horas por dia com autonomia.'
+              },
+              {
+                id: 'chatbot',
+                category: 'vendas',
+                title: 'Chatbot com IA',
+                icon: Bot,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'WHATSAPP & DIRECT',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Atendimento instantâneo com inteligência artificial para responder dúvidas de produtos, contornar objeções e agendar reuniões.'
+              },
+              {
+                id: 'instagram_auto_dm',
+                category: 'vendas',
+                title: 'Auto-DM Instagram',
+                icon: Instagram,
+                iconColor: 'text-rose-400 bg-rose-500/10',
+                badge: 'MANYCHAT STYLE',
+                badgeStyle: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+                description: 'Dispare mensagens no Direct e links de vendas automaticamente para quem comentar palavras-chave nos seus posts, reels e stories.'
+              },
+              {
+                id: 'chat',
+                category: 'vendas',
+                title: 'Chat ao Vivo (Inbox)',
+                icon: MessageSquare,
+                iconColor: 'text-emerald-400 bg-emerald-500/10',
+                badge: 'CENTRAL UNIFICADA',
+                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                description: 'Central única de atendimento humano no WhatsApp oficial para sua equipe conversar, enviar mídias e registrar vendas sem conflitos.'
+              },
+              {
+                id: 'broadcast',
+                category: 'vendas',
+                title: 'Campanhas & Lançamentos',
+                icon: Send,
+                iconColor: 'text-purple-400 bg-purple-500/10',
+                badge: 'BROADCAST 24/7',
+                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                description: 'Disparos em massa de mensagens e avisos no WhatsApp, E-mail e SMS com motor autônomo cron rodando em nuvem sem travas.'
+              },
+
+              // 4. Configurações & Gestão
+              {
+                id: 'products',
+                category: 'gestao',
+                title: 'Produtos & Catálogo',
+                icon: ShoppingCart,
+                iconColor: 'text-blue-400 bg-blue-500/10',
+                badge: 'CHECKOUTS',
+                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                description: 'Cadastre produtos, ofertas e links de checkout da Hotmart, Kiwify ou Eduzz para acompanhar ticket médio e atribuição de vendas.'
+              },
+              {
+                id: 'events',
+                category: 'gestao',
+                title: 'Integrações & CAPI Servidor',
+                icon: Zap,
+                iconColor: 'text-amber-400 bg-amber-500/10',
+                badge: 'META & GOOGLE',
+                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                description: 'Central de API de Conversões do Meta (CAPI), Google Ads, TikTok Pixel, servidor SMTP próprio e webhooks globais.'
+              },
+              {
+                id: 'users',
+                category: 'gestao',
+                title: 'Usuários & Permissões',
+                icon: UserPlus,
+                iconColor: 'text-indigo-400 bg-indigo-500/10',
+                badge: 'CONTROLE DE ACESSO',
+                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+                description: 'Gerencie logins com controle por nível: Administrador, Gerente, Atendente e Operador de Call Center com segurança total.'
+              },
+              {
+                id: 'company',
+                category: 'gestao',
+                title: 'Minha Empresa (Multi-tenant)',
+                icon: Building2,
+                iconColor: 'text-emerald-400 bg-emerald-500/10',
+                badge: 'ISOLAMENTO 100%',
+                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                description: 'Isolamento rigoroso de dados entre empresas, personalização de marca, logotipo, telefone e endereço comercial da sua organização.'
+              }
+            ]
+              .filter(m => selectedCategory === 'all' || m.category === selectedCategory)
+              .map((mod) => {
+                const Icon = mod.icon;
+                return (
+                  <div
+                    key={mod.id}
+                    className="p-5 sm:p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 transition flex flex-col justify-between space-y-4 group shadow-md"
+                  >
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold shadow-xs ${mod.iconColor}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${mod.badgeStyle}`}>
+                          {mod.badge}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-white group-hover:text-blue-300 transition">
+                          {mod.title}
+                        </h3>
+                        <p className="text-xs text-slate-400 leading-relaxed mt-1.5">
+                          {mod.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="font-semibold capitalize text-slate-400">
+                        {mod.category === 'geral' ? 'Visão Geral' : mod.category === 'marketing' ? 'Atração' : mod.category === 'vendas' ? 'Vendas & CRM' : 'Configurações'}
+                      </span>
+                      <button
+                        onClick={() => setIsTrialModalOpen(true)}
+                        className="text-blue-400 hover:text-blue-300 font-bold transition flex items-center gap-1"
+                      >
+                        <span>Testar Módulo</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Confidence Banner & CTAs */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
+            <div className="space-y-1">
+              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400/10 text-amber-300 border border-amber-400/20 mb-1">
                 GARANTIA INCONDICIONAL DE 7 DIAS
               </span>
-              <h3 className="text-2xl sm:text-3xl font-black text-white">
-                Pronto para Testar o TrackerMD na Prática?
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                Você pode começar hoje mesmo com <strong>1 dia de teste 100% gratuito</strong> ou assinar diretamente pelo Hotmart com cancelamento a qualquer momento.
-              </p>
-              
-              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-slate-300 font-medium">
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Ativação Imediata</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Sem Fidelidade</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suporte VIP 1 a 1</span>
-              </div>
+              <h4 className="font-black text-lg text-white">Todos os 24 Módulos Inclusos na Sua Assinatura</h4>
+              <p className="text-xs sm:text-sm text-slate-300">Sem cobrança surpresa por novos módulos ou contatos adicionais na base.</p>
             </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={() => setIsTrialModalOpen(true)}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-blue-600/30 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2"
+                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-md transition transform hover:scale-105 flex items-center gap-1.5"
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>Testar 1 Dia Grátis</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Liberar Teste de 1 Dia Grátis</span>
               </button>
-
               <button
                 onClick={handleOpenCheckout}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2"
+                className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition"
               >
-                <CreditCard className="w-4 h-4 text-emerald-400" />
-                <span>Assinar no Hotmart</span>
+                Ver Planos & Assinar
               </button>
             </div>
           </div>
@@ -654,367 +793,6 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ========================================================= */}
-      {/* COMPLETE FEATURES GRID - ALL 24 MENU MODULES */}
-      {/* ========================================================= */}
-      <section className="py-20 px-4 sm:px-6" id="recursos">
-        <div className="max-w-7xl mx-auto space-y-10">
-          
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3.5 py-1.5 rounded-full border border-blue-500/20">
-              ECOSSISTEMA COMPLETO 360°
-            </span>
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight">
-              Tudo o que sua Operação Precisa para Vender Mais
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-              Construído de ponta a ponta para gestores de tráfego, agências, infoprodutores e times comerciais. Conheça cada um dos <strong>24 módulos integrados</strong> do sistema:
-            </p>
-          </div>
-
-          {/* Category Filter Tabs */}
-          <div className="flex items-center justify-center gap-2 flex-wrap pb-2">
-            {[
-              { id: 'all', label: 'Todas as Funcionalidades (24)' },
-              { id: 'geral', label: 'Visão Geral & Funil (2)' },
-              { id: 'marketing', label: 'Atração & Marketing (8)' },
-              { id: 'vendas', label: 'Vendas & Atendimento (10)' },
-              { id: 'gestao', label: 'Configurações & Gestão (4)' }
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id as any)}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition shadow-xs ${
-                  selectedCategory === cat.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-105'
-                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Modules Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {[
-              // 1. Visão Geral & Funil
-              {
-                id: 'dashboard',
-                category: 'geral',
-                title: 'Dashboard de Métricas',
-                icon: BarChart3,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Métricas Reais',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Painel executivo com gráficos em tempo real de visitantes, conversões, ROI, faturamento e custo por lead (CPL).'
-              },
-              {
-                id: 'visual_funnels',
-                category: 'geral',
-                title: 'Funil Visual 360°',
-                icon: GitBranch,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'Power UP ⚡',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Canvas drag-and-drop para desenhar a jornada completa do anúncio até o checkout, com taxas de conversão por etapa ao vivo.'
-              },
-
-              // 2. Atração & Marketing
-              {
-                id: 'links',
-                category: 'marketing',
-                title: 'Gerador de Links UTM',
-                icon: LinkIcon,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Rastreio Total',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Links inteligentes para WhatsApp com parâmetros UTM automáticos, proteção cloaker anti-bloqueio e rotação de atendentes.'
-              },
-              {
-                id: 'landing_pages',
-                category: 'marketing',
-                title: 'Landing Pages Integradas',
-                icon: Layout,
-                iconColor: 'text-indigo-400 bg-indigo-500/10',
-                badge: 'RD Style',
-                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-                description: 'Crie páginas de captura, vendas e obrigado de alta conversão sem programar, com formulários conectados diretamente ao WhatsApp e CRM.'
-              },
-              {
-                id: 'surveys',
-                category: 'marketing',
-                title: 'Pesquisas & NPS (Quiz)',
-                icon: ClipboardList,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'Qualificação',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Formulários dinâmicos e quizzes para qualificar o perfil do lead e disparar mensagens automáticas com base nas respostas.'
-              },
-              {
-                id: 'custom_domains',
-                category: 'marketing',
-                title: 'Domínios Próprios & DNS',
-                icon: Globe,
-                iconColor: 'text-emerald-400 bg-emerald-500/10',
-                badge: 'SSL Grátis',
-                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                description: 'Conecte seus próprios domínios e subdomínios com certificado SSL automático para blindar suas páginas e links contra bloqueios.'
-              },
-              {
-                id: 'event_gamification',
-                category: 'marketing',
-                title: 'Eventos & Gamificação',
-                icon: Trophy,
-                iconColor: 'text-amber-400 bg-amber-500/10',
-                badge: 'Telão 🎮',
-                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                description: 'Gamificação para eventos presenciais ou lançamentos com telão ao vivo, placar de vendas em tempo real e ranking de engajamento.'
-              },
-              {
-                id: 'popups',
-                category: 'marketing',
-                title: 'Pop-ups com Selos Oficiais',
-                icon: Sliders,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Redirecionamento Seguro',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Pop-ups inteligentes com identificação obrigatória de Nome e WhatsApp, selos de conformidade LGPD e recuperação de saída da página.'
-              },
-              {
-                id: 'workflows',
-                category: 'marketing',
-                title: 'Automações de Workflows',
-                icon: GitBranch,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'Webinários & Prazos',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Régua de mensagens omnicanal com redistribuição inteligente no tempo restante para webinários e eventos, sem deixar ninguém de fora.'
-              },
-              {
-                id: 'ai',
-                category: 'marketing',
-                title: 'Assistente IA Copywriter',
-                icon: Sparkles,
-                iconColor: 'text-amber-400 bg-amber-500/10',
-                badge: 'IA Integrada',
-                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                description: 'Gere copys persuasivas de alta conversão para anúncios do Meta/Google, roteiros de abordagem no WhatsApp e sequências de e-mail.'
-              },
-
-              // 3. Vendas & Atendimento
-              {
-                id: 'leads',
-                category: 'vendas',
-                title: 'Gestão de Leads (CRM Kanban)',
-                icon: Users,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Funil Comercial',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Pipeline visual de vendas com histórico completo do lead, dados de UTMs, tags, anotações e movimentação rápida entre estágios de compra.'
-              },
-              {
-                id: 'smart_lists',
-                category: 'vendas',
-                title: 'Listas & Lead Scoring',
-                icon: Target,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'IA Scoring 🎯',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Pontuação preditiva automática por IA para priorizar leads com maior probabilidade de compra imediata para seus vendedores.'
-              },
-              {
-                id: 'virtual_phone',
-                category: 'vendas',
-                title: 'Telefone Virtual & VoIP',
-                icon: PhoneCall,
-                iconColor: 'text-emerald-400 bg-emerald-500/10',
-                badge: 'WebRTC Direto',
-                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                description: 'Faça e receba ligações comerciais com 1 clique direto pelo navegador, com gravação automática de chamadas e registro no CRM.'
-              },
-              {
-                id: 'teams',
-                category: 'vendas',
-                title: 'Equipes & Filas de Vendas',
-                icon: Headphones,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Multi-Atendimento',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Distribuição automática e balanceada de novos leads em fila round-robin entre atendentes, corretores e consultores comerciais.'
-              },
-              {
-                id: 'supervisor_monitor',
-                category: 'vendas',
-                title: 'Torre de Supervisão',
-                icon: ShieldCheck,
-                iconColor: 'text-indigo-400 bg-indigo-500/10',
-                badge: 'Ao Vivo 🔴',
-                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-                description: 'Painel em tempo real para gestores monitorarem o status de cada operador (em chamada, disponível, pausa), tempo de resposta e conversões.'
-              },
-              {
-                id: 'ai_agents',
-                category: 'vendas',
-                title: 'Agentes de IA Autônomos',
-                icon: BrainCircuit,
-                iconColor: 'text-amber-400 bg-amber-500/10',
-                badge: 'Autônomos 🧠',
-                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                description: 'Crie colaboradores virtuais inteligentes capazes de realizar prospecção, qualificar leads e interagir 24 horas por dia com autonomia.'
-              },
-              {
-                id: 'chatbot',
-                category: 'vendas',
-                title: 'Chatbot com IA',
-                icon: Bot,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'WhatsApp & Direct',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Atendimento instantâneo com inteligência artificial para responder dúvidas de produtos, contornar objeções e agendar reuniões.'
-              },
-              {
-                id: 'instagram_auto_dm',
-                category: 'vendas',
-                title: 'Auto-DM Instagram',
-                icon: Instagram,
-                iconColor: 'text-rose-400 bg-rose-500/10',
-                badge: 'Manychat Style',
-                badgeStyle: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-                description: 'Dispare mensagens no Direct e links de vendas automaticamente para quem comentar palavras-chave nos seus posts, reels e stories.'
-              },
-              {
-                id: 'chat',
-                category: 'vendas',
-                title: 'Chat ao Vivo (Inbox)',
-                icon: MessageSquare,
-                iconColor: 'text-emerald-400 bg-emerald-500/10',
-                badge: 'Central Unificada',
-                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                description: 'Central única de atendimento humano no WhatsApp oficial para sua equipe conversar, enviar mídias e registrar vendas sem conflitos.'
-              },
-              {
-                id: 'broadcast',
-                category: 'vendas',
-                title: 'Campanhas & Lançamentos',
-                icon: Send,
-                iconColor: 'text-purple-400 bg-purple-500/10',
-                badge: 'Broadcast 24/7',
-                badgeStyle: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                description: 'Disparos em massa de mensagens e avisos no WhatsApp, E-mail e SMS com motor autônomo cron rodando em nuvem sem travas.'
-              },
-
-              // 4. Configurações & Gestão
-              {
-                id: 'products',
-                category: 'gestao',
-                title: 'Produtos & Catálogo',
-                icon: ShoppingCart,
-                iconColor: 'text-blue-400 bg-blue-500/10',
-                badge: 'Checkouts',
-                badgeStyle: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                description: 'Cadastre produtos, ofertas e links de checkout da Hotmart, Kiwify ou Eduzz para acompanhar ticket médio e atribuição de vendas.'
-              },
-              {
-                id: 'events',
-                category: 'gestao',
-                title: 'Integrações & CAPI Servidor',
-                icon: Zap,
-                iconColor: 'text-amber-400 bg-amber-500/10',
-                badge: 'Meta & Google',
-                badgeStyle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                description: 'Central de API de Conversões do Meta (CAPI), Google Ads, TikTok Pixel, servidor SMTP próprio e webhooks globais.'
-              },
-              {
-                id: 'users',
-                category: 'gestao',
-                title: 'Usuários & Permissões',
-                icon: UserPlus,
-                iconColor: 'text-indigo-400 bg-indigo-500/10',
-                badge: 'Controle de Acesso',
-                badgeStyle: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-                description: 'Gerencie logins com controle por nível: Administrador, Gerente, Atendente e Operador de Call Center com segurança total.'
-              },
-              {
-                id: 'company',
-                category: 'gestao',
-                title: 'Minha Empresa (Multi-tenant)',
-                icon: Building2,
-                iconColor: 'text-emerald-400 bg-emerald-500/10',
-                badge: 'Isolamento 100%',
-                badgeStyle: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                description: 'Isolamento rigoroso de dados entre empresas, personalização de marca, logotipo, telefone e endereço comercial da sua organização.'
-              }
-            ]
-              .filter(m => selectedCategory === 'all' || m.category === selectedCategory)
-              .map((mod) => {
-                const Icon = mod.icon;
-                return (
-                  <div
-                    key={mod.id}
-                    className="p-5 sm:p-6 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 transition flex flex-col justify-between space-y-4 group shadow-md"
-                  >
-                    <div className="space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold shadow-xs ${mod.iconColor}`}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${mod.badgeStyle}`}>
-                          {mod.badge}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-white group-hover:text-blue-300 transition">
-                          {mod.title}
-                        </h3>
-                        <p className="text-xs text-slate-400 leading-relaxed mt-1.5">
-                          {mod.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="font-semibold capitalize text-slate-400">
-                        {mod.category === 'geral' ? 'Visão Geral' : mod.category === 'marketing' ? 'Atração' : mod.category === 'vendas' ? 'Vendas & CRM' : 'Configurações'}
-                      </span>
-                      <button
-                        onClick={() => setIsTrialModalOpen(true)}
-                        className="text-blue-400 hover:text-blue-300 font-bold transition flex items-center gap-1"
-                      >
-                        <span>Testar Módulo</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-
-          {/* Bottom Callout in Features Section */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-            <div className="space-y-1">
-              <h4 className="font-black text-lg text-white">Todos os 24 Módulos Inclusos na Sua Assinatura</h4>
-              <p className="text-xs sm:text-sm text-slate-300">Sem cobrança surpresa por novos módulos ou contatos adicionais na base.</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => setIsTrialModalOpen(true)}
-                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-md transition transform hover:scale-105"
-              >
-                Liberar Teste de 1 Dia Grátis ⚡
-              </button>
-              <button
-                onClick={handleOpenCheckout}
-                className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition"
-              >
-                Ver Planos
-              </button>
-            </div>
-          </div>
-
         </div>
       </section>
 
