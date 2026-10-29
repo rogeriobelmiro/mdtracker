@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1521,6 +1521,88 @@ export async function deleteVisualFunnel(id: string): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Erro ao excluir funil visual');
+  }
+}
+
+// ==========================================
+// HOTMART & SUPER ADMIN APIS
+// ==========================================
+export async function fetchAdminCompanies(userEmail: string): Promise<Company[]> {
+  const res = await fetch(`/api/admin/companies?userEmail=${encodeURIComponent(userEmail)}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function updateCompanySubscription(
+  companyId: string, 
+  userEmail: string, 
+  data: { subscriptionStatus?: string; trialDaysToAdd?: number; subscriptionExpiresAt?: string; subscriptionPlan?: string }
+): Promise<any> {
+  const res = await fetch(`/api/admin/companies/${companyId}/subscription`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify({ ...data, userEmail })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar assinatura da empresa');
+  }
+  return res.json();
+}
+
+export async function fetchHotmartSettings(userEmail: string): Promise<HotmartConfig> {
+  const res = await fetch(`/api/admin/hotmart-settings?userEmail=${encodeURIComponent(userEmail)}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) {
+    return {
+      hottok: '',
+      checkoutUrl: '',
+      productId: '',
+      trialDays: 1,
+      webhookUrl: window.location.origin + '/api/webhooks/hotmart'
+    };
+  }
+  return res.json();
+}
+
+export async function updateHotmartSettings(userEmail: string, data: Partial<HotmartConfig>): Promise<any> {
+  const res = await fetch('/api/admin/hotmart-settings', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify({ ...data, userEmail })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao salvar configurações da Hotmart');
+  }
+  return res.json();
+}
+
+export async function fetchHotmartEvents(userEmail: string): Promise<HotmartEvent[]> {
+  const res = await fetch(`/api/admin/hotmart-events?userEmail=${encodeURIComponent(userEmail)}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchSubscriptionCheckoutUrl(): Promise<string> {
+  try {
+    const res = await fetch('/api/subscription/checkout-url');
+    if (!res.ok) return 'https://pay.hotmart.com';
+    const data = await res.json();
+    return data.checkoutUrl || 'https://pay.hotmart.com';
+  } catch {
+    return 'https://pay.hotmart.com';
   }
 }
 

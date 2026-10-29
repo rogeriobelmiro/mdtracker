@@ -298,6 +298,13 @@ const mapCompanyToDB = (c: any) => {
     if (c.responsibleName !== undefined) obj.responsible_name = c.responsibleName;
     if (c.phone !== undefined) obj.phone = c.phone;
     if (c.address !== undefined) obj.address = c.address;
+    if (c.subscriptionStatus !== undefined) obj.subscription_status = c.subscriptionStatus;
+    if (c.trialEndsAt !== undefined) obj.trial_ends_at = c.trialEndsAt;
+    if (c.subscriptionPlan !== undefined) obj.subscription_plan = c.subscriptionPlan;
+    if (c.subscriptionExpiresAt !== undefined) obj.subscription_expires_at = c.subscriptionExpiresAt;
+    if (c.hotmartSubscriptionId !== undefined) obj.hotmart_subscription_id = c.hotmartSubscriptionId;
+    if (c.hotmartTransactionId !== undefined) obj.hotmart_transaction_id = c.hotmartTransactionId;
+    if (c.hotmartBuyerEmail !== undefined) obj.hotmart_buyer_email = c.hotmartBuyerEmail;
     obj.updated_at = new Date().toISOString();
     return obj;
 };
@@ -306,13 +313,20 @@ const mapCompanyFromDB = (db: any) => ({
     id: db.id,
     name: db.name,
     cnpj: db.cnpj,
-    plan: db.plan,
-    active: db.active,
+    plan: db.plan || 'starter',
+    active: db.active !== false,
     logoUrl: db.logo_url,
     responsibleName: db.responsible_name,
     phone: db.phone,
     address: db.address,
-    createdAt: db.created_at
+    createdAt: db.created_at,
+    subscriptionStatus: db.subscription_status || 'trial',
+    trialEndsAt: db.trial_ends_at || (db.created_at ? new Date(new Date(db.created_at).getTime() + 24*60*60*1000).toISOString() : new Date(Date.now() + 24*60*60*1000).toISOString()),
+    subscriptionPlan: db.subscription_plan || 'mensal',
+    subscriptionExpiresAt: db.subscription_expires_at,
+    hotmartSubscriptionId: db.hotmart_subscription_id,
+    hotmartTransactionId: db.hotmart_transaction_id,
+    hotmartBuyerEmail: db.hotmart_buyer_email
 });
 
 const mapUserToDB = (u: any) => ({
@@ -614,6 +628,11 @@ const mapSettingsToDB = (s: any) => ({
     stage_event_mappings: s.stageEventMappings,
     auto_stage_keywords: s.autoStageKeywords,
     chatbot_config: s.chatbotConfig || DEFAULT_CHATBOT_CONFIG,
+    hotmart_hottok: s.hotmartHottok || null,
+    hotmart_checkout_url: s.hotmartCheckoutUrl || null,
+    hotmart_product_id: s.hotmartProductId || null,
+    trial_days: s.trialDays !== undefined ? Number(s.trialDays) : 1,
+    superadmin_email: s.superadminEmail || 'rogerio@mudadigital.com.br',
     updated_at: new Date().toISOString()
 });
 
@@ -662,7 +681,12 @@ const mapSettingsFromDB = (db: any) => ({
       ? db.stage_event_mappings
       : DEFAULT_STAGE_MAPPINGS,
     autoStageKeywords: db.auto_stage_keywords || [],
-    chatbotConfig: db.chatbot_config ? { ...DEFAULT_CHATBOT_CONFIG, ...db.chatbot_config } : DEFAULT_CHATBOT_CONFIG
+    chatbotConfig: db.chatbot_config ? { ...DEFAULT_CHATBOT_CONFIG, ...db.chatbot_config } : DEFAULT_CHATBOT_CONFIG,
+    hotmartHottok: db.hotmart_hottok || '',
+    hotmartCheckoutUrl: db.hotmart_checkout_url || '',
+    hotmartProductId: db.hotmart_product_id || '',
+    trialDays: db.trial_days !== undefined && db.trial_days !== null ? Number(db.trial_days) : 1,
+    superadminEmail: db.superadmin_email || 'rogerio@mudadigital.com.br'
 });
 
 const mapWebhookFromDB = (db: any) => ({
@@ -11949,10 +11973,16 @@ app.get('/api/companies', async (req: Request, res: Response) => {
 });
 
 app.post('/api/companies', async (req: Request, res: Response) => {
+    const trialDays = 1;
+    const defaultTrialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
+
     const body = {
         ...req.body,
         id: req.body.id || `comp-${Date.now()}`,
         active: req.body.active !== undefined ? req.body.active : true,
+        subscriptionStatus: req.body.subscriptionStatus || 'trial',
+        trialEndsAt: req.body.trialEndsAt || defaultTrialEndsAt,
+        subscriptionPlan: req.body.subscriptionPlan || 'mensal',
         createdAt: req.body.createdAt || new Date().toISOString()
     };
     const idx = inMemoryCompanies.findIndex(c => c.id === body.id);
@@ -12854,6 +12884,350 @@ app.get('/api/webhooks/logs', async (req: Request, res: Response) => {
         return res.json(fallbackLogs);
     }
     res.json(data.map(mapWebhookFromDB));
+});
+
+// ==========================================
+// HOTMART WEBHOOK (SAAS SUBSCRIPTIONS & PURCHASES)
+// ==========================================
+app.post('/api/webhooks/hotmart', async (req: Request, res: Response) => {
+    try {
+        const payload = req.body || {};
+        console.log('[Hotmart Webhook] Incoming payload:', JSON.stringify(payload).substring(0, 300));
+
+        // 1. Validate Hottok Token
+        const incomingHottok = payload.hottok || req.headers['x-hotmart-hottok'] || req.query.hottok;
+        let expectedHottok = '';
+        try {
+            const { data: setRes } = await supabase.from('settings').select('hotmart_hottok').limit(1);
+            if (setRes && setRes.length > 0 && setRes[0].hotmart_hottok) {
+                expectedHottok = setRes[0].hotmart_hottok;
+            }
+        } catch {}
+
+        if (expectedHottok && incomingHottok && incomingHottok !== expectedHottok) {
+            console.warn('[Hotmart Webhook] Invalid hottok token. Expected:', expectedHottok, 'Received:', incomingHottok);
+            return res.status(403).json({ error: 'Token Hottok inválido' });
+        }
+
+        // 2. Extract Event Data
+        const eventType = String(payload.event || payload.status || 'PURCHASE_APPROVED').toUpperCase();
+        const dataObj = payload.data || payload;
+        
+        const buyer = dataObj.buyer || {};
+        const buyerEmail = String(buyer.email || dataObj.email || payload.email || '').toLowerCase().trim();
+        const buyerName = buyer.name || dataObj.name || payload.first_name || '';
+        const buyerPhone = buyer.checkout_phone || buyer.phone || dataObj.phone || '';
+
+        const purchase = dataObj.purchase || {};
+        const transactionId = purchase.transaction || dataObj.transaction || payload.transaction || `tx-${Date.now()}`;
+        
+        const subscription = dataObj.subscription || {};
+        const subscriptionId = subscription.subscriber_code || subscription.id || dataObj.subscription_id || payload.subscription_id || `sub-${Date.now()}`;
+        const planName = subscription.plan?.name || dataObj.product_name || 'Plano Mensal MDTracker';
+
+        console.log(`[Hotmart Webhook] Event: ${eventType} | Buyer: ${buyerEmail} | Tx: ${transactionId} | Sub: ${subscriptionId}`);
+
+        // 3. Find matching company by buyer email or user
+        let matchedCompanyId: string | null = null;
+
+        if (buyerEmail) {
+            try {
+                const { data: userMatch } = await supabase
+                    .from('users')
+                    .select('company_id')
+                    .ilike('email', buyerEmail)
+                    .limit(1);
+                if (userMatch && userMatch.length > 0) {
+                    matchedCompanyId = userMatch[0].company_id;
+                }
+            } catch {}
+
+            if (!matchedCompanyId) {
+                try {
+                    const { data: compMatch } = await supabase
+                        .from('companies')
+                        .select('id')
+                        .ilike('hotmart_buyer_email', buyerEmail)
+                        .limit(1);
+                    if (compMatch && compMatch.length > 0) {
+                        matchedCompanyId = compMatch[0].id;
+                    }
+                } catch {}
+            }
+        }
+
+        // Determine subscription status
+        let newStatus: 'active' | 'canceled' | 'expired' = 'active';
+        let expiresAt: string | null = new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString();
+
+        if (
+            eventType.includes('CANCEL') ||
+            eventType.includes('REFUND') ||
+            eventType.includes('CHARGEBACK') ||
+            eventType.includes('DISPUTE')
+        ) {
+            newStatus = 'canceled';
+            expiresAt = new Date().toISOString();
+        } else if (eventType.includes('EXPIRE') || eventType.includes('OVERDUE')) {
+            newStatus = 'expired';
+            expiresAt = new Date().toISOString();
+        }
+
+        // 4. Update Company in DB if found
+        if (matchedCompanyId) {
+            console.log(`[Hotmart Webhook] Updating company ${matchedCompanyId} to status: ${newStatus}`);
+            try {
+                await supabase.from('companies').update({
+                    subscription_status: newStatus,
+                    subscription_plan: planName,
+                    subscription_expires_at: expiresAt,
+                    hotmart_subscription_id: subscriptionId,
+                    hotmart_transaction_id: transactionId,
+                    hotmart_buyer_email: buyerEmail,
+                    updated_at: new Date().toISOString()
+                }).eq('id', matchedCompanyId);
+
+                const cIdx = inMemoryCompanies.findIndex(c => c.id === matchedCompanyId);
+                if (cIdx >= 0) {
+                    inMemoryCompanies[cIdx].subscriptionStatus = newStatus;
+                    inMemoryCompanies[cIdx].subscriptionPlan = planName;
+                    inMemoryCompanies[cIdx].subscriptionExpiresAt = expiresAt;
+                    inMemoryCompanies[cIdx].hotmartSubscriptionId = subscriptionId;
+                    inMemoryCompanies[cIdx].hotmartTransactionId = transactionId;
+                    inMemoryCompanies[cIdx].hotmartBuyerEmail = buyerEmail;
+                }
+            } catch (err) {
+                console.error('[Hotmart Webhook] Error updating company:', err);
+            }
+        }
+
+        // 5. Save event in hotmart_events table for auditing
+        const eventId = `hme-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        try {
+            await supabase.from('hotmart_events').insert({
+                id: eventId,
+                event_type: eventType,
+                transaction_id: transactionId,
+                subscription_id: subscriptionId,
+                buyer_email: buyerEmail,
+                buyer_name: buyerName,
+                buyer_phone: buyerPhone,
+                company_id: matchedCompanyId,
+                payload: payload,
+                status: matchedCompanyId ? 'processed' : 'unmatched_company',
+                created_at: new Date().toISOString()
+            });
+        } catch (err) {
+            console.error('[Hotmart Webhook] Error logging event:', err);
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Webhook da Hotmart processado com sucesso',
+            matchedCompanyId,
+            newStatus
+        });
+    } catch (error: any) {
+        console.error('[Hotmart Webhook] Fatal error:', error);
+        return res.status(500).json({ error: error?.message || 'Erro interno ao processar webhook' });
+    }
+});
+
+// ==========================================
+// SUPER ADMIN APIS (EXCLUSIVE FOR rogerio@mudadigital.com.br)
+// ==========================================
+app.get('/api/admin/companies', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador (rogerio@mudadigital.com.br).' });
+        }
+
+        let companiesList: any[] = [];
+        try {
+            const { data } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
+            if (data && data.length > 0) {
+                companiesList = data.map(mapCompanyFromDB);
+            }
+        } catch {}
+
+        if (companiesList.length === 0) {
+            companiesList = inMemoryCompanies;
+        }
+
+        const now = Date.now();
+        const enriched = await Promise.all(companiesList.map(async (comp) => {
+            let uCount = 0;
+            let lCount = 0;
+            try {
+                const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('company_id', comp.id);
+                uCount = userCount || 0;
+                const { count: leadCount } = await supabase.from('leads').select('*', { count: 'exact', head: true }).eq('company_id', comp.id);
+                lCount = leadCount || 0;
+            } catch {}
+
+            let trialRemainingHours = 0;
+            let isTrialExpired = false;
+
+            if (comp.subscriptionStatus === 'trial') {
+                const trialEnd = comp.trialEndsAt ? new Date(comp.trialEndsAt).getTime() : (new Date(comp.createdAt).getTime() + 24 * 60 * 60 * 1000);
+                if (now > trialEnd) {
+                    isTrialExpired = true;
+                } else {
+                    trialRemainingHours = Math.max(0, Math.round((trialEnd - now) / (1000 * 60 * 60)));
+                }
+            }
+
+            return {
+                ...comp,
+                userCount: uCount,
+                leadCount: lCount,
+                trialRemainingHours,
+                isTrialExpired
+            };
+        }));
+
+        res.json(enriched);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/companies/:id/subscription', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { id } = req.params;
+        const { subscriptionStatus, trialDaysToAdd, subscriptionExpiresAt, subscriptionPlan } = req.body;
+
+        const compIdx = inMemoryCompanies.findIndex(c => c.id === id);
+        let currentComp = compIdx >= 0 ? inMemoryCompanies[compIdx] : null;
+
+        const updateData: any = {};
+        if (subscriptionStatus) updateData.subscription_status = subscriptionStatus;
+        if (subscriptionPlan) updateData.subscription_plan = subscriptionPlan;
+        if (subscriptionExpiresAt) updateData.subscription_expires_at = subscriptionExpiresAt;
+
+        if (trialDaysToAdd) {
+            const baseTime = currentComp?.trialEndsAt ? new Date(currentComp.trialEndsAt).getTime() : Date.now();
+            const newTrialEnd = new Date(Math.max(Date.now(), baseTime) + Number(trialDaysToAdd) * 24 * 60 * 60 * 1000).toISOString();
+            updateData.trial_ends_at = newTrialEnd;
+            updateData.subscription_status = 'trial';
+        }
+
+        updateData.updated_at = new Date().toISOString();
+
+        await supabase.from('companies').update(updateData).eq('id', id);
+
+        if (compIdx >= 0) {
+            inMemoryCompanies[compIdx] = {
+                ...inMemoryCompanies[compIdx],
+                subscriptionStatus: updateData.subscription_status || inMemoryCompanies[compIdx].subscriptionStatus,
+                subscriptionPlan: updateData.subscription_plan || inMemoryCompanies[compIdx].subscriptionPlan,
+                trialEndsAt: updateData.trial_ends_at || inMemoryCompanies[compIdx].trialEndsAt,
+                subscriptionExpiresAt: updateData.subscription_expires_at || inMemoryCompanies[compIdx].subscriptionExpiresAt
+            };
+        }
+
+        res.json({ success: true, updated: updateData });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { data } = await supabase.from('settings').select('*').limit(1);
+        const s = (data && data.length > 0) ? data[0] : {};
+
+        const host = req.get('host') || 'mdtracker.app';
+        const protocol = req.protocol || 'https';
+        const webhookUrl = `${protocol}://${host}/api/webhooks/hotmart`;
+
+        res.json({
+            hottok: s.hotmart_hottok || '',
+            checkoutUrl: s.hotmart_checkout_url || '',
+            productId: s.hotmart_product_id || '',
+            trialDays: s.trial_days !== undefined && s.trial_days !== null ? Number(s.trial_days) : 1,
+            superadminEmail: s.superadmin_email || 'rogerio@mudadigital.com.br',
+            webhookUrl
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { hottok, checkoutUrl, productId, trialDays } = req.body;
+        const updateObj: any = {
+            hotmart_hottok: hottok !== undefined ? hottok : null,
+            hotmart_checkout_url: checkoutUrl !== undefined ? checkoutUrl : null,
+            hotmart_product_id: productId !== undefined ? productId : null,
+            trial_days: trialDays !== undefined ? Number(trialDays) : 1,
+            updated_at: new Date().toISOString()
+        };
+
+        await supabase.from('settings').update(updateObj).neq('company_id', 'non_existent_id');
+
+        Object.keys(inMemorySettings).forEach(cId => {
+            inMemorySettings[cId] = {
+                ...inMemorySettings[cId],
+                hotmartHottok: hottok,
+                hotmartCheckoutUrl: checkoutUrl,
+                hotmartProductId: productId,
+                trialDays: Number(trialDays || 1)
+            };
+        });
+
+        res.json({ success: true, message: 'Configurações da Hotmart salvas com sucesso' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/hotmart-events', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { data } = await supabase
+            .from('hotmart_events')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        res.json(data || []);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/subscription/checkout-url', async (req: Request, res: Response) => {
+    try {
+        const { data } = await supabase.from('settings').select('hotmart_checkout_url').limit(1);
+        const checkoutUrl = data && data.length > 0 && data[0].hotmart_checkout_url 
+            ? data[0].hotmart_checkout_url 
+            : 'https://pay.hotmart.com';
+        res.json({ checkoutUrl });
+    } catch {
+        res.json({ checkoutUrl: 'https://pay.hotmart.com' });
+    }
 });
 
 app.post('/api/webhooks/test', async (req: Request, res: Response) => {

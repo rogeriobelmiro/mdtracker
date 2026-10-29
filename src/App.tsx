@@ -27,6 +27,7 @@ import { CustomDomainsManager } from './components/CustomDomainsManager';
 import { EventGamificationManager } from './components/EventGamificationManager';
 import { AIAgentsManager } from './components/AIAgentsManager';
 import { FunnelCanvasBuilder } from './components/FunnelCanvasBuilder';
+import { SuperAdminHotmartManager } from './components/SuperAdminHotmartManager';
 import {
   fetchCompanies,
   fetchUsers,
@@ -888,6 +889,12 @@ export default function App() {
               <CompanyProfile
                 currentCompany={currentCompany}
                 onUpdateCompany={handleUpdateCompany}
+              />
+            )}
+
+            {activeTab === 'saas_admin' && (
+              <SuperAdminHotmartManager
+                currentUser={currentUser}
               />
             )}
           </div>

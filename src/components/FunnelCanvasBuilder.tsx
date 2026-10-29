@@ -1508,3 +1508,4 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     </div>
   );
 };
+

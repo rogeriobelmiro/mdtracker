@@ -23,10 +23,14 @@ import {
   Instagram,
   Headphones,
   ShieldCheck,
-  BrainCircuit
+  BrainCircuit,
+  Clock,
+  Flame,
+  CreditCard
 } from 'lucide-react';
 import { User, Company } from '../types';
 import { NavTabId } from './Sidebar';
+import { fetchSubscriptionCheckoutUrl } from '../services/api';
 
 interface TopbarProps {
   activeTab: NavTabId;
@@ -186,6 +190,27 @@ export const Topbar: React.FC<TopbarProps> = ({
   const meta = getTabMeta();
   const Icon = meta.icon;
 
+  // Subscription calculation
+  const isOwnerMaster = currentCompany.id === 'comp-1786498560971' || currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br';
+  const subStatus = currentCompany.subscriptionStatus || 'trial';
+  const isActiveSub = subStatus === 'active' || isOwnerMaster;
+
+  const now = Date.now();
+  const trialEnd = currentCompany.trialEndsAt 
+    ? new Date(currentCompany.trialEndsAt).getTime() 
+    : (new Date(currentCompany.createdAt).getTime() + 24 * 60 * 60 * 1000);
+  const isTrialExpired = !isActiveSub && now > trialEnd;
+  const remainingHours = Math.max(0, Math.round((trialEnd - now) / (1000 * 60 * 60)));
+
+  const handleGoToCheckout = async () => {
+    try {
+      const url = await fetchSubscriptionCheckoutUrl();
+      window.open(url, '_blank');
+    } catch {
+      window.open('https://pay.hotmart.com', '_blank');
+    }
+  };
+
   return (
     <header className="bg-white border-b border-slate-200/90 sticky top-0 z-10 px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs">
       
@@ -281,6 +306,49 @@ export const Topbar: React.FC<TopbarProps> = ({
                 ✕
               </button>
             )}
+          </div>
+        )}
+
+        {/* Subscription Status & Checkout Button */}
+        {!isActiveSub && (
+          <div className="flex items-center gap-2">
+            {!isTrialExpired ? (
+              <>
+                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 shadow-2xs">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Teste: {remainingHours}h restantes</span>
+                </div>
+                <button
+                  onClick={handleGoToCheckout}
+                  className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm transform hover:scale-105 active:scale-95"
+                  title="Fazer Assinatura Mensal na Hotmart"
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-200" />
+                  <span>Fazer Assinatura ⚡</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 shadow-2xs animate-pulse">
+                  <span>🚨 Teste de 1 dia expirado</span>
+                </div>
+                <button
+                  onClick={handleGoToCheckout}
+                  className="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white text-xs font-black px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md animate-pulse hover:animate-none transform hover:scale-105 active:scale-95"
+                  title="Ativar Assinatura na Hotmart"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Assinar Agora para Liberar ⚡</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {isActiveSub && (
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Assinatura Ativa</span>
           </div>
         )}
 

@@ -14,6 +14,13 @@ CREATE TABLE IF NOT EXISTS public.companies (
   responsible_name TEXT,
   phone TEXT,
   address TEXT,
+  subscription_status TEXT DEFAULT 'trial',
+  trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '1 day'),
+  subscription_plan TEXT DEFAULT 'mensal',
+  subscription_expires_at TIMESTAMPTZ,
+  hotmart_subscription_id TEXT,
+  hotmart_transaction_id TEXT,
+  hotmart_buyer_email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -191,8 +198,30 @@ CREATE TABLE IF NOT EXISTS public.settings (
   smtp_from_name TEXT,
   smtp_from_email TEXT,
   smtp_secure BOOLEAN DEFAULT TRUE,
+  hotmart_hottok TEXT,
+  hotmart_checkout_url TEXT,
+  hotmart_product_id TEXT,
+  trial_days INTEGER DEFAULT 1,
+  superadmin_email TEXT DEFAULT 'rogerio@mudadigital.com.br',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 9.1 EVENTOS E WEBHOOKS HOTMART (ASSINATURAS SAAS)
+CREATE TABLE IF NOT EXISTS public.hotmart_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  transaction_id TEXT,
+  subscription_id TEXT,
+  buyer_email TEXT,
+  buyer_name TEXT,
+  buyer_phone TEXT,
+  company_id TEXT,
+  payload JSONB DEFAULT '{}'::jsonb,
+  status TEXT DEFAULT 'processed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_hotmart_events_buyer ON public.hotmart_events(buyer_email);
+CREATE INDEX IF NOT EXISTS idx_hotmart_events_company ON public.hotmart_events(company_id);
 
 -- 10. LOGS DE WEBHOOK
 CREATE TABLE IF NOT EXISTS public.webhook_logs (

@@ -6,6 +6,8 @@ export type UserRole = 'admin' | 'manager' | 'attendant';
 export type TeamMemberStatus = 'online' | 'busy' | 'in_call' | 'break' | 'offline';
 
 
+export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'expired';
+
 export interface Company {
   id: string;
   name: string;
@@ -17,6 +19,15 @@ export interface Company {
   phone?: string;
   address?: string;
   createdAt: string;
+  subscriptionStatus?: SubscriptionStatus;
+  trialEndsAt?: string;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: string;
+  hotmartSubscriptionId?: string;
+  hotmartTransactionId?: string;
+  hotmartBuyerEmail?: string;
+  userCount?: number;
+  leadCount?: number;
 }
 
 export interface User {
@@ -194,6 +205,34 @@ export interface IntegrationSettings {
   smtpFromName?: string;
   smtpFromEmail?: string;
   smtpSecure?: boolean;
+  hotmartHottok?: string;
+  hotmartCheckoutUrl?: string;
+  hotmartProductId?: string;
+  trialDays?: number;
+  superadminEmail?: string;
+}
+
+export interface HotmartEvent {
+  id: string;
+  eventType: string;
+  transactionId?: string;
+  subscriptionId?: string;
+  buyerEmail?: string;
+  buyerName?: string;
+  buyerPhone?: string;
+  companyId?: string;
+  companyName?: string;
+  payload?: any;
+  status: string;
+  createdAt: string;
+}
+
+export interface HotmartConfig {
+  hottok: string;
+  checkoutUrl: string;
+  productId: string;
+  trialDays: number;
+  webhookUrl: string;
 }
 
 export type ChatbotMode = 'prompt' | 'visual_flow';
