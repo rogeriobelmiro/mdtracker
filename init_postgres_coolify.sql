@@ -319,6 +319,23 @@ CREATE TABLE IF NOT EXISTS public.workflow_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_workflow_logs_company ON public.workflow_logs(company_id);
 
+-- 14.1 FUNIS VISUAIS 360° (VISUAL FUNNEL CANVAS BUILDER)
+CREATE TABLE IF NOT EXISTS public.visual_funnels (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT DEFAULT 'Geral',
+  is_template BOOLEAN DEFAULT FALSE,
+  nodes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  edges JSONB NOT NULL DEFAULT '[]'::jsonb,
+  viewport JSONB DEFAULT '{"x": 0, "y": 0, "zoom": 1}'::jsonb,
+  metrics JSONB DEFAULT '{"investment": 0, "totalLeads": 0, "cpl": 0, "conversionRate": 0}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_visual_funnels_company ON public.visual_funnels(company_id);
+
 -- 15. DISPAROS EM MASSA (BROADCAST CAMPAIGNS)
 CREATE TABLE IF NOT EXISTS public.broadcast_campaigns (
   id TEXT PRIMARY KEY,

@@ -26,6 +26,7 @@ import { SurveysManager } from './components/SurveysManager';
 import { CustomDomainsManager } from './components/CustomDomainsManager';
 import { EventGamificationManager } from './components/EventGamificationManager';
 import { AIAgentsManager } from './components/AIAgentsManager';
+import { FunnelCanvasBuilder } from './components/FunnelCanvasBuilder';
 import {
   fetchCompanies,
   fetchUsers,
@@ -562,8 +563,8 @@ export default function App() {
         />
 
         {/* Scrollable Viewport */}
-        <main className={`flex-1 ${activeTab === 'chatbot' ? 'overflow-hidden p-0' : 'overflow-y-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
-          <div className={activeTab === 'chatbot' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}>
+        <main className={`flex-1 ${activeTab === 'chatbot' || activeTab === 'visual_funnels' ? 'overflow-hidden p-0' : 'overflow-y-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
+          <div className={activeTab === 'chatbot' || activeTab === 'visual_funnels' ? 'w-full h-full' : 'max-w-7xl mx-auto w-full'}>
             {activeTab === 'dashboard' && currentUser.role !== 'attendant' && (
               <DashboardOverview
                 stats={companyStats}
@@ -576,6 +577,14 @@ export default function App() {
                   setActiveTab('links');
                 }}
                 onNavigateToLeads={() => setActiveTab('leads')}
+              />
+            )}
+
+            {activeTab === 'visual_funnels' && currentUser.role !== 'attendant' && (
+              <FunnelCanvasBuilder
+                currentCompany={currentCompany}
+                leads={companyLeads}
+                onNavigateToTab={(tab) => setActiveTab(tab as NavTabId)}
               />
             )}
 

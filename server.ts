@@ -5625,6 +5625,299 @@ app.delete('/api/workflows/queue/:id', async (req: Request, res: Response) => {
 });
 
 // ==========================================
+// Visual Funnels API (Canvas Builder 360° - Estilo Power UP / React Flow)
+// ==========================================
+
+const mapVisualFunnelToDB = (f: any) => ({
+    id: f.id,
+    company_id: f.companyId || f.company_id || 'comp-alfa',
+    name: f.name,
+    description: f.description || '',
+    category: f.category || 'Geral',
+    is_template: Boolean(f.isTemplate),
+    nodes: f.nodes || [],
+    edges: f.edges || [],
+    viewport: f.viewport || { x: 0, y: 0, zoom: 1 },
+    metrics: f.metrics || { investment: 0, totalLeads: 0, cpl: 0, conversionRate: 0 },
+    created_at: f.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+});
+
+const mapVisualFunnelFromDB = (db: any) => ({
+    id: db.id,
+    companyId: db.company_id,
+    name: db.name,
+    description: db.description || '',
+    category: db.category || 'Geral',
+    isTemplate: Boolean(db.is_template),
+    nodes: Array.isArray(db.nodes) ? db.nodes : [],
+    edges: Array.isArray(db.edges) ? db.edges : [],
+    viewport: db.viewport || { x: 0, y: 0, zoom: 1 },
+    metrics: db.metrics || { investment: 0, totalLeads: 0, cpl: 0, conversionRate: 0 },
+    createdAt: db.created_at || new Date().toISOString(),
+    updatedAt: db.updated_at || new Date().toISOString()
+});
+
+let inMemoryVisualFunnels: any[] = [
+    {
+        id: 'funnel-default-mandala',
+        company_id: 'comp-alfa',
+        name: 'Funil Direto - Tráfego Pago & WhatsApp',
+        description: 'Fluxo oficial de atração de anúncios Meta/Instagram para captura de leads e atendimento comercial.',
+        category: 'Geral',
+        is_template: false,
+        nodes: [
+            {
+                id: 'node-meta-ads',
+                type: 'traffic_meta',
+                title: 'Meta Ads',
+                subtitle: 'Campanha de Tráfego Direto',
+                x: 80,
+                y: 120,
+                data: {
+                    source: 'meta_ads',
+                    visitors: 1240,
+                    investment: 420.00,
+                    cpl: 3.25,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-creative-subflow',
+                type: 'traffic_creative',
+                title: 'Sub Workflow Criativos',
+                subtitle: 'Testes A/B de Vídeos',
+                x: 80,
+                y: 280,
+                data: {
+                    source: 'traffic_creative',
+                    visitors: 850,
+                    investment: 280.00,
+                    cpl: 2.90,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-instagram-bio',
+                type: 'traffic_instagram',
+                title: 'Instagram Orgânico',
+                subtitle: 'Link da Bio & Stories',
+                x: 80,
+                y: 440,
+                data: {
+                    source: 'traffic_instagram',
+                    visitors: 630,
+                    investment: 0,
+                    cpl: 0,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-landing-page',
+                type: 'landing_page',
+                title: 'Página de Vendas / Captura',
+                subtitle: 'Alta Conversão com VSL',
+                x: 480,
+                y: 240,
+                data: {
+                    url: 'https://mdtracker.com.br/lp/oferta-vip',
+                    visitors: 2720,
+                    leads: 680,
+                    conversionRate: 25.0,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-whatsapp-link',
+                type: 'whatsapp_link',
+                title: 'Link WhatsApp Oficial',
+                subtitle: 'Disparo Meta CAPI + Rotação',
+                x: 880,
+                y: 240,
+                data: {
+                    conversions: 410,
+                    conversionRate: 60.3,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-checkout-hotmart',
+                type: 'checkout',
+                title: 'Checkout Hotmart / Kiwify',
+                subtitle: 'Pagamento Cartão/Pix',
+                x: 1240,
+                y: 240,
+                data: {
+                    provider: 'Hotmart',
+                    price: 297.00,
+                    salesCount: 68,
+                    revenue: 20196.00,
+                    conversionRate: 16.6,
+                    status: 'active'
+                }
+            },
+            {
+                id: 'node-automation-nurture',
+                type: 'automation_sequence',
+                title: 'Automação & Recuperação',
+                subtitle: 'E-mails + WhatsApp 24h',
+                x: 880,
+                y: 480,
+                data: {
+                    leads: 270,
+                    conversions: 34,
+                    status: 'active'
+                }
+            }
+        ],
+        edges: [
+            { id: 'edge-1', source: 'node-meta-ads', target: 'node-landing-page', label: '1.240 cliques' },
+            { id: 'edge-2', source: 'node-creative-subflow', target: 'node-landing-page', label: '850 cliques' },
+            { id: 'edge-3', source: 'node-instagram-bio', target: 'node-landing-page', label: '630 cliques' },
+            { id: 'edge-4', source: 'node-landing-page', target: 'node-whatsapp-link', label: '25.0% conversão' },
+            { id: 'edge-5', source: 'node-whatsapp-link', target: 'node-checkout-hotmart', label: '60.3% avançam' },
+            { id: 'edge-6', source: 'node-landing-page', target: 'node-automation-nurture', label: 'Leads não-convertidos' }
+        ],
+        viewport: { x: 0, y: 0, zoom: 0.95 },
+        metrics: {
+            investment: 700.00,
+            totalLeads: 680,
+            cpl: 1.03,
+            conversionRate: 25.0,
+            totalSales: 68,
+            totalRevenue: 20196.00
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }
+];
+
+app.get('/api/visual-funnels', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('visual_funnels')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('created_at', { ascending: false });
+
+            if (!error && data && data.length > 0) {
+                return res.json(data.map(mapVisualFunnelFromDB));
+            }
+        } catch {}
+
+        const list = inMemoryVisualFunnels
+            .filter(f => f.company_id === companyId || f.company_id === 'comp-alfa')
+            .map(mapVisualFunnelFromDB);
+        res.json(list);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/visual-funnels/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        try {
+            const { data, error } = await supabase
+                .from('visual_funnels')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+
+            if (!error && data) {
+                return res.json(mapVisualFunnelFromDB(data));
+            }
+        } catch {}
+
+        const item = inMemoryVisualFunnels.find(f => f.id === id);
+        if (item) return res.json(mapVisualFunnelFromDB(item));
+        res.status(404).json({ error: 'Funil não encontrado' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/visual-funnels', async (req: Request, res: Response) => {
+    try {
+        const id = req.body.id || `funnel-${Date.now()}`;
+        const funnelData = {
+            ...req.body,
+            id,
+            companyId: req.body.companyId || 'comp-alfa'
+        };
+
+        const dbRow = mapVisualFunnelToDB(funnelData);
+        try {
+            const { data, error } = await supabase
+                .from('visual_funnels')
+                .insert(dbRow)
+                .select()
+                .single();
+
+            if (!error && data) {
+                return res.json(mapVisualFunnelFromDB(data));
+            }
+        } catch {}
+
+        inMemoryVisualFunnels.unshift(dbRow);
+        res.json(mapVisualFunnelFromDB(dbRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/visual-funnels/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const funnelData = {
+            ...req.body,
+            id,
+            companyId: req.body.companyId || 'comp-alfa'
+        };
+
+        const dbRow = mapVisualFunnelToDB(funnelData);
+        try {
+            const { data, error } = await supabase
+                .from('visual_funnels')
+                .update(dbRow)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (!error && data) {
+                return res.json(mapVisualFunnelFromDB(data));
+            }
+        } catch {}
+
+        const idx = inMemoryVisualFunnels.findIndex(f => f.id === id);
+        if (idx !== -1) {
+            inMemoryVisualFunnels[idx] = dbRow;
+        } else {
+            inMemoryVisualFunnels.unshift(dbRow);
+        }
+        res.json(mapVisualFunnelFromDB(dbRow));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/visual-funnels/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        try {
+            await supabase.from('visual_funnels').delete().eq('id', id);
+        } catch {}
+
+        inMemoryVisualFunnels = inMemoryVisualFunnels.filter(f => f.id !== id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
 // Landing Pages Endpoints (RD Station style)
 // ==========================================
 

@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
+export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -74,12 +74,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Categorized navigation groups
   const navGroups: NavGroup[] = [
     {
-      title: 'Visão Geral',
+      title: 'Visão Geral & Funil',
       items: [
         {
           id: 'dashboard',
-          label: 'Visão Geral',
+          label: 'Dashboard Métricas',
           icon: BarChart3,
+          allowedRoles: ['admin', 'manager']
+        },
+        {
+          id: 'visual_funnels',
+          label: 'Funil Visual 360°',
+          icon: GitBranch,
+          badge: { text: 'Power UP', variant: 'purple' },
           allowedRoles: ['admin', 'manager']
         }
       ]

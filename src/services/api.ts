@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1469,6 +1469,59 @@ export async function sendTestPhaseEmail(payload: {
     body: JSON.stringify(payload)
   });
   return res.json();
+}
+
+// ==========================================
+// Visual Funnels API (Canvas Builder 360°)
+// ==========================================
+
+export async function fetchVisualFunnels(companyId?: string): Promise<VisualFunnel[]> {
+  const url = companyId ? `/api/visual-funnels?companyId=${encodeURIComponent(companyId)}` : '/api/visual-funnels';
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchVisualFunnel(id: string): Promise<VisualFunnel | null> {
+  const res = await fetch(`/api/visual-funnels/${id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function createVisualFunnel(payload: Partial<VisualFunnel>): Promise<VisualFunnel> {
+  const res = await fetch('/api/visual-funnels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao criar funil visual');
+  }
+  return res.json();
+}
+
+export async function updateVisualFunnel(id: string, payload: Partial<VisualFunnel>): Promise<VisualFunnel> {
+  const res = await fetch(`/api/visual-funnels/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao salvar funil visual');
+  }
+  return res.json();
+}
+
+export async function deleteVisualFunnel(id: string): Promise<void> {
+  const res = await fetch(`/api/visual-funnels/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao excluir funil visual');
+  }
 }
 
 

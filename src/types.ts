@@ -1368,4 +1368,85 @@ export interface AIAgent {
   updatedAt: string;
 }
 
+// ==============================================================================
+// FUNIS VISUAIS 360° (VISUAL FUNNEL CANVAS BUILDER - ESTILO POWER UP / REACT FLOW)
+// ==============================================================================
+
+export type FunnelNodeType =
+  | 'traffic_meta'
+  | 'traffic_google'
+  | 'traffic_instagram'
+  | 'traffic_tiktok'
+  | 'traffic_organic'
+  | 'traffic_creative'
+  | 'landing_page'
+  | 'whatsapp_link'
+  | 'popup'
+  | 'whatsapp_chat'
+  | 'checkout'
+  | 'conversion_sale'
+  | 'automation_sequence'
+  | 'crm_stage';
+
+export interface VisualFunnelNode {
+  id: string;
+  type: FunnelNodeType;
+  title: string;
+  subtitle?: string;
+  x: number;
+  y: number;
+  data: {
+    linkId?: string;
+    landingPageId?: string;
+    workflowId?: string;
+    popupId?: string;
+    stage?: string;
+    url?: string;
+    imageUrl?: string;
+    provider?: string;
+    price?: number;
+    visitors?: number;
+    leads?: number;
+    conversions?: number;
+    salesCount?: number;
+    revenue?: number;
+    conversionRate?: number;
+    investment?: number;
+    cpl?: number;
+    status?: 'active' | 'draft' | 'paused';
+    notes?: string;
+  };
+}
+
+export interface VisualFunnelEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  conversionRate?: number;
+  color?: string;
+}
+
+export interface VisualFunnel {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  category: string;
+  isTemplate?: boolean;
+  nodes: VisualFunnelNode[];
+  edges: VisualFunnelEdge[];
+  viewport?: { x: number; y: number; zoom: number };
+  metrics?: {
+    investment?: number;
+    totalLeads?: number;
+    cpl?: number;
+    conversionRate?: number;
+    totalSales?: number;
+    totalRevenue?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 
