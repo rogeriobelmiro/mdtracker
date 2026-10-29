@@ -4852,6 +4852,9 @@ interface SendMarketingEmailParams {
     companyName?: string;
     lead?: any;
     context?: any;
+    campaignId?: string;
+    recipientId?: string;
+    trackingBaseUrl?: string;
 }
 
 async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -4890,9 +4893,12 @@ async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ s
 
         // Format variables in subject and body
         const finalSubject = formatWorkflowText(params.subject, params.lead || { name: 'Cliente', email: params.to }, params.companyName || smtpFromName, params.context);
-        const rawBody = formatWorkflowText(params.body, params.lead || { name: 'Cliente', email: params.to }, params.companyName || smtpFromName, params.context);
+        let rawBody = formatWorkflowText(params.body, params.lead || { name: 'Cliente', email: params.to }, params.companyName || smtpFromName, params.context);
 
-        const htmlContent = `
+        // Detect if content is already a rich HTML layout (Broadcast Campaigns, Elementor templates, etc.)
+        const isRichHtml = rawBody.includes('<div') || rawBody.includes('<table') || rawBody.includes('<html') || rawBody.includes('<body') || rawBody.includes('<!DOCTYPE');
+
+        let htmlContent = isRichHtml ? rawBody : `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4926,11 +4932,35 @@ async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ s
 </html>
 `;
 
+        // Inject Real Tracking Pixel & Click Tracking Redirect if Campaign ID is provided
+        if (params.campaignId && params.recipientId) {
+            const campId = params.campaignId;
+            const recipId = params.recipientId;
+            const baseUrl = (params.trackingBaseUrl || process.env.APP_URL || 'https://mdtracker.mudadigital.com.br').replace(/\/+$/, '');
+
+            // Rewrite links for click tracking
+            htmlContent = htmlContent.replace(/href=["'](https?:\/\/[^"']+)["']/gi, (match, url) => {
+                if (url.includes('/api/broadcast/track/')) return match;
+                const trackedUrl = `${baseUrl}/api/broadcast/track/click/${encodeURIComponent(campId)}/${encodeURIComponent(recipId)}?url=${encodeURIComponent(url)}`;
+                return `href="${trackedUrl}"`;
+            });
+
+            // 1x1 Open Tracking Pixel
+            const openPixelUrl = `${baseUrl}/api/broadcast/track/open/${encodeURIComponent(campId)}/${encodeURIComponent(recipId)}`;
+            const trackingPixel = `<img src="${openPixelUrl}" width="1" height="1" alt="" style="display:none !important; width:1px !important; height:1px !important; border:0 !important; opacity:0 !important; pointer-events:none;" />`;
+
+            if (htmlContent.includes('</body>')) {
+                htmlContent = htmlContent.replace('</body>', `${trackingPixel}</body>`);
+            } else {
+                htmlContent += trackingPixel;
+            }
+        }
+
         const mailOptions = {
             from: `"${smtpFromName}" <${smtpFromEmail}>`,
             to: params.to,
             subject: finalSubject,
-            text: rawBody,
+            text: rawBody.replace(/<[^>]*>?/gm, ''),
             html: htmlContent
         };
 
@@ -7578,6 +7608,10 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
         }
 
         const cleanDest = effectiveChannel === 'email' ? targetEmail : targetPhone;
+        const recipientId = `test-${Date.now()}`;
+        const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+        const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'mdtracker.mudadigital.com.br';
+        const trackingBaseUrl = `${proto}://${host}`;
 
         if (effectiveChannel === 'email' && targetEmail) {
             const companyId = camp?.company_id || camp?.companyId || 'comp-alfa';
@@ -7589,8 +7623,44 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
                 body,
                 companyId,
                 companyName: name,
-                lead: { name: 'Lead de Teste', email: targetEmail }
+                lead: { name: 'Lead de Teste', email: targetEmail },
+                campaignId: id,
+                recipientId,
+                trackingBaseUrl
             });
+        }
+
+        // Register recipient and update sent count on the campaign
+        if (camp && id !== 'temp-test') {
+            let recipients = Array.isArray(camp.recipients) ? camp.recipients : [];
+            const newRecip = {
+                leadId: recipientId,
+                name: `Teste (${targetEmail || targetPhone})`,
+                email: targetEmail,
+                phone: targetPhone,
+                channel: effectiveChannel,
+                stage: 'Disparo de Teste',
+                status: 'entregue',
+                sentAt: new Date().toISOString()
+            };
+            recipients.unshift(newRecip);
+            camp.recipients = recipients;
+            camp.sent_count = (camp.sent_count || 0) + 1;
+            camp.delivered_count = (camp.delivered_count || 0) + 1;
+
+            const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === id);
+            if (idx !== -1) inMemoryBroadcastCampaigns[idx] = camp;
+
+            try {
+                await supabase.from('broadcast_campaigns').update({
+                    sent_count: camp.sent_count,
+                    delivered_count: camp.delivered_count,
+                    recipients: camp.recipients,
+                    updated_at: new Date().toISOString()
+                }).eq('id', id);
+            } catch (err: any) {
+                console.error('[send-test] Erro ao atualizar estatísticas da campanha:', err);
+            }
         }
 
         res.json({
@@ -7605,6 +7675,148 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Real Open Tracking Pixel Endpoint
+app.get('/api/broadcast/track/open/:campaignId/:recipientId', async (req: Request, res: Response) => {
+    try {
+        const { campaignId, recipientId } = req.params;
+        const now = new Date().toISOString();
+
+        // Serve 1x1 transparent GIF immediately
+        const gif1x1 = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.writeHead(200, {
+            'Content-Type': 'image/gif',
+            'Content-Length': gif1x1.length,
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+        res.end(gif1x1);
+
+        // Update campaign & recipient asynchronously
+        let camp = inMemoryBroadcastCampaigns.find(c => c.id === campaignId);
+        if (!camp) {
+            try {
+                const { data } = await supabase.from('broadcast_campaigns').select('*').eq('id', campaignId).single();
+                if (data) camp = data;
+            } catch {}
+        }
+        if (camp) {
+            let recipients: any[] = Array.isArray(camp.recipients) ? camp.recipients : [];
+            let recip = recipients.find((r: any) => r.leadId === recipientId || r.id === recipientId || r.email === recipientId);
+
+            if (!recip) {
+                recip = {
+                    leadId: recipientId,
+                    name: 'Destinatário',
+                    status: 'aberto',
+                    openedAt: now,
+                    sentAt: camp.created_at || now,
+                    device: req.headers['user-agent']?.includes('Mobile') ? 'Mobile' : 'Desktop'
+                };
+                recipients.push(recip);
+            } else {
+                if (!recip.openedAt) recip.openedAt = now;
+                if (recip.status !== 'clicou') recip.status = 'aberto';
+            }
+
+            camp.recipients = recipients;
+            const openedCount = recipients.filter((r: any) => r.openedAt || r.status === 'aberto' || r.status === 'clicou').length;
+            camp.opened_count = openedCount;
+            if ((camp.sent_count || 0) < openedCount) {
+                camp.sent_count = openedCount;
+            }
+
+            const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === campaignId);
+            if (idx !== -1) inMemoryBroadcastCampaigns[idx] = camp;
+
+            try {
+                await supabase.from('broadcast_campaigns').update({
+                    opened_count: camp.opened_count,
+                    sent_count: camp.sent_count,
+                    recipients: camp.recipients,
+                    updated_at: now
+                }).eq('id', campaignId);
+            } catch (err: any) {
+                console.error('[Track Open] Erro ao atualizar banco:', err.message);
+            }
+            console.log(`[Email Tracking] Abertura registrada! Campanha "${camp.name}" | Recipiente: ${recipientId} | Total Aberturas: ${camp.opened_count}`);
+        }
+    } catch (err: any) {
+        console.error('[Track Open Error]', err);
+    }
+});
+
+// Real Click Tracking Redirect Endpoint
+app.get('/api/broadcast/track/click/:campaignId/:recipientId', async (req: Request, res: Response) => {
+    try {
+        const { campaignId, recipientId } = req.params;
+        let targetUrl = req.query.url as string;
+        if (!targetUrl || targetUrl === 'undefined' || targetUrl === 'null') {
+            targetUrl = 'https://mdtracker.com.br';
+        }
+        const now = new Date().toISOString();
+
+        let camp = inMemoryBroadcastCampaigns.find(c => c.id === campaignId);
+        if (!camp) {
+            try {
+                const { data } = await supabase.from('broadcast_campaigns').select('*').eq('id', campaignId).single();
+                if (data) camp = data;
+            } catch {}
+        }
+        if (camp) {
+            let recipients: any[] = Array.isArray(camp.recipients) ? camp.recipients : [];
+            let recip = recipients.find((r: any) => r.leadId === recipientId || r.id === recipientId || r.email === recipientId);
+
+            if (!recip) {
+                recip = {
+                    leadId: recipientId,
+                    name: 'Destinatário',
+                    status: 'clicou',
+                    openedAt: now,
+                    clickedAt: now,
+                    sentAt: camp.created_at || now,
+                    device: req.headers['user-agent']?.includes('Mobile') ? 'Mobile' : 'Desktop'
+                };
+                recipients.push(recip);
+            } else {
+                if (!recip.openedAt) recip.openedAt = now;
+                recip.clickedAt = now;
+                recip.status = 'clicou';
+            }
+
+            camp.recipients = recipients;
+            const clickedCount = recipients.filter((r: any) => r.clickedAt || r.status === 'clicou').length;
+            const openedCount = recipients.filter((r: any) => r.openedAt || r.status === 'aberto' || r.status === 'clicou').length;
+            camp.clicked_count = clickedCount;
+            camp.opened_count = Math.max(camp.opened_count || 0, openedCount);
+            if ((camp.sent_count || 0) < camp.opened_count) {
+                camp.sent_count = camp.opened_count;
+            }
+
+            const idx = inMemoryBroadcastCampaigns.findIndex(c => c.id === campaignId);
+            if (idx !== -1) inMemoryBroadcastCampaigns[idx] = camp;
+
+            try {
+                await supabase.from('broadcast_campaigns').update({
+                    clicked_count: camp.clicked_count,
+                    opened_count: camp.opened_count,
+                    sent_count: camp.sent_count,
+                    recipients: camp.recipients,
+                    updated_at: now
+                }).eq('id', campaignId);
+            } catch (err: any) {
+                console.error('[Track Click] Erro ao atualizar banco:', err.message);
+            }
+            console.log(`[Email Tracking] Clique registrado! Campanha "${camp.name}" | Recipiente: ${recipientId} | Destino: ${targetUrl} | Total Cliques: ${camp.clicked_count}`);
+        }
+
+        return res.redirect(302, targetUrl);
+    } catch (err: any) {
+        console.error('[Track Click Error]', err);
+        return res.redirect(302, 'https://mdtracker.com.br');
     }
 });
 

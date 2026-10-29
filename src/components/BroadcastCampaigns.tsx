@@ -553,6 +553,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
       });
       await alert(`✅ ${res.message || 'Disparo de teste realizado com sucesso!'}`);
       setTestModalOpen(false);
+      await loadCampaigns();
     } catch (err: any) {
       await alert(err.message || 'Erro ao enviar disparo de teste');
     } finally {
@@ -895,7 +896,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     >
                       Testar
                     </button>
-                    {camp.status !== 'concluido' && (
+                    {(camp.status !== 'concluido' || (camp.sentCount || 0) === 0) && (
                       <button
                         onClick={() => handleLaunchCampaign(camp)}
                         className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs"
