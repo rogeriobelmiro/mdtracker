@@ -9,12 +9,14 @@ interface LoginScreenProps {
   companies: Company[];
   users: User[];
   onLoginSuccess: (user: User, company: Company) => void;
+  onBackToSite?: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   companies,
   users,
-  onLoginSuccess
+  onLoginSuccess,
+  onBackToSite
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -177,16 +179,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     : 'Informe suas credenciais de acesso.'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegistering(!isRegistering);
-                  setAuthError('');
-                }}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition"
-              >
-                {isRegistering ? 'Voltar para Login' : 'Cadastrar Empresa'}
-              </button>
+              <div className="flex items-center gap-2">
+                {onBackToSite && (
+                  <button
+                    type="button"
+                    onClick={onBackToSite}
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition py-1.5 px-2.5 rounded-lg border border-slate-200 hover:bg-slate-50"
+                  >
+                    ← Ver Site
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(!isRegistering);
+                    setAuthError('');
+                  }}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg transition"
+                >
+                  {isRegistering ? 'Voltar para Login' : 'Cadastrar Empresa'}
+                </button>
+              </div>
             </div>
 
             {authError && (

@@ -28,6 +28,7 @@ import { EventGamificationManager } from './components/EventGamificationManager'
 import { AIAgentsManager } from './components/AIAgentsManager';
 import { FunnelCanvasBuilder } from './components/FunnelCanvasBuilder';
 import { SuperAdminHotmartManager } from './components/SuperAdminHotmartManager';
+import { PublicSalesWebsite } from './components/PublicSalesWebsite';
 import {
   fetchCompanies,
   fetchUsers,
@@ -117,6 +118,17 @@ export default function App() {
   const [links, setLinks] = useState<CampaignLink[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [authView, setAuthView] = useState<'site' | 'login'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const path = window.location.pathname || '';
+      const search = window.location.search || '';
+      if (hash === '#login' || path === '/login' || search.includes('login=true')) {
+        return 'login';
+      }
+    }
+    return 'site';
+  });
   const [leadPurchases, setLeadPurchases] = useState<LeadPurchase[]>([]);
   const [popups, setPopups] = useState<SmartPopup[]>([]);
   const [settings, setSettings] = useState<IntegrationSettings>({
@@ -504,12 +516,21 @@ export default function App() {
     }
   };
 
-  // Render Login Screen if not authenticated
+  // Render Public Sales Website or Login Screen if not authenticated
   if (!currentUser || !currentCompany) {
+    if (authView === 'login') {
+      return (
+        <LoginScreen
+          companies={companies}
+          users={users}
+          onLoginSuccess={handleLoginSuccess}
+          onBackToSite={() => setAuthView('site')}
+        />
+      );
+    }
     return (
-      <LoginScreen
-        companies={companies}
-        users={users}
+      <PublicSalesWebsite
+        onOpenLogin={() => setAuthView('login')}
         onLoginSuccess={handleLoginSuccess}
       />
     );

@@ -708,3 +708,4 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     </div>
   );
 };
+
