@@ -16600,6 +16600,25 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       }
     }
 
+    // Resolve Company Name for official branding
+    let companyName = '';
+    const targetCompId = dbLink.company_id || linkObj.companyId;
+    const memComp = inMemoryCompanies.find(c => c.id === targetCompId);
+    if (memComp && memComp.name) {
+      companyName = memComp.name;
+    } else {
+      try {
+        const { data: cRow } = await supabase.from('companies').select('name').eq('id', targetCompId).maybeSingle();
+        if (cRow?.name) companyName = cRow.name;
+      } catch {}
+    }
+    if (!companyName && settings.companyName) {
+      companyName = settings.companyName;
+    }
+    if (!companyName) {
+      companyName = linkObj.title;
+    }
+
     // Render client redirect & tracking landing page
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`
@@ -16608,7 +16627,7 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Conectando ao WhatsApp... - ${linkObj.title}</title>
+        <title>Atendimento da: ${companyName}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         
         <!-- Meta Pixel Code -->
@@ -16667,8 +16686,10 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
             </svg>
           </div>
 
-          <h2 class="text-xl font-bold text-white mb-1">${linkObj.title}</h2>
-          <p class="text-xs text-slate-400 mb-6">Redirecionando para o atendimento oficial no WhatsApp...</p>
+          <h2 class="text-lg sm:text-xl font-bold text-white mb-1.5 leading-snug">
+            Atendimento da: <span class="text-emerald-400 font-extrabold">${companyName}</span>
+          </h2>
+          <p class="text-xs text-slate-400 mb-5">Redirecionando para o canal oficial de atendimento no WhatsApp...</p>
 
           ${linkObj.captureLeadForm ? `
             <div id="captureBlock" class="text-left bg-slate-800/80 p-4 rounded-xl border border-slate-700/80 mb-5">
@@ -16699,9 +16720,44 @@ app.get(['/r/:slug', '/w/:slug'], async (req: Request, res: Response) => {
             </a>
           `}
 
-          <div class="text-[11px] text-slate-500 space-y-1">
-            <p>Rastreamento seguro via <strong>UTM ${utmSource} / ${utmCampaign}</strong></p>
-            <p>Localização detectada: ${location.city}, ${location.state} (${location.country})</p>
+          <!-- Selos de Garantia, Segurança e Confidencialidade + Redirecionamento Seguro -->
+          <div class="mt-5 pt-4 border-t border-slate-800/80 space-y-3">
+            <!-- Selos de Confiança -->
+            <div class="grid grid-cols-3 gap-2">
+              <div class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center">
+                <svg class="w-4 h-4 text-emerald-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span class="text-[10px] font-bold text-slate-200">Garantia</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Canal Oficial</span>
+              </div>
+
+              <div class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center">
+                <svg class="w-4 h-4 text-emerald-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span class="text-[10px] font-bold text-slate-200">Segurança</span>
+                <span class="text-[9px] text-slate-400 leading-tight">SSL 256-Bit</span>
+              </div>
+
+              <div class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center">
+                <svg class="w-4 h-4 text-emerald-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+                <span class="text-[10px] font-bold text-slate-200">Confidencialidade</span>
+                <span class="text-[9px] text-slate-400 leading-tight">LGPD Protegido</span>
+              </div>
+            </div>
+
+            <!-- Texto Padrão de Redirecionamento Seguro -->
+            <p class="text-[11px] text-slate-400 leading-relaxed text-center px-1">
+              Ambiente com redirecionamento seguro e verificado. Seus dados estão protegidos de acordo com a LGPD e serão utilizados exclusivamente para iniciar o seu atendimento oficial com nossa equipe.
+            </p>
+
+            <div class="text-[10px] text-slate-500 pt-0.5 text-center flex items-center justify-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Conexão segura • Localização: ${location.city}, ${location.state} (${location.country})</span>
+            </div>
           </div>
         </div>
 
