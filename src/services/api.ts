@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -438,6 +438,22 @@ export async function fetchWorkflowLogs(companyId?: string): Promise<WorkflowExe
   const res = await fetch(url);
   if (!res.ok) return [];
   return res.json();
+}
+
+export async function fetchWorkflowQueue(companyId?: string): Promise<ScheduledWorkflowAction[]> {
+  const url = companyId ? `/api/workflows/queue?companyId=${encodeURIComponent(companyId)}` : '/api/workflows/queue';
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function processWorkflowQueue(): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/workflows/queue/process', { method: 'POST' });
+  return res.json();
+}
+
+export async function cancelScheduledWorkflowAction(id: string): Promise<void> {
+  await fetch(`/api/workflows/queue/${id}`, { method: 'DELETE' });
 }
 
 // ==========================================

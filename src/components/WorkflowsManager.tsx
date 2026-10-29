@@ -30,7 +30,8 @@ import {
   Globe,
   Code,
   Check,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 import { 
   MarketingWorkflow, 
@@ -38,6 +39,7 @@ import {
   WorkflowTriggerType, 
   WorkflowActionType, 
   WorkflowExecutionLog, 
+  ScheduledWorkflowAction,
   FunnelStage, 
   FUNNEL_STAGES,
   Lead, 
@@ -53,7 +55,10 @@ import {
   testRunWorkflow, 
   fetchWorkflowLogs,
   fetchLandingPages,
-  sendTestPhaseEmail
+  sendTestPhaseEmail,
+  fetchWorkflowQueue,
+  processWorkflowQueue,
+  cancelScheduledWorkflowAction
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -73,7 +78,9 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [logs, setLogs] = useState<WorkflowExecutionLog[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'workflows' | 'templates' | 'logs'>('workflows');
+  const [activeView, setActiveView] = useState<'workflows' | 'templates' | 'logs' | 'queue'>('workflows');
+  const [queueActions, setQueueActions] = useState<ScheduledWorkflowAction[]>([]);
+  const [processingQueue, setProcessingQueue] = useState(false);
 
   // Modal Editor state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -105,14 +112,16 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [wfs, lgs, lps] = await Promise.all([
+      const [wfs, lgs, lps, qActions] = await Promise.all([
         fetchWorkflows(currentCompany.id),
         fetchWorkflowLogs(currentCompany.id),
-        fetchLandingPages(currentCompany.id)
+        fetchLandingPages(currentCompany.id),
+        fetchWorkflowQueue(currentCompany.id)
       ]);
       setWorkflows(wfs);
       setLogs(lgs);
       setLandingPages(lps || []);
+      setQueueActions(qActions || []);
       if (lps && lps.length > 0 && !selectedLpForEmbed) {
         setSelectedLpForEmbed(lps[0].slug);
       }
@@ -120,6 +129,30 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
       console.error('Erro ao carregar dados de automação:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProcessQueue = async () => {
+    try {
+      setProcessingQueue(true);
+      await processWorkflowQueue();
+      await loadAllData();
+      alert('Fila de disparos processada com sucesso!', 'success');
+    } catch (err: any) {
+      alert(err.message || 'Erro ao processar fila', 'error');
+    } finally {
+      setProcessingQueue(false);
+    }
+  };
+
+  const handleCancelQueueItem = async (id: string) => {
+    if (await confirm('Deseja cancelar o disparo desta ação agendada?')) {
+      try {
+        await cancelScheduledWorkflowAction(id);
+        setQueueActions(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+      } catch (err: any) {
+        alert(err.message || 'Erro ao cancelar ação', 'error');
+      }
     }
   };
 
@@ -284,6 +317,62 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
           messageTemplate: 'Olá {nome}! Tudo bem? Sei que no momento anterior não foi a hora ideal para avançarmos. Lançamos uma novidade na {empresa} que pode ser exatamente o que você precisava. Posso te apresentar rapidamente?'
         }
       ]
+    },
+    {
+      title: '🎯 Sequência de Aquecimento para Webinário / Live (Com Prazo)',
+      subtitle: 'Distribui automaticamente as mensagens até a data do evento, adaptando o tempo para inscrições de última hora.',
+      triggerType: 'form_submitted' as WorkflowTriggerType,
+      triggerConfig: { formSource: 'any' },
+      hasEventDeadline: true,
+      eventDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+      timeDistributionMode: 'proportional',
+      minStepIntervalMinutes: 30,
+      steps: [
+        {
+          id: 'step-1',
+          type: 'send_whatsapp' as WorkflowActionType,
+          title: 'WhatsApp Imediato: Inscrição Confirmada',
+          messageTemplate: 'Parabéns, {nome}! Sua vaga para o nosso webinário exclusivo está garantida. Salve na sua agenda: teremos conteúdos práticos imperdíveis!'
+        },
+        {
+          id: 'step-2',
+          type: 'wait_delay' as WorkflowActionType,
+          title: 'Aguardar 24 Horas',
+          delayMinutes: 1440
+        },
+        {
+          id: 'step-3',
+          type: 'send_email' as WorkflowActionType,
+          title: 'E-mail 1: Material de Aquecimento Exclusivo',
+          emailSubject: '[Webinário] Seu material preparatório chegou!',
+          emailBody: 'Olá {nome}, preparamos um resumo estratégico para você aproveitar ao máximo nosso encontro ao vivo.'
+        },
+        {
+          id: 'step-4',
+          type: 'wait_delay' as WorkflowActionType,
+          title: 'Aguardar 24 Horas',
+          delayMinutes: 1440
+        },
+        {
+          id: 'step-5',
+          type: 'send_email' as WorkflowActionType,
+          title: 'E-mail 2: Estudo de Caso Prático',
+          emailSubject: 'Veja este resultado real antes da nossa aula',
+          emailBody: 'Olá {nome}, descubra como estruturar seu processo comercial para multiplicar conversões.'
+        },
+        {
+          id: 'step-6',
+          type: 'wait_delay' as WorkflowActionType,
+          title: 'Aguardar 12 Horas',
+          delayMinutes: 720
+        },
+        {
+          id: 'step-7',
+          type: 'send_whatsapp' as WorkflowActionType,
+          title: 'WhatsApp Final: Link da Sala ao Vivo',
+          messageTemplate: 'Olá, {nome}! O webinário está prestes a começar. Acesse agora a sala exclusiva: {link_checkout}'
+        }
+      ]
     }
   ];
 
@@ -320,6 +409,10 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
       active: true,
       triggerType: 'lead_created',
       triggerConfig: {},
+      hasEventDeadline: false,
+      eventDate: undefined,
+      timeDistributionMode: 'proportional',
+      minStepIntervalMinutes: 30,
       steps: [
         {
           id: `step-${Date.now()}-1`,
@@ -343,6 +436,10 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
       active: true,
       triggerType: tmpl.triggerType,
       triggerConfig: tmpl.triggerConfig,
+      hasEventDeadline: tmpl.hasEventDeadline || false,
+      eventDate: tmpl.eventDate,
+      timeDistributionMode: tmpl.timeDistributionMode || 'proportional',
+      minStepIntervalMinutes: tmpl.minStepIntervalMinutes || 30,
       steps: JSON.parse(JSON.stringify(tmpl.steps)),
       enrolledCount: 0,
       executedCount: 0,
@@ -667,7 +764,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>Biblioteca de Templates (4)</span>
+          <span>Biblioteca de Templates (6)</span>
         </button>
 
         <button
@@ -680,6 +777,25 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
         >
           <FileText className="w-3.5 h-3.5" />
           <span>Histórico de Execuções ({logs.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveView('queue')}
+          className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+            activeView === 'queue'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5 text-indigo-500" />
+          <span>Fila Agendada 24h</span>
+          {queueActions.filter(a => a.status === 'pending').length > 0 && (
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              activeView === 'queue' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'
+            }`}>
+              {queueActions.filter(a => a.status === 'pending').length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -736,13 +852,19 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                         <p className="text-xs text-slate-500 line-clamp-1">{wf.description}</p>
                       )}
                       
-                      {/* Trigger Badge */}
-                      <div className="flex items-center gap-2 pt-1 text-[11px]">
+                      {/* Trigger & Deadline Badges */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                         <span className="text-slate-400 font-semibold">Gatilho:</span>
                         <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-blue-200">
                           <Zap className="w-3 h-3 text-blue-600" />
                           {getTriggerLabel(wf.triggerType, wf.triggerConfig)}
                         </span>
+                        {wf.hasEventDeadline && wf.eventDate && (
+                          <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200" title="Automação com prazo de evento">
+                            <Calendar className="w-3 h-3 text-indigo-600" />
+                            Prazo: {new Date(wf.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -961,7 +1083,162 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
         </div>
       )}
 
-      {/* 4. Modal Editor of Workflow (Timeline & Step Builder) */}
+      {/* 4. Scheduled Queue View (Cron 24h) */}
+      {activeView === 'queue' && (
+        <div className="space-y-4">
+          {/* Header Card */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-sm border border-indigo-900/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                    Fila de Disparos em Segundo Plano (Cron 24h Ativo)
+                  </h3>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold px-2 py-0.5 rounded-full">
+                    Auto-Check a cada 30s
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-2xl">
+                  O servidor na nuvem monitora esta fila continuamente, mesmo que seu navegador esteja fechado. Ações de fluxos de eventos/webinários são distribuídas proporcionalmente até a data limite.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleProcessQueue}
+                  disabled={processingQueue}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  title="Força a verificação imediata de ações agendadas"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${processingQueue ? 'animate-spin' : ''}`} />
+                  <span>{processingQueue ? 'Processando...' : 'Processar Fila Agora'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-indigo-900/50">
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Aguardando Horário</p>
+                <p className="text-lg font-black text-amber-400">
+                  {queueActions.filter(a => a.status === 'pending').length}
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Disparados com Sucesso</p>
+                <p className="text-lg font-black text-emerald-400">
+                  {queueActions.filter(a => a.status === 'executed').length}
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Cancelados / Pulados</p>
+                <p className="text-lg font-black text-slate-400">
+                  {queueActions.filter(a => a.status === 'cancelled').length}
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">Total na Fila</p>
+                <p className="text-lg font-black text-white">
+                  {queueActions.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Queue Items Table */}
+          {queueActions.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-xs">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h3 className="text-base font-bold text-slate-900">Nenhum disparo agendado no momento</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Quando leads entrarem em fluxos com tempos de espera ou prazos de webinário, os próximos envios de e-mail e WhatsApp aparecerão aqui.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-[11px]">
+                    <th className="py-3 px-4">Lead / Contato</th>
+                    <th className="py-3 px-4">Fluxo de Automação</th>
+                    <th className="py-3 px-4">Ação Programada</th>
+                    <th className="py-3 px-4">Horário do Disparo</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {queueActions.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/70 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900">{item.leadName || 'Lead Sem Nome'}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {item.leadEmail || item.leadPhone || item.leadId}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-800">
+                        {item.workflowName || item.workflowId}
+                      </td>
+                      <td className="py-3 px-4">
+                        {getActionBadge(item.actionType as any)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          {new Date(item.scheduledFor).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {item.status === 'pending' ? (
+                            new Date(item.scheduledFor) <= new Date() 
+                              ? 'Pronto para disparo imediato' 
+                              : `Disparo em ~${Math.max(1, Math.round((new Date(item.scheduledFor).getTime() - Date.now()) / 60000))} min`
+                          ) : item.executedAt ? (
+                            `Executado em ${new Date(item.executedAt).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          item.status === 'executed'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : item.status === 'pending'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {item.status === 'executed' ? 'Disparado' : item.status === 'pending' ? 'Aguardando Horário' : 'Cancelado'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {item.status === 'pending' && (
+                          <button
+                            onClick={() => handleCancelQueueItem(item.id)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded-lg transition"
+                            title="Cancelar disparo agendado"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. Modal Editor of Workflow (Timeline & Step Builder) */}
       {isEditorOpen && editingWorkflow && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
@@ -1212,6 +1489,110 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                         <option key={stg} value={stg}>{stg}</option>
                       ))}
                     </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Prazo Limite do Evento / Webinário (Opcional) */}
+              <div className="bg-gradient-to-r from-indigo-50/70 via-purple-50/50 to-blue-50/70 border border-indigo-200/80 rounded-2xl p-4.5 space-y-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                        Prazo Limite do Evento / Webinário
+                        <span className="text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                          Distribuição Inteligente 24h
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-indigo-800/80">
+                        Se sua automação leva até um evento (ex: live, webinário ou lançamento), ative para comprimir e distribuir automaticamente as mensagens para leads de última hora.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={!!editingWorkflow.hasEventDeadline}
+                      onChange={(e) => setEditingWorkflow({
+                        ...editingWorkflow,
+                        hasEventDeadline: e.target.checked
+                      })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {editingWorkflow.hasEventDeadline && (
+                  <div className="pt-3 border-t border-indigo-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-indigo-950 mb-1">
+                        Data e Hora do Evento *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editingWorkflow.eventDate ? (() => {
+                          try {
+                            const d = new Date(editingWorkflow.eventDate);
+                            const pad = (n: number) => String(n).padStart(2, '0');
+                            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                          } catch { return ''; }
+                        })() : ''}
+                        onChange={(e) => setEditingWorkflow({
+                          ...editingWorkflow,
+                          eventDate: e.target.value ? new Date(e.target.value).toISOString() : undefined
+                        })}
+                        className="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-bold outline-none focus:border-indigo-500 shadow-xs"
+                      />
+                      <span className="text-[10px] text-indigo-600 mt-1 block">
+                        Nenhum e-mail ou WhatsApp será enviado após este horário.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-indigo-950 mb-1">
+                        Estratégia de Distribuição
+                      </label>
+                      <select
+                        value={editingWorkflow.timeDistributionMode || 'proportional'}
+                        onChange={(e) => setEditingWorkflow({
+                          ...editingWorkflow,
+                          timeDistributionMode: e.target.value as any
+                        })}
+                        className="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-bold outline-none focus:border-indigo-500 shadow-xs"
+                      >
+                        <option value="proportional">Proporcional (Comprimir todos no tempo restante)</option>
+                        <option value="compact">Acelerada (Fila com intervalo mínimo)</option>
+                        <option value="fixed">Original Fixo (Pular passos após o evento)</option>
+                      </select>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Como lidar com inscrições feitas perto da hora do evento.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-indigo-950 mb-1">
+                        Intervalo Mínimo (Minutos)
+                      </label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={1440}
+                        value={editingWorkflow.minStepIntervalMinutes ?? 30}
+                        onChange={(e) => setEditingWorkflow({
+                          ...editingWorkflow,
+                          minStepIntervalMinutes: Number(e.target.value) || 30
+                        })}
+                        className="w-full bg-white border border-indigo-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-bold outline-none focus:border-indigo-500 shadow-xs"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Tempo mínimo entre 2 mensagens para não virar spam.
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

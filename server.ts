@@ -808,6 +808,10 @@ const mapWorkflowToDB = (w: any) => ({
     enrolled_count: w.enrolledCount || 0,
     executed_count: w.executedCount || 0,
     conversions_count: w.conversionsCount || 0,
+    has_event_deadline: Boolean(w.hasEventDeadline),
+    event_date: w.eventDate ? new Date(w.eventDate).toISOString() : null,
+    time_distribution_mode: w.timeDistributionMode || 'proportional',
+    min_step_interval_minutes: w.minStepIntervalMinutes ? Number(w.minStepIntervalMinutes) : 30,
     created_at: w.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
 });
@@ -824,6 +828,10 @@ const mapWorkflowFromDB = (db: any) => ({
     enrolledCount: Number(db.enrolled_count || 0),
     executedCount: Number(db.executed_count || 0),
     conversionsCount: Number(db.conversions_count || 0),
+    hasEventDeadline: Boolean(db.has_event_deadline),
+    eventDate: db.event_date ? new Date(db.event_date).toISOString().slice(0, 16) : '',
+    timeDistributionMode: db.time_distribution_mode || 'proportional',
+    minStepIntervalMinutes: Number(db.min_step_interval_minutes || 30),
     createdAt: db.created_at || new Date().toISOString(),
     updatedAt: db.updated_at || new Date().toISOString()
 });
@@ -4935,48 +4943,21 @@ async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ s
     }
 }
 
-async function executeWorkflowForLead(
-    wf: any,
+// In-memory queue fallback for scheduled actions
+let inMemoryScheduledActions: any[] = [];
+
+async function executeSingleStep(
+    step: any,
     lead: any,
+    wf: any,
     companyId: string,
     companyName: string,
     context?: any
-) {
-    if (!wf || !lead) return;
+): Promise<{ status: 'success' | 'failed'; detail: string }> {
+    let detail = '';
+    let status: 'success' | 'failed' = 'success';
 
-    wf.enrolledCount = (wf.enrolledCount || 0) + 1;
     try {
-        await supabase.from('marketing_workflows').update({ enrolled_count: wf.enrolledCount }).eq('id', wf.id);
-    } catch {}
-    const mem = inMemoryWorkflows.find(m => m.id === wf.id);
-    if (mem) mem.enrolled_count = wf.enrolledCount;
-
-    const steps = wf.steps || [];
-    for (const step of steps) {
-        if (step.type === 'wait_delay') {
-            const logItem = {
-                id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                company_id: companyId,
-                workflow_id: wf.id,
-                workflow_name: wf.name,
-                lead_id: lead.id,
-                lead_name: lead.name,
-                lead_phone: lead.phone,
-                action_type: 'wait_delay' as const,
-                status: 'scheduled' as const,
-                detail: `Aguardando intervalo de ${step.delayMinutes || 60} minutos para o próximo passo.`,
-                executed_at: new Date().toISOString()
-            };
-            inMemoryWorkflowLogs.unshift(logItem);
-            try {
-                await supabase.from('workflow_logs').insert(logItem);
-            } catch {}
-            continue;
-        }
-
-        let detail = '';
-        let status: 'success' | 'failed' | 'scheduled' = 'success';
-
         if (step.type === 'send_whatsapp') {
             const formattedMsg = formatWorkflowText(step.messageTemplate || '', lead, companyName, context);
             if (lead.phone) {
@@ -5013,6 +4994,7 @@ async function executeWorkflowForLead(
                     detail = `E-mail enviado com sucesso para ${lead.email}: "${subject}"`;
                 } else {
                     detail = `Falha no envio de e-mail para ${lead.email} (${mailRes.error}): "${subject}"`;
+                    status = 'failed';
                 }
             } else {
                 detail = `E-mail não disparado (lead sem e-mail cadastrado): "${subject}"`;
@@ -5028,32 +5010,294 @@ async function executeWorkflowForLead(
         } else {
             detail = `Ação ${step.type} processada com sucesso.`;
         }
+    } catch (err: any) {
+        status = 'failed';
+        detail = `Erro ao executar ${step.type}: ${err.message}`;
+    }
 
+    if (wf) {
         wf.executedCount = (wf.executedCount || 0) + 1;
         try {
             await supabase.from('marketing_workflows').update({ executed_count: wf.executedCount }).eq('id', wf.id);
         } catch {}
+        const mem = inMemoryWorkflows.find(m => m.id === wf.id);
         if (mem) mem.executed_count = wf.executedCount;
+    }
 
-        const logItem = {
-            id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-            company_id: companyId,
-            workflow_id: wf.id,
-            workflow_name: wf.name,
-            lead_id: lead.id,
-            lead_name: lead.name,
-            lead_phone: lead.phone,
-            action_type: step.type,
-            status,
-            detail,
-            executed_at: new Date().toISOString()
-        };
-        inMemoryWorkflowLogs.unshift(logItem);
+    const logItem = {
+        id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+        company_id: companyId,
+        workflow_id: wf?.id || 'wf-unknown',
+        workflow_name: wf?.name || 'Automação',
+        lead_id: lead.id,
+        lead_name: lead.name,
+        lead_phone: lead.phone,
+        action_type: step.type,
+        status,
+        detail,
+        executed_at: new Date().toISOString()
+    };
+    inMemoryWorkflowLogs.unshift(logItem);
+    try {
+        await supabase.from('workflow_logs').insert(logItem);
+    } catch {}
+
+    return { status, detail };
+}
+
+async function executeWorkflowForLead(
+    wf: any,
+    lead: any,
+    companyId: string,
+    companyName: string,
+    context?: any
+) {
+    if (!wf || !lead) return;
+
+    wf.enrolledCount = (wf.enrolledCount || 0) + 1;
+    try {
+        await supabase.from('marketing_workflows').update({ enrolled_count: wf.enrolledCount }).eq('id', wf.id);
+    } catch {}
+    const mem = inMemoryWorkflows.find(m => m.id === wf.id);
+    if (mem) mem.enrolled_count = wf.enrolledCount;
+
+    const steps = wf.steps || [];
+    if (steps.length === 0) return;
+
+    // Check if workflow has a deadline event configured (Webinar, Launch, Limited-Time Event)
+    const now = new Date();
+    const hasEventDeadline = Boolean(wf.hasEventDeadline || wf.has_event_deadline);
+    const eventDateStr = wf.eventDate || wf.event_date;
+    const eventDate = (hasEventDeadline && eventDateStr) ? new Date(eventDateStr) : null;
+    const timeDistMode = wf.timeDistributionMode || wf.time_distribution_mode || 'proportional';
+    const minIntervalMin = Number(wf.minStepIntervalMinutes || wf.min_step_interval_minutes || 30);
+
+    let isPastEvent = false;
+    let timeRemainingMinutes = 0;
+    if (eventDate) {
+        timeRemainingMinutes = Math.floor((eventDate.getTime() - now.getTime()) / 60000);
+        if (timeRemainingMinutes <= 0) {
+            isPastEvent = true;
+            console.log(`[Workflow Deadline] O evento "${wf.name}" (${eventDate.toISOString()}) já ocorreu há ${Math.abs(timeRemainingMinutes)} minutos.`);
+        }
+    }
+
+    // Calculate total planned delay of all wait_delay steps in the workflow
+    let totalPlannedMinutes = 0;
+    for (const step of steps) {
+        if (step.type === 'wait_delay') {
+            totalPlannedMinutes += Number(step.delayMinutes || 60);
+        }
+    }
+
+    // Adaptive compression factor calculation:
+    let compressionRatio = 1.0;
+    if (hasEventDeadline && eventDate && !isPastEvent && totalPlannedMinutes > 0) {
+        // Reserve 10% buffer before the event (or at least 15 mins)
+        const usableMinutes = Math.max(10, timeRemainingMinutes * 0.90);
+        if (usableMinutes < totalPlannedMinutes) {
+            if (timeDistMode === 'proportional') {
+                compressionRatio = usableMinutes / totalPlannedMinutes;
+                console.log(`[Workflow Adaptive] Comprimindo réguas proporcionalmente para lead ${lead.name}. Razão: ${(compressionRatio * 100).toFixed(1)}% (Restam ${timeRemainingMinutes}m, planejado ${totalPlannedMinutes}m)`);
+            }
+        }
+    }
+
+    // Timeline calculation
+    let accumulatedDelayMinutes = 0;
+    let scheduledActionsToSave: any[] = [];
+
+    for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+
+        if (step.type === 'wait_delay') {
+            const rawMinutes = Number(step.delayMinutes || 60);
+            let effectiveMinutes = rawMinutes;
+
+            if (hasEventDeadline && eventDate && !isPastEvent) {
+                if (timeDistMode === 'proportional' && compressionRatio < 1.0) {
+                    effectiveMinutes = Math.max(minIntervalMin, Math.round(rawMinutes * compressionRatio));
+                } else if (timeDistMode === 'compact') {
+                    effectiveMinutes = Math.min(rawMinutes, minIntervalMin);
+                }
+            }
+
+            accumulatedDelayMinutes += effectiveMinutes;
+            continue;
+        }
+
+        // Target dispatch time for this action
+        const scheduledTime = new Date(now.getTime() + accumulatedDelayMinutes * 60000);
+
+        // Security check: If workflow has an event deadline, do not schedule pre-event messages after the event!
+        if (hasEventDeadline && eventDate && scheduledTime >= eventDate) {
+            console.log(`[Workflow Deadline] Pulando ação "${step.title}" pois seu horário agendado (${scheduledTime.toISOString()}) ultrapassaria o início do evento (${eventDate.toISOString()}).`);
+            continue;
+        }
+
+        // If scheduledTime is right now (accumulatedDelayMinutes === 0), execute immediately!
+        if (accumulatedDelayMinutes === 0) {
+            await executeSingleStep(step, lead, wf, companyId, companyName, context);
+        } else {
+            // Queue for 24/7 background cron execution!
+            const queueItem = {
+                id: `sq-${Date.now()}-${Math.floor(Math.random() * 10000)}-${i}`,
+                company_id: companyId,
+                workflow_id: wf.id,
+                workflow_name: wf.name,
+                lead_id: lead.id,
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_phone: lead.phone,
+                step_id: step.id,
+                step_index: i,
+                action_type: step.type,
+                scheduled_for: scheduledTime.toISOString(),
+                status: 'pending',
+                payload: {
+                    step,
+                    context,
+                    companyName,
+                    leadSummary: { id: lead.id, name: lead.name, email: lead.email, phone: lead.phone, stage: lead.stage }
+                },
+                created_at: now.toISOString()
+            };
+            scheduledActionsToSave.push(queueItem);
+            inMemoryScheduledActions.push(queueItem);
+
+            // Log that this action has been scheduled
+            const schedLog = {
+                id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                company_id: companyId,
+                workflow_id: wf.id,
+                workflow_name: wf.name,
+                lead_id: lead.id,
+                lead_name: lead.name,
+                lead_phone: lead.phone,
+                action_type: step.type,
+                status: 'scheduled' as const,
+                detail: `Agendado automaticamente para ${scheduledTime.toLocaleString('pt-BR')} (${step.title})`,
+                executed_at: now.toISOString()
+            };
+            inMemoryWorkflowLogs.unshift(schedLog);
+            try {
+                await supabase.from('workflow_logs').insert(schedLog);
+            } catch {}
+        }
+    }
+
+    if (scheduledActionsToSave.length > 0) {
         try {
-            await supabase.from('workflow_logs').insert(logItem);
-        } catch {}
+            await supabase.from('scheduled_workflow_actions').insert(scheduledActionsToSave);
+            console.log(`[Workflow Queue] ${scheduledActionsToSave.length} ação(ões) agendada(s) na fila para o lead ${lead.name} (${wf.name}).`);
+        } catch (dbErr) {
+            console.error('Erro ao salvar ações agendadas na fila:', dbErr);
+        }
     }
 }
+
+// 24/7 Background Cron Queue Processor for Workflows
+async function processScheduledWorkflowQueue() {
+    try {
+        const nowIso = new Date().toISOString();
+        
+        // Find all pending actions whose scheduled time has arrived
+        let actions: any[] = [];
+        try {
+            const { data } = await supabase
+                .from('scheduled_workflow_actions')
+                .select('*')
+                .eq('status', 'pending')
+                .lte('scheduled_for', nowIso)
+                .order('scheduled_for', { ascending: true })
+                .limit(40);
+            if (data && data.length > 0) actions = data;
+        } catch {}
+
+        if (actions.length === 0) {
+            // Check in-memory queue fallback
+            const memReady = inMemoryScheduledActions.filter(a => a.status === 'pending' && a.scheduled_for <= nowIso);
+            if (memReady.length > 0) actions = memReady;
+        }
+
+        if (actions.length === 0) return;
+
+        console.log(`[Cron Workflows] Processando ${actions.length} ação(ões) agendada(s) prontas para disparo...`);
+
+        for (const item of actions) {
+            const step = item.payload?.step;
+            const context = item.payload?.context;
+            const companyName = item.payload?.companyName || 'MDTracker';
+            const companyId = item.company_id;
+
+            // Fetch live lead
+            let lead: any = null;
+            try {
+                const { data: dbLead } = await supabase.from('leads').select('*').eq('id', item.lead_id).maybeSingle();
+                if (dbLead) lead = mapLeadFromDB(dbLead);
+            } catch {}
+
+            if (!lead) {
+                lead = item.payload?.leadSummary || { id: item.lead_id, name: item.lead_name, email: item.lead_email, phone: item.lead_phone };
+            }
+
+            // Fetch workflow
+            let wf: any = null;
+            try {
+                const { data: dbWf } = await supabase.from('marketing_workflows').select('*').eq('id', item.workflow_id).maybeSingle();
+                if (dbWf) wf = mapWorkflowFromDB(dbWf);
+            } catch {}
+            if (!wf) {
+                wf = inMemoryWorkflows.find(w => w.id === item.workflow_id);
+            }
+
+            // Check if workflow is active
+            if (wf && wf.active === false) {
+                console.log(`[Cron Workflows] Fluxo ${wf.name} pausado. Cancelando ação agendada ${item.id}.`);
+                try {
+                    await supabase.from('scheduled_workflow_actions').update({ status: 'cancelled' }).eq('id', item.id);
+                } catch {}
+                item.status = 'cancelled';
+                continue;
+            }
+
+            // Check if event deadline has passed
+            if (wf && wf.hasEventDeadline && wf.eventDate) {
+                const eventDate = new Date(wf.eventDate);
+                if (new Date(item.scheduled_for) > eventDate) {
+                    console.log(`[Cron Workflows] Ação ${item.id} expirou pois o evento já ocorreu (${eventDate.toISOString()}).`);
+                    try {
+                        await supabase.from('scheduled_workflow_actions').update({ status: 'expired' }).eq('id', item.id);
+                    } catch {}
+                    item.status = 'expired';
+                    continue;
+                }
+            }
+
+            // Execute the step!
+            const result = await executeSingleStep(step, lead, wf, companyId, companyName, context);
+
+            // Update action in scheduled queue
+            try {
+                await supabase.from('scheduled_workflow_actions').update({
+                    status: result.status === 'success' ? 'executed' : 'failed',
+                    executed_at: new Date().toISOString(),
+                    error_message: result.status === 'failed' ? result.detail : null
+                }).eq('id', item.id);
+            } catch {}
+            item.status = result.status === 'success' ? 'executed' : 'failed';
+            item.executed_at = new Date().toISOString();
+
+            console.log(`[Cron Workflows] Ação ${item.action_type} para ${item.lead_name} executada! Status: ${result.status} (${result.detail})`);
+        }
+    } catch (err: any) {
+        console.error('[Cron Workflows] Erro ao processar fila agendada:', err);
+    }
+}
+
+// 24/7 Background Cron: runs every 30 seconds automatically
+setInterval(processScheduledWorkflowQueue, 30 * 1000);
+setTimeout(processScheduledWorkflowQueue, 5000);
 
 async function triggerWorkflows(
     event: 'lead_created' | 'stage_changed' | 'product_purchased' | 'popup_submitted' | 'tag_added' | 'form_submitted',
@@ -5302,6 +5546,49 @@ app.get('/api/workflows/logs', async (req: Request, res: Response) => {
         } catch {}
 
         res.json(inMemoryWorkflowLogs.slice(0, 50));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Workflow Scheduled Actions Queue API (24/7 Background Cron Queue)
+app.get('/api/workflows/queue', async (req: Request, res: Response) => {
+    try {
+        const companyId = req.query.companyId as string || 'comp-alfa';
+        try {
+            const { data, error } = await supabase
+                .from('scheduled_workflow_actions')
+                .select('*')
+                .eq('company_id', companyId)
+                .order('scheduled_for', { ascending: true })
+                .limit(100);
+            if (!error && data) return res.json(data);
+        } catch {}
+
+        res.json(inMemoryScheduledActions.filter(a => a.company_id === companyId));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/workflows/queue/process', async (req: Request, res: Response) => {
+    try {
+        await processScheduledWorkflowQueue();
+        res.json({ success: true, message: 'Fila de disparos processada com sucesso!' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/workflows/queue/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        try {
+            await supabase.from('scheduled_workflow_actions').update({ status: 'cancelled' }).eq('id', id);
+        } catch {}
+        const mem = inMemoryScheduledActions.find(a => a.id === id);
+        if (mem) mem.status = 'cancelled';
+        res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

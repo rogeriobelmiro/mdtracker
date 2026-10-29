@@ -511,8 +511,32 @@ export interface MarketingWorkflow {
   enrolledCount: number;
   executedCount: number;
   conversionsCount: number;
+  hasEventDeadline?: boolean;
+  eventDate?: string;
+  timeDistributionMode?: 'proportional' | 'compact' | 'fixed';
+  minStepIntervalMinutes?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ScheduledWorkflowAction {
+  id: string;
+  companyId: string;
+  workflowId: string;
+  workflowName?: string;
+  leadId: string;
+  leadName?: string;
+  leadEmail?: string;
+  leadPhone?: string;
+  stepId: string;
+  stepIndex: number;
+  actionType: WorkflowActionType;
+  scheduledFor: string;
+  status: 'pending' | 'executed' | 'cancelled' | 'expired';
+  payload: any;
+  createdAt: string;
+  executedAt?: string;
+  errorMessage?: string;
 }
 
 export interface WorkflowExecutionLog {

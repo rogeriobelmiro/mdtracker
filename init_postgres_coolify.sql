@@ -270,10 +270,38 @@ CREATE TABLE IF NOT EXISTS public.marketing_workflows (
   enrolled_count INTEGER DEFAULT 0,
   executed_count INTEGER DEFAULT 0,
   conversions_count INTEGER DEFAULT 0,
+  has_event_deadline BOOLEAN DEFAULT FALSE,
+  event_date TIMESTAMPTZ,
+  time_distribution_mode TEXT DEFAULT 'proportional',
+  min_step_interval_minutes INTEGER DEFAULT 30,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_marketing_workflows_company ON public.marketing_workflows(company_id);
+
+-- 13.1 FILA AGENDADA DE AÇÕES DE FLUXOS (CRON / BACKGROUND QUEUE)
+CREATE TABLE IF NOT EXISTS public.scheduled_workflow_actions (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+  workflow_id TEXT REFERENCES public.marketing_workflows(id) ON DELETE CASCADE,
+  workflow_name TEXT,
+  lead_id TEXT,
+  lead_name TEXT,
+  lead_email TEXT,
+  lead_phone TEXT,
+  step_id TEXT NOT NULL,
+  step_index INTEGER DEFAULT 0,
+  action_type TEXT NOT NULL,
+  scheduled_for TIMESTAMPTZ NOT NULL,
+  status TEXT DEFAULT 'pending',
+  payload JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  executed_at TIMESTAMPTZ,
+  error_message TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sched_wf_status_scheduled ON public.scheduled_workflow_actions(status, scheduled_for);
+CREATE INDEX IF NOT EXISTS idx_sched_wf_company ON public.scheduled_workflow_actions(company_id);
+CREATE INDEX IF NOT EXISTS idx_sched_wf_lead ON public.scheduled_workflow_actions(lead_id);
 
 -- 14. LOGS DOS FLUXOS DE MARKETING
 CREATE TABLE IF NOT EXISTS public.workflow_logs (
