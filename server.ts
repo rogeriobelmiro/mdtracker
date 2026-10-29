@@ -1262,6 +1262,309 @@ const mapCustomDomainFromDB = (db: any) => ({
 
 let inMemoryLandingPages: any[] = [
   {
+    id: 'lp-mdtracker-oficial',
+    company_id: 'comp-alfa',
+    title: 'MDTracker 360° - Plataforma Definitiva de Rastreamento CAPI, Automação & Funil Visual',
+    slug: 'mdtracker',
+    description: 'Substitua RD Station, Manychat e Timtim por uma única máquina de conversão. Rastreamento CAPI no WhatsApp, automações omnicanal com redistribuição por prazo e Funil Visual 360° estilo Power UP.',
+    status: 'published',
+    category: 'software_saas',
+    theme: {
+      primaryColor: '#2563eb',
+      accentColor: '#10b981',
+      backgroundColor: 'white',
+      fontFamily: 'Inter',
+      buttonStyle: 'rounded-xl'
+    },
+    hero: {
+      badge: '🚀 LANÇAMENTO: NOVA VERSÃO 360° POWER UP',
+      headline: 'Pare de Queimar Dinheiro em Anúncios Cegos. Domine do Primeiro Clique ao Fechamento no WhatsApp.',
+      subheadline: 'A única plataforma tudo-em-um que une Rastreamento CAPI de Alta Precisão (Meta + Google), Automação Omnicanal com Redistribuição Temporal para Webinários e o Construtor de Funil Visual 360° interativo.',
+      ctaText: 'Garantir Acesso com Condição Especial ⚡',
+      imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80'
+    },
+    features: [
+      {
+        id: 'feat-capi',
+        title: 'Rastreamento CAPI Cirúrgico no WhatsApp',
+        description: 'Blindagem total contra bloqueadores e iOS 14. Envie eventos do primeiro clique, do formulário de entrada e do checkout diretamente para a API de Conversões do Meta e Google Ads.'
+      },
+      {
+        id: 'feat-funnel',
+        title: 'Funil Visual 360° Interativo (Estilo Power UP)',
+        description: 'Mapeie toda a jornada do seu cliente em um canvas visual em tempo real. Conecte anúncios, páginas, pop-ups, links de WhatsApp e acompanhe taxas de conversão, CPL e receita ao vivo.'
+      },
+      {
+        id: 'feat-automation',
+        title: 'Automação com Prazos e Redistribuição Inteligente',
+        description: 'Ideal para webinários e lançamentos: defina a data limite do evento. Se o lead entrar 3 dias antes ou 20 minutos antes, o sistema recalcula e redistribui as mensagens automaticamente no tempo que resta.'
+      },
+      {
+        id: 'feat-popup',
+        title: 'Pop-up de Redirecionamento Seguro com Selos',
+        description: 'Captura obrigatória de Nome e WhatsApp antes de direcionar o lead para o chat oficial, com selos de segurança, verificação e identificação que aumentam a taxa de resposta dos atendentes.'
+      },
+      {
+        id: 'feat-cron',
+        title: 'Motor Autônomo de Disparo em Segundo Plano (Cron)',
+        description: 'Seus e-mails e mensagens de WhatsApp são disparados pontualmente pela nossa infraestrutura de servidores em nuvem, sem depender de deixar nenhuma aba ou computador ligado.'
+      },
+      {
+        id: 'feat-dialer',
+        title: 'Discador Virtual VoIP & Call Center Integrado',
+        description: 'Ligue para os leads diretamente pelo navegador com 1 clique, grave as chamadas comerciais e distribua novas oportunidades automaticamente em fila round-robin entre seus vendedores.'
+      }
+    ],
+    social_proof: {
+      enabled: true,
+      stats: [
+        { label: 'Leads Rastreados & Atribuídos', value: '+2.4M' },
+        { label: 'Aumento Médio em Conversão', value: '+47%' },
+        { label: 'Economia Mensal em Softwares', value: 'R$ 1.250+' },
+        { label: 'Satisfação dos Clientes', value: '4.9/5' }
+      ],
+      testimonials: [
+        {
+          id: 'test-1',
+          name: 'Rodrigo Vasconcelos',
+          role: 'Head de Tráfego - Agência Escala Digital',
+          text: 'Antes do MDTracker, a gente usava Timtim pro WhatsApp, Manychat no Instagram e RD Station pra e-mails. Era uma loucura de contas e os dados nunca batiam. Hoje gerenciamos tudo em uma tela só e o CAPI reduziu nosso CPA pela metade!',
+          rating: 5
+        },
+        {
+          id: 'test-2',
+          name: 'Camila Fernandes',
+          role: 'Infoprodutora & Especialista em Lançamentos',
+          text: 'O recurso de redistribuição automática para webinário é genial! Quem se inscrevia 1 hora antes do evento perdia toda a nutrição nas ferramentas comuns. No MDTracker, todo mundo recebe os pontos-chave a tempo e nossa sala lotou!',
+          rating: 5
+        },
+        {
+          id: 'test-3',
+          name: 'Lucas Brandão',
+          role: 'Diretor Comercial - Grupo OmniVendas',
+          text: 'O Funil Visual estilo Power UP deu uma clareza que nenhum CRM ou analytics jamais deu. Ver os nós de tráfego, cliques e conversões fluindo ao vivo transformou a tomada de decisão da nossa equipe.',
+          rating: 5
+        }
+      ]
+    },
+    countdown: {
+      enabled: true,
+      title: '⚡ Condição Especial de Lançamento com Vagas Limitadas Encerra em:',
+      endDate: new Date(Date.now() + 86400000 * 3).toISOString()
+    },
+    form: {
+      title: 'Desbloqueie seu Acesso Imediato ao MDTracker 360°',
+      subtitle: 'Preencha seus dados abaixo para receber uma demonstração prática guiada e garantir a condição exclusiva de fundador.',
+      buttonText: 'Quero Minha Demonstração Gratuita 🚀',
+      buttonColor: '#2563eb',
+      fields: [
+        { id: 'f-name', name: 'name', label: 'Seu Nome Completo', type: 'text', placeholder: 'Ex: Rogério Belmiro', required: true },
+        { id: 'f-phone', name: 'phone', label: 'WhatsApp com DDD', type: 'tel', placeholder: '(11) 99999-9999', required: true },
+        { id: 'f-email', name: 'email', label: 'Seu Melhor E-mail', type: 'email', placeholder: 'seu@email.com', required: true },
+        { id: 'f-role', name: 'empresa_nicho', label: 'Qual seu nicho ou faturamento atual?', type: 'text', placeholder: 'Ex: Agência, Infoproduto, E-commerce, B2B', required: false }
+      ],
+      actionType: 'redirect_whatsapp',
+      whatsappPhone: '5511999999999',
+      whatsappMessage: 'Olá! Vim pela Landing Page do MDTracker 360° e gostaria de liberar minha demonstração e garantir a condição especial de lançamento!',
+      redirectUrl: '',
+      successMessage: 'Solicitação recebida com sucesso! Redirecionando para o atendimento oficial no WhatsApp...',
+      targetStage: 'Novo Lead',
+      tags: ['lp-venda-mdtracker', 'alta-intencao', 'substituir-concorrentes']
+    },
+    blocks: [
+      {
+        id: 'block-header-form',
+        type: 'header_form',
+        enabled: true,
+        headerNavbarEnabled: true,
+        headerLogoText: 'MDTracker 360°',
+        headerNavCtaText: 'Acessar Agora →',
+        headerBadge: '🚀 LANÇAMENTO: VERSÃO 360° POWER UP',
+        headerHeadline: 'A Única Máquina Tudo-em-Um que Conecta seus Anúncios, WhatsApp e Vendas com Rastreamento CAPI Preciso',
+        headerSubheadline: 'Elimine 4 assinaturas fragmentadas. Substitua RD Station, Manychat e Timtim por uma plataforma integrada com Funil Visual 360°, réguas temporais para webinários e discador comercial.',
+        headerPrimaryCtaText: 'Garantir Minha Condição Exclusiva Agora →',
+        headerTrustBadges: [
+          'Instalação Rápida em 5 Minutos',
+          'Rastreamento CAPI Meta & Google',
+          'Sem Trava de Cobrança por Lead',
+          'Suporte Especializado 1 a 1'
+        ],
+        formCardBadge: 'CONDIÇÃO DE FUNDADOR',
+        formCardTitle: 'Garanta sua Vaga com Bônus',
+        formCardSubtitle: 'Tenha acesso ao ecossistema completo com garantia incondicional de 7 dias.',
+        formCardButtonText: 'Quero Meu Acesso ao MDTracker 🚀',
+        formPosition: 'right',
+        formLgpdNotice: '🔒 Seus dados estão 100% seguros e protegidos pela LGPD.'
+      },
+      {
+        id: 'block-features',
+        type: 'features',
+        enabled: true,
+        backgroundColor: 'slate',
+        title: 'Tudo o que sua Operação Precisa para Escalar em Uma Só Tela',
+        subtitle: 'Projetado sob medida para Gestores de Tráfego, Infoprodutores, Agências e Negócios Locais.'
+      },
+      {
+        id: 'block-comparison',
+        type: 'comparison',
+        enabled: true,
+        backgroundColor: 'white',
+        comparisonBadge: 'MDTRACKER VS CONCORRENTES DO MERCADO',
+        title: 'Por que RD Station, Manychat e Timtim Ficaram para Trás?',
+        subtitle: 'Compare as tecnologias, recursos e a economia real ao unificar suas ferramentas no MDTracker 360°.'
+      },
+      {
+        id: 'block-countdown',
+        type: 'countdown',
+        enabled: true,
+        backgroundColor: 'dark',
+        countdownTitle: '⚡ CONDIÇÃO ESPECIAL DE LANÇAMENTO EXPIRA EM:',
+        countdownEndDate: new Date(Date.now() + 86400000 * 3).toISOString()
+      },
+      {
+        id: 'block-social',
+        type: 'socialProof',
+        enabled: true,
+        backgroundColor: 'white'
+      },
+      {
+        id: 'block-pricing',
+        type: 'pricing',
+        enabled: true,
+        backgroundColor: 'slate',
+        title: 'Planos Transparentes e Sem Pegadinhas',
+        subtitle: 'Pare de ser penalizado por ter uma lista grande. No MDTracker você escala sem medo da fatura.',
+        pricingPlans: [
+          {
+            id: 'plan-starter',
+            name: 'Starter Tracker',
+            price: 'R$ 147',
+            period: 'mês',
+            description: 'Ideal para quem quer rastrear campanhas e parar de queimar dinheiro em anúncios cegos.',
+            features: [
+              'Rastreamento CAPI Meta & Google Ads',
+              'Pop-up de Redirecionamento Seguro',
+              'Gestão de Links com UTMs automáticas',
+              'Até 10.000 cliques rastreados/mês',
+              'CRM de Vendas Integrado',
+              'Suporte via WhatsApp'
+            ],
+            buttonText: 'Começar com o Starter',
+            buttonUrl: '#capture-form'
+          },
+          {
+            id: 'plan-pro',
+            name: 'Pro Growth 360° (Mais Escolhido)',
+            price: 'R$ 297',
+            period: 'mês',
+            description: 'A máquina completa com Funil Visual, automações omnicanal e discador VoIP.',
+            features: [
+              'Tudo do Plano Starter +',
+              'Funil Visual 360° Estilo Power UP',
+              'Automação WhatsApp + E-mail',
+              'Redistribuição Inteligente para Webinários',
+              'Motor Background Cron no Servidor',
+              'Discador Virtual VoIP (Call Center)',
+              'Pesquisas e Quiz Dinâmico',
+              'Cliques e Eventos Ilimitados'
+            ],
+            highlighted: true,
+            badge: 'Melhor Custo-Benefício',
+            buttonText: 'Garantir Acesso Pro Growth 🚀',
+            buttonUrl: '#capture-form'
+          },
+          {
+            id: 'plan-agency',
+            name: 'Agency & Scale',
+            price: 'R$ 597',
+            period: 'mês',
+            description: 'Para agências, co-produções e operações com múltiplos clientes e equipes.',
+            features: [
+              'Tudo do Plano Pro Growth +',
+              'Gestão Multi-Empresas e Sub-contas',
+              'Domínios Personalizados Ilimitados',
+              'Acesso para atendentes ilimitados',
+              'Distribuição Round-Robin Avançada',
+              'Onboarding VIP com Especialista',
+              'Gerente de Contas Dedicado'
+            ],
+            buttonText: 'Contratar Agency & Scale',
+            buttonUrl: '#capture-form'
+          }
+        ]
+      },
+      {
+        id: 'block-faq',
+        type: 'faq',
+        enabled: true,
+        backgroundColor: 'white',
+        title: 'Perguntas Frequentes sobre a Migração',
+        subtitle: 'Tudo o que você precisa saber antes de dar o próximo passo.',
+        faqItems: [
+          {
+            id: 'faq-1',
+            question: 'Como funciona a migração do RD Station, Manychat ou Timtim?',
+            answer: 'A migração é simples e rápida. Você pode importar seus contatos via CSV, configurar seus links de WhatsApp e Landing Pages em menos de 10 minutos. Nossa equipe oferece suporte guiado para você não perder nenhum lead.'
+          },
+          {
+            id: 'faq-2',
+            question: 'Por que o rastreamento CAPI do MDTracker é superior ao pixel comum?',
+            answer: 'Desde a atualização do iOS 14.5 e dos novos bloqueadores de navegador, pixels convencionais perdem de 30% a 50% dos eventos. O MDTracker envia os dados diretamente do servidor para a API do Facebook e Google Ads com dados enriquecidos (FBP, FBC, IP, User-Agent, Nome e WhatsApp), garantindo a menor taxa de perda do mercado.'
+          },
+          {
+            id: 'faq-3',
+            question: 'Como funciona a redistribuição automática para webinários e eventos?',
+            answer: 'Você configura a data e hora do seu evento (ex: 10/11 às 19h). Se uma pessoa se cadastrar 5 dias antes, ela recebe a sequência normal. Se outra pessoa se cadastrar 1 hora antes do evento, o MDTracker recalcula o intervalo e distribui os avisos cruciais no tempo que resta, garantindo que ninguém chegue desinformado ao evento!'
+          },
+          {
+            id: 'faq-4',
+            question: 'Preciso deixar o computador ou navegador aberto para disparar mensagens?',
+            answer: 'Não! O MDTracker possui um motor de background autônomo (Cron Jobs no servidor). Seus disparos em massa, réguas de relacionamento e follow-ups rodam 24 horas por dia, 7 dias por semana nos nossos servidores de nuvem, sem exigir nada do seu computador.'
+          },
+          {
+            id: 'faq-5',
+            question: 'Tenho garantia se não me adaptar?',
+            answer: 'Sim! Oferecemos 7 dias de garantia incondicional. Se por qualquer motivo você achar que a plataforma não atendeu suas expectativas, basta nos avisar pelo WhatsApp que devolvemos 100% do seu investimento, sem perguntas.'
+          }
+        ]
+      },
+      {
+        id: 'block-cta-final',
+        type: 'cta_banner',
+        enabled: true,
+        ctaBadge: 'GARANTIA INCONDICIONAL DE 7 DIAS',
+        ctaHeadline: 'Pronto para Unificar seu Tráfego e Multiplicar suas Conversões?',
+        ctaSubheadline: 'Junte-se a centenas de gestores, agências e infoprodutores que trocaram ferramentas caras e desconectadas pela tecnologia integrada do MDTracker 360°.',
+        ctaButtonText: 'Garantir Meu Acesso com Condição Especial Agora',
+        ctaButtonUrl: '#capture-form'
+      }
+    ],
+    faq: {
+      enabled: true,
+      items: [
+        {
+          id: 'faq-1',
+          question: 'O MDTracker substitui mesmo o RD Station, Manychat e Timtim?',
+          answer: 'Sim! Ele reúne as melhores funções de cada um: a CAPI e redirecionamento seguro com selos (substitui o Timtim), a régua de e-mail e CRM (substitui o RD Station) e a automação de WhatsApp com prazos fixos (substitui o Manychat), além de adicionar o Funil Visual 360° e o Discador VoIP.'
+        },
+        {
+          id: 'faq-2',
+          question: 'É fácil de instalar?',
+          answer: 'Sim, você não precisa saber programação. Em poucos cliques você cria seus links, ativa seu funil e já começa a rastrear campanhas no Meta e Google.'
+        }
+      ]
+    },
+    footer: {
+      companyName: 'MDTracker 360° - Plataforma de Rastreamento & Crescimento',
+      copyrightText: 'Todos os direitos reservados.',
+      privacyPolicyUrl: '#'
+    },
+    views_count: 342,
+    conversions_count: 98,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
     id: 'lp-consultoria-estrategica',
     company_id: 'comp-alfa',
     title: 'Consultoria Estratégica de Vendas & Tráfego no WhatsApp',
@@ -13391,6 +13694,147 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                             <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
                               <span class="cd-secs text-2xl sm:text-3xl font-black text-emerald-400">00</span>
                               <span class="block text-[10px] text-slate-400 uppercase font-normal">Seg</span>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'comparison') {
+                    const rows = b.comparisonRows || [
+                        {
+                            feature: 'Rastreamento CAPI no WhatsApp & Checkout (Meta + Google)',
+                            mdtracker: '✅ Nativo com atribuição de primeiro e último clique',
+                            rdstation: '❌ Apenas formulário em site (Cego no WhatsApp)',
+                            manychat: '❌ Sem atribuição de campanha ou anúncio',
+                            timtim: '⚠️ CAPI simplificada, sem CRM nem automação',
+                            highlight: true
+                        },
+                        {
+                            feature: 'Funil Visual 360° Interativo (Estilo Power UP)',
+                            mdtracker: '✅ Canvas drag-and-drop com métricas ao vivo',
+                            rdstation: '❌ Apenas funil estático em barras',
+                            manychat: '❌ Fluxo de mensagens isolado do tráfego',
+                            timtim: '❌ Não possui funil visual',
+                            highlight: true
+                        },
+                        {
+                            feature: 'Sequência com Prazo Limite (Eventos/Webinários)',
+                            mdtracker: '✅ Redistribuição inteligente automática no tempo restante',
+                            rdstation: '❌ Disparo por dias fixos (perde quem entra em cima da hora)',
+                            manychat: '❌ Travado na janela de 24h sem cálculo de prazo',
+                            timtim: '❌ Não tem disparador nem sequência de mensagens',
+                            highlight: true
+                        },
+                        {
+                            feature: 'Pop-up Inteligente com Selos de Redirecionamento Seguro',
+                            mdtracker: '✅ Captura Nome + WhatsApp com selos oficiais e UTM',
+                            rdstation: '❌ Popups tradicionais de newsletter',
+                            manychat: '❌ Não possui',
+                            timtim: '⚠️ Redirecionador básico sem selos nem qualificação',
+                            highlight: false
+                        },
+                        {
+                            feature: 'Motor Autônomo de Disparo em Segundo Plano (Cron no Servidor)',
+                            mdtracker: '✅ Dispara na hora exata sem precisar de tela aberta',
+                            rdstation: '⚠️ Apenas para e-mail (WhatsApp requer apps terceiros)',
+                            manychat: '⚠️ Depende da janela do Meta e custos extras',
+                            timtim: '❌ Não possui motor de envio',
+                            highlight: false
+                        },
+                        {
+                            feature: 'Call Center & Discador Virtual VoIP Integrado',
+                            mdtracker: '✅ Discador Web com gravação e distribuição round-robin',
+                            rdstation: '❌ Requer contratação de plataformas externas caras',
+                            manychat: '❌ Não possui',
+                            timtim: '❌ Não possui',
+                            highlight: false
+                        },
+                        {
+                            feature: 'Pesquisa / Quiz com Gatilhos Condicionais',
+                            mdtracker: '✅ Qualifica lead e dispara automação personalizada',
+                            rdstation: '⚠️ Formulários estáticos sem disparo dinâmico',
+                            manychat: '⚠️ Apenas dentro do chat do Instagram',
+                            timtim: '❌ Não possui',
+                            highlight: false
+                        },
+                        {
+                            feature: 'Modelo de Cobrança & Limite de Contatos',
+                            mdtracker: '🟢 Acesso Unificado Ilimitado (Sem taxas abusivas)',
+                            rdstation: '🔴 R$ 450 a R$ 1.500/mês (aumenta por contato)',
+                            manychat: '🔴 Cobrado em Dólar ($$$) conforme a base sobe',
+                            timtim: '🔴 Cobrado por plano ou volume de cliques',
+                            highlight: true
+                        }
+                    ];
+
+                    return `
+                      <section class="py-16 md:py-24 ${bgClass}" id="comparison-section">
+                        <div class="max-w-6xl mx-auto px-4">
+                          <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+                            <span class="text-xs font-extrabold uppercase tracking-widest text-blue-600 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-200 shadow-xs">
+                              ${b.comparisonBadge || 'Comparativo Definitivo de Mercado'}
+                            </span>
+                            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-4">
+                              ${b.title || 'Por que o MDTracker 360° é a Escolha Nº 1 frente aos Concorrentes?'}
+                            </h2>
+                            <p class="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
+                              ${b.subtitle || 'Pare de pagar por 4 ferramentas separadas que não conversam entre si. Veja lado a lado por que líderes de tráfego e vendas migraram para o MDTracker.'}
+                            </p>
+                          </div>
+
+                          <!-- Table Container -->
+                          <div class="overflow-hidden rounded-3xl border border-slate-200/90 shadow-2xl bg-white">
+                            <div class="overflow-x-auto">
+                              <table class="w-full text-left border-collapse min-w-[760px]">
+                                <thead>
+                                  <tr class="border-b border-slate-200 bg-slate-50/90 text-xs uppercase font-extrabold text-slate-700">
+                                    <th class="p-5 sm:p-6 w-2/5">Capacidades & Recursos</th>
+                                    <th class="p-5 sm:p-6 w-1/4 bg-blue-600 text-white text-center relative shadow-lg">
+                                      <span class="inline-block bg-amber-400 text-slate-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-1">RECOMENDADO</span>
+                                      <div class="font-black text-sm sm:text-base tracking-wide">MDTracker 360°</div>
+                                    </th>
+                                    <th class="p-5 sm:p-6 text-center text-slate-600 font-bold">RD Station</th>
+                                    <th class="p-5 sm:p-6 text-center text-slate-600 font-bold">Manychat</th>
+                                    <th class="p-5 sm:p-6 text-center text-slate-600 font-bold">Timtim</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
+                                  ${rows.map((row: any, rIdx: number) => {
+                                    const rowBg = row.highlight ? 'bg-blue-50/30' : (rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40');
+                                    return `
+                                      <tr class="${rowBg} hover:bg-slate-50 transition">
+                                        <td class="p-4 sm:p-5 font-bold text-slate-900 flex items-start gap-2">
+                                          ${row.highlight ? `<span class="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5"></span>` : ''}
+                                          <span>${row.feature}</span>
+                                        </td>
+                                        <td class="p-4 sm:p-5 bg-blue-50/50 border-x-2 border-blue-600 font-bold text-blue-950 text-center">
+                                          ${row.mdtracker}
+                                        </td>
+                                        <td class="p-4 sm:p-5 text-center text-slate-600">
+                                          ${row.rdstation}
+                                        </td>
+                                        <td class="p-4 sm:p-5 text-center text-slate-600">
+                                          ${row.manychat}
+                                        </td>
+                                        <td class="p-4 sm:p-5 text-center text-slate-600">
+                                          ${row.timtim}
+                                        </td>
+                                      </tr>
+                                    `;
+                                  }).join('')}
+                                </tbody>
+                              </table>
+                            </div>
+                            <div class="p-5 sm:p-6 bg-slate-50/90 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                              <div class="text-xs text-slate-500 text-center sm:text-left">
+                                <strong class="text-slate-800">Economia Real:</strong> Substitua 4 assinaturas diferentes por 1 única plataforma centralizada.
+                              </div>
+                              <a href="#capture-form" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-xs sm:text-sm rounded-xl hover:bg-blue-500 shadow-md transition transform active:scale-95">
+                                <span>Garantir Acesso ao MDTracker 360°</span>
+                                <span>&rarr;</span>
+                              </a>
                             </div>
                           </div>
                         </div>

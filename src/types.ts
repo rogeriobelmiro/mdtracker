@@ -663,7 +663,18 @@ export type LandingPageBlockType =
   | 'pricing' 
   | 'faq' 
   | 'countdown' 
-  | 'cta_banner';
+  | 'cta_banner'
+  | 'comparison';
+
+export interface ComparisonRow {
+  feature: string;
+  category?: string;
+  mdtracker: string;
+  rdstation: string;
+  manychat: string;
+  timtim: string;
+  highlight?: boolean;
+}
 
 export interface LandingPagePricingPlan {
   id: string;
@@ -747,6 +758,10 @@ export interface LandingPageCustomBlock {
   ctaButtonText?: string;
   ctaButtonUrl?: string;
   ctaBadge?: string;
+
+  // Comparison block (MDTracker vs Concorrentes)
+  comparisonBadge?: string;
+  comparisonRows?: ComparisonRow[];
 }
 
 export interface LandingPageForm {
