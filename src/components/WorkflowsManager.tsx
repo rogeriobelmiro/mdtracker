@@ -1406,7 +1406,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                           }`}
                         >
                           📄 Landing Page Interna
-                          <span className="block text-[10px] text-slate-500 font-normal">Criada no MDTracker</span>
+                          <span className="block text-[10px] text-slate-500 font-normal">Criada no TrackerMD</span>
                         </button>
 
                         <button
@@ -1997,7 +1997,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                 </div>
 
                 <p className="text-xs text-slate-600">
-                  Envie os dados de qualquer formulário feito no <strong>Elementor</strong> diretamente para o MDTracker. Ao enviar, o lead é cadastrado no CRM e o fluxo de nutrição é acionado.
+                  Envie os dados de qualquer formulário feito no <strong>Elementor</strong> diretamente para o TrackerMD. Ao enviar, o lead é cadastrado no CRM e o fluxo de nutrição é acionado.
                 </p>
 
                 <div className="space-y-1.5">
@@ -2140,7 +2140,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-sm text-purple-950 flex items-center gap-1.5">
                     <Globe className="w-4 h-4 text-purple-600" />
-                    3. Iframe de Landing Page Criada no MDTracker
+                    3. Iframe de Landing Page Criada no TrackerMD
                   </h4>
                   <span className="text-[11px] text-purple-700 font-medium">Embed completo</span>
                 </div>
@@ -2199,7 +2199,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                   </div>
                 ) : (
                   <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-                    Nenhuma landing page criada ainda no MDTracker. Você pode criar uma na aba <strong>Landing Pages</strong>.
+                    Nenhuma landing page criada ainda no TrackerMD. Você pode criar uma na aba <strong>Landing Pages</strong>.
                   </p>
                 )}
               </div>

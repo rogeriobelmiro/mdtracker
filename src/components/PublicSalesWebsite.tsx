@@ -111,7 +111,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
         active: true
       });
 
-      await success(`🎉 Bem-vindo ao MDTracker! Seu período de 1 dia de testes já está liberado.`);
+      await success(`🎉 Bem-vindo ao TrackerMD! Seu período de 1 dia de testes já está liberado.`);
       setIsTrialModalOpen(false);
       onLoginSuccess(newUser, newComp);
     } catch (err: any) {
@@ -146,7 +146,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-white">MDTracker</span>
+                <span className="text-lg font-black tracking-tight text-white">TrackerMD</span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
                   360° SaaS
                 </span>
@@ -264,7 +264,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
                 <span className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
                 <span className="ml-2 font-mono text-slate-400 font-semibold text-[11px] hidden sm:inline">
-                  MDTracker Funil Visual 360° • Power UP Live Canvas
+                  TrackerMD Funil Visual 360° • Power UP Live Canvas
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             <div className="relative overflow-hidden cursor-pointer" onClick={() => setIsTrialModalOpen(true)}>
               <img
                 src="/funnel-showcase.png"
-                alt="MDTracker Funil Visual 360° Power UP Live Canvas"
+                alt="TrackerMD Funil Visual 360° Power UP Live Canvas"
                 className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition duration-500 rounded-b-xl"
                 loading="eager"
               />
@@ -352,7 +352,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               </ul>
             </div>
 
-            {/* The MDTracker Way */}
+            {/* The TrackerMD Way */}
             <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-blue-950/80 via-slate-900 to-indigo-950 border-2 border-blue-500/80 shadow-2xl space-y-5 relative">
               <span className="absolute -top-3.5 right-6 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 text-xs font-black rounded-full uppercase tracking-wider shadow">
                 SOLUÇÃO 100% INTEGRADA
@@ -360,7 +360,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               <div className="flex items-center justify-between">
                 <h3 className="font-black text-lg text-white flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <span>Com o MDTracker 360°</span>
+                  <span>Com o TrackerMD 360°</span>
                 </h3>
                 <span className="text-xs font-bold text-emerald-400 font-mono">A partir de R$ 147/mês</span>
               </div>
@@ -755,7 +755,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
       </section>
 
       {/* ========================================================= */}
-      {/* COMPARISON TABLE: MDTracker vs Competitors */}
+      {/* COMPARISON TABLE: TrackerMD vs Competitors */}
       {/* ========================================================= */}
       <section className="py-20 bg-slate-900/50 border-t border-slate-800 px-4 sm:px-6" id="comparativo">
         <div className="max-w-6xl mx-auto space-y-12">
@@ -764,10 +764,10 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               Lado a Lado
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white">
-              Por que o MDTracker Vence RD Station, Manychat e Timtim?
+              Por que o TrackerMD Vence RD Station, Manychat e Timtim?
             </h2>
             <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-              Veja por que os maiores players de tráfego direto e lançamentos abandonaram ferramentas caras para migrar para o MDTracker 360°.
+              Veja por que os maiores players de tráfego direto e lançamentos abandonaram ferramentas caras para migrar para o TrackerMD 360°.
             </p>
           </div>
 
@@ -781,7 +781,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
                       <span className="inline-block bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full mb-1">
                         RECOMENDADO
                       </span>
-                      <div className="font-black text-sm text-white">MDTracker 360°</div>
+                      <div className="font-black text-sm text-white">TrackerMD 360°</div>
                     </th>
                     <th className="p-5 text-center text-slate-400">RD Station</th>
                     <th className="p-5 text-center text-slate-400">Manychat</th>
@@ -1008,7 +1008,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               Casos Reais
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white">
-              O que Quem Usa o MDTracker Está Dizendo
+              O que Quem Usa o TrackerMD Está Dizendo
             </h2>
           </div>
 
@@ -1018,7 +1018,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
                 {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
               </div>
               <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed">
-                "Antes a gente usava Timtim pro WhatsApp, Manychat pro Insta e RD pros e-mails. Era uma loucura e os dados nunca batiam. O CAPI do MDTracker reduziu nosso CPA pela metade no primeiro mês!"
+                "Antes a gente usava Timtim pro WhatsApp, Manychat pro Insta e RD pros e-mails. Era uma loucura e os dados nunca batiam. O CAPI do TrackerMD reduziu nosso CPA pela metade no primeiro mês!"
               </p>
               <div>
                 <strong className="block text-sm text-white">Rodrigo Vasconcelos</strong>
@@ -1031,7 +1031,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
                 {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
               </div>
               <p className="text-xs sm:text-sm text-slate-300 italic leading-relaxed">
-                "O recurso de redistribuição para webinário salvou meu último lançamento. Quem entrava 1 hora antes perdia toda a nutrição nas outras ferramentas. No MDTracker a sala lotou!"
+                "O recurso de redistribuição para webinário salvou meu último lançamento. Quem entrava 1 hora antes perdia toda a nutrição nas outras ferramentas. No TrackerMD a sala lotou!"
               </p>
               <div>
                 <strong className="block text-sm text-white">Camila Fernandes</strong>
@@ -1080,7 +1080,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
                 a: 'Após assinar seu plano na Hotmart, nosso Webhook recebe a confirmação em segundos e ativa automaticamente o status da sua empresa, liberando acesso ilimitado sem travas.'
               },
               {
-                q: 'O MDTracker substitui mesmo o RD Station, Manychat e Timtim?',
+                q: 'O TrackerMD substitui mesmo o RD Station, Manychat e Timtim?',
                 a: 'Sim! Ele reúne o que há de melhor em cada um: o redirecionamento com selos e CAPI (substitui o Timtim), o fluxo de e-mail e CRM (substitui o RD Station) e a automação de WhatsApp com prazos fixos (substitui o Manychat), além de adicionar o Funil Visual 360° e o Discador VoIP.'
               },
               {
@@ -1124,7 +1124,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             Pronto para Multiplicar o ROI dos seus Anúncios?
           </h2>
           <p className="text-sm sm:text-base text-blue-100 max-w-2xl mx-auto">
-            Junte-se a centenas de empresas que trocaram o caos das ferramentas fragmentadas pela clareza do MDTracker 360°.
+            Junte-se a centenas de empresas que trocaram o caos das ferramentas fragmentadas pela clareza do TrackerMD 360°.
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
@@ -1153,7 +1153,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               W
             </div>
             <div>
-              <strong className="text-white block font-bold">MDTracker 360° SaaS</strong>
+              <strong className="text-white block font-bold">TrackerMD 360° SaaS</strong>
               <span>© {new Date().getFullYear()} Todos os direitos reservados.</span>
             </div>
           </div>
@@ -1190,7 +1190,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
               <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-wider border border-blue-500/20">
                 1 DIA DE TESTES 100% GRÁTIS
               </span>
-              <h3 className="text-2xl font-black text-white">Criar Minha Conta no MDTracker</h3>
+              <h3 className="text-2xl font-black text-white">Criar Minha Conta no TrackerMD</h3>
               <p className="text-xs text-slate-400">
                 Preencha os dados abaixo. Você terá acesso imediato sem precisar de cartão de crédito.
               </p>

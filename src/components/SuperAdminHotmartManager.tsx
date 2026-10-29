@@ -539,7 +539,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             {/* Webhook URL Box */}
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                URL do Webhook do MDTracker (Copie e cole na Hotmart)
+                URL do Webhook do TrackerMD (Copie e cole na Hotmart)
               </label>
               <div className="flex items-center gap-2">
                 <input

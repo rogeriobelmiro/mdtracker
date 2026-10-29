@@ -216,8 +216,8 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
       autoTriggerWhatsApp: false,
       whatsappTemplate: 'Olá {nome}! Obrigado por responder à nossa pesquisa na {empresa}. Em instantes entraremos em contato com você!',
       autoTriggerEmail: false,
-      emailSubject: 'Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker'),
-      emailBody: 'Olá {nome},\n\nRecebemos suas respostas para a pesquisa da {empresa}. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker')
+      emailSubject: 'Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'TrackerMD'),
+      emailBody: 'Olá {nome},\n\nRecebemos suas respostas para a pesquisa da {empresa}. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD')
     };
     setEditingSurvey(newSurvey);
     setIsEditorOpen(true);
@@ -230,10 +230,10 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
       ...s,
       workflowId: s.workflowId || '',
       autoTriggerWhatsApp: Boolean(s.autoTriggerWhatsApp),
-      whatsappTemplate: s.whatsappTemplate || ('Olá {nome}! Obrigado por responder à nossa pesquisa na ' + (currentCompany.name || 'MDTracker') + '. Em instantes entraremos em contato com você!'),
+      whatsappTemplate: s.whatsappTemplate || ('Olá {nome}! Obrigado por responder à nossa pesquisa na ' + (currentCompany.name || 'TrackerMD') + '. Em instantes entraremos em contato com você!'),
       autoTriggerEmail: Boolean(s.autoTriggerEmail),
-      emailSubject: s.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker')),
-      emailBody: s.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa da ' + (currentCompany.name || 'MDTracker') + '. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+      emailSubject: s.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'TrackerMD')),
+      emailBody: s.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa da ' + (currentCompany.name || 'TrackerMD') + '. Muito obrigado pela sua participação!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD'))
     });
     setIsEditorOpen(true);
   };
@@ -1117,8 +1117,8 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
                         onChange={e => setEditingSurvey({
                           ...editingSurvey,
                           autoTriggerEmail: e.target.checked,
-                          emailSubject: editingSurvey.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'MDTracker')),
-                          emailBody: editingSurvey.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa "' + (editingSurvey.title || 'Pesquisa') + '" da {empresa}. Muito obrigado por sua contribuição!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+                          emailSubject: editingSurvey.emailSubject || ('Obrigado por responder nossa pesquisa - ' + (currentCompany.name || 'TrackerMD')),
+                          emailBody: editingSurvey.emailBody || ('Olá {nome},\n\nRecebemos suas respostas para a pesquisa "' + (editingSurvey.title || 'Pesquisa') + '" da {empresa}. Muito obrigado por sua contribuição!\n\nNossa equipe já está analisando suas respostas para te atender com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD'))
                         })}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
@@ -2098,7 +2098,7 @@ export const SurveysManager: React.FC<SurveysManagerProps> = ({ currentCompany, 
               {/* Modal Footer */}
               <div className="p-4 px-6 border-t border-slate-200 flex items-center justify-between bg-slate-50/80 rounded-b-3xl">
                 <span className="text-xs text-slate-500">
-                  Relatório gerado em tempo real pelo MDTracker Growth Suite
+                  Relatório gerado em tempo real pelo TrackerMD Growth Suite
                 </span>
                 <button
                   onClick={() => setIsResponsesOpen(false)}

@@ -300,7 +300,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
   const handleExportLeads = async (eventId: string) => {
     try {
       const res = await exportGamificationLeadsToCRM(eventId);
-      await alert(`🎉 ${res.importedCount} leads foram importados com sucesso para a base de Leads e CRM do MDTracker!`);
+      await alert(`🎉 ${res.importedCount} leads foram importados com sucesso para a base de Leads e CRM do TrackerMD!`);
     } catch (err: any) {
       await alert('Erro ao exportar leads: ' + err.message);
     }

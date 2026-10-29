@@ -127,8 +127,8 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
     autoTriggerWhatsApp: false,
     whatsappTemplate: 'Olá {nome}! Obrigado por se cadastrar no pop-up do nosso site. Em instantes um especialista falará com você!',
     autoTriggerEmail: false,
-    emailSubject: 'Obrigado pelo seu contato - ' + (currentCompany.name || 'MDTracker'),
-    emailBody: 'Olá {nome},\n\nRecebemos seus dados através do formulário de oportunidade em nosso site.\n\nNossa equipe já está analisando suas informações para atendê-lo com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker')
+    emailSubject: 'Obrigado pelo seu contato - ' + (currentCompany.name || 'TrackerMD'),
+    emailBody: 'Olá {nome},\n\nRecebemos seus dados através do formulário de oportunidade em nosso site.\n\nNossa equipe já está analisando suas informações para atendê-lo com prioridade.\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD')
   });
 
   // Filtered List
@@ -185,8 +185,8 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
       autoTriggerWhatsApp: false,
       whatsappTemplate: 'Olá {nome}! Obrigado por se cadastrar no pop-up do nosso site. Em instantes um especialista falará com você!',
       autoTriggerEmail: false,
-      emailSubject: 'Obrigado pelo seu contato - ' + (currentCompany.name || 'MDTracker'),
-      emailBody: 'Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker')
+      emailSubject: 'Obrigado pelo seu contato - ' + (currentCompany.name || 'TrackerMD'),
+      emailBody: 'Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD')
     });
     setActiveTab('content');
     setIsEditorOpen(true);
@@ -201,8 +201,8 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
       autoTriggerWhatsApp: popup.autoTriggerWhatsApp || false,
       whatsappTemplate: popup.whatsappTemplate || 'Olá {nome}! Obrigado por se cadastrar no pop-up do nosso site. Em instantes um especialista falará com você!',
       autoTriggerEmail: popup.autoTriggerEmail || false,
-      emailSubject: popup.emailSubject || ('Obrigado pelo seu contato - ' + (currentCompany.name || 'MDTracker')),
-      emailBody: popup.emailBody || ('Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+      emailSubject: popup.emailSubject || ('Obrigado pelo seu contato - ' + (currentCompany.name || 'TrackerMD')),
+      emailBody: popup.emailBody || ('Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD'))
     });
     setActiveTab('content');
     setIsEditorOpen(true);
@@ -296,7 +296,7 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
     const origin = (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
       ? 'https://mdtracker.mudadigital.com.br'
       : window.location.origin;
-    return `<!-- Início Pop-up Inteligente MDTracker -->\n<script src="${origin}/tracker/popup.js?id=${popup.id}" async></script>\n<!-- Fim Pop-up Inteligente MDTracker -->`;
+    return `<!-- Início Pop-up Inteligente TrackerMD -->\n<script src="${origin}/tracker/popup.js?id=${popup.id}" async></script>\n<!-- Fim Pop-up Inteligente TrackerMD -->`;
   };
 
   const handleCopySnippet = (popup: SmartPopup) => {
@@ -1235,8 +1235,8 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
                                 onChange={e => setFormData({
                                   ...formData,
                                   autoTriggerEmail: e.target.checked,
-                                  emailSubject: formData.emailSubject || ('Obrigado pelo seu contato - ' + (currentCompany.name || 'MDTracker')),
-                                  emailBody: formData.emailBody || ('Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'MDTracker'))
+                                  emailSubject: formData.emailSubject || ('Obrigado pelo seu contato - ' + (currentCompany.name || 'TrackerMD')),
+                                  emailBody: formData.emailBody || ('Olá {nome},\n\nRecebemos sua mensagem enviada através do pop-up do nosso site. Estamos prontos para te atender!\n\nAtenciosamente,\n' + (currentCompany.name || 'TrackerMD'))
                                 })}
                                 className="w-4 h-4 text-blue-600 rounded"
                               />

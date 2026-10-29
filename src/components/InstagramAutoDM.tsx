@@ -2286,7 +2286,7 @@ export const InstagramAutoDM: React.FC<InstagramAutoDMProps> = ({
                   Respostas Públicas no Post (Variações Rotativas Anti-Spam) *
                 </label>
                 <p className="text-[10px] text-slate-500">
-                  O Instagram bloqueia perfis que respondem sempre o mesmo texto. O MDTracker sorteia uma resposta diferente a cada comentário:
+                  O Instagram bloqueia perfis que respondem sempre o mesmo texto. O TrackerMD sorteia uma resposta diferente a cada comentário:
                 </p>
 
                 <div className="space-y-1.5">

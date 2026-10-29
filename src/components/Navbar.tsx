@@ -84,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base text-slate-900 tracking-tight">MDTracker</span>
+                <span className="font-bold text-base text-slate-900 tracking-tight">TrackerMD</span>
                 <span className="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-200">
                   Multiempresa
                 </span>

@@ -130,7 +130,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 W
               </div>
               <div>
-                <h1 className="text-lg font-black tracking-tight leading-tight">MDTracker</h1>
+                <h1 className="text-lg font-black tracking-tight leading-tight">TrackerMD</h1>
                 <p className="text-[11px] text-blue-300 font-medium">Plataforma de Trackeamento no WhatsApp</p>
               </div>
             </div>

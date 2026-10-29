@@ -1494,7 +1494,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
 
         <div className="flex items-center gap-2">
           <div className="text-[10px] text-slate-500 hidden md:block">
-            Mapeador Visual Conectado • MDTracker 360°
+            Mapeador Visual Conectado • TrackerMD 360°
           </div>
           <button
             onClick={() => alert('Dica: Você pode arrastar do pino azul à direita de um bloco até o pino verde à esquerda de outro bloco para criar uma linha de conexão.')}

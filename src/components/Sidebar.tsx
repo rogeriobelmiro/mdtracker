@@ -319,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
             <div className="flex flex-col leading-tight">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-white tracking-tight">MDTracker</span>
+                <span className="font-bold text-base text-white tracking-tight">TrackerMD</span>
                 <span className="bg-blue-500/20 text-blue-400 text-[9px] font-bold px-1.5 py-0.2 rounded border border-blue-500/30">
                   PRO
                 </span>

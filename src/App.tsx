@@ -83,10 +83,12 @@ export default function App() {
   // Logged-in Session State (Persisted in localStorage)
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem('mdtracker_user');
+      const saved = localStorage.getItem('trackermd_user') || localStorage.getItem('mdtracker_user');
       if (!saved) return null;
       const parsed: User = JSON.parse(saved);
       if (parsed.companyId === 'comp-1786498560971' && !parsed.email?.toLowerCase().includes('@mudadigital.')) {
+        localStorage.removeItem('trackermd_user');
+        localStorage.removeItem('trackermd_company');
         localStorage.removeItem('mdtracker_user');
         localStorage.removeItem('mdtracker_company');
         return null;
@@ -98,12 +100,14 @@ export default function App() {
   });
   const [currentCompany, setCurrentCompany] = useState<Company | null>(() => {
     try {
-      const savedUserStr = localStorage.getItem('mdtracker_user');
-      const savedCompStr = localStorage.getItem('mdtracker_company');
+      const savedUserStr = localStorage.getItem('trackermd_user') || localStorage.getItem('mdtracker_user');
+      const savedCompStr = localStorage.getItem('trackermd_company') || localStorage.getItem('mdtracker_company');
       if (!savedUserStr || !savedCompStr) return null;
       const parsedUser: User = JSON.parse(savedUserStr);
       const parsedComp: Company = JSON.parse(savedCompStr);
       if (parsedComp.id === 'comp-1786498560971' && !parsedUser.email?.toLowerCase().includes('@mudadigital.')) {
+        localStorage.removeItem('trackermd_user');
+        localStorage.removeItem('trackermd_company');
         localStorage.removeItem('mdtracker_user');
         localStorage.removeItem('mdtracker_company');
         return null;
@@ -339,6 +343,8 @@ export default function App() {
     setCurrentCompany(company);
     stateRef.current = { ...stateRef.current, currentCompany: company, currentUser: user };
     try {
+      localStorage.setItem('trackermd_user', JSON.stringify(user));
+      localStorage.setItem('trackermd_company', JSON.stringify(company));
       localStorage.setItem('mdtracker_user', JSON.stringify(user));
       localStorage.setItem('mdtracker_company', JSON.stringify(company));
     } catch {}
@@ -365,6 +371,8 @@ export default function App() {
     setWebhookLogs([]);
     stateRef.current = { ...stateRef.current, currentCompany: null, currentUser: null };
     try {
+      localStorage.removeItem('trackermd_user');
+      localStorage.removeItem('trackermd_company');
       localStorage.removeItem('mdtracker_user');
       localStorage.removeItem('mdtracker_company');
     } catch {}
@@ -541,7 +549,7 @@ export default function App() {
       <div className="min-h-screen bg-[#F1F5F9] text-slate-800 flex items-center justify-center p-4">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-semibold text-slate-600">Iniciando MDTracker...</p>
+          <p className="text-sm font-semibold text-slate-600">Iniciando TrackerMD...</p>
         </div>
       </div>
     );
@@ -925,7 +933,7 @@ export default function App() {
         <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 py-3 shrink-0 text-center">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p>
-              MDTracker &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
+              TrackerMD &copy; {new Date().getFullYear()} - {currentCompany.name} (CNPJ: {currentCompany.cnpj})
             </p>
             <div className="flex items-center gap-3 text-[11px] text-slate-500">
               <span className="flex items-center gap-1">

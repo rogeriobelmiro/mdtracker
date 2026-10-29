@@ -1143,7 +1143,7 @@ const mapLandingPageFromDB = (db: any) => ({
         tags: ['landing-page']
     },
     faq: db.faq || { enabled: false, items: [] },
-    footer: db.footer || { companyName: 'MDTracker' },
+    footer: db.footer || { companyName: 'TrackerMD' },
     thankYouPage: db.thank_you_page || {
         enabled: true,
         title: '🎉 Parabéns! Sua Inscrição Foi Confirmada!',
@@ -1288,8 +1288,8 @@ let inMemoryLandingPages: any[] = [
   {
     id: 'lp-mdtracker-oficial',
     company_id: 'comp-alfa',
-    title: 'MDTracker 360° - Plataforma Definitiva de Rastreamento CAPI, Automação & Funil Visual',
-    slug: 'mdtracker',
+    title: 'TrackerMD 360° - Plataforma Definitiva de Rastreamento CAPI, Automação & Funil Visual',
+    slug: 'trackermd',
     description: 'Substitua RD Station, Manychat e Timtim por uma única máquina de conversão. Rastreamento CAPI no WhatsApp, automações omnicanal com redistribuição por prazo e Funil Visual 360° estilo Power UP.',
     status: 'published',
     category: 'software_saas',
@@ -1352,14 +1352,14 @@ let inMemoryLandingPages: any[] = [
           id: 'test-1',
           name: 'Rodrigo Vasconcelos',
           role: 'Head de Tráfego - Agência Escala Digital',
-          text: 'Antes do MDTracker, a gente usava Timtim pro WhatsApp, Manychat no Instagram e RD Station pra e-mails. Era uma loucura de contas e os dados nunca batiam. Hoje gerenciamos tudo em uma tela só e o CAPI reduziu nosso CPA pela metade!',
+          text: 'Antes do TrackerMD, a gente usava Timtim pro WhatsApp, Manychat no Instagram e RD Station pra e-mails. Era uma loucura de contas e os dados nunca batiam. Hoje gerenciamos tudo em uma tela só e o CAPI reduziu nosso CPA pela metade!',
           rating: 5
         },
         {
           id: 'test-2',
           name: 'Camila Fernandes',
           role: 'Infoprodutora & Especialista em Lançamentos',
-          text: 'O recurso de redistribuição automática para webinário é genial! Quem se inscrevia 1 hora antes do evento perdia toda a nutrição nas ferramentas comuns. No MDTracker, todo mundo recebe os pontos-chave a tempo e nossa sala lotou!',
+          text: 'O recurso de redistribuição automática para webinário é genial! Quem se inscrevia 1 hora antes do evento perdia toda a nutrição nas ferramentas comuns. No TrackerMD, todo mundo recebe os pontos-chave a tempo e nossa sala lotou!',
           rating: 5
         },
         {
@@ -1377,7 +1377,7 @@ let inMemoryLandingPages: any[] = [
       endDate: new Date(Date.now() + 86400000 * 3).toISOString()
     },
     form: {
-      title: 'Desbloqueie seu Acesso Imediato ao MDTracker 360°',
+      title: 'Desbloqueie seu Acesso Imediato ao TrackerMD 360°',
       subtitle: 'Preencha seus dados abaixo para receber uma demonstração prática guiada e garantir a condição exclusiva de fundador.',
       buttonText: 'Quero Minha Demonstração Gratuita 🚀',
       buttonColor: '#2563eb',
@@ -1389,11 +1389,11 @@ let inMemoryLandingPages: any[] = [
       ],
       actionType: 'redirect_whatsapp',
       whatsappPhone: '5511999999999',
-      whatsappMessage: 'Olá! Vim pela Landing Page do MDTracker 360° e gostaria de liberar minha demonstração e garantir a condição especial de lançamento!',
+      whatsappMessage: 'Olá! Vim pela Landing Page do TrackerMD 360° e gostaria de liberar minha demonstração e garantir a condição especial de lançamento!',
       redirectUrl: '',
       successMessage: 'Solicitação recebida com sucesso! Redirecionando para o atendimento oficial no WhatsApp...',
       targetStage: 'Novo Lead',
-      tags: ['lp-venda-mdtracker', 'alta-intencao', 'substituir-concorrentes']
+      tags: ['lp-venda-trackermd', 'alta-intencao', 'substituir-concorrentes']
     },
     blocks: [
       {
@@ -1401,7 +1401,7 @@ let inMemoryLandingPages: any[] = [
         type: 'header_form',
         enabled: true,
         headerNavbarEnabled: true,
-        headerLogoText: 'MDTracker 360°',
+        headerLogoText: 'TrackerMD 360°',
         headerNavCtaText: 'Acessar Agora →',
         headerBadge: '🚀 LANÇAMENTO: VERSÃO 360° POWER UP',
         headerHeadline: 'A Única Máquina Tudo-em-Um que Conecta seus Anúncios, WhatsApp e Vendas com Rastreamento CAPI Preciso',
@@ -1416,7 +1416,7 @@ let inMemoryLandingPages: any[] = [
         formCardBadge: 'CONDIÇÃO DE FUNDADOR',
         formCardTitle: 'Garanta sua Vaga com Bônus',
         formCardSubtitle: 'Tenha acesso ao ecossistema completo com garantia incondicional de 7 dias.',
-        formCardButtonText: 'Quero Meu Acesso ao MDTracker 🚀',
+        formCardButtonText: 'Quero Meu Acesso ao TrackerMD 🚀',
         formPosition: 'right',
         formLgpdNotice: '🔒 Seus dados estão 100% seguros e protegidos pela LGPD.'
       },
@@ -1433,9 +1433,9 @@ let inMemoryLandingPages: any[] = [
         type: 'comparison',
         enabled: true,
         backgroundColor: 'white',
-        comparisonBadge: 'MDTRACKER VS CONCORRENTES DO MERCADO',
+        comparisonBadge: 'TRACKERMD VS CONCORRENTES DO MERCADO',
         title: 'Por que RD Station, Manychat e Timtim Ficaram para Trás?',
-        subtitle: 'Compare as tecnologias, recursos e a economia real ao unificar suas ferramentas no MDTracker 360°.'
+        subtitle: 'Compare as tecnologias, recursos e a economia real ao unificar suas ferramentas no TrackerMD 360°.'
       },
       {
         id: 'block-countdown',
@@ -1457,7 +1457,7 @@ let inMemoryLandingPages: any[] = [
         enabled: true,
         backgroundColor: 'slate',
         title: 'Planos Transparentes e Sem Pegadinhas',
-        subtitle: 'Pare de ser penalizado por ter uma lista grande. No MDTracker você escala sem medo da fatura.',
+        subtitle: 'Pare de ser penalizado por ter uma lista grande. No TrackerMD você escala sem medo da fatura.',
         pricingPlans: [
           {
             id: 'plan-starter',
@@ -1532,18 +1532,18 @@ let inMemoryLandingPages: any[] = [
           },
           {
             id: 'faq-2',
-            question: 'Por que o rastreamento CAPI do MDTracker é superior ao pixel comum?',
-            answer: 'Desde a atualização do iOS 14.5 e dos novos bloqueadores de navegador, pixels convencionais perdem de 30% a 50% dos eventos. O MDTracker envia os dados diretamente do servidor para a API do Facebook e Google Ads com dados enriquecidos (FBP, FBC, IP, User-Agent, Nome e WhatsApp), garantindo a menor taxa de perda do mercado.'
+            question: 'Por que o rastreamento CAPI do TrackerMD é superior ao pixel comum?',
+            answer: 'Desde a atualização do iOS 14.5 e dos novos bloqueadores de navegador, pixels convencionais perdem de 30% a 50% dos eventos. O TrackerMD envia os dados diretamente do servidor para a API do Facebook e Google Ads com dados enriquecidos (FBP, FBC, IP, User-Agent, Nome e WhatsApp), garantindo a menor taxa de perda do mercado.'
           },
           {
             id: 'faq-3',
             question: 'Como funciona a redistribuição automática para webinários e eventos?',
-            answer: 'Você configura a data e hora do seu evento (ex: 10/11 às 19h). Se uma pessoa se cadastrar 5 dias antes, ela recebe a sequência normal. Se outra pessoa se cadastrar 1 hora antes do evento, o MDTracker recalcula o intervalo e distribui os avisos cruciais no tempo que resta, garantindo que ninguém chegue desinformado ao evento!'
+            answer: 'Você configura a data e hora do seu evento (ex: 10/11 às 19h). Se uma pessoa se cadastrar 5 dias antes, ela recebe a sequência normal. Se outra pessoa se cadastrar 1 hora antes do evento, o TrackerMD recalcula o intervalo e distribui os avisos cruciais no tempo que resta, garantindo que ninguém chegue desinformado ao evento!'
           },
           {
             id: 'faq-4',
             question: 'Preciso deixar o computador ou navegador aberto para disparar mensagens?',
-            answer: 'Não! O MDTracker possui um motor de background autônomo (Cron Jobs no servidor). Seus disparos em massa, réguas de relacionamento e follow-ups rodam 24 horas por dia, 7 dias por semana nos nossos servidores de nuvem, sem exigir nada do seu computador.'
+            answer: 'Não! O TrackerMD possui um motor de background autônomo (Cron Jobs no servidor). Seus disparos em massa, réguas de relacionamento e follow-ups rodam 24 horas por dia, 7 dias por semana nos nossos servidores de nuvem, sem exigir nada do seu computador.'
           },
           {
             id: 'faq-5',
@@ -1558,7 +1558,7 @@ let inMemoryLandingPages: any[] = [
         enabled: true,
         ctaBadge: 'GARANTIA INCONDICIONAL DE 7 DIAS',
         ctaHeadline: 'Pronto para Unificar seu Tráfego e Multiplicar suas Conversões?',
-        ctaSubheadline: 'Junte-se a centenas de gestores, agências e infoprodutores que trocaram ferramentas caras e desconectadas pela tecnologia integrada do MDTracker 360°.',
+        ctaSubheadline: 'Junte-se a centenas de gestores, agências e infoprodutores que trocaram ferramentas caras e desconectadas pela tecnologia integrada do TrackerMD 360°.',
         ctaButtonText: 'Garantir Meu Acesso com Condição Especial Agora',
         ctaButtonUrl: '#capture-form'
       }
@@ -1568,7 +1568,7 @@ let inMemoryLandingPages: any[] = [
       items: [
         {
           id: 'faq-1',
-          question: 'O MDTracker substitui mesmo o RD Station, Manychat e Timtim?',
+          question: 'O TrackerMD substitui mesmo o RD Station, Manychat e Timtim?',
           answer: 'Sim! Ele reúne as melhores funções de cada um: a CAPI e redirecionamento seguro com selos (substitui o Timtim), a régua de e-mail e CRM (substitui o RD Station) e a automação de WhatsApp com prazos fixos (substitui o Manychat), além de adicionar o Funil Visual 360° e o Discador VoIP.'
         },
         {
@@ -1579,7 +1579,7 @@ let inMemoryLandingPages: any[] = [
       ]
     },
     footer: {
-      companyName: 'MDTracker 360° - Plataforma de Rastreamento & Crescimento',
+      companyName: 'TrackerMD 360° - Plataforma de Rastreamento & Crescimento',
       copyrightText: 'Todos os direitos reservados.',
       privacyPolicyUrl: '#'
     },
@@ -1701,7 +1701,7 @@ let inMemoryLandingPages: any[] = [
       ]
     },
     footer: {
-      companyName: 'MDTracker & Growth Suite',
+      companyName: 'TrackerMD & Growth Suite',
       copyrightText: 'Todos os direitos reservados.',
       privacyPolicyUrl: '#'
     },
@@ -1793,7 +1793,7 @@ let inMemoryLandingPages: any[] = [
       ]
     },
     footer: {
-      companyName: 'MDTracker & Growth Suite',
+      companyName: 'TrackerMD & Growth Suite',
       copyrightText: 'Todos os direitos reservados.'
     },
     views_count: 312,
@@ -4358,9 +4358,9 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
 
     const scriptCode = `
 (function() {
-  window.__MDTrackerPopups = window.__MDTrackerPopups || {};
-  if (window.__MDTrackerPopups['${popupId}']) return;
-  window.__MDTrackerPopups['${popupId}'] = true;
+  window.__TrackerMDPopups = window.__TrackerMDPopups || window.__MDTrackerPopups || {};
+  if (window.__TrackerMDPopups['${popupId}']) return;
+  window.__TrackerMDPopups['${popupId}'] = true;
 
   const serverBase = '${serverOrigin}';
   const scriptPopupId = '${popupId}';
@@ -4375,7 +4375,7 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
           config = await resp.json();
         }
       } catch(e) {
-        console.error('[MDTracker] Erro ao carregar pop-up:', e);
+        console.error('[TrackerMD] Erro ao carregar pop-up:', e);
       }
     }
 
@@ -5162,8 +5162,8 @@ function formatWorkflowText(template: string, lead: any, companyName: string, co
         .replace(/\{telefone\}/gi, lead.phone || '')
         .replace(/\{phone\}/gi, lead.phone || '')
         .replace(/\{email\}/gi, lead.email || '')
-        .replace(/\{empresa\}/gi, companyName || 'MDTracker')
-        .replace(/\{company\}/gi, companyName || 'MDTracker')
+        .replace(/\{empresa\}/gi, companyName || 'TrackerMD')
+        .replace(/\{company\}/gi, companyName || 'TrackerMD')
         .replace(/\{produto\}/gi, lead.productName || 'nossa solução')
         .replace(/\{pagina\}/gi, context?.formName || lead.source || 'Landing Page')
         .replace(/\{page\}/gi, context?.formName || lead.source || 'Landing Page')
@@ -5194,7 +5194,7 @@ async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ s
         const smtpUser = settings.smtpUser || process.env.SMTP_USER;
         const smtpPass = settings.smtpPass || process.env.SMTP_PASS;
         const smtpSecure = typeof settings.smtpSecure === 'boolean' ? settings.smtpSecure : (smtpPort === 465);
-        const smtpFromName = settings.smtpFromName || params.companyName || process.env.SMTP_FROM_NAME || 'MDTracker';
+        const smtpFromName = settings.smtpFromName || params.companyName || process.env.SMTP_FROM_NAME || 'TrackerMD';
         const smtpFromEmail = settings.smtpFromEmail || smtpUser || process.env.SMTP_FROM_EMAIL || 'nao-responda@mudadigital.net';
 
         if (!smtpHost || !smtpUser || !smtpPass) {
@@ -5584,7 +5584,7 @@ async function processScheduledWorkflowQueue() {
         for (const item of actions) {
             const step = item.payload?.step;
             const context = item.payload?.context;
-            const companyName = item.payload?.companyName || 'MDTracker';
+            const companyName = item.payload?.companyName || 'TrackerMD';
             const companyId = item.company_id;
 
             // Fetch live lead
@@ -5689,7 +5689,7 @@ async function triggerWorkflows(
 
         if (workflows.length === 0) return;
 
-        let companyName = 'MDTracker';
+        let companyName = 'TrackerMD';
         try {
             const { data: comp } = await supabase.from('companies').select('name').eq('id', companyId).maybeSingle();
             if (comp) companyName = comp.name;
@@ -7795,7 +7795,7 @@ app.post('/api/public/events/:pinOrSlug/join', async (req: Request, res: Respons
             };
             inMemoryGamificationParticipants.push(participant);
 
-            // Also create/link lead in MDTracker CRM automatically!
+            // Also create/link lead in TrackerMD CRM automatically!
             if (phone || email) {
                 try {
                     const newLead: any = {
@@ -12748,7 +12748,7 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
         const user = smtpUser || process.env.SMTP_USER;
         const pass = smtpPass || process.env.SMTP_PASS;
         const secure = typeof smtpSecure === 'boolean' ? smtpSecure : (port === 465);
-        const fromName = smtpFromName || 'MDTracker Marketing';
+        const fromName = smtpFromName || 'TrackerMD Marketing';
         const fromEmail = smtpFromEmail || user || 'nao-responda@mudadigital.net';
 
         if (!host || !user || !pass) {
@@ -12773,8 +12773,8 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
         const info = await transporter.sendMail({
             from: `"${fromName}" <${fromEmail}>`,
             to: targetEmail,
-            subject: '✅ Teste de Conexão SMTP - MDTracker',
-            text: `Olá! Se você recebeu este e-mail, as configurações de SMTP do MDTracker estão funcionando com 100% de sucesso! Servidor: ${host}:${port}`,
+            subject: '✅ Teste de Conexão SMTP - TrackerMD',
+            text: `Olá! Se você recebeu este e-mail, as configurações de SMTP do TrackerMD estão funcionando com 100% de sucesso! Servidor: ${host}:${port}`,
             html: `
               <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                 <div style="background: #2563eb; padding: 24px 32px; color: #ffffff;">
@@ -12782,7 +12782,7 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
                 </div>
                 <div style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
                   <p style="margin-top: 0;">Olá,</p>
-                  <p>Este é um e-mail de validação enviado pelo <strong>MDTracker</strong> para confirmar que suas credenciais de disparo de e-mail marketing estão 100% ativas e operacionais.</p>
+                  <p>Este é um e-mail de validação enviado pelo <strong>TrackerMD</strong> para confirmar que suas credenciais de disparo de e-mail marketing estão 100% ativas e operacionais.</p>
                   <div style="background: #f8fafc; border-left: 4px solid #16a34a; padding: 16px; margin: 20px 0; border-radius: 4px; font-size: 13px;">
                     <p style="margin: 0 0 6px 0;"><strong>Servidor Host:</strong> ${host}</p>
                     <p style="margin: 0 0 6px 0;"><strong>Porta:</strong> ${port} (${secure ? 'SSL/TLS' : 'STARTTLS'})</p>
@@ -12793,7 +12793,7 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
                   <p>Agora suas Landing Pages, Pop-ups e Automações de Marketing dispararão e-mails reais para seus leads.</p>
                 </div>
                 <div style="padding: 16px 32px; background: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
-                  Enviado para <strong>${targetEmail}</strong> via MDTracker
+                  Enviado para <strong>${targetEmail}</strong> via TrackerMD
                 </div>
               </div>
             `
@@ -12823,7 +12823,7 @@ app.post('/api/email/test-send', async (req: Request, res: Response) => {
         }
 
         const effectiveCompanyId = companyId || 'comp-alfa';
-        let companyName = 'MDTracker';
+        let companyName = 'TrackerMD';
         try {
             const { data: comp } = await supabase.from('companies').select('name').eq('id', effectiveCompanyId).maybeSingle();
             if (comp?.name) companyName = comp.name;
@@ -12923,7 +12923,7 @@ app.post('/api/webhooks/hotmart', async (req: Request, res: Response) => {
         
         const subscription = dataObj.subscription || {};
         const subscriptionId = subscription.subscriber_code || subscription.id || dataObj.subscription_id || payload.subscription_id || `sub-${Date.now()}`;
-        const planName = subscription.plan?.name || dataObj.product_name || 'Plano Mensal MDTracker';
+        const planName = subscription.plan?.name || dataObj.product_name || 'Plano Mensal TrackerMD';
 
         console.log(`[Hotmart Webhook] Event: ${eventType} | Buyer: ${buyerEmail} | Tx: ${transactionId} | Sub: ${subscriptionId}`);
 
@@ -13386,7 +13386,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
               <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Página Não Encontrada - MDTracker</title>
+                <title>Página Não Encontrada - TrackerMD</title>
                 <script src="https://cdn.tailwindcss.com"></script>
               </head>
               <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
@@ -13441,7 +13441,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
         const primaryColor = lp.theme?.primaryColor || '#2563eb';
         const accentColor = lp.theme?.accentColor || '#10b981';
         const buttonShape = lp.theme?.buttonStyle || 'rounded-xl';
-        const companyName = lp.footer?.companyName || 'MDTracker Growth';
+        const companyName = lp.footer?.companyName || 'TrackerMD Growth';
 
         // ------------------------------------------
         // THANK YOU PAGE RENDERER (Página de Obrigado)
@@ -14151,10 +14151,10 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                               ${b.comparisonBadge || 'Comparativo Definitivo de Mercado'}
                             </span>
                             <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mt-4">
-                              ${b.title || 'Por que o MDTracker 360° é a Escolha Nº 1 frente aos Concorrentes?'}
+                              ${b.title || 'Por que o TrackerMD 360° é a Escolha Nº 1 frente aos Concorrentes?'}
                             </h2>
                             <p class="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-                              ${b.subtitle || 'Pare de pagar por 4 ferramentas separadas que não conversam entre si. Veja lado a lado por que líderes de tráfego e vendas migraram para o MDTracker.'}
+                              ${b.subtitle || 'Pare de pagar por 4 ferramentas separadas que não conversam entre si. Veja lado a lado por que líderes de tráfego e vendas migraram para o TrackerMD.'}
                             </p>
                           </div>
 
@@ -14167,7 +14167,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                                     <th class="p-5 sm:p-6 w-2/5">Capacidades & Recursos</th>
                                     <th class="p-5 sm:p-6 w-1/4 bg-blue-600 text-white text-center relative shadow-lg">
                                       <span class="inline-block bg-amber-400 text-slate-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-1">RECOMENDADO</span>
-                                      <div class="font-black text-sm sm:text-base tracking-wide">MDTracker 360°</div>
+                                      <div class="font-black text-sm sm:text-base tracking-wide">TrackerMD 360°</div>
                                     </th>
                                     <th class="p-5 sm:p-6 text-center text-slate-600 font-bold">RD Station</th>
                                     <th class="p-5 sm:p-6 text-center text-slate-600 font-bold">Manychat</th>
@@ -14206,7 +14206,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                                 <strong class="text-slate-800">Economia Real:</strong> Substitua 4 assinaturas diferentes por 1 única plataforma centralizada.
                               </div>
                               <a href="#capture-form" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-xs sm:text-sm rounded-xl hover:bg-blue-500 shadow-md transition transform active:scale-95">
-                                <span>Garantir Acesso ao MDTracker 360°</span>
+                                <span>Garantir Acesso ao TrackerMD 360°</span>
                                 <span>&rarr;</span>
                               </a>
                             </div>
@@ -14236,7 +14236,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     const isLeft = b.formPosition === 'left';
                     const trustBadges = b.headerTrustBadges || ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'];
                     const navEnabled = b.headerNavbarEnabled !== false;
-                    const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
+                    const blockLogo = b.headerLogoText || companyName || 'TrackerMD Growth Suite';
                     const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
                     const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
                     const blockHeadline = b.title || b.headerHeadline || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
@@ -14643,7 +14643,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 </div>
                 <div class="text-center md:text-right">
                   <p>&copy; ${new Date().getFullYear()} ${companyName}. ${lp.footer?.copyrightText || 'Todos os direitos reservados.'}</p>
-                  <p class="text-[11px] text-slate-500 mt-1">Desenvolvido com tecnologia de alta conversão MDTracker Growth Suite.</p>
+                  <p class="text-[11px] text-slate-500 mt-1">Desenvolvido com tecnologia de alta conversão TrackerMD Growth Suite.</p>
                 </div>
               </div>
             </footer>
@@ -14963,7 +14963,7 @@ app.get(['/pesquisa/:slug', '/survey/:slug'], async (req: Request, res: Response
               <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Pesquisa Não Encontrada - MDTracker</title>
+                <title>Pesquisa Não Encontrada - TrackerMD</title>
                 <script src="https://cdn.tailwindcss.com"></script>
               </head>
               <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
@@ -15030,7 +15030,7 @@ app.get(['/pesquisa/:slug', '/survey/:slug'], async (req: Request, res: Response
             <header class="w-full bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
               <div class="max-w-2xl mx-auto px-4 py-4">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-bold uppercase tracking-wider text-purple-400">MDTracker Forms & Pesquisas</span>
+                  <span class="text-xs font-bold uppercase tracking-wider text-purple-400">TrackerMD Forms & Pesquisas</span>
                   <span id="progress-text" class="text-xs font-semibold text-slate-400">Etapa 1 de ${questions.length || 1}</span>
                 </div>
                 <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -15210,7 +15210,7 @@ app.get(['/pesquisa/:slug', '/survey/:slug'], async (req: Request, res: Response
 
             <!-- Footer -->
             <footer class="w-full bg-slate-900 border-t border-slate-800 py-4 text-xs text-slate-500 text-center">
-              <span>Tecnologia de Pesquisas & Qualificação Comercial • MDTracker</span>
+              <span>Tecnologia de Pesquisas & Qualificação Comercial • TrackerMD</span>
             </footer>
 
             <!-- Survey Client Logic -->
@@ -16139,7 +16139,7 @@ app.get(['/evento/:slugOrPin', '/e/:slugOrPin', '/live/:slugOrPin'], async (req:
 
             <!-- Mobile Footer -->
             <footer class="text-center text-[11px] text-slate-500 pt-3 border-t border-slate-800 shrink-0">
-              MDTracker Eventos Ao Vivo &bull; Sistema Gamificado de Alta Conversão
+              TrackerMD Eventos Ao Vivo &bull; Sistema Gamificado de Alta Conversão
             </footer>
 
             <!-- Attendee Client Logic -->

@@ -377,7 +377,7 @@ const TEMPLATES: Array<{
           title: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
           subtitle: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
           headerNavbarEnabled: true,
-          headerLogoText: 'MDTracker Growth Suite',
+          headerLogoText: 'TrackerMD Growth Suite',
           headerNavCtaText: 'Quero Meu Acesso Gratuito Agora →',
           headerBadge: '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP',
           headerHeadline: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
@@ -409,7 +409,7 @@ const TEMPLATES: Array<{
         tags: ['power-up', 'alta-conversao', 'landing-page']
       },
       footer: {
-        companyName: 'MDTracker Growth Suite',
+        companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
       }
     }
@@ -491,7 +491,7 @@ const TEMPLATES: Array<{
         ]
       },
       footer: {
-        companyName: 'MDTracker Growth Suite',
+        companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
       }
     }
@@ -562,7 +562,7 @@ const TEMPLATES: Array<{
         ]
       },
       footer: {
-        companyName: 'MDTracker Growth Suite',
+        companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
       }
     }
@@ -636,7 +636,7 @@ const TEMPLATES: Array<{
         ]
       },
       footer: {
-        companyName: 'MDTracker Growth Suite',
+        companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
       }
     }
@@ -709,7 +709,7 @@ const TEMPLATES: Array<{
         ]
       },
       footer: {
-        companyName: 'MDTracker Growth Suite',
+        companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
       }
     }
@@ -1258,7 +1258,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
           title: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
           subtitle: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
           headerNavbarEnabled: true,
-          headerLogoText: currentCompany.name ? `${currentCompany.name} Growth Suite` : 'MDTracker Growth Suite',
+          headerLogoText: currentCompany.name ? `${currentCompany.name} Growth Suite` : 'TrackerMD Growth Suite',
           headerNavCtaText: 'Quero Meu Acesso Gratuito Agora →',
           headerBadge: '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP',
           headerHeadline: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
@@ -2597,7 +2597,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                                 blocks[idx] = { ...block, headerLogoText: e.target.value };
                                                 setEditingPage({ ...editingPage, blocks });
                                               }}
-                                              placeholder="Ex: MDTracker Growth Suite"
+                                              placeholder="Ex: TrackerMD Growth Suite"
                                               className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
                                             />
                                           </div>
@@ -3408,7 +3408,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                                   }}
                                                   className="text-blue-600"
                                                 />
-                                                <span>🏢 Outra Página do MDTracker</span>
+                                                <span>🏢 Outra Página do TrackerMD</span>
                                               </label>
                                               <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
                                                 <input
@@ -4852,7 +4852,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             {btn.type === 'survey' ? (
                               <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-purple-200">
                                 <label className="block text-[11px] font-bold text-purple-700">
-                                  Vincular à Pesquisa do MDTracker:
+                                  Vincular à Pesquisa do TrackerMD:
                                 </label>
                                 <select
                                   value={btn.surveyId || ''}
@@ -5542,7 +5542,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                         : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
                                     }`}
                                   >
-                                    🏢 Página do MDTracker
+                                    🏢 Página do TrackerMD
                                   </button>
                                   <button
                                     type="button"
@@ -5922,7 +5922,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
             <div className="flex-1 bg-slate-950 p-3 md:p-6 flex items-center justify-center overflow-hidden">
               {(() => {
                 const primaryColor = editingPage.theme?.primaryColor || '#2563eb';
-                const companyName = editingPage.footer?.companyName || currentCompany.name || 'MDTracker Growth';
+                const companyName = editingPage.footer?.companyName || currentCompany.name || 'TrackerMD Growth';
                 const hasHeaderFormBlock = Boolean(editingPage.blocks && editingPage.blocks.some(b => b.type === 'header_form' && b.enabled !== false));
                 const showDefaultHero = (editingPage.hero as any)?.enabled !== false && !hasHeaderFormBlock;
                 const buttonShapeClass = getButtonShapeClass(editingPage.theme?.buttonStyle);
@@ -6172,7 +6172,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                       {/* Footer */}
                       <footer className="bg-slate-900 text-slate-400 py-8 px-6 text-center text-xs">
                         <p>&copy; {new Date().getFullYear()} {companyName}. Todos os direitos reservados.</p>
-                        <p className="text-[11px] text-slate-500 mt-1">MDTracker Growth Suite • Página de Obrigado de Alta Conversão</p>
+                        <p className="text-[11px] text-slate-500 mt-1">TrackerMD Growth Suite • Página de Obrigado de Alta Conversão</p>
                       </footer>
                     </div>
                   );
@@ -6443,7 +6443,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             const isLeft = b.formPosition === 'left';
                             const trustBadges = b.headerTrustBadges || ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'];
                             const navEnabled = b.headerNavbarEnabled !== false;
-                            const blockLogo = b.headerLogoText || companyName || 'MDTracker Growth Suite';
+                            const blockLogo = b.headerLogoText || companyName || 'TrackerMD Growth Suite';
                             const blockNavCta = b.headerNavCtaText || 'Quero Meu Acesso Gratuito Agora →';
                             const blockBadge = b.headerBadge || '🚀 OPORTUNIDADE EXCLUSIVA: POWER UP';
                             const blockHeadline = b.title || b.headerHeadline || 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida';
@@ -7178,7 +7178,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                         </div>
                         <div className="text-center md:text-right">
                           <p>&copy; {new Date().getFullYear()} {companyName}. {editingPage.footer?.copyrightText || 'Todos os direitos reservados.'}</p>
-                          <p className="text-[11px] text-slate-500 mt-1">Desenvolvido com tecnologia de alta conversão MDTracker Growth Suite.</p>
+                          <p className="text-[11px] text-slate-500 mt-1">Desenvolvido com tecnologia de alta conversão TrackerMD Growth Suite.</p>
                         </div>
                       </div>
                     </footer>

@@ -799,7 +799,7 @@ export const VirtualPhoneManager: React.FC<VirtualPhoneManagerProps> = ({
                 onChange={(e) => setSettings({ ...settings, provider: e.target.value as any })}
                 className="w-full text-xs rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold focus:outline-none"
               >
-                <option value="webrtc_native">WebRTC MDTracker Nativo (Navegador com Gravação)</option>
+                <option value="webrtc_native">WebRTC TrackerMD Nativo (Navegador com Gravação)</option>
                 <option value="twilio">Twilio Voice (SIP / WebRTC Trunking)</option>
                 <option value="zenvia">Zenvia Voice API</option>
                 <option value="totalvoice">TotalVoice / Z-API Voice</option>
