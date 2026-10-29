@@ -252,88 +252,51 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
         </div>
 
         {/* ========================================================= */}
-        {/* INTERACTIVE FUNNEL VISUAL SHOWCASE MOCKUP */}
+        {/* REAL FUNNEL VISUAL SHOWCASE (PRINT 2 - POWER UP) */}
         {/* ========================================================= */}
-        <div className="max-w-6xl mx-auto mt-14 sm:mt-20 rounded-3xl border border-slate-800 bg-slate-900/80 p-2 sm:p-4 shadow-2xl shadow-blue-950/50 backdrop-blur-xl relative" id="funil-360">
-          <div className="rounded-2xl border border-slate-800/80 bg-[#070A11] p-4 sm:p-6 overflow-hidden">
+        <div className="max-w-6xl mx-auto mt-14 sm:mt-20 rounded-3xl border border-slate-800 bg-slate-900/90 p-2 sm:p-4 shadow-2xl shadow-blue-950/60 backdrop-blur-xl relative group" id="funil-360">
+          <div className="rounded-2xl border border-slate-800/80 bg-[#070A11] overflow-hidden shadow-inner relative">
             
-            {/* Mockup Header Bar */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800/80 text-xs">
+            {/* Window Topbar Frame */}
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-950/90 border-b border-slate-800/80 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-red-500/80" />
                 <span className="w-3 h-3 rounded-full bg-amber-500/80" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-mono text-slate-400 hidden sm:inline">MDTracker Funil Visual 360° • Power UP Live</span>
+                <span className="ml-2 font-mono text-slate-400 font-semibold text-[11px] hidden sm:inline">
+                  MDTracker Funil Visual 360° • Power UP Live Canvas
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 font-bold text-[11px] border border-blue-500/30">
-                  Fluxo Ativo • Meta Ads ➔ WhatsApp
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] border border-emerald-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Interface Real do Sistema</span>
                 </span>
               </div>
             </div>
 
-            {/* Mockup Funnel Flow Diagram */}
-            <div className="py-8 grid grid-cols-1 sm:grid-cols-4 gap-4 text-left relative">
-              {/* Step 1: Ads */}
-              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 relative group hover:border-blue-500 transition">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                  01
-                </div>
-                <h4 className="font-bold text-sm text-white">Anúncio Meta / Google</h4>
-                <p className="text-[11px] text-slate-400">Captura de UTMs, IP, User-Agent e FBP/FBC na origem.</p>
-                <div className="pt-2 text-xs font-mono text-emerald-400 font-bold">12.450 Cliques</div>
-              </div>
+            {/* High-Resolution Live Canvas Image (Print 2) */}
+            <div className="relative overflow-hidden cursor-pointer" onClick={() => setIsTrialModalOpen(true)}>
+              <img
+                src="/funnel-showcase.png"
+                alt="MDTracker Funil Visual 360° Power UP Live Canvas"
+                className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition duration-500 rounded-b-xl"
+                loading="eager"
+              />
 
-              {/* Step 2: Landing Page / Popup */}
-              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 relative group hover:border-indigo-500 transition">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                  02
+              {/* Floating Overlay Pill Buttons */}
+              <div className="absolute bottom-4 left-4 right-4 hidden sm:flex items-center justify-between pointer-events-none">
+                <div className="bg-slate-950/85 backdrop-blur-md border border-slate-800 text-xs font-semibold px-3 py-1.5 rounded-xl text-slate-200 shadow-lg flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span>Conexões Curvas com Cálculo de Conversão em Tempo Real</span>
                 </div>
-                <h4 className="font-bold text-sm text-white">Página / Pop-up Seguro</h4>
-                <p className="text-[11px] text-slate-400">Identificação obrigatória com nome e WhatsApp.</p>
-                <div className="pt-2 text-xs font-mono text-emerald-400 font-bold">3.820 Leads (30.6%)</div>
-              </div>
-
-              {/* Step 3: WhatsApp CAPI */}
-              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 relative group hover:border-emerald-500 transition">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  03
+                <div className="bg-blue-600/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 pointer-events-auto hover:bg-blue-500 transition">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Testar Esse Funil Grátis por 1 Dia →</span>
                 </div>
-                <h4 className="font-bold text-sm text-white">WhatsApp & CAPI Servidor</h4>
-                <p className="text-[11px] text-slate-400">Disparo automático de conversão para o Meta Pixel.</p>
-                <div className="pt-2 text-xs font-mono text-emerald-400 font-bold">100% Atribuído</div>
-              </div>
-
-              {/* Step 4: CRM & Automação */}
-              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 relative group hover:border-purple-500 transition">
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">
-                  04
-                </div>
-                <h4 className="font-bold text-sm text-white">Venda Fechada & CRM</h4>
-                <p className="text-[11px] text-slate-400">Régua temporal para webinários e discador VoIP.</p>
-                <div className="pt-2 text-xs font-mono text-emerald-400 font-bold">R$ 84.600 Vendas</div>
               </div>
             </div>
 
-            {/* Bottom Metrics Bar */}
-            <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Total de Leads</span>
-                <p className="text-xl font-black text-white mt-0.5">3.820</p>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Investimento</span>
-                <p className="text-xl font-black text-blue-400 mt-0.5">R$ 6.200,00</p>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Custo Médio / Lead</span>
-                <p className="text-xl font-black text-emerald-400 mt-0.5">R$ 1,62</p>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Receita Gerada</span>
-                <p className="text-xl font-black text-emerald-400 mt-0.5">R$ 84.600,00</p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
