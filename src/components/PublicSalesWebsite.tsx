@@ -156,12 +156,13 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
           </a>
 
           {/* Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-300">
-            <a href="#recursos" className="hover:text-white transition">Recursos</a>
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
             <a href="#funil-360" className="hover:text-white transition flex items-center gap-1.5">
               <span>Funil Visual</span>
               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-400 text-slate-950">NOVO</span>
             </a>
+            <a href="#sobre-trackermd" className="hover:text-white transition text-blue-400 font-bold">O que é o TrackerMD</a>
+            <a href="#recursos" className="hover:text-white transition">Recursos (24)</a>
             <a href="#comparativo" className="hover:text-white transition">Comparativo</a>
             <a href="#planos" className="hover:text-white transition">Planos & Assinaturas</a>
             <a href="#depoimentos" className="hover:text-white transition">Clientes</a>
@@ -298,6 +299,269 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             </div>
 
           </div>
+        </div>
+      </section>
+
+      {/* ========================================================= */}
+      {/* SECTION: SOBRE O TRACKERMD (trackermd.mudadigital.com.br) */}
+      {/* ========================================================= */}
+      <section className="py-20 md:py-28 px-4 sm:px-6 relative border-t border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950" id="sobre-trackermd">
+        <div className="max-w-6xl mx-auto space-y-16">
+          
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>O QUE É O TRACKERMD • MÁQUINA DE CONVERSÃO 360°</span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              A Única Plataforma Tudo-em-Um que Conecta seus Anúncios, WhatsApp e Vendas
+            </h2>
+
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              Descubra por que líderes de tráfego, agências e infoprodutores abandonaram 4 ferramentas fragmentadas para unificar suas operações no <strong>TrackerMD 360°</strong>: rastreamento CAPI cirúrgico, funil visual ao vivo, automações inteligentes e discador comercial.
+            </p>
+          </div>
+
+          {/* Key Stats Bar (como no site oficial trackermd.mudadigital.com.br) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-xl">
+            <div className="text-center space-y-1 border-r border-slate-800/80 last:border-0">
+              <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
+                +2.4M
+              </div>
+              <div className="text-xs sm:text-sm font-semibold text-slate-300">Leads Rastreados & Atribuídos</div>
+              <div className="text-[11px] text-slate-500">Com dados CAPI enriquecidos</div>
+            </div>
+
+            <div className="text-center space-y-1 border-r border-slate-800/80 last:border-0">
+              <div className="text-2xl sm:text-4xl font-black text-emerald-400">
+                +47%
+              </div>
+              <div className="text-xs sm:text-sm font-semibold text-slate-300">Aumento Médio em Conversão</div>
+              <div className="text-[11px] text-slate-500">Blindagem contra iOS 14.5</div>
+            </div>
+
+            <div className="text-center space-y-1 border-r border-slate-800/80 last:border-0">
+              <div className="text-2xl sm:text-4xl font-black text-amber-400">
+                R$ 1.250+
+              </div>
+              <div className="text-xs sm:text-sm font-semibold text-slate-300">Economia Média Mensal</div>
+              <div className="text-[11px] text-slate-500">Sem 4 faturas separadas</div>
+            </div>
+
+            <div className="text-center space-y-1">
+              <div className="text-2xl sm:text-4xl font-black text-purple-400 flex items-center justify-center gap-1">
+                <span>4.9</span>
+                <span className="text-amber-400 text-xl sm:text-2xl">★</span>
+              </div>
+              <div className="text-xs sm:text-sm font-semibold text-slate-300">Nota de Satisfação</div>
+              <div className="text-[11px] text-slate-500">Recomendado por gestores</div>
+            </div>
+          </div>
+
+          {/* 6 Core Functionalities Grid (from trackermd.mudadigital.com.br) */}
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-400">FUNCIONALIDADES ESSENCIAIS</span>
+                <h3 className="text-xl sm:text-2xl font-black text-white mt-1">
+                  Tudo o que sua Operação Precisa para Escalar em Uma Só Tela
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 max-w-sm">
+                Desenvolvido para eliminar gargalos e garantir 100% de precisão de dados entre anúncios e vendas.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              {/* Feature 1 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                      01 • Rastreamento
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-blue-300 transition">
+                    Rastreamento CAPI Cirúrgico no WhatsApp
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Blindagem total contra bloqueadores e iOS 14.5. Envie eventos do primeiro clique, do formulário de entrada e do checkout diretamente para a API de Conversões do Meta e Google Ads com dados enriquecidos (FBP, FBC, IP, User-Agent, Nome e WhatsApp).
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-blue-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Substitui o Timtim com Menor Custo</span>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                      02 • Canvas Visual
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-indigo-300 transition">
+                    Funil Visual 360° Interativo (Estilo Power UP)
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Mapeie toda a jornada do seu cliente em um canvas visual em tempo real. Conecte anúncios, páginas de vendas, pop-ups e links de WhatsApp, acompanhando taxas de conversão, CPL e faturamento gerado em cada anúncio.
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-indigo-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Clareza Total de Toda a Operação</span>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <Clock className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      03 • Automação
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-emerald-300 transition">
+                    Automação com Prazos & Redistribuição
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Ideal para webinários e lançamentos: defina a data limite do evento. Se o lead entrar 5 dias antes ou 20 minutos antes, o sistema recalcula e redistribui as mensagens automaticamente no tempo que resta para que ninguém fique de fora.
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-emerald-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Salas Cheias e Zero Leads Perdidos</span>
+                </div>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                      04 • Conversão
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-amber-300 transition">
+                    Pop-up de Redirecionamento Seguro com Selos
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Captura obrigatória de Nome e WhatsApp antes de direcionar o lead para o chat oficial, com selos de segurança, verificação e identificação que qualificam o contato e aumentam em até 3x a taxa de resposta dos atendentes.
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-amber-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Leads Salvos Direto no CRM</span>
+                </div>
+              </div>
+
+              {/* Feature 5 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <Send className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+                      05 • Nuvem 24/7
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-purple-300 transition">
+                    Motor Autônomo em Segundo Plano (Cron)
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Seus e-mails e mensagens de WhatsApp são disparados pontualmente pela nossa infraestrutura de servidores em nuvem, sem depender de deixar nenhuma aba ou computador ligado. Totalmente independente e resiliente.
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-purple-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Funciona 24 Horas sem Computador Aberto</span>
+                </div>
+              </div>
+
+              {/* Feature 6 */}
+              <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/50 hover:bg-slate-900 transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center font-black group-hover:scale-110 transition">
+                      <PhoneCall className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded-full border border-teal-500/20">
+                      06 • Call Center
+                    </span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white group-hover:text-teal-300 transition">
+                    Discador Virtual VoIP & Call Center Integrado
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                    Ligue para os leads diretamente pelo navegador com 1 clique, grave as chamadas comerciais e distribua novas oportunidades automaticamente em fila round-robin entre seus vendedores com métricas de tempo e ligação.
+                  </p>
+                </div>
+                <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center text-[11px] font-semibold text-teal-400 gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Atendimento Ativo de Alta Eficiência</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Pillars of Confidence & Direct Action */}
+          <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border border-blue-500/30 flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="space-y-3 text-center lg:text-left">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
+                GARANTIA INCONDICIONAL DE 7 DIAS
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-black text-white">
+                Pronto para Testar o TrackerMD na Prática?
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                Você pode começar hoje mesmo com <strong>1 dia de teste 100% gratuito</strong> ou assinar diretamente pelo Hotmart com cancelamento a qualquer momento.
+              </p>
+              
+              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-slate-300 font-medium">
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Ativação Imediata</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Sem Fidelidade</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suporte VIP 1 a 1</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+              <button
+                onClick={() => setIsTrialModalOpen(true)}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-blue-600/30 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Testar 1 Dia Grátis</span>
+              </button>
+
+              <button
+                onClick={handleOpenCheckout}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <span>Assinar no Hotmart</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </section>
 
