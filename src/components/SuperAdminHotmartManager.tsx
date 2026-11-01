@@ -3309,10 +3309,11 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
         </div>
       )}
       {isAffiliateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            {/* Modal Header (Fixed at top) */}
+            <div className="p-5 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                   <Users className="w-5 h-5 text-indigo-600" />
@@ -3324,15 +3325,19 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
               </div>
 
               <button
+                type="button"
                 onClick={() => setIsAffiliateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition"
+                title="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveAffiliateSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Form wrapping scrollable body and fixed footer */}
+            <form onSubmit={handleSaveAffiliateSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Nome Completo */}
                 <div className="sm:col-span-2">
@@ -3725,22 +3730,25 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              {/* Modal Footer (Fixed at bottom) */}
+              <div className="p-4 sm:px-8 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50/90 backdrop-blur-xs">
                 <button
                   type="button"
                   onClick={() => setIsAffiliateModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold transition"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-200 text-xs font-bold transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={savingAffiliate}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {savingAffiliate ? 'Salvando...' : (editingAffiliateId ? 'Atualizar Afiliado' : 'Salvar e Gerar Link')}
+                  <Save className="w-4 h-4" />
+                  <span>{savingAffiliate ? 'Salvando...' : (editingAffiliateId ? 'Atualizar Afiliado' : 'Salvar e Gerar Link')}</span>
                 </button>
               </div>
             </form>
@@ -4162,10 +4170,11 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {/* MODAL: CRIAR / EDITAR NOVIDADE (ALIMENTA O PORTAL DOS AFILIADOS) */}
       {/* ========================================================= */}
       {isReleaseModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            {/* Modal Header (Fixed) */}
+            <div className="p-5 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-600" />
@@ -4176,14 +4185,17 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsReleaseModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
+                className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition"
+                title="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveRelease} className="space-y-4">
+            <form onSubmit={handleSaveRelease} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-4">
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -4285,38 +4297,41 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   <span>Destacar como Novidade Principal (⭐)</span>
                 </label>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsReleaseModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingRelease}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition flex items-center gap-1.5"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{savingRelease ? 'Salvando...' : 'Salvar e Publicar Novidade'}</span>
-                </button>
-              </div>
+            {/* Modal Footer (Fixed) */}
+            <div className="p-4 sm:px-8 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50/90 backdrop-blur-xs">
+              <button
+                type="button"
+                onClick={() => setIsReleaseModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-200 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={savingRelease}
+                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition flex items-center gap-1.5"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingRelease ? 'Salvando...' : 'Salvar e Publicar Novidade'}</span>
+              </button>
+            </div>
 
-            </form>
-          </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ========================================================= */}
       {/* MODAL: CRIAR / EDITAR VÍDEO DE TREINAMENTO */}
       {/* ========================================================= */}
       {isTrainingVideoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            {/* Modal Header (Fixed) */}
+            <div className="p-5 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-emerald-600" />
@@ -4330,13 +4345,15 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
               <button
                 type="button"
                 onClick={() => setIsTrainingVideoModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition"
+                title="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveVideoSubmit} className="space-y-4">
+            <form onSubmit={handleSaveVideoSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-8 overflow-y-auto flex-1 custom-scrollbar space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Título da Aula / Treinamento *
@@ -4467,12 +4484,14 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            {/* Modal Footer (Fixed) */}
+              <div className="p-4 sm:px-8 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50/90 backdrop-blur-xs">
                 <button
                   type="button"
                   onClick={() => setIsTrainingVideoModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-200 transition"
                 >
                   Cancelar
                 </button>
