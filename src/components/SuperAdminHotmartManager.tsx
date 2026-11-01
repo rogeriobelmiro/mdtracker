@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  Flame, 
-  ShieldCheck, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  XCircle, 
-  Search, 
-  RefreshCw, 
-  ExternalLink, 
-  Copy, 
-  Check, 
-  CreditCard, 
-  Users, 
-  Lock, 
-  Sparkles, 
-  Save, 
-  Sliders, 
-  PlusCircle, 
+import {
+  Building2,
+  Flame,
+  ShieldCheck,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Search,
+  RefreshCw,
+  ExternalLink,
+  Copy,
+  Check,
+  CreditCard,
+  Users,
+  Lock,
+  Sparkles,
+  Save,
+  Sliders,
+  PlusCircle,
   Calendar,
   Layers,
   ArrowUpRight,
@@ -47,11 +47,11 @@ import {
   Play
 } from 'lucide-react';
 import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, AffiliateGoalsConfig, Affiliate, ProductRelease, TrainingVideo } from '../types';
-import { 
-  fetchAdminCompanies, 
-  updateCompanySubscription, 
-  fetchHotmartSettings, 
-  updateHotmartSettings, 
+import {
+  fetchAdminCompanies,
+  updateCompanySubscription,
+  fetchHotmartSettings,
+  updateHotmartSettings,
   fetchHotmartEvents,
   fetchAffiliates,
   createAffiliate,
@@ -912,7 +912,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
   // Filtered Companies
   const filteredCompanies = companies.filter(c => {
-    const matchesSearch = 
+    const matchesSearch =
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.responsibleName && c.responsibleName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.cnpj && c.cnpj.includes(searchTerm)) ||
@@ -929,7 +929,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
   // Filtered Affiliates
   const filteredAffiliates = affiliates.filter(a => {
-    const matchesSearch = 
+    const matchesSearch =
       a.name.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
       a.email.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
       a.phone.includes(affiliateSearch) ||
@@ -979,11 +979,11 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 font-sans">
-      
+
       {/* Top Banner Header */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-slate-800 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-indigo-600/10 to-transparent pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
@@ -1023,11 +1023,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
         <div className="flex items-center gap-2 mt-8 border-t border-slate-800/80 pt-4 overflow-x-auto">
           <button
             onClick={() => setActiveSubTab('companies')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'companies'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'companies'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <Building2 className="w-4 h-4" />
             <span>Empresas & Assinaturas ({totalCompanies})</span>
@@ -1035,11 +1034,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
           <button
             onClick={() => setActiveSubTab('hotmart_config')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'hotmart_config'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'hotmart_config'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <Flame className="w-4 h-4 text-amber-400" />
             <span>Tabela de Preços & Integração Hotmart</span>
@@ -1047,11 +1045,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
           <button
             onClick={() => setActiveSubTab('affiliates')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'affiliates'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'affiliates'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <Users className="w-4 h-4 text-cyan-400" />
             <span>Afiliados & Representantes Brasil ({totalAffiliates})</span>
@@ -1060,11 +1057,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
           <button
             onClick={() => setActiveSubTab('training_videos')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'training_videos'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'training_videos'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <GraduationCap className="w-4 h-4 text-emerald-400" />
             <span>Vídeos de Treinamento ({trainingVideos.length})</span>
@@ -1073,11 +1069,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
           <button
             onClick={() => setActiveSubTab('product_releases')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'product_releases'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'product_releases'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <Sparkles className="w-4 h-4 text-purple-400" />
             <span>Novidades & Roadmap ({releases.length})</span>
@@ -1086,11 +1081,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
           <button
             onClick={() => setActiveSubTab('events_log')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
-              activeSubTab === 'events_log'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'events_log'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
           >
             <Clock className="w-4 h-4" />
             <span>Auditoria de Webhooks Hotmart</span>
@@ -1345,9 +1339,9 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {/* ========================================================= */}
       {activeSubTab === 'hotmart_config' && (
         <div className="max-w-5xl space-y-8">
-          
+
           <form onSubmit={handleSaveHotmartSettings} className="space-y-8">
-            
+
             {/* 1. General Hotmart Settings */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
@@ -1468,7 +1462,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   const badgeColor = index === 1 ? 'border-amber-400 bg-amber-50/30' : index === 2 ? 'border-purple-300 bg-purple-50/20' : 'border-blue-200 bg-blue-50/20';
 
                   return (
-                    <div 
+                    <div
                       key={plan.id || index}
                       className={`rounded-2xl border-2 p-5 space-y-4 relative ${badgeColor}`}
                     >
@@ -1477,7 +1471,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white">
                           Opção {index + 1} • {plan.id.toUpperCase()}
                         </span>
-                        
+
                         <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
                           <input
                             type="checkbox"
@@ -1664,7 +1658,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(hotmartConfig.setupTraining?.features || DEFAULT_SETUP_TRAINING.features || []).map((feat, idx) => (
-                    <span 
+                    <span
                       key={idx}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-indigo-200 text-xs font-semibold text-slate-700 shadow-2xs"
                     >
@@ -1820,7 +1814,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(hotmartConfig.affiliatePlan?.features || DEFAULT_AFFILIATE_PLAN.features || []).map((feat, idx) => (
-                    <span 
+                    <span
                       key={idx}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-xs font-semibold text-slate-700 shadow-2xs"
                     >
@@ -2089,7 +2083,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {/* ========================================================= */}
       {activeSubTab === 'affiliates' && (
         <div className="space-y-6">
-          
+
           {/* Top KPI Cards for Affiliates */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between">
@@ -2174,18 +2168,16 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 <button
                   type="button"
                   onClick={() => setAffiliatesViewMode('table')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    affiliatesViewMode === 'table' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${affiliatesViewMode === 'table' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                    }`}
                 >
                   Tabela / Lista
                 </button>
                 <button
                   type="button"
                   onClick={() => setAffiliatesViewMode('map')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
-                    affiliatesViewMode === 'map' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${affiliatesViewMode === 'map' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                    }`}
                 >
                   <MapPin className="w-3.5 h-3.5" />
                   <span>Mapa do Brasil</span>
@@ -2205,281 +2197,279 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
           {/* Conditional View: Map or Table */}
           {affiliatesViewMode === 'map' ? (
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-2 sm:p-4">
-              <BrazilAffiliatesMap 
-                affiliates={affiliates} 
-                theme="light" 
+              <BrazilAffiliatesMap
+                affiliates={affiliates}
+                theme="light"
                 title="Distribuição Geográfica dos Afiliados & Representantes"
                 subtitle="Clique em qualquer estado ou cidade no mapa para visualizar os representantes alocados e acionar diretamente pelo WhatsApp."
               />
             </div>
           ) : (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-500 tracking-wider">
-                    <th className="py-3.5 px-5">Representante / Região</th>
-                    <th className="py-3.5 px-4">Contatos</th>
-                    <th className="py-3.5 px-4">Chave PIX (Repasse)</th>
-                    <th className="py-3.5 px-4">% Comissões (Mensal / Treinamento)</th>
-                    <th className="py-3.5 px-4">Metas do Mês (Vendas & Setup)</th>
-                    <th className="py-3.5 px-4">Link Exclusivo de Afiliado</th>
-                    <th className="py-3.5 px-4">Empresas & Repasse Estimado</th>
-                    <th className="py-3.5 px-5 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredAffiliates.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-400">
-                        Nenhum afiliado ou representante encontrado. Clique em "+ Novo Afiliado" para cadastrar o primeiro!
-                      </td>
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-500 tracking-wider">
+                      <th className="py-3.5 px-5">Representante / Região</th>
+                      <th className="py-3.5 px-4">Contatos</th>
+                      <th className="py-3.5 px-4">Chave PIX (Repasse)</th>
+                      <th className="py-3.5 px-4">% Comissões (Mensal / Treinamento)</th>
+                      <th className="py-3.5 px-4">Metas do Mês (Vendas & Setup)</th>
+                      <th className="py-3.5 px-4">Link Exclusivo de Afiliado</th>
+                      <th className="py-3.5 px-4">Empresas & Repasse Estimado</th>
+                      <th className="py-3.5 px-5 text-right">Ações</th>
                     </tr>
-                  ) : (
-                    filteredAffiliates.map((aff) => {
-                      const isActive = aff.status === 'active';
-                      const isCopied = copiedRefLink === aff.referralCode;
-                      const isPixCopied = copiedPixKey === aff.id;
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredAffiliates.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          Nenhum afiliado ou representante encontrado. Clique em "+ Novo Afiliado" para cadastrar o primeiro!
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAffiliates.map((aff) => {
+                        const isActive = aff.status === 'active';
+                        const isCopied = copiedRefLink === aff.referralCode;
+                        const isPixCopied = copiedPixKey === aff.id;
 
-                      return (
-                        <tr key={aff.id} className="hover:bg-slate-50/80 transition">
-                          
-                          {/* Nome e UF */}
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-black flex items-center justify-center text-sm shrink-0">
-                                {aff.state || 'BR'}
+                        return (
+                          <tr key={aff.id} className="hover:bg-slate-50/80 transition">
+
+                            {/* Nome e UF */}
+                            <td className="py-4 px-5">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-black flex items-center justify-center text-sm shrink-0">
+                                  {aff.state || 'BR'}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                                    <span>{aff.name}</span>
+                                    {!isActive && (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold">
+                                        Pausado
+                                      </span>
+                                    )}
+                                    {aff.trainingStatus === 'completed' ? (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1 border border-emerald-200">
+                                        <GraduationCap className="w-3 h-3 text-emerald-600" />
+                                        Treinado / Habilitado
+                                      </span>
+                                    ) : aff.trainingStatus === 'scheduled' ? (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center gap-1 border border-blue-200">
+                                        <GraduationCap className="w-3 h-3 text-blue-600" />
+                                        Treinamento Agendado
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center gap-1 border border-amber-200">
+                                        <GraduationCap className="w-3 h-3 text-amber-600" />
+                                        Treinamento Pendente
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span className="font-semibold text-slate-700">{aff.city ? `${aff.city} - ${aff.state}` : `${aff.state} (Brasil)`}</span>
+                                    {aff.address && <span>• {aff.address}{aff.neighborhood ? `, ${aff.neighborhood}` : ''}</span>}
+                                    {aff.cep && <span>• CEP: {aff.cep}</span>}
+                                    {aff.document && <span>• Doc: {aff.document}</span>}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                                  <span>{aff.name}</span>
-                                  {!isActive && (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold">
-                                      Pausado
-                                    </span>
-                                  )}
-                                  {aff.trainingStatus === 'completed' ? (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center gap-1 border border-emerald-200">
-                                      <GraduationCap className="w-3 h-3 text-emerald-600" />
-                                      Treinado / Habilitado
-                                    </span>
-                                  ) : aff.trainingStatus === 'scheduled' ? (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold flex items-center gap-1 border border-blue-200">
-                                      <GraduationCap className="w-3 h-3 text-blue-600" />
-                                      Treinamento Agendado
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center gap-1 border border-amber-200">
-                                      <GraduationCap className="w-3 h-3 text-amber-600" />
-                                      Treinamento Pendente
-                                    </span>
-                                  )}
+                            </td>
+
+                            {/* Contato */}
+                            <td className="py-4 px-4 text-xs">
+                              <div className="space-y-1">
+                                {aff.phone && (
+                                  <a
+                                    href={`https://wa.me/55${aff.phone.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"
+                                  >
+                                    <Phone className="w-3 h-3" />
+                                    <span>{aff.phone}</span>
+                                  </a>
+                                )}
+                                {aff.email && (
+                                  <div className="text-slate-500 flex items-center gap-1">
+                                    <Mail className="w-3 h-3 text-slate-400" />
+                                    <span>{aff.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Chave PIX */}
+                            <td className="py-4 px-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                                    {aff.pixKeyType?.toUpperCase() || 'PIX'}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyPix(aff.pixKey, aff.id)}
+                                    className="text-xs font-mono font-bold text-slate-800 hover:text-blue-600 flex items-center gap-1"
+                                    title="Clique para copiar a chave PIX"
+                                  >
+                                    <span>{aff.pixKey}</span>
+                                    {isPixCopied ? (
+                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                    )}
+                                  </button>
                                 </div>
-                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                                  <span className="font-semibold text-slate-700">{aff.city ? `${aff.city} - ${aff.state}` : `${aff.state} (Brasil)`}</span>
-                                  {aff.address && <span>• {aff.address}{aff.neighborhood ? `, ${aff.neighborhood}` : ''}</span>}
-                                  {aff.cep && <span>• CEP: {aff.cep}</span>}
-                                  {aff.document && <span>• Doc: {aff.document}</span>}
+                                {isPixCopied && (
+                                  <span className="text-[10px] text-emerald-600 font-bold block">PIX copiado!</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Comissões */}
+                            <td className="py-4 px-4">
+                              <div className="space-y-1">
+                                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                  <span className="text-blue-600 font-black">{aff.commissionMonthly || 0}%</span>
+                                  <span className="text-slate-500 font-normal">Mensalidade Recorrente</span>
+                                </div>
+                                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                  <span className="text-purple-600 font-black">{aff.commissionSetup || 0}%</span>
+                                  <span className="text-slate-500 font-normal">Instalação & Treinamento</span>
                                 </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Contato */}
-                          <td className="py-4 px-4 text-xs">
-                            <div className="space-y-1">
-                              {aff.phone && (
-                                <a
-                                  href={`https://wa.me/55${aff.phone.replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"
-                                >
-                                  <Phone className="w-3 h-3" />
-                                  <span>{aff.phone}</span>
-                                </a>
-                              )}
-                              {aff.email && (
-                                <div className="text-slate-500 flex items-center gap-1">
-                                  <Mail className="w-3 h-3 text-slate-400" />
-                                  <span>{aff.email}</span>
+                            {/* Metas Comerciais */}
+                            <td className="py-4 px-4 min-w-[190px]">
+                              <div className="space-y-2">
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] mb-0.5">
+                                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                      <Target className="w-3 h-3 text-emerald-600" />
+                                      <span>Vendas: <strong>{aff.activeCompaniesCount || 0} / {aff.targetSalesMonthly || 10}</strong></span>
+                                    </span>
+                                    <span className="font-bold text-emerald-700">{aff.salesProgressPct || 0}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, aff.salesProgressPct || 0)}%` }}
+                                    />
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          </td>
 
-                          {/* Chave PIX */}
-                          <td className="py-4 px-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                                  {aff.pixKeyType?.toUpperCase() || 'PIX'}
-                                </span>
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] mb-0.5">
+                                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                      <Trophy className="w-3 h-3 text-indigo-600" />
+                                      <span>Treinamentos: <strong>{aff.completedTrainingsCount || 0} / {aff.targetTrainingsMonthly || 3}</strong></span>
+                                    </span>
+                                    <span className="font-bold text-indigo-700">{aff.trainingsProgressPct || 0}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, aff.trainingsProgressPct || 0)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Link de Afiliado */}
+                            <td className="py-4 px-4">
+                              <div className="space-y-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyPix(aff.pixKey, aff.id)}
-                                  className="text-xs font-mono font-bold text-slate-800 hover:text-blue-600 flex items-center gap-1"
-                                  title="Clique para copiar a chave PIX"
+                                  onClick={() => handleCopyReferralLink(aff.referralCode)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs ${isCopied
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                    }`}
                                 >
-                                  <span>{aff.pixKey}</span>
-                                  {isPixCopied ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                  )}
+                                  {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                  <span>{isCopied ? 'Link Copiado!' : 'Copiar Link de Indicação'}</span>
                                 </button>
-                              </div>
-                              {isPixCopied && (
-                                <span className="text-[10px] text-emerald-600 font-bold block">PIX copiado!</span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Comissões */}
-                          <td className="py-4 px-4">
-                            <div className="space-y-1">
-                              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                <span className="text-blue-600 font-black">{aff.commissionMonthly || 0}%</span>
-                                <span className="text-slate-500 font-normal">Mensalidade Recorrente</span>
-                              </div>
-                              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                <span className="text-purple-600 font-black">{aff.commissionSetup || 0}%</span>
-                                <span className="text-slate-500 font-normal">Instalação & Treinamento</span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Metas Comerciais */}
-                          <td className="py-4 px-4 min-w-[190px]">
-                            <div className="space-y-2">
-                              <div>
-                                <div className="flex items-center justify-between text-[11px] mb-0.5">
-                                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                                    <Target className="w-3 h-3 text-emerald-600" />
-                                    <span>Vendas: <strong>{aff.activeCompaniesCount || 0} / {aff.targetSalesMonthly || 10}</strong></span>
-                                  </span>
-                                  <span className="font-bold text-emerald-700">{aff.salesProgressPct || 0}%</span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                  <div 
-                                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.min(100, aff.salesProgressPct || 0)}%` }}
-                                  />
+                                <div className="text-[11px] font-mono text-slate-400 truncate max-w-[200px]" title={`?ref=${aff.referralCode}`}>
+                                  ?ref={aff.referralCode}
                                 </div>
                               </div>
+                            </td>
 
-                              <div>
-                                <div className="flex items-center justify-between text-[11px] mb-0.5">
-                                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                                    <Trophy className="w-3 h-3 text-indigo-600" />
-                                    <span>Treinamentos: <strong>{aff.completedTrainingsCount || 0} / {aff.targetTrainingsMonthly || 3}</strong></span>
-                                  </span>
-                                  <span className="font-bold text-indigo-700">{aff.trainingsProgressPct || 0}%</span>
-                                </div>
-                                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                  <div 
-                                    className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.min(100, aff.trainingsProgressPct || 0)}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Link de Afiliado */}
-                          <td className="py-4 px-4">
-                            <div className="space-y-1.5">
+                            {/* Empresas Vinculadas & Repasse */}
+                            <td className="py-4 px-4">
                               <button
                                 type="button"
-                                onClick={() => handleCopyReferralLink(aff.referralCode)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs ${
-                                  isCopied 
-                                    ? 'bg-emerald-600 text-white' 
-                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
-                                }`}
+                                onClick={() => setSelectedAffiliateForCompanies(aff)}
+                                className="text-left group"
                               >
-                                {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                <span>{isCopied ? 'Link Copiado!' : 'Copiar Link de Indicação'}</span>
+                                <div className="font-bold text-slate-900 group-hover:text-blue-600 flex items-center gap-1">
+                                  <span>{aff.totalCompanies || 0} empresa(s)</span>
+                                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition" />
+                                </div>
+                                <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">
+                                  Est. Repasse: {formatCurrency((aff.estimatedMonthlyEarnings || 0) + (aff.estimatedSetupEarnings || 0))}
+                                </div>
                               </button>
-                              <div className="text-[11px] font-mono text-slate-400 truncate max-w-[200px]" title={`?ref=${aff.referralCode}`}>
-                                ?ref={aff.referralCode}
-                              </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Empresas Vinculadas & Repasse */}
-                          <td className="py-4 px-4">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedAffiliateForCompanies(aff)}
-                              className="text-left group"
-                            >
-                              <div className="font-bold text-slate-900 group-hover:text-blue-600 flex items-center gap-1">
-                                <span>{aff.totalCompanies || 0} empresa(s)</span>
-                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition" />
-                              </div>
-                              <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-                                Est. Repasse: {formatCurrency((aff.estimatedMonthlyEarnings || 0) + (aff.estimatedSetupEarnings || 0))}
-                              </div>
-                            </button>
-                          </td>
+                            {/* Ações */}
+                            <td className="py-4 px-5 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {Boolean(aff.totalCompanies && aff.totalCompanies > 0) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTransferModalSourceAffiliate(aff);
+                                      setTransferDestinationAffiliateId('');
+                                    }}
+                                    className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
+                                    title="Remanejar / Transferir Carteira de Empresas para Outro Afiliado"
+                                  >
+                                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
 
-                          {/* Ações */}
-                          <td className="py-4 px-5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {Boolean(aff.totalCompanies && aff.totalCompanies > 0) && (
                                 <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTransferModalSourceAffiliate(aff);
-                                    setTransferDestinationAffiliateId('');
-                                  }}
-                                  className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
-                                  title="Remanejar / Transferir Carteira de Empresas para Outro Afiliado"
+                                  onClick={() => handleOpenEditAffiliateModal(aff)}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                                  title="Editar Afiliado"
                                 >
-                                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                                  <Edit3 className="w-3.5 h-3.5" />
                                 </button>
-                              )}
 
-                              <button
-                                onClick={() => handleOpenEditAffiliateModal(aff)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-                                title="Editar Afiliado"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
+                                <button
+                                  onClick={() => handleToggleAffiliateStatusAction(aff)}
+                                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                                    }`}
+                                  title={isActive ? 'Pausar Afiliado' : 'Reativar Afiliado'}
+                                >
+                                  {isActive ? 'Pausar' : 'Ativar'}
+                                </button>
 
-                              <button
-                                onClick={() => handleToggleAffiliateStatusAction(aff)}
-                                className={`px-2 py-1 rounded-lg text-xs font-semibold transition ${
-                                  isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                                }`}
-                                title={isActive ? 'Pausar Afiliado' : 'Reativar Afiliado'}
-                              >
-                                {isActive ? 'Pausar' : 'Ativar'}
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteAffiliateAction(aff)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 transition"
-                                title="Excluir Afiliado"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                                <button
+                                  onClick={() => handleDeleteAffiliateAction(aff)}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 transition"
+                                  title="Excluir Afiliado"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    )}
+          )}
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* TAB: VÍDEOS DE TREINAMENTO (CAPACITAÇÃO DE AFILIADOS) */}
@@ -2563,14 +2553,13 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 return (
                   <div
                     key={vid.id}
-                    className={`bg-white rounded-3xl border transition hover:shadow-md flex flex-col overflow-hidden ${
-                      isActive ? 'border-slate-200/90' : 'border-slate-200 opacity-60 bg-slate-50/50'
-                    }`}
+                    className={`bg-white rounded-3xl border transition hover:shadow-md flex flex-col overflow-hidden ${isActive ? 'border-slate-200/90' : 'border-slate-200 opacity-60 bg-slate-50/50'
+                      }`}
                   >
                     {/* Video Card Header / Preview Area */}
                     <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-indigo-950 flex items-center justify-center text-white overflow-hidden group">
                       <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xs" />
-                      
+
                       <button
                         type="button"
                         onClick={() => setPreviewVideo(vid)}
@@ -2599,9 +2588,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             Ordem #{vid.orderIndex || 0}
                           </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                            isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                          }`}>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                            }`}>
                             {isActive ? 'Ativo no Portal' : 'Pausado'}
                           </span>
                         </div>
@@ -2650,9 +2638,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           <button
                             type="button"
                             onClick={() => handleToggleVideoActiveAction(vid)}
-                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-                              isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                            }`}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                              }`}
                             title={isActive ? 'Pausar Vídeo' : 'Ativar Vídeo'}
                           >
                             {isActive ? 'Pausar' : 'Ativar'}
@@ -2746,9 +2733,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           {ev.companyId || <span className="text-amber-600 italic">Não associada</span>}
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            ev.status === 'processed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${ev.status === 'processed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                            }`}>
                             {ev.status}
                           </span>
                         </td>
@@ -2835,13 +2821,12 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            rel.status === 'released' ? 'bg-emerald-100 text-emerald-800' :
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${rel.status === 'released' ? 'bg-emerald-100 text-emerald-800' :
                             rel.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
+                              'bg-purple-100 text-purple-800'
+                            }`}>
                             {rel.status === 'released' ? 'Lançado' :
-                             rel.status === 'in_progress' ? 'Em Progresso' : 'Planejado'}
+                              rel.status === 'in_progress' ? 'Em Progresso' : 'Planejado'}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-slate-600 text-[11px]">
@@ -2884,7 +2869,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {isAffiliateModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -2906,7 +2891,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
 
             <form onSubmit={handleSaveAffiliateSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Nome Completo */}
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -3102,33 +3087,30 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     <button
                       type="button"
                       onClick={() => setAffiliateFormData({ ...affiliateFormData, trainingStatus: 'pending' })}
-                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        affiliateFormData.trainingStatus === 'pending'
-                          ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${affiliateFormData.trainingStatus === 'pending'
+                        ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
                     >
                       <span>⏳ Pendente</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setAffiliateFormData({ ...affiliateFormData, trainingStatus: 'scheduled' })}
-                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        affiliateFormData.trainingStatus === 'scheduled'
-                          ? 'bg-blue-100 border-blue-300 text-blue-900 shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${affiliateFormData.trainingStatus === 'scheduled'
+                        ? 'bg-blue-100 border-blue-300 text-blue-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
                     >
                       <span>🗓️ Agendado</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setAffiliateFormData({ ...affiliateFormData, trainingStatus: 'completed' })}
-                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
-                        affiliateFormData.trainingStatus === 'completed'
-                          ? 'bg-emerald-100 border-emerald-300 text-emerald-900 shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
+                      className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${affiliateFormData.trainingStatus === 'completed'
+                        ? 'bg-emerald-100 border-emerald-300 text-emerald-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
                     >
                       <span>✅ Concluído / Habilitado</span>
                     </button>
@@ -3330,7 +3312,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {selectedAffiliateForCompanies && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -3391,9 +3373,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
                               {isActive ? 'Assinatura Ativa' : 'Em Teste / Expirada'}
                             </span>
 
@@ -3432,7 +3413,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {assigningCompany && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
@@ -3498,7 +3479,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {transferModalSourceAffiliate && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
@@ -3571,7 +3552,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {showPricingPreview && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 sm:p-10 space-y-8 my-8 text-white relative shadow-2xl">
-            
+
             <button
               onClick={() => setShowPricingPreview(false)}
               className="absolute top-6 right-6 text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800"
@@ -3594,13 +3575,12 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             {/* Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {(hotmartConfig.plans || DEFAULT_PLANS).map((p, i) => (
-                <div 
+                <div
                   key={p.id || i}
-                  className={`rounded-2xl p-6 flex flex-col justify-between relative transition border ${
-                    p.highlight 
-                      ? 'bg-gradient-to-b from-blue-900/40 to-slate-900 border-blue-500 shadow-xl shadow-blue-500/10 ring-2 ring-blue-500/20' 
-                      : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                  }`}
+                  className={`rounded-2xl p-6 flex flex-col justify-between relative transition border ${p.highlight
+                    ? 'bg-gradient-to-b from-blue-900/40 to-slate-900 border-blue-500 shadow-xl shadow-blue-500/10 ring-2 ring-blue-500/20'
+                    : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                    }`}
                 >
                   {p.highlight && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-blue-600 text-white font-black text-[10px] uppercase tracking-wider shadow-md">
@@ -3639,11 +3619,10 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                       href={p.checkoutUrl || hotmartConfig.checkoutUrl || 'https://pay.hotmart.com'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                        p.highlight
-                          ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                          : 'bg-slate-800 hover:bg-slate-700 text-white'
-                      }`}
+                      className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${p.highlight
+                        ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                        : 'bg-slate-800 hover:bg-slate-700 text-white'
+                        }`}
                     >
                       <span>Assinar na Hotmart</span>
                       <ArrowUpRight className="w-4 h-4" />
@@ -3743,7 +3722,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {isReleaseModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -3763,7 +3742,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             </div>
 
             <form onSubmit={handleSaveRelease} className="space-y-4">
-              
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Título da Novidade *
@@ -3894,7 +3873,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       {isTrainingVideoModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -4000,9 +3979,9 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   <input
                     type="text"
                     value={Array.isArray(videoFormData.tags) ? videoFormData.tags.join(', ') : (videoFormData.tags || '')}
-                    onChange={(e) => setVideoFormData({ 
-                      ...videoFormData, 
-                      tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) 
+                    onChange={(e) => setVideoFormData({
+                      ...videoFormData,
+                      tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                     })}
                     placeholder="Vendas, Pitch, Scripts"
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
