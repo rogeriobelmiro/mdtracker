@@ -1920,7 +1920,7 @@ let inMemoryPopups: any[] = [
 // ==========================================
 const mapLandingPageToDB = (lp: any) => ({
     id: lp.id,
-    company_id: lp.companyId || 'comp-alfa',
+    company_id: lp.companyId || lp.company_id || 'comp-alfa',
     title: lp.title,
     slug: (lp.slug || '').toLowerCase().trim().replace(/[^a-z0-9_-]/g, '-'),
     description: lp.description || '',
@@ -7101,14 +7101,14 @@ app.get('/api/landing-pages', async (req: Request, res: Response) => {
                 .eq('company_id', companyId)
                 .order('created_at', { ascending: false });
 
-            if (!error && data && data.length > 0) {
+            if (!error && Array.isArray(data)) {
                 return res.json(data.map(mapLandingPageFromDB));
             }
         } catch {}
 
-        // Fallback to in-memory
+        // Fallback to in-memory strictly filtered by company
         const list = inMemoryLandingPages
-            .filter(lp => lp.company_id === companyId)
+            .filter(lp => (lp.company_id || lp.companyId) === companyId)
             .map(mapLandingPageFromDB);
         res.json(list);
     } catch (err: any) {
@@ -7194,9 +7194,16 @@ app.put('/api/landing-pages/:id', async (req: Request, res: Response) => {
                 .replace(/^-|-$/g, '')
             : undefined;
 
+        let existingCompId = req.body.companyId || req.body.company_id;
+        if (!existingCompId) {
+            const inMem = inMemoryLandingPages.find(l => l.id === id);
+            if (inMem) existingCompId = inMem.company_id || inMem.companyId;
+        }
+
         const updatedData = {
             ...req.body,
             id,
+            companyId: existingCompId || 'comp-alfa',
             ...(cleanSlug ? { slug: cleanSlug } : {})
         };
 
@@ -7695,9 +7702,16 @@ app.put('/api/surveys/:id', async (req: Request, res: Response) => {
                 .replace(/^-|-$/g, '')
             : undefined;
 
+        let existingCompId = req.body.companyId || req.body.company_id;
+        if (!existingCompId) {
+            const inMem = inMemorySurveys.find(s => s.id === id);
+            if (inMem) existingCompId = inMem.company_id || inMem.companyId;
+        }
+
         const updatedData = {
             ...req.body,
             id,
+            companyId: existingCompId || 'comp-alfa',
             ...(cleanSlug ? { slug: cleanSlug } : {})
         };
 

@@ -1119,16 +1119,29 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     try {
       let data = await fetchLandingPages(currentCompany.id);
       
-      // Merge with localStorage persistence backup
+      // Filter data strictly by current company ID
+      data = (data || []).filter(p => !p.companyId || p.companyId === currentCompany.id);
+
+      // Merge with localStorage persistence backup for THIS company
       try {
-        const localSaved: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
-        if (localSaved && localSaved.length > 0) {
+        const companyStorageKey = `mdtracker_saved_landing_pages_${currentCompany.id}`;
+        const localSavedCompany: LandingPage[] = JSON.parse(localStorage.getItem(companyStorageKey) || '[]');
+        
+        // Also check legacy global storage, but ONLY pull pages belonging to current company
+        const legacySaved: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
+        const legacyFiltered = legacySaved.filter(p => p.companyId === currentCompany.id);
+
+        const allLocal = [...localSavedCompany, ...legacyFiltered];
+
+        if (allLocal.length > 0) {
           const map = new Map<string, LandingPage>();
           data.forEach(p => map.set(p.id, p));
-          localSaved.forEach(p => {
-            if (!map.has(p.id)) map.set(p.id, p);
+          allLocal.forEach(p => {
+            if (!map.has(p.id) && (!p.companyId || p.companyId === currentCompany.id)) {
+              map.set(p.id, { ...p, companyId: currentCompany.id });
+            }
           });
-          data = Array.from(map.values());
+          data = Array.from(map.values()).filter(p => !p.companyId || p.companyId === currentCompany.id);
         }
       } catch(e) {}
 
@@ -1175,28 +1188,31 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     } catch(e) {}
   }, [currentCompany.id]);
 
-  // Aggregate Metrics
+  // Aggregate Metrics (Strictly for Current Company)
   const metrics = useMemo(() => {
-    const total = landingPages.length;
-    const views = landingPages.reduce((acc, lp) => acc + (lp.viewsCount || 0), 0);
-    const conversions = landingPages.reduce((acc, lp) => acc + (lp.conversionsCount || 0), 0);
+    const companyPages = landingPages.filter(lp => !lp.companyId || lp.companyId === currentCompany.id);
+    const total = companyPages.length;
+    const views = companyPages.reduce((acc, lp) => acc + (lp.viewsCount || 0), 0);
+    const conversions = companyPages.reduce((acc, lp) => acc + (lp.conversionsCount || 0), 0);
     const conversionRate = views > 0 ? (conversions / views) * 100 : 0;
-    const published = landingPages.filter(lp => lp.status === 'published').length;
+    const published = companyPages.filter(lp => lp.status === 'published').length;
 
     return { total, views, conversions, conversionRate, published };
-  }, [landingPages]);
+  }, [landingPages, currentCompany.id]);
 
-  // Filtered List
+  // Filtered List (Strictly for Current Company)
   const filteredPages = useMemo(() => {
-    return landingPages.filter(lp => {
-      const matchesCategory = filterCategory === 'all' || lp.category === filterCategory;
-      const matchesSearch = 
-        lp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lp.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (lp.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [landingPages, filterCategory, searchQuery]);
+    return landingPages
+      .filter(lp => !lp.companyId || lp.companyId === currentCompany.id)
+      .filter(lp => {
+        const matchesCategory = filterCategory === 'all' || lp.category === filterCategory;
+        const matchesSearch = 
+          lp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          lp.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (lp.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+      });
+  }, [landingPages, filterCategory, searchQuery, currentCompany.id]);
 
   // Toggle status (published vs draft)
   const handleToggleStatus = async (lp: LandingPage) => {
@@ -1240,6 +1256,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     const duplicate: Partial<LandingPage> = {
       ...lp,
       id: `lp-${Date.now()}`,
+      companyId: currentCompany.id,
       title: `${lp.title} (Cópia)`,
       slug: newSlug,
       viewsCount: 0,
@@ -1798,27 +1815,40 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
     setIsSaving(true);
     try {
-      const exists = landingPages.some(p => p.id === editingPage.id);
+      const pageToSave: LandingPage = {
+        ...editingPage,
+        companyId: currentCompany.id
+      };
+
+      const exists = landingPages.some(p => p.id === pageToSave.id);
       let saved: LandingPage;
       if (exists) {
         try {
-          saved = await updateLandingPage(editingPage.id, editingPage);
+          saved = await updateLandingPage(pageToSave.id, pageToSave);
         } catch (updateErr: any) {
           // If update failed (e.g. 404 or backend session reset), fallback to create/upsert
-          saved = await createLandingPage(editingPage);
+          saved = await createLandingPage(pageToSave);
         }
         setLandingPages(prev => prev.map(p => p.id === saved.id ? saved : p));
       } else {
-        saved = await createLandingPage(editingPage);
+        saved = await createLandingPage(pageToSave);
         setLandingPages(prev => [saved, ...prev]);
       }
       setEditingPage(saved);
 
-      // Persist in localStorage backup so user never loses their changes
+      // Persist in company-specific localStorage backup
       try {
-        const localSaved: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
+        const companyStorageKey = `mdtracker_saved_landing_pages_${currentCompany.id}`;
+        const localSaved: LandingPage[] = JSON.parse(localStorage.getItem(companyStorageKey) || '[]');
         const updatedLocal = [saved, ...localSaved.filter(p => p.id !== saved.id)];
-        localStorage.setItem('mdtracker_saved_landing_pages', JSON.stringify(updatedLocal));
+        localStorage.setItem(companyStorageKey, JSON.stringify(updatedLocal));
+
+        // Also clean up any legacy global storage to remove cross-company pollution
+        try {
+          const legacy: LandingPage[] = JSON.parse(localStorage.getItem('mdtracker_saved_landing_pages') || '[]');
+          const cleanedLegacy = legacy.filter(p => p.id !== saved.id);
+          localStorage.setItem('mdtracker_saved_landing_pages', JSON.stringify(cleanedLegacy));
+        } catch(e) {}
       } catch(e) {}
 
       alert(`Landing Page "${saved.title}" salva com sucesso!\nURL pública: /p/${saved.slug}`);
