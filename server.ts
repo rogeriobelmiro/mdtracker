@@ -334,6 +334,10 @@ const initialAffiliates = [
         email: 'rogerio@crysrios.com.br',
         phone: '5565981150758',
         document: '53.483.257/0001-08',
+        cep: '78000-000',
+        address: 'Av. Historiador Rubens de Mendonça, 1500',
+        neighborhood: 'Bosque da Saúde',
+        complement: 'Ed. Top Tower, Sala 801',
         state: 'MT',
         city: 'Cuiabá',
         commissionMonthly: 25,
@@ -342,7 +346,8 @@ const initialAffiliates = [
         pixKey: '5565981150758',
         referralCode: 'rogerio-mt',
         status: 'active',
-        notes: 'Representante Oficial Centro-Oeste e Mato Grosso',
+        trainingStatus: 'completed',
+        notes: 'Representante Master e Coordenador Técnico Nacional - Centro-Oeste / MT',
         createdAt: new Date().toISOString()
     },
     {
@@ -351,6 +356,10 @@ const initialAffiliates = [
         email: 'carlos.mendes@rep-trackermd.com.br',
         phone: '5511998765432',
         document: '123.456.789-00',
+        cep: '01310-100',
+        address: 'Av. Paulista, 1842',
+        neighborhood: 'Bela Vista',
+        complement: 'Torre Norte, 14º Andar',
         state: 'SP',
         city: 'São Paulo',
         commissionMonthly: 20,
@@ -359,6 +368,7 @@ const initialAffiliates = [
         pixKey: 'carlos.mendes@rep-trackermd.com.br',
         referralCode: 'carlos-sp',
         status: 'active',
+        trainingStatus: 'completed',
         notes: 'Representante Especialista em Automações e CAPI - Grande SP',
         createdAt: new Date().toISOString()
     },
@@ -368,6 +378,10 @@ const initialAffiliates = [
         email: 'mariana.rio@rep-trackermd.com.br',
         phone: '5521987654321',
         document: '987.654.321-11',
+        cep: '22041-001',
+        address: 'Av. Atlântica, 2500',
+        neighborhood: 'Copacabana',
+        complement: 'Sala 402',
         state: 'RJ',
         city: 'Rio de Janeiro',
         commissionMonthly: 20,
@@ -376,6 +390,7 @@ const initialAffiliates = [
         pixKey: '987.654.321-11',
         referralCode: 'mariana-rj',
         status: 'active',
+        trainingStatus: 'completed',
         notes: 'Especialista em Gestão de Tráfego e Rastreamento RJ',
         createdAt: new Date().toISOString()
     },
@@ -385,6 +400,10 @@ const initialAffiliates = [
         email: 'felipe.mg@rep-trackermd.com.br',
         phone: '5531988887777',
         document: '321.654.987-22',
+        cep: '30130-100',
+        address: 'Av. Afonso Pena, 3000',
+        neighborhood: 'Funcionários',
+        complement: 'Conjunto 508',
         state: 'MG',
         city: 'Belo Horizonte',
         commissionMonthly: 20,
@@ -393,6 +412,7 @@ const initialAffiliates = [
         pixKey: 'felipe.mg@rep-trackermd.com.br',
         referralCode: 'felipe-mg',
         status: 'active',
+        trainingStatus: 'completed',
         notes: 'Consultor de Implantação e CRM Minas Gerais',
         createdAt: new Date().toISOString()
     },
@@ -402,6 +422,10 @@ const initialAffiliates = [
         email: 'lucas.pr@rep-trackermd.com.br',
         phone: '5541999998888',
         document: '456.789.123-33',
+        cep: '80420-000',
+        address: 'Rua Comendador Araújo, 499',
+        neighborhood: 'Batel',
+        complement: 'Sala 1102',
         state: 'PR',
         city: 'Curitiba',
         commissionMonthly: 20,
@@ -410,7 +434,8 @@ const initialAffiliates = [
         pixKey: '456.789.123-33',
         referralCode: 'lucas-pr',
         status: 'active',
-        notes: 'Representante Região Sul',
+        trainingStatus: 'completed',
+        notes: 'Representante Região Sul e Paraná',
         createdAt: new Date().toISOString()
     },
     {
@@ -419,6 +444,10 @@ const initialAffiliates = [
         email: 'aline.ba@rep-trackermd.com.br',
         phone: '5571991234567',
         document: '654.321.987-44',
+        cep: '41810-011',
+        address: 'Av. Tancredo Neves, 1200',
+        neighborhood: 'Caminho das Árvores',
+        complement: 'Empresarial Salvador, Sala 601',
         state: 'BA',
         city: 'Salvador',
         commissionMonthly: 20,
@@ -427,6 +456,7 @@ const initialAffiliates = [
         pixKey: '5571991234567',
         referralCode: 'aline-ba',
         status: 'active',
+        trainingStatus: 'completed',
         notes: 'Representante Nordeste / Bahia',
         createdAt: new Date().toISOString()
     },
@@ -436,6 +466,10 @@ const initialAffiliates = [
         email: 'eduardo.df@rep-trackermd.com.br',
         phone: '5561998877665',
         document: '789.123.456-55',
+        cep: '70070-120',
+        address: 'SCN Quadra 2, Bloco D',
+        neighborhood: 'Asa Norte',
+        complement: 'Torre B, Sala 304',
         state: 'DF',
         city: 'Brasília',
         commissionMonthly: 20,
@@ -444,12 +478,205 @@ const initialAffiliates = [
         pixKey: 'eduardo.df@rep-trackermd.com.br',
         referralCode: 'eduardo-df',
         status: 'active',
+        trainingStatus: 'completed',
         notes: 'Representante Distrito Federal e Entorno',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-rs-01',
+        name: 'Juliana Freitas',
+        email: 'juliana.rs@rep-trackermd.com.br',
+        phone: '5551981122334',
+        document: '852.963.741-66',
+        cep: '90010-150',
+        address: 'Av. Carlos Gomes, 1111',
+        neighborhood: 'Auxiliadora',
+        complement: 'Conjunto 905',
+        state: 'RS',
+        city: 'Porto Alegre',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'juliana.rs@rep-trackermd.com.br',
+        referralCode: 'juliana-rs',
+        status: 'active',
+        trainingStatus: 'completed',
+        notes: 'Representante Rio Grande do Sul e Serra Gaúcha',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-pe-01',
+        name: 'Thiago Albuquerque',
+        email: 'thiago.pe@rep-trackermd.com.br',
+        phone: '5581987766554',
+        document: '951.753.357-77',
+        cep: '51020-020',
+        address: 'Av. Boa Viagem, 3500',
+        neighborhood: 'Boa Viagem',
+        complement: 'Edf. Empresarial, Sala 702',
+        state: 'PE',
+        city: 'Recife',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'cpf',
+        pixKey: '951.753.357-77',
+        referralCode: 'thiago-pe',
+        status: 'active',
+        trainingStatus: 'completed',
+        notes: 'Representante Pernambuco e Região Metropolitana',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-go-01',
+        name: 'Renata Lima',
+        email: 'renata.go@rep-trackermd.com.br',
+        phone: '5562994433221',
+        document: '753.159.852-88',
+        cep: '74110-010',
+        address: 'Av. 85, 1400',
+        neighborhood: 'Setor Marista',
+        complement: 'Bloco A, Sala 401',
+        state: 'GO',
+        city: 'Goiânia',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'renata.go@rep-trackermd.com.br',
+        referralCode: 'renata-go',
+        status: 'active',
+        trainingStatus: 'completed',
+        notes: 'Representante Goiás e Centro-Oeste',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-am-01',
+        name: 'Gabriel Barbosa',
+        email: 'gabriel.am@rep-trackermd.com.br',
+        phone: '5592981239876',
+        document: '357.951.456-99',
+        cep: '69057-002',
+        address: 'Av. Djalma Batista, 1661',
+        neighborhood: 'Chapada',
+        complement: 'Millennium Center, Torre Business',
+        state: 'AM',
+        city: 'Manaus',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'phone',
+        pixKey: '5592981239876',
+        referralCode: 'gabriel-am',
+        status: 'active',
+        trainingStatus: 'completed',
+        notes: 'Representante Região Norte e Amazonas',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-ce-01',
+        name: 'Camila Nogueira',
+        email: 'camila.ce@rep-trackermd.com.br',
+        phone: '5585996655443',
+        document: '159.357.258-01',
+        cep: '60165-121',
+        address: 'Av. Beira Mar, 4000',
+        neighborhood: 'Meireles',
+        complement: 'Torre Atlântico, Sala 1205',
+        state: 'CE',
+        city: 'Fortaleza',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'camila.ce@rep-trackermd.com.br',
+        referralCode: 'camila-ce',
+        status: 'active',
+        trainingStatus: 'completed',
+        notes: 'Representante Ceará e Litoral Leste',
         createdAt: new Date().toISOString()
     }
 ];
 
 let inMemoryAffiliates: any[] = [...initialAffiliates];
+
+function mapAffiliateToDB(a: any) {
+    return {
+        id: a.id,
+        name: a.name,
+        email: (a.email || '').toLowerCase().trim(),
+        phone: a.phone || '',
+        document: a.document || null,
+        cep: a.cep || null,
+        address: a.address || null,
+        neighborhood: a.neighborhood || null,
+        complement: a.complement || null,
+        city: a.city || '',
+        state: (a.state || 'SP').toUpperCase().trim(),
+        commission_monthly: a.commissionMonthly !== undefined ? Number(a.commissionMonthly) : 20,
+        commission_setup: a.commissionSetup !== undefined ? Number(a.commissionSetup) : 50,
+        pix_key_type: a.pixKeyType || 'cpf',
+        pix_key: a.pixKey || '',
+        referral_code: (a.referralCode || '').toLowerCase().trim(),
+        status: a.status || 'active',
+        training_status: a.trainingStatus || 'pending',
+        notes: a.notes || null,
+        created_at: a.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+}
+
+function mapAffiliateFromDB(row: any) {
+    return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        document: row.document || '',
+        cep: row.cep || '',
+        address: row.address || '',
+        neighborhood: row.neighborhood || '',
+        complement: row.complement || '',
+        city: row.city || '',
+        state: row.state || 'SP',
+        commissionMonthly: row.commission_monthly !== undefined ? Number(row.commission_monthly) : 20,
+        commissionSetup: row.commission_setup !== undefined ? Number(row.commission_setup) : 50,
+        pixKeyType: row.pix_key_type || 'cpf',
+        pixKey: row.pix_key || '',
+        referralCode: row.referral_code,
+        status: row.status || 'active',
+        trainingStatus: row.training_status || 'pending',
+        notes: row.notes || '',
+        createdAt: row.created_at || new Date().toISOString(),
+        updatedAt: row.updated_at
+    };
+}
+
+async function syncAffiliatesWithDatabase() {
+    try {
+        // 1. Fetch current affiliates from Supabase
+        const { data: dbAffiliates, error } = await supabase.from('affiliates').select('*');
+        if (!error && Array.isArray(dbAffiliates) && dbAffiliates.length > 0) {
+            const mapped = dbAffiliates.map(mapAffiliateFromDB);
+            mapped.forEach((aff: any) => {
+                const idx = inMemoryAffiliates.findIndex(ia => ia.id === aff.id || ia.referralCode?.toLowerCase() === aff.referralCode?.toLowerCase());
+                if (idx >= 0) inMemoryAffiliates[idx] = { ...inMemoryAffiliates[idx], ...aff };
+                else inMemoryAffiliates.push(aff);
+            });
+        }
+
+        // 2. Persist/upsert all model affiliates into Supabase
+        for (const modelAff of initialAffiliates) {
+            const dbRow = mapAffiliateToDB(modelAff);
+            try {
+                await supabase.from('affiliates').upsert(dbRow, { onConflict: 'referral_code' });
+            } catch (upsertErr) {}
+        }
+
+        saveLocalAffiliatesStore();
+    } catch (err: any) {
+        console.warn('[Affiliates] Aviso ao sincronizar com banco de dados:', err?.message || err);
+    }
+}
+
+// Executa sincronização de afiliados com o banco
+syncAffiliatesWithDatabase();
 
 function saveLocalAffiliatesStore() {
     try {
@@ -13722,6 +13949,10 @@ app.post('/api/public/affiliates/register', async (req: Request, res: Response) 
         inMemoryAffiliates.unshift(newAffiliate);
         saveLocalAffiliatesStore();
 
+        try {
+            await supabase.from('affiliates').upsert(mapAffiliateToDB(newAffiliate));
+        } catch {}
+
         res.json({
             success: true,
             affiliate: newAffiliate,
@@ -13738,6 +13969,19 @@ app.get('/api/admin/affiliates', async (req: Request, res: Response) => {
         if (userEmail !== 'rogerio@mudadigital.com.br') {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
+
+        // Try to sync with Supabase
+        try {
+            const { data: dbData } = await supabase.from('affiliates').select('*');
+            if (dbData && dbData.length > 0) {
+                const mapped = dbData.map(mapAffiliateFromDB);
+                mapped.forEach((m: any) => {
+                    const idx = inMemoryAffiliates.findIndex(ia => ia.id === m.id || ia.referralCode === m.referralCode);
+                    if (idx >= 0) inMemoryAffiliates[idx] = { ...inMemoryAffiliates[idx], ...m };
+                    else inMemoryAffiliates.push(m);
+                });
+            }
+        } catch {}
 
         // Enrich affiliates with stats from inMemoryCompanies
         const enriched = inMemoryAffiliates.map(aff => {
@@ -13823,6 +14067,10 @@ app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
         else inMemoryAffiliates.unshift(newAffiliate);
         saveLocalAffiliatesStore();
 
+        try {
+            await supabase.from('affiliates').upsert(mapAffiliateToDB(newAffiliate));
+        } catch {}
+
         res.json(newAffiliate);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13852,6 +14100,10 @@ app.put('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
         inMemoryAffiliates[idx] = updated;
         saveLocalAffiliatesStore();
 
+        try {
+            await supabase.from('affiliates').update(mapAffiliateToDB(updated)).eq('id', id);
+        } catch {}
+
         res.json(updated);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13868,6 +14120,10 @@ app.delete('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
         const { id } = req.params;
         inMemoryAffiliates = inMemoryAffiliates.filter(a => a.id !== id);
         saveLocalAffiliatesStore();
+
+        try {
+            await supabase.from('affiliates').delete().eq('id', id);
+        } catch {}
 
         res.json({ success: true, id });
     } catch (err: any) {
