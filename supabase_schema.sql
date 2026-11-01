@@ -322,7 +322,7 @@ ALTER TABLE workflow_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir all anonimo em marketing_workflows" ON marketing_workflows FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir all anonimo em workflow_logs" ON workflow_logs FOR ALL TO anon USING (true) WITH CHECK (true);
 
--- Tabela: landing_pages (Criador de Landing Pages estilo RD Station)
+-- Tabela: landing_pages (Criador de Landing Pages estilo RD Station com VSL Pitch Delay e Player Blindado)
 CREATE TABLE IF NOT EXISTS landing_pages (
   id TEXT PRIMARY KEY,
   company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
@@ -336,14 +336,25 @@ CREATE TABLE IF NOT EXISTS landing_pages (
   features JSONB DEFAULT '[]'::jsonb,
   social_proof JSONB DEFAULT '{}'::jsonb,
   countdown JSONB DEFAULT '{}'::jsonb,
+  pitch_delay JSONB DEFAULT '{}'::jsonb,
+  thank_you_page JSONB DEFAULT '{}'::jsonb,
+  custom_domain TEXT,
+  blocks JSONB DEFAULT '[]'::jsonb,
   form JSONB DEFAULT '{}'::jsonb,
   faq JSONB DEFAULT '{}'::jsonb,
   footer JSONB DEFAULT '{}'::jsonb,
+  published BOOLEAN DEFAULT true,
   views_count INTEGER DEFAULT 0,
   conversions_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE IF EXISTS landing_pages ADD COLUMN IF NOT EXISTS pitch_delay JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS landing_pages ADD COLUMN IF NOT EXISTS thank_you_page JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS landing_pages ADD COLUMN IF NOT EXISTS custom_domain TEXT;
+ALTER TABLE IF EXISTS landing_pages ADD COLUMN IF NOT EXISTS blocks JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS landing_pages ADD COLUMN IF NOT EXISTS published BOOLEAN DEFAULT true;
 
 ALTER TABLE landing_pages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir all anonimo em landing_pages" ON landing_pages FOR ALL TO anon USING (true) WITH CHECK (true);

@@ -596,21 +596,38 @@ CREATE TABLE IF NOT EXISTS public.survey_responses (
 );
 CREATE INDEX IF NOT EXISTS idx_survey_responses_company_id ON public.survey_responses(company_id);
 
--- 26. LANDING PAGES
+-- 26. LANDING PAGES (com Suporte a VSL Pitch Delay, Player Blindado Anti-Fuga e Blocos Modulares)
 CREATE TABLE IF NOT EXISTS public.landing_pages (
   id TEXT PRIMARY KEY,
   company_id TEXT NOT NULL,
   title TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  status TEXT DEFAULT 'published',
+  category TEXT DEFAULT 'lead_magnet',
+  theme JSONB DEFAULT '{}'::jsonb,
+  hero JSONB DEFAULT '{}'::jsonb,
+  features JSONB DEFAULT '[]'::jsonb,
+  social_proof JSONB DEFAULT '{}'::jsonb,
+  countdown JSONB DEFAULT '{}'::jsonb,
+  pitch_delay JSONB DEFAULT '{}'::jsonb,
+  form JSONB DEFAULT '{}'::jsonb,
+  faq JSONB DEFAULT '{}'::jsonb,
+  footer JSONB DEFAULT '{}'::jsonb,
   blocks JSONB DEFAULT '[]'::jsonb,
   thank_you_page JSONB DEFAULT '{"enabled": true, "title": "🎉 Cadastro Confirmado!", "showCheckmark": true}'::jsonb,
   custom_domain TEXT,
-  published BOOLEAN DEFAULT FALSE,
+  published BOOLEAN DEFAULT TRUE,
   views_count INTEGER DEFAULT 0,
   conversions_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE IF EXISTS public.landing_pages ADD COLUMN IF NOT EXISTS pitch_delay JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS public.landing_pages ADD COLUMN IF NOT EXISTS thank_you_page JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS public.landing_pages ADD COLUMN IF NOT EXISTS custom_domain TEXT;
+ALTER TABLE IF EXISTS public.landing_pages ADD COLUMN IF NOT EXISTS blocks JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS public.landing_pages ADD COLUMN IF NOT EXISTS published BOOLEAN DEFAULT TRUE;
 CREATE INDEX IF NOT EXISTS idx_landing_pages_company_id ON public.landing_pages(company_id);
 CREATE INDEX IF NOT EXISTS idx_landing_pages_slug ON public.landing_pages(slug);
 
