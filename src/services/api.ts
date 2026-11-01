@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket, SystemActivityLog } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1915,5 +1915,34 @@ export async function updateSupportTicket(id: string, updates: Partial<SupportTi
   const result = await res.json();
   return result.ticket;
 }
+
+export async function fetchActivityLogs(companyId?: string, userEmail?: string): Promise<SystemActivityLog[]> {
+  try {
+    const params = new URLSearchParams();
+    if (companyId) params.append('companyId', companyId);
+    if (userEmail) params.append('userEmail', userEmail);
+    const res = await fetch(`/api/activity-logs?${params.toString()}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createActivityLog(data: Partial<SystemActivityLog>): Promise<SystemActivityLog> {
+  const res = await fetch('/api/activity-logs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao registrar log de atividade');
+  }
+  const result = await res.json();
+  return result.log;
+}
+
 
 

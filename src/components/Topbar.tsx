@@ -30,7 +30,8 @@ import {
   X,
   Check,
   ArrowUpRight,
-  GraduationCap
+  GraduationCap,
+  Activity
 } from 'lucide-react';
 import { User, Company, HotmartPlanOption, SetupTrainingConfig } from '../types';
 import { NavTabId } from './Sidebar';
@@ -46,6 +47,7 @@ interface TopbarProps {
   setEndDate?: (date: string) => void;
   onOpenCreateModal: () => void;
   onToggleMobileMenu: () => void;
+  onOpenActivityLogs?: () => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -57,7 +59,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   endDate,
   setEndDate,
   onOpenCreateModal,
-  onToggleMobileMenu
+  onToggleMobileMenu,
+  onOpenActivityLogs
 }) => {
   // Page titles and breadcrumb metadata
   const getTabMeta = () => {
@@ -362,6 +365,19 @@ export const Topbar: React.FC<TopbarProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Assinatura Ativa</span>
           </div>
+        )}
+
+        {/* Activity Logs Button */}
+        {onOpenActivityLogs && (
+          <button
+            type="button"
+            onClick={onOpenActivityLogs}
+            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition"
+            title="Ver logs de atividades e auditoria da empresa"
+          >
+            <Activity className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden md:inline">Logs</span>
+          </button>
         )}
 
         {/* Company Badge */}

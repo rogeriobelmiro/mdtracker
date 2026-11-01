@@ -333,6 +333,64 @@ function saveLocalSupportTicketsStore() {
     } catch {}
 }
 
+const LOCAL_ACTIVITY_LOGS_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_activity_logs.json');
+
+const defaultActivityLogs = [
+    {
+        id: 'act-001',
+        companyId: 'comp-alfa',
+        userId: 'usr-mt-01',
+        userName: 'Rogério Belmiro (Representante Master)',
+        userEmail: 'rogerio@mudadigital.com.br',
+        userRole: 'affiliate',
+        isAffiliateSupport: true,
+        affiliateName: 'Rogério Belmiro',
+        category: 'support_access',
+        action: 'support_access_started',
+        title: 'Acesso de Suporte Assistido Iniciado',
+        details: 'O representante Rogério Belmiro acessou o ambiente da empresa para configuração do Meta Ads CAPI e treinamento da equipe.',
+        createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+    },
+    {
+        id: 'act-002',
+        companyId: 'comp-alfa',
+        userId: 'usr-mt-01',
+        userName: 'Rogério Belmiro (Representante Master)',
+        userEmail: 'rogerio@mudadigital.com.br',
+        userRole: 'affiliate',
+        isAffiliateSupport: true,
+        affiliateName: 'Rogério Belmiro',
+        category: 'meta_capi',
+        action: 'capi_configured',
+        title: 'Validação do Token Permanente Meta CAPI',
+        details: 'Configurado e testado com sucesso o envio de eventos de Purchase e Lead via servidor para o Pixel 1234567890.',
+        createdAt: new Date(Date.now() - 46 * 3600 * 1000).toISOString()
+    },
+    {
+        id: 'act-003',
+        companyId: 'comp-alfa',
+        userId: 'usr-1',
+        userName: 'Ana Cláudia (Administrador)',
+        userEmail: 'admin@alfa.com',
+        userRole: 'admin',
+        isAffiliateSupport: false,
+        affiliateName: null,
+        category: 'link',
+        action: 'link_created',
+        title: 'Novo Link de Campanha Criado',
+        details: 'Criado o link de rastreamento "Black Friday WhatsApp - Anúncios Instagram" (slug: bf-whats).',
+        createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    }
+];
+
+let inMemoryActivityLogs: any[] = [...defaultActivityLogs];
+
+function saveLocalActivityLogsStore() {
+    try {
+        fs.writeFileSync(LOCAL_ACTIVITY_LOGS_FILE, JSON.stringify(inMemoryActivityLogs, null, 2), 'utf-8');
+    } catch {}
+}
+
 const defaultHotmartPlans = [
     {
         id: 'starter',
@@ -833,6 +891,15 @@ try {
         const parsed = JSON.parse(fs.readFileSync(LOCAL_SUPPORT_TICKETS_FILE, 'utf-8'));
         if (Array.isArray(parsed) && parsed.length > 0) {
             inMemorySupportTickets = parsed;
+        }
+    }
+} catch {}
+
+try {
+    if (fs.existsSync(LOCAL_ACTIVITY_LOGS_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_ACTIVITY_LOGS_FILE, 'utf-8'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            inMemoryActivityLogs = parsed;
         }
     }
 } catch {}
@@ -14709,6 +14776,130 @@ app.put('/api/support-tickets/:id', async (req: Request, res: Response) => {
             return res.json({ success: true, ticket: inMemorySupportTickets[idx] });
         }
         res.status(404).json({ error: 'Chamado não encontrado.' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// LOGS DE ATIVIDADE DO SISTEMA & AUDITORIA (CLIENTE + REPRESENTANTE)
+// ==============================================================================
+
+app.get('/api/activity-logs', async (req: Request, res: Response) => {
+    try {
+        const companyId = String(req.query.companyId || '').trim();
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+
+        try {
+            let query = supabase.from('system_activity_logs').select('*').order('created_at', { ascending: false }).limit(200);
+            if (companyId) {
+                query = query.eq('company_id', companyId);
+            }
+            const { data: dbLogs } = await query;
+            if (dbLogs && dbLogs.length > 0) {
+                const mapped = dbLogs.map((l: any) => ({
+                    id: l.id,
+                    companyId: l.company_id,
+                    userId: l.user_id,
+                    userName: l.user_name,
+                    userEmail: l.user_email,
+                    userRole: l.user_role,
+                    isAffiliateSupport: Boolean(l.is_affiliate_support),
+                    affiliateName: l.affiliate_name,
+                    category: l.category,
+                    action: l.action,
+                    title: l.title,
+                    details: l.details,
+                    metadata: l.metadata,
+                    ipAddress: l.ip_address,
+                    createdAt: l.created_at
+                }));
+                // Merge into inMemoryActivityLogs
+                mapped.forEach((m: any) => {
+                    const idx = inMemoryActivityLogs.findIndex(l => l.id === m.id);
+                    if (idx >= 0) inMemoryActivityLogs[idx] = m;
+                    else inMemoryActivityLogs.push(m);
+                });
+            }
+        } catch {}
+
+        let filtered = inMemoryActivityLogs;
+        if (companyId) {
+            filtered = filtered.filter(l => l.companyId === companyId);
+        }
+
+        // Sort descending
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        res.json(filtered.slice(0, 150));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/activity-logs', async (req: Request, res: Response) => {
+    try {
+        const {
+            companyId,
+            userId,
+            userName,
+            userEmail,
+            userRole,
+            isAffiliateSupport,
+            affiliateName,
+            category,
+            action,
+            title,
+            details,
+            metadata
+        } = req.body;
+
+        if (!companyId || !title || !details) {
+            return res.status(400).json({ error: 'companyId, título e detalhes são obrigatórios.' });
+        }
+
+        const newLog = {
+            id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            companyId,
+            userId: userId || null,
+            userName: (userName || 'Usuário').trim(),
+            userEmail: (userEmail || '').trim().toLowerCase(),
+            userRole: userRole || 'admin',
+            isAffiliateSupport: Boolean(isAffiliateSupport),
+            affiliateName: affiliateName || null,
+            category: category || 'general',
+            action: action || 'activity_recorded',
+            title: title.trim(),
+            details: details.trim(),
+            metadata: metadata || {},
+            ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+            createdAt: new Date().toISOString()
+        };
+
+        inMemoryActivityLogs.unshift(newLog);
+        saveLocalActivityLogsStore();
+
+        try {
+            await supabase.from('system_activity_logs').insert({
+                id: newLog.id,
+                company_id: newLog.companyId,
+                user_id: newLog.userId,
+                user_name: newLog.userName,
+                user_email: newLog.userEmail,
+                user_role: newLog.userRole,
+                is_affiliate_support: newLog.isAffiliateSupport,
+                affiliate_name: newLog.affiliateName,
+                category: newLog.category,
+                action: newLog.action,
+                title: newLog.title,
+                details: newLog.details,
+                metadata: newLog.metadata,
+                ip_address: newLog.ipAddress,
+                created_at: newLog.createdAt
+            });
+        } catch {}
+
+        res.json({ success: true, log: newLog });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

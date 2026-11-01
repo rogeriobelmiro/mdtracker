@@ -36,7 +36,9 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
-  X
+  X,
+  KeyRound,
+  Activity
 } from 'lucide-react';
 import { User, Company, Affiliate, ProductRelease, SupportTicket, TrainingVideo } from '../types';
 import { 
@@ -47,12 +49,14 @@ import {
   createSupportTicket 
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
+import { ActivityLogsModal } from './ActivityLogsModal';
 
 interface AffiliatePortalProps {
   currentUser: User;
   currentCompany: Company;
   initialTab?: 'clients' | 'trainings' | 'news' | 'support';
   onNavigateToTab?: (tab: string) => void;
+  onImpersonateCompany?: (company: any) => void;
 }
 
 const DEFAULT_TRAINING_VIDEOS: TrainingVideo[] = [
@@ -128,10 +132,15 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
   currentUser,
   currentCompany,
   initialTab = 'clients',
-  onNavigateToTab
+  onNavigateToTab,
+  onImpersonateCompany
 }) => {
   const { alert, confirm, success } = useDialog();
   const [activeTab, setActiveTab] = useState<'clients' | 'trainings' | 'news' | 'support'>(initialTab);
+
+  // Modal de Logs de Atividades & Auditoria do Cliente
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [selectedClientForLogs, setSelectedClientForLogs] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (initialTab) {
@@ -736,22 +745,47 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
                         </td>
 
                         <td className="py-3 px-2 text-center">
-                          {c.phone ? (
-                            <a
-                              href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                                `Olá ${c.responsibleName}! Sou o representante TrackerMD (${affiliate?.name || ''}). Como estão os testes e a configuração do seu WhatsApp na plataforma?`
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shadow-sm"
-                              title="Chamar no WhatsApp"
+                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                            {onImpersonateCompany && (
+                              <button
+                                type="button"
+                                onClick={() => onImpersonateCompany(c)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] transition shadow-xs"
+                                title="Acessar painel da empresa em Modo de Gestão Assistida"
+                              >
+                                <KeyRound className="w-3 h-3" />
+                                <span>Gerenciar</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedClientForLogs({ id: c.id, name: c.name });
+                                setIsLogsModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] transition border border-slate-200 dark:border-slate-700"
+                              title="Ver histórico de alterações e logs de auditoria"
                             >
-                              <MessageCircle className="w-3 h-3" />
-                              <span>WhatsApp</span>
-                            </a>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">-</span>
-                          )}
+                              <FileText className="w-3 h-3 text-indigo-500" />
+                              <span>Logs</span>
+                            </button>
+
+                            {c.phone ? (
+                              <a
+                                href={`https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Olá ${c.responsibleName}! Sou o representante TrackerMD (${affiliate?.name || ''}). Como estão os testes e a configuração do seu WhatsApp na plataforma?`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition shadow-xs"
+                                title="Chamar no WhatsApp"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                <span>Whats</span>
+                              </a>
+                            ) : null}
+                          </div>
                         </td>
 
                       </tr>
@@ -1489,6 +1523,22 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
         </div>
       )}
 
+      {/* MODAL DE LOGS DE ATIVIDADE & AUDITORIA DO CLIENTE */}
+      {isLogsModalOpen && selectedClientForLogs && (
+        <ActivityLogsModal
+          isOpen={isLogsModalOpen}
+          onClose={() => {
+            setIsLogsModalOpen(false);
+            setSelectedClientForLogs(null);
+          }}
+          companyId={selectedClientForLogs.id}
+          companyName={selectedClientForLogs.name}
+          currentUser={currentUser}
+        />
+      )}
+
     </div>
   );
 };
+
+

@@ -48,6 +48,24 @@ export interface TrainingVideo {
   downloadUrl?: string;
 }
 
+export interface SystemActivityLog {
+  id: string;
+  companyId: string;
+  userId?: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  isAffiliateSupport?: boolean;
+  affiliateName?: string;
+  category: 'support_access' | 'meta_capi' | 'whatsapp' | 'link' | 'lead' | 'settings' | 'chatbot' | 'general';
+  action: string;
+  title: string;
+  details: string;
+  metadata?: Record<string, any>;
+  ipAddress?: string;
+  createdAt: string;
+}
+
 
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'expired';
 

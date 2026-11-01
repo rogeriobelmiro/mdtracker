@@ -30,6 +30,8 @@ import { FunnelCanvasBuilder } from './components/FunnelCanvasBuilder';
 import { SuperAdminHotmartManager } from './components/SuperAdminHotmartManager';
 import { PublicSalesWebsite } from './components/PublicSalesWebsite';
 import { AffiliatePortal } from './components/AffiliatePortal';
+import { ActivityLogsModal } from './components/ActivityLogsModal';
+import { ShieldCheck, FileText, KeyRound, LogOut, Activity } from 'lucide-react';
 import {
   fetchCompanies,
   fetchUsers,
@@ -62,6 +64,7 @@ import {
   createPopup,
   updatePopup,
   deletePopup,
+  createActivityLog,
 } from './services/api';
 import { CampaignLink, Lead, IntegrationSettings, StatsSummary, WebhookLog, User, Company, Product, LeadPurchase, SmartPopup } from './types';
 import { useDialog } from './contexts/DialogContext';
@@ -163,6 +166,16 @@ export default function App() {
 
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  // Impersonation (Gestão Assistida por Afiliado / Representante)
+  const [impersonatorSession, setImpersonatorSession] = useState<{
+    originalUser: User;
+    originalCompany: Company;
+    returnTab: NavTabId;
+  } | null>(null);
+
+  // Modal de Logs de Atividades do Sistema
+  const [isActivityLogsModalOpen, setIsActivityLogsModalOpen] = useState(false);
 
   // Refs for state values to prevent stale closures in setInterval
   const stateRef = React.useRef({ startDate, endDate, currentCompany, currentUser });
@@ -374,6 +387,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    setImpersonatorSession(null);
     setCurrentUser(null);
     setCurrentCompany(null);
     setLinks([]);
@@ -389,6 +403,85 @@ export default function App() {
       localStorage.removeItem('mdtracker_user');
       localStorage.removeItem('mdtracker_company');
     } catch {}
+  };
+
+  // Acesso de Gestão Assistida pelo Afiliado / Representante
+  const handleImpersonateCompany = async (targetCompany: any) => {
+    if (!currentUser || !currentCompany) return;
+    
+    // Salva a sessão original do afiliado/representante
+    setImpersonatorSession({
+      originalUser: currentUser,
+      originalCompany: currentCompany,
+      returnTab: activeTab
+    });
+
+    // Cria usuário de suporte assistido com privilégios de gestão no tenant da empresa
+    const proxyUser: User = {
+      ...currentUser,
+      role: 'admin',
+      companyId: targetCompany.id
+    };
+
+    setCurrentUser(proxyUser);
+    setCurrentCompany(targetCompany);
+    setActiveTab('dashboard');
+
+    // Registra auditoria da atividade
+    try {
+      await createActivityLog({
+        companyId: targetCompany.id,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmail: currentUser.email,
+        userRole: 'affiliate',
+        isAffiliateSupport: true,
+        affiliateName: currentUser.name,
+        category: 'support_access',
+        action: 'support_access_started',
+        title: 'Acesso de Gestão Assistida Iniciado',
+        details: `O representante ${currentUser.name} (${currentUser.email}) iniciou suporte assistido no ambiente da empresa ${targetCompany.name}.`,
+        metadata: { targetCompanyName: targetCompany.name, targetCompanyId: targetCompany.id }
+      });
+    } catch (err) {
+      console.error('Erro ao registrar log de suporte assistido:', err);
+    }
+
+    loadData(targetCompany.id);
+  };
+
+  const handleExitImpersonation = async () => {
+    if (!impersonatorSession) return;
+    const { originalUser, originalCompany, returnTab } = impersonatorSession;
+    const assistedCompanyName = currentCompany?.name;
+    const assistedCompanyId = currentCompany?.id;
+
+    if (assistedCompanyId) {
+      try {
+        await createActivityLog({
+          companyId: assistedCompanyId,
+          userId: originalUser.id,
+          userName: originalUser.name,
+          userEmail: originalUser.email,
+          userRole: 'affiliate',
+          isAffiliateSupport: true,
+          affiliateName: originalUser.name,
+          category: 'support_access',
+          action: 'support_access_ended',
+          title: 'Acesso de Gestão Assistida Finalizado',
+          details: `O representante ${originalUser.name} encerrou a sessão de suporte e retornou ao seu Portal de Afiliados.`,
+          metadata: { targetCompanyName: assistedCompanyName }
+        });
+      } catch (err) {
+        console.error('Erro ao registrar encerramento de suporte:', err);
+      }
+    }
+
+    setCurrentUser(originalUser);
+    setCurrentCompany(originalCompany);
+    setActiveTab(returnTab || 'affiliate_clients');
+    setImpersonatorSession(null);
+    loadData(originalCompany.id);
   };
 
   // User Management Handlers (Admin)
@@ -594,6 +687,38 @@ export default function App() {
       {/* Main Content Area: Topbar + Scrollable Viewport + Footer */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
+        {/* Banner de Gestão Assistida por Afiliado / Representante */}
+        {impersonatorSession && (
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-4 py-2.5 flex items-center justify-between gap-3 text-xs font-semibold shadow-md z-20 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-amber-200 shrink-0" />
+              <span className="truncate">
+                ⚡ <strong>Modo de Gestão Assistida Ativo:</strong> Você está administrando o ambiente da empresa <u>{currentCompany?.name}</u> como Representante ({impersonatorSession.originalUser.name}).
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsActivityLogsModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-white font-bold text-xs transition flex items-center gap-1"
+                title="Ver logs de atividades e auditoria desta empresa"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Ver Logs</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExitImpersonation}
+                className="px-3 py-1 rounded-lg bg-white text-amber-900 hover:bg-amber-50 font-black text-xs transition shadow-sm flex items-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sair da Empresa e Voltar ao Portal</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Topbar */}
         <Topbar
           activeTab={activeTab}
@@ -608,6 +733,7 @@ export default function App() {
             setIsCreateModalOpen(true);
           }}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onOpenActivityLogs={() => setIsActivityLogsModalOpen(true)}
         />
 
         {/* Scrollable Viewport */}
@@ -958,6 +1084,7 @@ export default function App() {
                   activeTab === 'affiliate_support' ? 'support' : 'clients'
                 }
                 onNavigateToTab={(tab) => setActiveTab(tab as NavTabId)}
+                onImpersonateCompany={handleImpersonateCompany}
               />
             )}
           </div>
@@ -996,6 +1123,17 @@ export default function App() {
           handleUpdateLead(leadId, { stage: newStage });
         }}
       />
+
+      {/* Modal de Logs de Atividades do Sistema & Auditoria */}
+      {isActivityLogsModalOpen && currentCompany && (
+        <ActivityLogsModal
+          isOpen={isActivityLogsModalOpen}
+          onClose={() => setIsActivityLogsModalOpen(false)}
+          companyId={currentCompany.id}
+          companyName={currentCompany.name}
+          currentUser={currentUser}
+        />
+      )}
 
     </div>
   );

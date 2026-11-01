@@ -765,3 +765,29 @@ CREATE TABLE IF NOT EXISTS public.support_tickets (
 CREATE INDEX IF NOT EXISTS idx_support_tickets_affiliate_id ON public.support_tickets(affiliate_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_author_email ON public.support_tickets(author_email);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
+
+-- ==============================================================================
+-- 8. LOGS DE ATIVIDADE DO SISTEMA & AUDITORIA (CLIENTE + REPRESENTANTE)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.system_activity_logs (
+    id TEXT PRIMARY KEY,
+    company_id TEXT REFERENCES public.companies(id) ON DELETE CASCADE,
+    user_id TEXT,
+    user_name TEXT NOT NULL,
+    user_email TEXT NOT NULL,
+    user_role TEXT DEFAULT 'admin',
+    is_affiliate_support BOOLEAN DEFAULT false,
+    affiliate_name TEXT,
+    category VARCHAR(50) NOT NULL DEFAULT 'general',
+    action VARCHAR(100) NOT NULL,
+    title TEXT NOT NULL,
+    details TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    ip_address TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_company_id ON public.system_activity_logs(company_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_category ON public.system_activity_logs(category);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.system_activity_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_is_affiliate_support ON public.system_activity_logs(is_affiliate_support);
