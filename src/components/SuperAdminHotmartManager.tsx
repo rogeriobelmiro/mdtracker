@@ -2776,7 +2776,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             {/* Action Buttons Footer inside Card */}
             <div className="pt-4 border-t border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
               <span className="text-xs text-slate-500 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>As alterações são salvas na nuvem e atualizam imediatamente as metas dos representantes.</span>
               </span>
 
