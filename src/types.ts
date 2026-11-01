@@ -947,6 +947,9 @@ export interface LandingPageCustomBlock {
   // Comparison block (MDTracker vs Concorrentes)
   comparisonBadge?: string;
   comparisonRows?: ComparisonRow[];
+
+  // Pitch Delay / Revelação Atrasada
+  delayReveal?: boolean;
 }
 
 export interface LandingPageForm {
@@ -991,6 +994,19 @@ export interface LandingPageCountdown {
   serverRedirect?: boolean;
 }
 
+export type PitchDelayScope = 'cta_only' | 'form_only' | 'entire_offer' | 'custom_sections';
+export type PitchDelayAnimation = 'fade' | 'slide_up' | 'zoom' | 'bounce';
+
+export interface LandingPagePitchDelay {
+  enabled: boolean;
+  delayMinutes: number;
+  delaySeconds: number;
+  scope: PitchDelayScope;
+  rememberVisitor: boolean;
+  animation: PitchDelayAnimation;
+  autoScrollToOffer?: boolean;
+}
+
 export interface LandingPageFAQ {
   enabled: boolean;
   items?: LandingPageFAQItem[];
@@ -1016,6 +1032,7 @@ export interface LandingPage {
   features: LandingPageFeature[];
   socialProof: LandingPageSocialProof;
   countdown: LandingPageCountdown;
+  pitchDelay?: LandingPagePitchDelay;
   form: LandingPageForm;
   faq: LandingPageFAQ;
   footer: LandingPageFooter;

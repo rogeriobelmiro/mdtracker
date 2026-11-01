@@ -1931,6 +1931,7 @@ const mapLandingPageToDB = (lp: any) => ({
     features: lp.features || [],
     social_proof: lp.socialProof || {},
     countdown: lp.countdown || {},
+    pitch_delay: lp.pitchDelay || {},
     form: lp.form || {},
     faq: lp.faq || {},
     footer: lp.footer || {},
@@ -1967,6 +1968,15 @@ const mapLandingPageFromDB = (db: any) => ({
     features: db.features || [],
     socialProof: db.social_proof || { enabled: false, stats: [], testimonials: [] },
     countdown: db.countdown || { enabled: false },
+    pitchDelay: db.pitch_delay || {
+        enabled: false,
+        delayMinutes: 0,
+        delaySeconds: 0,
+        scope: 'cta_only',
+        rememberVisitor: true,
+        animation: 'fade',
+        autoScrollToOffer: false
+    },
     form: db.form || {
         title: 'Garanta sua Vaga',
         buttonText: 'Enviar Dados',
@@ -15963,6 +15973,20 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             ? 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black'
             : 'text-3xl sm:text-4xl md:text-5xl font-black';
 
+        // Pitch Delay / Delayed Reveal System
+        const pitchDelay = lp.pitchDelay || { enabled: false, delayMinutes: 0, delaySeconds: 0, scope: 'cta_only', rememberVisitor: true, animation: 'fade', autoScrollToOffer: false };
+        const pitchDelayEnabled = Boolean(pitchDelay.enabled && ((Number(pitchDelay.delayMinutes || 0) > 0) || (Number(pitchDelay.delaySeconds || 0) > 0)));
+        const totalPitchDelaySeconds = (Number(pitchDelay.delayMinutes || 0) * 60) + Number(pitchDelay.delaySeconds || 0);
+        const pitchScope = pitchDelay.scope || 'cta_only';
+
+        const pitchAnimClass = pitchDelay.animation === 'slide_up' ? 'anim-slide-up' :
+                               pitchDelay.animation === 'zoom' ? 'anim-zoom' :
+                               pitchDelay.animation === 'bounce' ? 'anim-bounce' : 'anim-fade';
+
+        const ctaDelayClass = pitchDelayEnabled && (pitchScope === 'cta_only' || pitchScope === 'entire_offer') ? 'lp-pitch-delayed hidden-pitch-delay' : '';
+        const formDelayClass = pitchDelayEnabled && (pitchScope === 'form_only' || pitchScope === 'entire_offer') ? 'lp-pitch-delayed hidden-pitch-delay' : '';
+        const offerSectionDelayClass = pitchDelayEnabled && (pitchScope === 'entire_offer') ? 'lp-pitch-delayed hidden-pitch-delay' : '';
+
         const renderCustomBlocks = () => {
             if (!lp.blocks || lp.blocks.length === 0) {
                 return `
@@ -16683,6 +16707,49 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
               .custom-primary-btn:hover {
                 filter: brightness(0.92);
               }
+              /* Pitch Delay / Delayed Reveal Styles */
+              .hidden-pitch-delay {
+                display: none !important;
+                opacity: 0 !important;
+              }
+              .revealed-pitch-delay {
+                display: block !important;
+              }
+              .revealed-pitch-delay-flex {
+                display: flex !important;
+              }
+              .revealed-pitch-delay-inline {
+                display: inline-flex !important;
+              }
+              .anim-fade {
+                animation: lpPitchFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              }
+              .anim-slide-up {
+                animation: lpPitchSlideUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              }
+              .anim-zoom {
+                animation: lpPitchZoom 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+              }
+              .anim-bounce {
+                animation: lpPitchBounce 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+              }
+              @keyframes lpPitchFade {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes lpPitchSlideUp {
+                from { opacity: 0; transform: translateY(32px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              @keyframes lpPitchZoom {
+                from { opacity: 0; transform: scale(0.92); }
+                to { opacity: 1; transform: scale(1); }
+              }
+              @keyframes lpPitchBounce {
+                0% { opacity: 0; transform: translateY(30px) scale(0.9); }
+                60% { opacity: 1; transform: translateY(-8px) scale(1.02); }
+                100% { opacity: 1; transform: translateY(0) scale(1); }
+              }
             </style>
           </head>
           <body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white min-h-screen flex flex-col justify-between">
@@ -16698,7 +16765,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                   <span class="font-bold text-slate-900 tracking-tight text-lg">${companyName}</span>
                 </div>
                 <div>
-                  <a href="#capture-form" class="custom-primary-btn px-4 py-2 text-sm font-semibold ${buttonShape} shadow-sm transition inline-flex items-center gap-1.5">
+                  <a href="#capture-form" class="custom-primary-btn px-4 py-2 text-sm font-semibold ${buttonShape} shadow-sm transition inline-flex items-center gap-1.5 ${ctaDelayClass}">
                     ${lp.hero?.ctaText || 'Acessar Agora'} &rarr;
                   </a>
                 </div>
@@ -16753,7 +16820,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                       </div>
                     ` : ''}
 
-                    <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                    <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 ${ctaDelayClass}">
                       <a href="#capture-form" class="custom-primary-btn w-full sm:w-auto px-8 py-4 text-base font-bold ${buttonShape} shadow-lg shadow-blue-500/25 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2">
                         <span>${lp.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
@@ -16779,7 +16846,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                   </div>
 
                   <!-- Right: Hero Card or Capture Form -->
-                  <div class="lg:col-span-5">
+                  <div class="lg:col-span-5 ${formDelayClass}">
                     <div id="capture-form" class="bg-white p-6 sm:p-8 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
                       <div class="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
                         Cadastre-se Grátis
@@ -16855,7 +16922,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             ` : ''}
 
             <!-- Modular Custom Blocks (or Default Sections) -->
-            ${renderCustomBlocks()}
+            <div class="${offerSectionDelayClass}">
+              ${renderCustomBlocks()}
+            </div>
 
 
             <!-- Footer -->
@@ -17150,6 +17219,68 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                   }
                 });
               });
+            </script>
+
+            <!-- Pitch Delay / Delayed Reveal System -->
+            <script>
+              (function() {
+                var isEnabled = ${pitchDelayEnabled ? 'true' : 'false'};
+                var delaySeconds = ${totalPitchDelaySeconds};
+                var rememberVisitor = ${pitchDelay.rememberVisitor !== false ? 'true' : 'false'};
+                var autoScroll = ${pitchDelay.autoScrollToOffer ? 'true' : 'false'};
+                var pageSlug = ${JSON.stringify(lp.slug)};
+                var animClass = '${pitchAnimClass}';
+
+                if (!isEnabled || delaySeconds <= 0) return;
+
+                var storageKey = 'mdtracker_pitch_revealed_' + pageSlug;
+                var urlParams = new URLSearchParams(window.location.search);
+                var bypass = urlParams.get('delay') === '0' || 
+                             urlParams.get('preview') === 'true' || 
+                             urlParams.get('pitch') === 'show' || 
+                             urlParams.get('bypass_delay') === 'true';
+
+                function doReveal() {
+                  var delayedElements = document.querySelectorAll('.lp-pitch-delayed');
+                  if (!delayedElements || delayedElements.length === 0) return;
+
+                  delayedElements.forEach(function(el) {
+                    el.classList.remove('hidden-pitch-delay');
+                    var tag = el.tagName.toLowerCase();
+                    var isFlex = el.classList.contains('flex') || el.classList.contains('sm:flex') || el.classList.contains('md:flex') || el.classList.contains('lg:flex');
+                    var isInline = el.classList.contains('inline-flex') || el.classList.contains('inline-block') || tag === 'a' || tag === 'button';
+
+                    if (isInline) {
+                      el.classList.add('revealed-pitch-delay-inline');
+                    } else if (isFlex) {
+                      el.classList.add('revealed-pitch-delay-flex');
+                    } else {
+                      el.classList.add('revealed-pitch-delay');
+                    }
+                    el.classList.add(animClass);
+                  });
+
+                  if (rememberVisitor) {
+                    try { localStorage.setItem(storageKey, '1'); } catch(e) {}
+                  }
+
+                  if (autoScroll) {
+                    var target = document.querySelector('.lp-pitch-delayed');
+                    if (target) {
+                      setTimeout(function() {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 250);
+                    }
+                  }
+                  console.log('[MDTracker] Pitch delay revelado com sucesso após ' + delaySeconds + ' segundos.');
+                }
+
+                if (bypass || (rememberVisitor && localStorage.getItem(storageKey) === '1')) {
+                  doReveal();
+                } else {
+                  setTimeout(doReveal, delaySeconds * 1000);
+                }
+              })();
             </script>
           </body>
           </html>

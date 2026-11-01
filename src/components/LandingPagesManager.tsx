@@ -796,6 +796,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   // Preview Interactive Form State
   const [previewFormValues, setPreviewFormValues] = useState<Record<string, string>>({});
   const [previewSubmitStatus, setPreviewSubmitStatus] = useState<string | null>(null);
+  const [previewPitchRevealed, setPreviewPitchRevealed] = useState(false);
 
   // AI Copywriter Modal State
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -2202,6 +2203,27 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                 </button>
               </div>
 
+              {/* Pitch Delay Simulation Toggle */}
+              {editingPage.pitchDelay?.enabled && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewPitchRevealed(!previewPitchRevealed)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                    previewPitchRevealed
+                      ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
+                      : 'bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/35 animate-pulse'
+                  }`}
+                  title="Clique para alternar entre ver o estado antes do pitch delay e após a revelação"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {previewPitchRevealed
+                      ? '✨ Oferta Revelada'
+                      : `⏱️ Oculto (${editingPage.pitchDelay.delayMinutes || 0}m ${editingPage.pitchDelay.delaySeconds || 0}s)`}
+                  </span>
+                </button>
+              )}
+
               {/* Generate AI button */}
               <button
                 onClick={() => setAiModalOpen(true)}
@@ -2260,7 +2282,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   { id: 'thankyou', label: 'Página de Obrigado 🎉' },
                   { id: 'features', label: 'Benefícios' },
                   { id: 'social', label: 'Prova Social' },
-                  { id: 'scarcity', label: 'FAQ & Timer' }
+                  { id: 'scarcity', label: 'Timer & Pitch Delay ⏱️' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -5654,6 +5676,272 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                       )}
                     </div>
 
+                    {/* Pitch Delay / Delayed Reveal (VSL & Secret Offer) */}
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-indigo-600" />
+                            <span>Pitch Delay (Revelação Atrasada de CTA & Oferta)</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            Oculte o botão de compra ou a oferta completa até o momento exato do pitch no vídeo
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={editingPage.pitchDelay?.enabled || false}
+                          onChange={e => {
+                            const isChecked = e.target.checked;
+                            setEditingPage({
+                              ...editingPage,
+                              pitchDelay: {
+                                enabled: isChecked,
+                                delayMinutes: editingPage.pitchDelay?.delayMinutes ?? 10,
+                                delaySeconds: editingPage.pitchDelay?.delaySeconds ?? 30,
+                                scope: editingPage.pitchDelay?.scope || 'cta_only',
+                                rememberVisitor: editingPage.pitchDelay?.rememberVisitor !== false,
+                                animation: editingPage.pitchDelay?.animation || 'fade',
+                                autoScrollToOffer: editingPage.pitchDelay?.autoScrollToOffer || false
+                              }
+                            });
+                          }}
+                          className="w-5 h-5 text-indigo-600 rounded cursor-pointer"
+                        />
+                      </div>
+
+                      {editingPage.pitchDelay?.enabled && (
+                        <div className="space-y-4 pt-3 border-t border-slate-200">
+                          {/* Time Inputs */}
+                          <div className="p-3.5 bg-white rounded-xl border border-indigo-100 shadow-2xs space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                Tempo de Espera até o Pitch
+                              </label>
+                              <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                                Total: {(Number(editingPage.pitchDelay.delayMinutes || 0) * 60) + Number(editingPage.pitchDelay.delaySeconds || 0)} segundos
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">
+                                  Minutos
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="180"
+                                    value={editingPage.pitchDelay.delayMinutes ?? 10}
+                                    onChange={e => setEditingPage({
+                                      ...editingPage,
+                                      pitchDelay: {
+                                        ...editingPage.pitchDelay!,
+                                        delayMinutes: Math.max(0, parseInt(e.target.value) || 0)
+                                      }
+                                    })}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-slate-50 font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">min</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">
+                                  Segundos
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    value={editingPage.pitchDelay.delaySeconds ?? 30}
+                                    onChange={e => setEditingPage({
+                                      ...editingPage,
+                                      pitchDelay: {
+                                        ...editingPage.pitchDelay!,
+                                        delaySeconds: Math.max(0, Math.min(59, parseInt(e.target.value) || 0))
+                                      }
+                                    })}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-slate-50 font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">seg</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Quick Shortcuts */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              <span className="text-[10px] text-slate-400 font-medium">Atalhos comuns:</span>
+                              {[
+                                { label: '3 min', m: 3, s: 0 },
+                                { label: '5 min', m: 5, s: 0 },
+                                { label: '8m 30s', m: 8, s: 30 },
+                                { label: '10 min', m: 10, s: 0 },
+                                { label: '12m 45s', m: 12, s: 45 },
+                                { label: '15 min', m: 15, s: 0 }
+                              ].map(sc => (
+                                <button
+                                  key={sc.label}
+                                  type="button"
+                                  onClick={() => setEditingPage({
+                                    ...editingPage,
+                                    pitchDelay: {
+                                      ...editingPage.pitchDelay!,
+                                      delayMinutes: sc.m,
+                                      delaySeconds: sc.s
+                                    }
+                                  })}
+                                  className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 rounded-md font-semibold transition cursor-pointer"
+                                >
+                                  {sc.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Scope: What to Hide */}
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                              O que deve ficar oculto até o momento do Pitch?
+                            </label>
+                            
+                            <div className="grid grid-cols-1 gap-2">
+                              {[
+                                {
+                                  id: 'cta_only',
+                                  title: 'Apenas Botões de Ação (CTAs)',
+                                  desc: 'Esconde os botões de compra, checkout e WhatsApp. O resto da página continua visível.'
+                                },
+                                {
+                                  id: 'form_only',
+                                  title: 'Formulário de Captura',
+                                  desc: 'O card do formulário de cadastro só aparece na tela após o tempo limite do pitch.'
+                                },
+                                {
+                                  id: 'entire_offer',
+                                  title: 'Toda a Oferta abaixo do Vídeo (Recomendado VSL)',
+                                  desc: 'Oculta botões, preços, garantias, depoimentos e FAQ. O visitante foca 100% no vídeo antes do pitch.'
+                                }
+                              ].map(opt => (
+                                <label
+                                  key={opt.id}
+                                  className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer transition ${
+                                    (editingPage.pitchDelay?.scope || 'cta_only') === opt.id
+                                      ? 'bg-indigo-50/70 border-indigo-400 shadow-2xs'
+                                      : 'bg-white border-slate-200 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="pitchDelayScope"
+                                    checked={(editingPage.pitchDelay?.scope || 'cta_only') === opt.id}
+                                    onChange={() => setEditingPage({
+                                      ...editingPage,
+                                      pitchDelay: {
+                                        ...editingPage.pitchDelay!,
+                                        scope: opt.id as any
+                                      }
+                                    })}
+                                    className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                  />
+                                  <div>
+                                    <div className="text-xs font-bold text-slate-900">{opt.title}</div>
+                                    <div className="text-[11px] text-slate-500 mt-0.5">{opt.desc}</div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Animation & Options */}
+                          <div className="p-3.5 bg-slate-100/70 rounded-xl space-y-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                Efeito Visual de Entrada (Animação)
+                              </label>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                {[
+                                  { id: 'fade', label: 'Fade-in Suave' },
+                                  { id: 'slide_up', label: 'Slide de Baixo' },
+                                  { id: 'zoom', label: 'Zoom-in' },
+                                  { id: 'bounce', label: 'Bounce Animado' }
+                                ].map(anim => (
+                                  <button
+                                    key={anim.id}
+                                    type="button"
+                                    onClick={() => setEditingPage({
+                                      ...editingPage,
+                                      pitchDelay: {
+                                        ...editingPage.pitchDelay!,
+                                        animation: anim.id as any
+                                      }
+                                    })}
+                                    className={`py-1.5 px-2 text-[11px] font-bold rounded-lg border text-center transition ${
+                                      (editingPage.pitchDelay?.animation || 'fade') === anim.id
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    {anim.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-200">
+                              <label className="flex items-start gap-2.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingPage.pitchDelay?.rememberVisitor !== false}
+                                  onChange={e => setEditingPage({
+                                    ...editingPage,
+                                    pitchDelay: {
+                                      ...editingPage.pitchDelay!,
+                                      rememberVisitor: e.target.checked
+                                    }
+                                  })}
+                                  className="w-4 h-4 text-indigo-600 rounded mt-0.5"
+                                />
+                                <div className="text-xs text-slate-700">
+                                  <span className="font-bold text-slate-900 block">Lembrar visitante que já assistiu (Navegador / localStorage)</span>
+                                  <span className="text-[11px] text-slate-500">Se o visitante atualizar a página (F5) ou retornar mais tarde, os botões e a oferta aparecerão de imediato.</span>
+                                </div>
+                              </label>
+
+                              <label className="flex items-start gap-2.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editingPage.pitchDelay?.autoScrollToOffer || false}
+                                  onChange={e => setEditingPage({
+                                    ...editingPage,
+                                    pitchDelay: {
+                                      ...editingPage.pitchDelay!,
+                                      autoScrollToOffer: e.target.checked
+                                    }
+                                  })}
+                                  className="w-4 h-4 text-indigo-600 rounded mt-0.5"
+                                />
+                                <div className="text-xs text-slate-700">
+                                  <span className="font-bold text-slate-900 block">Scroll automático suave até a oferta</span>
+                                  <span className="text-[11px] text-slate-500">Ao disparar o tempo, a tela rola suavemente até o botão de compra para chamar atenção do cliente.</span>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Quick preview test info */}
+                          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-800 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <span>Para testar a página completa sem esperar, use o botão no topo do Preview ou o link com <strong>?delay=0</strong>.</span>
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* FAQ */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -6322,18 +6610,34 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
                               {/* Hero CTA Button */}
                               <div className={`flex flex-col sm:flex-row items-center gap-4 ${previewDevice === 'desktop' ? 'justify-start' : 'justify-center'}`}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const formEl = document.getElementById('preview-capture-form');
-                                    formEl?.scrollIntoView({ behavior: 'smooth' });
-                                  }}
-                                  className={`w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg shadow-blue-500/20 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 ${buttonShapeClass}`}
-                                  style={{ backgroundColor: primaryColor }}
-                                >
-                                  <span>{editingPage.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
-                                  <ArrowRight className="w-5 h-5" />
-                                </button>
+                                {editingPage.pitchDelay?.enabled && !previewPitchRevealed && (editingPage.pitchDelay.scope === 'cta_only' || editingPage.pitchDelay.scope === 'entire_offer') ? (
+                                  <div
+                                    onClick={() => setPreviewPitchRevealed(true)}
+                                    className="p-3.5 bg-amber-500/10 border-2 border-dashed border-amber-400 rounded-2xl text-xs text-amber-900 font-bold flex items-center justify-between gap-3 cursor-pointer hover:bg-amber-500/20 transition w-full sm:w-auto shadow-xs"
+                                    title="Clique para simular a revelação do botão no preview"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                                      <span>Botão CTA Oculto até {editingPage.pitchDelay.delayMinutes || 0}m {editingPage.pitchDelay.delaySeconds || 0}s</span>
+                                    </div>
+                                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-amber-200 text-amber-900">
+                                      Simular Revelação ✨
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const formEl = document.getElementById('preview-capture-form');
+                                      formEl?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`w-full sm:w-auto px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg shadow-blue-500/20 transition transform hover:-translate-y-0.5 text-center flex items-center justify-center gap-2 ${buttonShapeClass}`}
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    <span>{editingPage.hero?.ctaText || 'Quero Meu Acesso Agora'}</span>
+                                    <ArrowRight className="w-5 h-5" />
+                                  </button>
+                                )}
                               </div>
 
                               {/* Trust indicators */}
@@ -6355,7 +6659,25 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
 
                             {/* Right: Capture Form Card */}
                             <div className={previewDevice === 'desktop' ? 'col-span-5' : 'w-full'}>
-                              <div id="preview-capture-form" className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
+                              {editingPage.pitchDelay?.enabled && !previewPitchRevealed && (editingPage.pitchDelay.scope === 'form_only' || editingPage.pitchDelay.scope === 'entire_offer') ? (
+                                <div
+                                  onClick={() => setPreviewPitchRevealed(true)}
+                                  className="bg-amber-50/60 p-8 rounded-2xl border-2 border-dashed border-amber-300 text-center cursor-pointer hover:bg-amber-100/60 transition shadow-sm"
+                                  title="Clique para simular a revelação do formulário no preview"
+                                >
+                                  <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                                    <Clock className="w-6 h-6 animate-pulse" />
+                                  </div>
+                                  <h4 className="font-black text-slate-900 text-base">Formulário Oculto até o Pitch</h4>
+                                  <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto">
+                                    O formulário de cadastro só surgirá na tela após <strong>{editingPage.pitchDelay.delayMinutes || 0}m {editingPage.pitchDelay.delaySeconds || 0}s</strong> de vídeo.
+                                  </p>
+                                  <button type="button" className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-xs">
+                                    Simular Revelação do Formulário ✨
+                                  </button>
+                                </div>
+                              ) : (
+                                <div id="preview-capture-form" className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/80 shadow-2xl relative">
                                 <div className="absolute -top-3 right-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
                                   Cadastre-se Grátis
                                 </div>
@@ -6420,6 +6742,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                   </p>
                                 </form>
                               </div>
+                            )}
                             </div>
 
                           </div>
@@ -6428,7 +6751,24 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                     )}
 
                     {/* Dynamic Modular Blocks or Legacy Sections Fallback */}
-                    {editingPage.blocks && editingPage.blocks.length > 0 ? (
+                    {editingPage.pitchDelay?.enabled && !previewPitchRevealed && editingPage.pitchDelay.scope === 'entire_offer' ? (
+                      <div 
+                        onClick={() => setPreviewPitchRevealed(true)}
+                        className="my-10 mx-6 p-8 bg-amber-50/70 border-2 border-dashed border-amber-300 rounded-3xl text-center cursor-pointer hover:bg-amber-100/60 transition shadow-xs"
+                        title="Clique para simular a revelação de todas as seções no preview"
+                      >
+                        <Clock className="w-8 h-8 text-amber-600 mx-auto mb-2 animate-bounce" />
+                        <h4 className="font-black text-slate-900 text-base">Oferta Completa Oculta até o Pitch ({editingPage.pitchDelay.delayMinutes || 0}m {editingPage.pitchDelay.delaySeconds || 0}s)</h4>
+                        <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto">
+                          As seções de benefícios, prova social, preços e perguntas frequentes ficarão invisíveis para o visitante até o momento exato do pitch do vídeo.
+                        </p>
+                        <button type="button" className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-xs">
+                          Simular Revelação de Toda a Oferta ✨
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {editingPage.blocks && editingPage.blocks.length > 0 ? (
                       editingPage.blocks
                         .filter(b => b.enabled !== false)
                         .map((b, bIdx) => {
@@ -7162,6 +7502,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             </div>
                           </section>
                         )}
+                      </>
+                    )}
                       </>
                     )}
 
