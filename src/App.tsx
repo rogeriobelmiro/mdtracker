@@ -1086,11 +1086,15 @@ export default function App() {
               />
             )}
 
-            {(activeTab === 'saas_admin' || activeTab === 'saas_goals') && (
+            {(activeTab === 'saas_admin' || activeTab === 'saas_goals' || activeTab === 'saas_financial') && (
               <SuperAdminHotmartManager
                 key={activeTab}
                 currentUser={currentUser}
-                initialSubTab={activeTab === 'saas_goals' ? 'affiliate_goals' : 'companies'}
+                initialSubTab={
+                  activeTab === 'saas_goals' ? 'affiliate_goals' :
+                  activeTab === 'saas_financial' ? 'financial_projection' :
+                  'companies'
+                }
               />
             )}
 

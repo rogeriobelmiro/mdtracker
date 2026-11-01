@@ -33,11 +33,12 @@ import {
   GraduationCap,
   HelpCircle,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  TrendingUp
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin' | 'saas_goals' | 'affiliate_clients' | 'affiliate_trainings' | 'affiliate_news' | 'affiliate_support';
+export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin' | 'saas_goals' | 'saas_financial' | 'affiliate_clients' | 'affiliate_trainings' | 'affiliate_news' | 'affiliate_support';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -316,6 +317,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label: 'Metas Globais dos Afiliados',
             icon: Target,
             badge: { text: 'Metas & Bônus', variant: 'purple' as const },
+            allowedRoles: ['admin' as const]
+          },
+          {
+            id: 'saas_financial' as NavTabId,
+            label: 'Demonstrativo & Faturamento Previsto',
+            icon: TrendingUp,
+            badge: { text: 'DRE & Previsão', variant: 'emerald' as const },
             allowedRoles: ['admin' as const]
           }
         ] : [])

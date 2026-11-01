@@ -43,6 +43,9 @@ import {
   Target,
   Trophy,
   TrendingUp,
+  Printer,
+  Calculator,
+  FileSpreadsheet,
   Video,
   Play
 } from 'lucide-react';
@@ -73,7 +76,7 @@ import { BrazilAffiliatesMap } from './BrazilAffiliatesMap';
 
 interface SuperAdminHotmartManagerProps {
   currentUser: User;
-  initialSubTab?: 'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log';
+  initialSubTab?: 'companies' | 'affiliates' | 'affiliate_goals' | 'financial_projection' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log';
 }
 
 const DEFAULT_PLANS: HotmartPlanOption[] = [
@@ -234,11 +237,15 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     currentUser?.email?.toLowerCase().includes('rogerio') ||
     currentUser?.role === 'admin';
 
-  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>(initialSubTab || 'companies');
+  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'affiliate_goals' | 'financial_projection' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>(initialSubTab || 'companies');
 
   useEffect(() => {
     setActiveSubTab(initialSubTab || 'companies');
   }, [initialSubTab]);
+
+  // Estados do Simulador de Metas & Faturamento Previsto
+  const [goalAttainmentPct, setGoalAttainmentPct] = useState<number>(100);
+  const [simulatedPlanMix, setSimulatedPlanMix] = useState<'starter_only' | 'realistic_mix' | 'enterprise_heavy'>('realistic_mix');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1103,6 +1110,18 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             <Target className="w-4 h-4 text-amber-400" />
             <span>Metas & Gamificação ({totalAffiliates})</span>
             <span className="px-1.5 py-0.5 text-[10px] bg-amber-500/20 text-amber-300 rounded-full font-bold">Super Bônus PIX</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('financial_projection')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'financial_projection'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+          >
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span>Demonstrativo & Faturamento Previsto</span>
+            <span className="px-1.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-bold">DRE & Metas</span>
           </button>
 
           <button
@@ -2962,6 +2981,525 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
           </div>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* TAB: DEMONSTRATIVO & FATURAMENTO PREVISTO (DRE & METAS) */}
+      {/* ========================================================= */}
+      {activeSubTab === 'financial_projection' && (() => {
+        // 1. Dados da Carteira Real Atual
+        const activeCompaniesList = companies.filter(c => c.subscriptionStatus === 'active' || c.active !== false);
+        const trialCompaniesList = companies.filter(c => c.subscriptionStatus === 'trial');
+        
+        // Preços dos Planos
+        const starterPrice = hotmartConfig.plans?.find(p => p.id === 'starter')?.price || 197;
+        const proPrice = hotmartConfig.plans?.find(p => p.id === 'pro')?.price || 397;
+        const enterprisePrice = hotmartConfig.plans?.find(p => p.id === 'enterprise')?.price || 697;
+        const setupTrainingPrice = hotmartConfig.setupTraining?.price || 997;
+
+        // MRR Atual Imediato (só assinaturas ativas)
+        const currentActiveMRR = activeCompaniesList.reduce((acc, comp) => {
+          const planKey = (comp.subscriptionPlan || comp.plan || 'starter').toLowerCase();
+          const p = (hotmartConfig.plans || DEFAULT_PLANS).find(pl => pl.id === planKey);
+          return acc + (p ? Number(p.price) : starterPrice);
+        }, 0);
+
+        // MRR Potencial com Conversão dos Trials
+        const currentPotentialMRR = companies.reduce((acc, comp) => {
+          const planKey = (comp.subscriptionPlan || comp.plan || 'starter').toLowerCase();
+          const p = (hotmartConfig.plans || DEFAULT_PLANS).find(pl => pl.id === planKey);
+          return acc + (p ? Number(p.price) : starterPrice);
+        }, 0);
+
+        // Repasse atual mensal recorrente estimado
+        const currentEstimatedMonthlyCommission = activeCompaniesList.reduce((acc, comp) => {
+          const aff = affiliates.find(a => a.id === comp.affiliateId || (comp.affiliateCode && a.referralCode?.toLowerCase() === comp.affiliateCode?.toLowerCase()));
+          const commPct = aff?.commissionMonthly ? Number(aff.commissionMonthly) / 100 : 0.20;
+          const planKey = (comp.subscriptionPlan || comp.plan || 'starter').toLowerCase();
+          const p = (hotmartConfig.plans || DEFAULT_PLANS).find(pl => pl.id === planKey);
+          const price = p ? Number(p.price) : starterPrice;
+          return acc + (price * commPct);
+        }, 0);
+
+        // Total Setups / Treinamentos VIP já faturados
+        const totalCompaniesLinked = companies.filter(c => c.affiliateId || c.affiliateCode).length;
+        const currentSetupRevenue = totalCompaniesLinked * setupTrainingPrice;
+        const currentSetupCommission = currentSetupRevenue * 0.50;
+
+        // 2. Parâmetros das Metas Comerciais dos Representantes
+        const totalReps = affiliates.length || 12;
+        const targetSalesPerRep = hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly || 10;
+        const targetTrainingsPerRep = hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly || 3;
+        const bonusRewardPerRep = hotmartConfig.affiliateGoals?.bonusRewardAmount || 1000;
+        const commissionBonusPct = hotmartConfig.affiliateGoals?.salesCommissionBonusPct || 5;
+
+        // 3. Simulação Dinâmica com base no % de Atingimento e Mix de Planos
+        const factor = goalAttainmentPct / 100;
+        const simNewSales = Math.round(totalReps * targetSalesPerRep * factor);
+        const simTrainings = Math.round(totalReps * targetTrainingsPerRep * factor);
+
+        // Ticket Médio Ponderado por Empresa no Mix Selecionado
+        let averageTicket = starterPrice;
+        let mixDescription = '100% no Plano Starter (R$ 197/mês)';
+        if (simulatedPlanMix === 'realistic_mix') {
+          averageTicket = Math.round((0.70 * starterPrice) + (0.20 * proPrice) + (0.10 * enterprisePrice));
+          mixDescription = 'Mix Realista: 70% Starter (R$ 197), 20% Pro (R$ 397), 10% Enterprise (R$ 697)';
+        } else if (simulatedPlanMix === 'enterprise_heavy') {
+          averageTicket = Math.round((0.50 * starterPrice) + (0.30 * proPrice) + (0.20 * enterprisePrice));
+          mixDescription = 'Mix Escala VIP: 50% Starter (R$ 197), 30% Pro (R$ 397), 20% Enterprise (R$ 697)';
+        }
+
+        // Receitas do Mês Simulado
+        const simSetupGross = simTrainings * setupTrainingPrice;
+        const simMRRGross = simNewSales * averageTicket;
+        const simTotalGross = simSetupGross + simMRRGross;
+
+        // Deduções do Mês Simulado
+        const simSetupCommission = simSetupGross * 0.50; // 50% repasse treinamento
+        const simMRRCommission = simMRRGross * 0.20; // 20% repasse mensalidade
+        const isEligibleForBonus = goalAttainmentPct >= 100;
+        const simBonusTotal = isEligibleForBonus
+          ? (totalReps * bonusRewardPerRep)
+          : (goalAttainmentPct >= 75 ? Math.round(totalReps * bonusRewardPerRep * 0.5) : 0);
+        const simTotalDeductions = simSetupCommission + simMRRCommission + simBonusTotal;
+
+        // Resultado Líquido TrackerMD
+        const simNetRevenue = simTotalGross - simTotalDeductions;
+        const simNetMarginPct = simTotalGross > 0 ? Math.round((simNetRevenue / simTotalGross) * 100) : 0;
+
+        // Projeção Cumulativa de Escala (12 meses)
+        const projectionMonths = [1, 2, 3, 4, 5, 6, 9, 12].map(m => {
+          const cumClients = m * simNewSales;
+          const cumMRR = cumClients * averageTicket;
+          const cumARR = cumMRR * 12;
+          const cumSetupGrossTotal = m * simSetupGross;
+          const cumMRRGrossTotal = (m * (m + 1) / 2) * simMRRGross;
+          const cumGrossTotal = cumSetupGrossTotal + cumMRRGrossTotal;
+          const cumNetTotal = cumGrossTotal - (m * simTotalDeductions);
+          return { month: m, cumClients, cumMRR, cumARR, cumGrossTotal, cumNetTotal };
+        });
+
+        return (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header da Aba Financeira */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-indigo-900/60">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[11px] uppercase tracking-wider border border-emerald-500/30">
+                    DRE Executivo & Previsão de Escala
+                  </span>
+                  <span className="text-xs text-indigo-300 font-medium">• Base de 12 Representantes</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
+                  <TrendingUp className="w-6 h-6 text-emerald-400" />
+                  <span>Demonstrativo & Faturamento Previsto</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                  Visão consolidada do faturamento atual da base de clientes e simulação do resultado financeiro (Bruto, Repasses, Bônus e Líquido) ao atingir as metas mensais.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 border border-slate-700/80 transition cursor-pointer"
+                  title="Imprimir ou exportar relatório em PDF"
+                >
+                  <Printer className="w-4 h-4 text-slate-300" />
+                  <span>Imprimir Relatório</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('affiliate_goals')}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-md transition cursor-pointer"
+                >
+                  <Target className="w-4 h-4" />
+                  <span>Ajustar Metas Globais</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SEÇÃO 1: Faturamento Atual da Base Real */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span>1. Faturamento Mensal Atual (Base Real de {companies.length} Empresas)</span>
+                </h4>
+                <span className="text-xs text-slate-500 font-semibold">
+                  {activeCompaniesList.length} Ativas • {trialCompaniesList.length} em Período de Teste
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">MRR Atual Imediato</p>
+                  <h3 className="text-2xl font-black text-blue-600 mt-1">
+                    {formatCurrency(currentActiveMRR)}
+                    <span className="text-xs font-medium text-slate-400 ml-1">/mês</span>
+                  </h3>
+                  <p className="text-[11px] text-blue-700 font-medium mt-1">
+                    3 assinaturas pagantes ativas
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">MRR Potencial (c/ Trials)</p>
+                  <h3 className="text-2xl font-black text-indigo-600 mt-1">
+                    {formatCurrency(currentPotentialMRR)}
+                    <span className="text-xs font-medium text-slate-400 ml-1">/mês</span>
+                  </h3>
+                  <p className="text-[11px] text-indigo-700 font-medium mt-1">
+                    Ao converter os 3 trials em andamento
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Setups / Treinamentos Já Faturados</p>
+                  <h3 className="text-2xl font-black text-purple-600 mt-1">
+                    {formatCurrency(currentSetupRevenue)}
+                  </h3>
+                  <p className="text-[11px] text-purple-700 font-medium mt-1">
+                    {totalCompaniesLinked} empresas vinculadas (R$ 997 cada)
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Líquido Atual TrackerMD</p>
+                  <h3 className="text-2xl font-black text-emerald-600 mt-1">
+                    {formatCurrency(currentActiveMRR - currentEstimatedMonthlyCommission)}
+                    <span className="text-xs font-medium text-slate-400 ml-1">/mês</span>
+                  </h3>
+                  <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                    Margem líquida de ~75% nas mensalidades
+                  </p>
+                </div>
+              </div>
+
+              {/* Tabela da Carteira Atual */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Detalhamento por Empresa na Base
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    Repasse de 25% (Rogério MT) e 20% (Demais Afiliados)
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-600">
+                    <thead className="bg-slate-100/60 text-[11px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Empresa</th>
+                        <th className="py-3 px-4">Plano</th>
+                        <th className="py-3 px-4">Valor Mensal</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Representante Vinculado</th>
+                        <th className="py-3 px-4">Repasse Afiliado</th>
+                        <th className="py-3 px-4 text-right">Líquido TrackerMD</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {companies.map(comp => {
+                        const planKey = (comp.subscriptionPlan || comp.plan || 'starter').toLowerCase();
+                        const p = (hotmartConfig.plans || DEFAULT_PLANS).find(pl => pl.id === planKey);
+                        const price = p ? Number(p.price) : starterPrice;
+                        const aff = affiliates.find(a => a.id === comp.affiliateId || (comp.affiliateCode && a.referralCode?.toLowerCase() === comp.affiliateCode?.toLowerCase()));
+                        const commPct = aff?.commissionMonthly ? Number(aff.commissionMonthly) / 100 : 0.20;
+                        const isTrial = comp.subscriptionStatus === 'trial';
+                        const commissionVal = isTrial ? 0 : price * commPct;
+                        const netVal = isTrial ? price : price - commissionVal;
+
+                        return (
+                          <tr key={comp.id} className="hover:bg-slate-50/70 transition">
+                            <td className="py-3 px-4 font-bold text-slate-900">{comp.name}</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                                {planKey}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-800">{formatCurrency(price)}</td>
+                            <td className="py-3 px-4">
+                              {isTrial ? (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                  Trial (Teste)
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                  Ativo Pagante
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-slate-700">
+                              {aff ? `${aff.name} (${aff.state})` : 'Direto (Sem Afiliado)'}
+                            </td>
+                            <td className="py-3 px-4 text-purple-700 font-semibold">
+                              {isTrial ? '—' : `${formatCurrency(commissionVal)} (${Math.round(commPct * 100)}%)`}
+                            </td>
+                            <td className="py-3 px-4 text-right font-black text-emerald-700">
+                              {formatCurrency(netVal)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO 2: Simulador Interativo de Metas */}
+            <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 border border-indigo-200/80 shadow-md space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100 pb-4">
+                <div>
+                  <h4 className="font-black text-slate-900 text-lg flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-indigo-600" />
+                    <span>2. Simulador Interativo de Faturamento por Metas</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Selecione o percentual de atingimento das metas e a distribuição de planos para recalcular as projeções em tempo real.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-indigo-100/70 p-1.5 rounded-2xl">
+                  {[25, 50, 75, 100, 120].map(pct => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setGoalAttainmentPct(pct)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                        goalAttainmentPct === pct
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-indigo-900 hover:bg-white/60'
+                      }`}
+                    >
+                      {pct}% {pct === 100 ? 'Meta Plena' : pct === 120 ? 'Superação' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Controles de Mix de Planos */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-indigo-100">
+                <div>
+                  <span className="text-xs font-bold text-slate-700 block uppercase tracking-wide">
+                    Distribuição dos Planos Contratados (Mix de Vendas):
+                  </span>
+                  <span className="text-xs text-indigo-600 font-semibold">{mixDescription}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSimulatedPlanMix('starter_only')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      simulatedPlanMix === 'starter_only'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    100% Starter (Conservador)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSimulatedPlanMix('realistic_mix')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      simulatedPlanMix === 'realistic_mix'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Mix Realista (70/20/10)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSimulatedPlanMix('enterprise_heavy')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      simulatedPlanMix === 'enterprise_heavy'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Escala VIP (50/30/20)
+                  </button>
+                </div>
+              </div>
+
+              {/* Cards de Resumo da Simulação do Mês */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-indigo-600" />
+                    Novas Empresas no Mês
+                  </span>
+                  <h3 className="text-3xl font-black text-slate-900 mt-2">
+                    {simNewSales}
+                    <span className="text-xs text-slate-400 font-semibold ml-1.5">empresas</span>
+                  </h3>
+                  <p className="text-[11px] text-indigo-600 font-semibold mt-1">
+                    {Math.round(simNewSales / totalReps)} por representante ({totalReps} ativos)
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                    Treinamentos VIP / Setup
+                  </span>
+                  <h3 className="text-3xl font-black text-slate-900 mt-2">
+                    {simTrainings}
+                    <span className="text-xs text-slate-400 font-semibold ml-1.5">aulas</span>
+                  </h3>
+                  <p className="text-[11px] text-purple-600 font-semibold mt-1">
+                    Faturamento Bruto: {formatCurrency(simSetupGross)}
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm bg-gradient-to-br from-emerald-50/50 to-white">
+                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                    Faturamento Bruto Total
+                  </span>
+                  <h3 className="text-3xl font-black text-emerald-700 mt-2">
+                    {formatCurrency(simTotalGross)}
+                  </h3>
+                  <p className="text-[11px] text-emerald-800 font-semibold mt-1">
+                    Setups: {formatCurrency(simSetupGross)} • Mensal: {formatCurrency(simMRRGross)}
+                  </p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-indigo-200 shadow-md bg-gradient-to-br from-indigo-900 to-slate-950 text-white">
+                  <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                    Líquido Caixa TrackerMD
+                  </span>
+                  <h3 className="text-3xl font-black text-emerald-400 mt-2">
+                    {formatCurrency(simNetRevenue)}
+                  </h3>
+                  <p className="text-[11px] text-slate-300 font-medium mt-1">
+                    Margem Líquida: <strong>{simNetMarginPct}%</strong> no 1º mês
+                  </p>
+                </div>
+              </div>
+
+              {/* DRE Executivo do Mês */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                    <span className="font-black text-sm uppercase tracking-wider">
+                      DRE Gerencial do Mês ({goalAttainmentPct}% da Meta Atingida)
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-300">
+                    Valores em Moeda Corrente (R$)
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100 text-xs sm:text-sm font-semibold">
+                  <div className="p-4 flex items-center justify-between bg-slate-50/60 font-bold text-slate-700">
+                    <span>(+) Faturamento Bruto de Treinamentos VIP & Setup (36 aulas x R$ 997)</span>
+                    <span className="text-slate-900">{formatCurrency(simSetupGross)}</span>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between bg-slate-50/60 font-bold text-slate-700">
+                    <span>(+) Faturamento Bruto de Novas Assinaturas Mensais Recorrentes (120 empresas x R$ {averageTicket})</span>
+                    <span className="text-slate-900">{formatCurrency(simMRRGross)}</span>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between bg-emerald-50/80 font-black text-emerald-950 text-sm sm:text-base border-y border-emerald-200">
+                    <span>(=) FATURAMENTO BRUTO TOTAL DO MÊS</span>
+                    <span className="text-emerald-700">{formatCurrency(simTotalGross)}</span>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between text-rose-700">
+                    <span>(–) Dedução: Repasses de Comissões de Setup/Treinamento (50% aos representantes)</span>
+                    <span className="font-bold">({formatCurrency(simSetupCommission)})</span>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between text-rose-700">
+                    <span>(–) Dedução: Repasses de Comissões de Mensalidades Recorrentes (20% aos representantes)</span>
+                    <span className="font-bold">({formatCurrency(simMRRCommission)})</span>
+                  </div>
+
+                  <div className="p-4 flex items-center justify-between text-amber-700">
+                    <span>(–) Dedução: Super Bônus no PIX aos Representantes com Metas Batidas (R$ {bonusRewardPerRep} x {isEligibleForBonus ? totalReps : 0} reps)</span>
+                    <span className="font-bold">({formatCurrency(simBonusTotal)})</span>
+                  </div>
+
+                  <div className="p-5 flex items-center justify-between bg-slate-950 text-white font-black text-base sm:text-lg rounded-b-2xl">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-400" />
+                      <span>(=) FATURAMENTO LÍQUIDO CAIXA TRACKERMD (1º MÊS)</span>
+                    </span>
+                    <span className="text-emerald-400">{formatCurrency(simNetRevenue)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO 3: Escala & Efeito Bola de Neve da Recorrência (12 Meses) */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h4 className="font-black text-slate-900 text-base flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-indigo-600" />
+                    <span>3. Escala Acumulada da Receita Recorrente (Efeito Bola de Neve SaaS / MRR & ARR)</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Como a receita de mensalidades é recorrente, a cada mês novos clientes se somam à base sem novo custo de setup.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  Potencial Anual: ~R$ 5 Milhões no Mês 12
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Período</th>
+                      <th className="py-3 px-4">Clientes Acumulados</th>
+                      <th className="py-3 px-4">MRR Recorrente / Mês</th>
+                      <th className="py-3 px-4">ARR (Receita Anualizada)</th>
+                      <th className="py-3 px-4">Faturamento Bruto Acumulado</th>
+                      <th className="py-3 px-4 text-right">Líquido Acumulado Plataforma</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {projectionMonths.map(row => (
+                      <tr key={row.month} className={row.month === 12 ? 'bg-indigo-50/70 font-bold text-indigo-950' : 'hover:bg-slate-50 transition'}>
+                        <td className="py-3.5 px-4 font-black">
+                          {row.month === 1 ? 'Mês 1 (Início)' : row.month === 12 ? 'Mês 12 (1 Ano)' : `Mês ${row.month}`}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-slate-800">
+                          {row.cumClients} empresas
+                        </td>
+                        <td className="py-3.5 px-4 font-black text-blue-600">
+                          {formatCurrency(row.cumMRR)}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-purple-700">
+                          {formatCurrency(row.cumARR)}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-slate-700">
+                          {formatCurrency(row.cumGrossTotal)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-emerald-600">
+                          {formatCurrency(row.cumNetTotal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* TAB: VÍDEOS DE TREINAMENTO (CAPACITAÇÃO DE AFILIADOS) */}
