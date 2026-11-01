@@ -16097,6 +16097,9 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 params.set('rel', '0');
                 params.set('enablejsapi', '1');
                 params.set('playsinline', '1');
+                params.set('iv_load_policy', '3');
+                params.set('autohide', '1');
+                params.set('cc_load_policy', '0');
                 if (autoplay) {
                     params.set('autoplay', '1');
                     params.set('mute', '1');
@@ -16105,7 +16108,6 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     params.set('controls', '0');
                     params.set('disablekb', '1');
                     params.set('fs', '0');
-                    params.set('iv_load_policy', '3');
                     params.set('modestbranding', '1');
                 }
                 return `https://www.youtube.com/embed/${id}?${params.toString()}`;
@@ -16265,15 +16267,43 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 const bgClass = bgMap[b.backgroundColor || 'white'] || 'bg-white text-slate-800 border-y border-slate-200/80';
 
                 if (b.type === 'video') {
-                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                    const isDirect = isDirectVideo(b.videoUrl);
+                    const hideControls = b.videoHideControls !== false;
+                    const autoplay = b.videoAutoplay !== false;
+                    const antiLeak = b.videoAntiLeakShield !== false;
+                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls, antiLeak });
+                    const bannerText = b.videoUnmuteBannerText || 'Clique para ouvir com áudio';
+
                     return `
                       <section class="py-14 md:py-20 ${bgClass}">
                         <div class="max-w-4xl mx-auto px-4 text-center">
                           ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
                           ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
                           ${embedUrl ? `
-                            <div class="rounded-2xl overflow-hidden shadow-2xl border border-black/10 bg-black aspect-video max-w-3xl mx-auto">
-                              <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div class="vsl-player-wrapper relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800/80 bg-black aspect-video max-w-3xl mx-auto ring-4 ring-black/20 select-none group">
+                              <div class="vsl-media-container absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'vsl-crop-scale' : ''}">
+                                ${isDirect ? `
+                                  <video id="vsl-video-${b.id}" class="w-full h-full object-cover" src="${embedUrl}" ${autoplay ? 'autoplay muted' : ''} ${!hideControls ? 'controls' : ''} playsinline loop></video>
+                                ` : `
+                                  <iframe id="vsl-iframe-${b.id}" class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                `}
+                              </div>
+
+                              ${antiLeak ? `
+                                <div id="vsl-shield-${b.id}" class="vsl-click-shield absolute inset-0 z-10 cursor-pointer" data-vsl-id="${b.id}" title="Clique para pausar ou continuar"></div>
+                              ` : ''}
+
+                              ${autoplay ? `
+                                <div id="vsl-unmute-${b.id}" class="vsl-unmute-badge absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all duration-300 cursor-pointer" data-vsl-id="${b.id}">
+                                  <div class="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse border border-white/30 text-center max-w-md mx-4 transform transition hover:scale-105">
+                                    <span class="text-2xl animate-bounce">🔊</span>
+                                    <div class="text-left">
+                                      <p class="text-[11px] uppercase font-black tracking-wider text-amber-300">Seu vídeo já começou!</p>
+                                      <p class="text-xs sm:text-sm font-bold leading-tight">${bannerText} 👆</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ` : ''}
                             </div>
                           ` : `
                             <div class="rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400">
@@ -17125,25 +17155,42 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 60% { opacity: 1; transform: translateY(-8px) scale(1.02); }
                 100% { opacity: 1; transform: translateY(0) scale(1); }
               }
-              /* Clean VSL Player & Anti-Fuga Shield */
+              /* Clean VSL Player & Anti-Fuga Shield (Fake Local Host) */
               .vsl-crop-scale {
-                transform: scale(1.08);
-                transform-origin: center center;
+                position: absolute !important;
+                top: -14% !important;
+                left: -7% !important;
+                width: 114% !important;
+                height: 128% !important;
+                overflow: hidden !important;
+              }
+              .vsl-crop-scale iframe {
+                width: 100% !important;
+                height: 100% !important;
+                pointer-events: none !important;
               }
               .vsl-player-wrapper {
-                position: relative;
-                isolation: isolate;
+                position: relative !important;
+                isolation: isolate !important;
+                overflow: hidden !important;
               }
               .vsl-click-shield {
-                background: transparent;
-                -webkit-tap-highlight-color: transparent;
+                position: absolute !important;
+                inset: 0 !important;
+                z-index: 10 !important;
+                background: transparent !important;
+                -webkit-tap-highlight-color: transparent !important;
+                cursor: pointer !important;
               }
               .vsl-unmute-badge {
-                cursor: pointer;
-                transition: opacity 0.3s ease, transform 0.3s ease;
+                position: absolute !important;
+                inset: 0 !important;
+                z-index: 20 !important;
+                cursor: pointer !important;
+                transition: opacity 0.3s ease, transform 0.3s ease !important;
               }
               .vsl-unmute-badge:hover {
-                background-color: rgba(0, 0, 0, 0.55);
+                background-color: rgba(0, 0, 0, 0.55) !important;
               }
             </style>
           </head>

@@ -906,12 +906,10 @@ export interface LandingPageCustomBlock {
   videoUrl?: string;
   videoCaption?: string;
   videoAspectRatio?: '16/9' | '4/3' | '1/1';
-
-  // VSL & Video Custom Player / Anti-Fuga controls
-  videoAutoplay?: boolean; // Autoplay com ativação sonora (Smart Autoplay)
-  videoHideControls?: boolean; // Ocultar barra de progresso, botões e controles
-  videoAntiLeakShield?: boolean; // Bloquear cliques externos e fuga para o YouTube (Escudo Anti-Fuga)
-  videoUnmuteBannerText?: string; // Ex: "🔊 SEU VÍDEO JÁ COMEÇOU! Clique para ouvir com áudio"
+  videoAutoplay?: boolean;
+  videoHideControls?: boolean;
+  videoAntiLeakShield?: boolean;
+  videoUnmuteBannerText?: string;
 
   // VSL & Pitch Delay block
   pitchDelayMinutes?: number;

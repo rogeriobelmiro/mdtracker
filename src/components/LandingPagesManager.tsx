@@ -303,11 +303,14 @@ const normalizeEmbedUrl = (rawUrl?: string, options?: { autoplay?: boolean; hide
   const autoplay = options?.autoplay !== false;
   const hideControls = options?.hideControls !== false;
 
-  const buildYtParams = (id: string) => {
+  const buildYt = (id: string) => {
     const params = new URLSearchParams();
     params.set('rel', '0');
     params.set('enablejsapi', '1');
     params.set('playsinline', '1');
+    params.set('iv_load_policy', '3');
+    params.set('autohide', '1');
+    params.set('cc_load_policy', '0');
     if (autoplay) {
       params.set('autoplay', '1');
       params.set('mute', '1');
@@ -316,7 +319,6 @@ const normalizeEmbedUrl = (rawUrl?: string, options?: { autoplay?: boolean; hide
       params.set('controls', '0');
       params.set('disablekb', '1');
       params.set('fs', '0');
-      params.set('iv_load_policy', '3');
       params.set('modestbranding', '1');
     }
     return `https://www.youtube.com/embed/${id}?${params.toString()}`;
@@ -324,15 +326,15 @@ const normalizeEmbedUrl = (rawUrl?: string, options?: { autoplay?: boolean; hide
 
   if (url.includes('youtube.com/watch?v=')) {
     const id = url.split('watch?v=')[1]?.split('&')[0];
-    return buildYtParams(id);
+    return buildYt(id);
   }
   if (url.includes('youtu.be/')) {
     const id = url.split('youtu.be/')[1]?.split('?')[0];
-    return buildYtParams(id);
+    return buildYt(id);
   }
   if (url.includes('youtube.com/embed/')) {
     const id = url.split('youtube.com/embed/')[1]?.split('?')[0];
-    return buildYtParams(id);
+    return buildYt(id);
   }
   if (url.includes('vimeo.com/')) {
     const id = url.split('vimeo.com/')[1]?.split('?')[0]?.replace('video/', '');
@@ -1103,6 +1105,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
   const [previewFormValues, setPreviewFormValues] = useState<Record<string, string>>({});
   const [previewSubmitStatus, setPreviewSubmitStatus] = useState<string | null>(null);
   const [previewPitchRevealed, setPreviewPitchRevealed] = useState(false);
+  const [previewUnmuted, setPreviewUnmuted] = useState(false);
 
   // AI Copywriter Modal State
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -3272,7 +3275,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                           className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
                                         />
                                         <p className="text-[11px] text-slate-500 mt-1">
-                                          💡 Cole qualquer link do YouTube (inclusive <code>youtu.be</code>) ou Vimeo. Convertemos para player responsivo sem cortes.
+                                          💡 Cole links do YouTube, Vimeo ou link direto de arquivo <code>.mp4</code>/<code>.webm</code>.
                                         </p>
                                       </div>
                                       <div>
@@ -3290,6 +3293,70 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                           placeholder="Ex: Vídeo gravado com nossa diretoria comercial"
                                           className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
                                         />
+                                      </div>
+
+                                      {/* Opções de Reprodução Blindada / Hospedagem Própria */}
+                                      <div className="p-3 bg-slate-100/80 rounded-xl border border-slate-200/90 space-y-2">
+                                        <div className="font-bold text-[11px] text-slate-800 flex items-center justify-between">
+                                          <div className="flex items-center gap-1.5">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Player Blindado (Simular Hospedagem Própria)</span>
+                                          </div>
+                                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full">Anti-Fuga</span>
+                                        </div>
+
+                                        <div className="space-y-1.5 pt-0.5">
+                                          <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                            <div>
+                                              <p className="font-bold text-slate-800">Iniciar Automaticamente (Autoplay)</p>
+                                              <p className="text-[10px] text-slate-500">Inicia ao abrir a página com aviso suave para ativar o som</p>
+                                            </div>
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoAutoplay !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoAutoplay: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-600 rounded"
+                                            />
+                                          </label>
+
+                                          <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                            <div>
+                                              <p className="font-bold text-slate-800">Desabilitar Todos os Controles</p>
+                                              <p className="text-[10px] text-slate-500">Oculta barra de progresso, timeline e botões nativos</p>
+                                            </div>
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoHideControls !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoHideControls: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-600 rounded"
+                                            />
+                                          </label>
+
+                                          <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                            <div>
+                                              <p className="font-bold text-slate-800">Tirar Logo do YouTube & Bloquear Cliques (Anti-Fuga)</p>
+                                              <p className="text-[10px] text-slate-500">Oculta logo e título do YouTube, impedindo o visitante de sair da página</p>
+                                            </div>
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoAntiLeakShield !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoAntiLeakShield: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-600 rounded"
+                                            />
+                                          </label>
+                                        </div>
                                       </div>
                                     </div>
                                   )}
@@ -3335,95 +3402,70 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                             className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
                                           />
                                         </div>
-                                      </div>
 
-                                      {/* Custom VSL Player Controls: Anti-Fuga, Hide Controls, Autoplay */}
-                                      <div className="p-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl border border-slate-700/60 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                          <div className="font-bold text-xs flex items-center gap-1.5 text-white">
-                                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                            <span>Player VSL Estilo Hospedagem Própria</span>
+                                        {/* Opções de Reprodução Blindada / Hospedagem Própria */}
+                                        <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2 mt-2">
+                                          <div className="font-bold text-[11px] text-slate-800 flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                              <span>Player Blindado (Simular Hospedagem Própria)</span>
+                                            </div>
+                                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full">Anti-Fuga</span>
                                           </div>
-                                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                                            Anti-Fuga Ativo 🛡️
-                                          </span>
-                                        </div>
 
-                                        <p className="text-[11px] text-slate-300 leading-relaxed">
-                                          Transforma o vídeo do YouTube em um player limpo idêntico ao PandaVideo e VTurb, ocultando botões, controles e bloqueando cliques na logo do YouTube para que o visitante permaneça na página.
-                                        </p>
-
-                                        <div className="space-y-2.5 pt-1 text-xs">
-                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
-                                            <input
-                                              type="checkbox"
-                                              checked={block.videoHideControls !== false}
-                                              onChange={e => {
-                                                const blocks = [...(editingPage.blocks || [])];
-                                                blocks[idx] = { ...block, videoHideControls: e.target.checked };
-                                                setEditingPage({ ...editingPage, blocks });
-                                              }}
-                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
-                                            />
-                                            <div>
-                                              <span className="font-bold block text-white">Ocultar todos os controles do player</span>
-                                              <span className="text-[11px] text-slate-400">Remove barra de tempo, botão de volume, tela cheia e barra de reprodução.</span>
-                                            </div>
-                                          </label>
-
-                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
-                                            <input
-                                              type="checkbox"
-                                              checked={block.videoAutoplay !== false}
-                                              onChange={e => {
-                                                const blocks = [...(editingPage.blocks || [])];
-                                                blocks[idx] = { ...block, videoAutoplay: e.target.checked };
-                                                setEditingPage({ ...editingPage, blocks });
-                                              }}
-                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
-                                            />
-                                            <div>
-                                              <span className="font-bold block text-white">Iniciar vídeo automaticamente (Smart Autoplay)</span>
-                                              <span className="text-[11px] text-slate-400">Inicia mudo de imediato ao carregar e exibe banner animado "Clique para ouvir com áudio".</span>
-                                            </div>
-                                          </label>
-
-                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
-                                            <input
-                                              type="checkbox"
-                                              checked={block.videoAntiLeakShield !== false}
-                                              onChange={e => {
-                                                const blocks = [...(editingPage.blocks || [])];
-                                                blocks[idx] = { ...block, videoAntiLeakShield: e.target.checked };
-                                                setEditingPage({ ...editingPage, blocks });
-                                              }}
-                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
-                                            />
-                                            <div>
-                                              <span className="font-bold block text-white">Tirar Logo do YouTube & Bloquear Fuga</span>
-                                              <span className="text-[11px] text-slate-400">Aplica recorte anti-logo e escudo de clique para impedir que o visitante saia para o YouTube.</span>
-                                            </div>
-                                          </label>
-                                        </div>
-
-                                        {block.videoAutoplay !== false && (
-                                          <div className="pt-2 border-t border-slate-800">
-                                            <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
-                                              Texto do Banner de Ativação do Som
+                                          <div className="space-y-1.5 pt-0.5">
+                                            <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                              <div>
+                                                <p className="font-bold text-slate-800">Iniciar Automaticamente (Autoplay)</p>
+                                                <p className="text-[10px] text-slate-500">Inicia ao abrir a página com aviso suave para ativar o som</p>
+                                              </div>
+                                              <input
+                                                type="checkbox"
+                                                checked={block.videoAutoplay !== false}
+                                                onChange={e => {
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, videoAutoplay: e.target.checked };
+                                                  setEditingPage({ ...editingPage, blocks });
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 rounded"
+                                              />
                                             </label>
-                                            <input
-                                              type="text"
-                                              value={block.videoUnmuteBannerText || ''}
-                                              onChange={e => {
-                                                const blocks = [...(editingPage.blocks || [])];
-                                                blocks[idx] = { ...block, videoUnmuteBannerText: e.target.value };
-                                                setEditingPage({ ...editingPage, blocks });
-                                              }}
-                                              placeholder="Ex: 🔊 SEU VÍDEO JÁ COMEÇOU! Clique para ouvir com áudio"
-                                              className="w-full px-3 py-1.5 border border-slate-700 rounded-xl bg-slate-800/80 text-white text-xs placeholder-slate-500"
-                                            />
+
+                                            <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                              <div>
+                                                <p className="font-bold text-slate-800">Desabilitar Todos os Controles</p>
+                                                <p className="text-[10px] text-slate-500">Oculta barra de progresso, timeline e botões nativos</p>
+                                              </div>
+                                              <input
+                                                type="checkbox"
+                                                checked={block.videoHideControls !== false}
+                                                onChange={e => {
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, videoHideControls: e.target.checked };
+                                                  setEditingPage({ ...editingPage, blocks });
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 rounded"
+                                              />
+                                            </label>
+
+                                            <label className="flex items-center justify-between cursor-pointer p-2 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition text-[11px]">
+                                              <div>
+                                                <p className="font-bold text-slate-800">Tirar Logo do YouTube & Bloquear Cliques (Anti-Fuga)</p>
+                                                <p className="text-[10px] text-slate-500">Oculta logo e título do YouTube, impedindo o visitante de sair da página</p>
+                                              </div>
+                                              <input
+                                                type="checkbox"
+                                                checked={block.videoAntiLeakShield !== false}
+                                                onChange={e => {
+                                                  const blocks = [...(editingPage.blocks || [])];
+                                                  blocks[idx] = { ...block, videoAntiLeakShield: e.target.checked };
+                                                  setEditingPage({ ...editingPage, blocks });
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 rounded"
+                                              />
+                                            </label>
                                           </div>
-                                        )}
+                                        </div>
                                       </div>
 
                                       {/* Pitch Timing */}
@@ -8192,27 +8234,68 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           }
 
                           if (b.type === 'video') {
-                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                            const isDirect = isDirectVideo(b.videoUrl);
+                            const hideControls = b.videoHideControls !== false;
+                            const autoplay = b.videoAutoplay !== false;
+                            const antiLeak = b.videoAntiLeakShield !== false;
+                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls, antiLeak });
                             return (
                               <section key={b.id || bIdx} className={`py-12 md:py-16 px-6 sm:px-10 ${bgClass}`}>
                                 <div className="max-w-3xl mx-auto text-center">
                                   {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
                                   {b.subtitle && <p className="text-xs sm:text-sm opacity-80 mb-6 max-w-xl mx-auto">{b.subtitle}</p>}
                                   {embedUrl ? (
-                                    <div className="rounded-2xl overflow-hidden shadow-2xl border border-black/10 bg-black aspect-video max-w-2xl mx-auto">
-                                      <iframe
-                                        className="w-full h-full"
-                                        src={embedUrl}
-                                        title={b.title || 'Vídeo'}
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                      />
+                                    <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-black/10 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10 select-none group">
+                                      <div className={`absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'scale-[1.14] -translate-y-[2%] origin-center' : ''}`}>
+                                        {isDirect ? (
+                                          <video
+                                            className="w-full h-full object-cover"
+                                            src={embedUrl}
+                                            autoPlay={autoplay}
+                                            muted={!previewUnmuted}
+                                            controls={!hideControls}
+                                            playsInline
+                                            loop
+                                          />
+                                        ) : (
+                                          <iframe
+                                            className={`w-full h-full ${antiLeak ? 'pointer-events-none' : ''}`}
+                                            src={embedUrl}
+                                            title={b.title || 'Vídeo'}
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                          />
+                                        )}
+                                      </div>
+
+                                      {antiLeak && (
+                                        <div
+                                          className="absolute inset-0 z-10 cursor-pointer"
+                                          onClick={() => setPreviewUnmuted(true)}
+                                          title="Player Blindado: Cliques protegidos contra saída da página"
+                                        />
+                                      )}
+
+                                      {autoplay && !previewUnmuted && (
+                                        <div
+                                          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all duration-300 cursor-pointer"
+                                          onClick={() => setPreviewUnmuted(true)}
+                                        >
+                                          <div className="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse border border-white/30 text-center max-w-sm mx-4 transform transition hover:scale-105">
+                                            <span className="text-2xl animate-bounce">🔊</span>
+                                            <div className="text-left">
+                                              <p className="text-[10px] uppercase font-black tracking-wider text-amber-300">Seu vídeo já começou!</p>
+                                              <p className="text-xs sm:text-sm font-bold leading-tight">{b.videoUnmuteBannerText || 'Clique para ouvir com áudio 👆'}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs">
                                       <Video className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                      Insira o link do YouTube ou Vimeo para exibir o player
+                                      Insira o link do YouTube, Vimeo ou MP4 para exibir o player
                                     </div>
                                   )}
                                   {b.videoCaption && <p className="text-xs opacity-75 mt-3 italic">{b.videoCaption}</p>}
@@ -8226,7 +8309,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             const hideControls = b.videoHideControls !== false;
                             const autoplay = b.videoAutoplay !== false;
                             const antiLeak = b.videoAntiLeakShield !== false;
-                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls });
+                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls, antiLeak });
                             const isDark = b.backgroundColor === 'dark';
                             return (
                               <section key={b.id || bIdx} className={`py-14 md:py-20 px-6 sm:px-10 ${bgClass}`}>
@@ -8235,22 +8318,21 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                   {b.subtitle && <p className={`text-xs sm:text-sm mb-6 max-w-xl mx-auto ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{b.subtitle}</p>}
 
                                   {embedUrl ? (
-                                    <div className="vsl-player-wrapper relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-700/50 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10 select-none group">
-                                      {/* Video Media Container (with anti-leak scale crop to remove YouTube logo and top bar) */}
-                                      <div className={`absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'scale-105 origin-center' : ''}`}>
+                                    <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-700/50 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10 select-none group">
+                                      <div className={`absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'scale-[1.14] -translate-y-[2%] origin-center' : ''}`}>
                                         {isDirect ? (
                                           <video
                                             className="w-full h-full object-cover"
                                             src={embedUrl}
                                             autoPlay={autoplay}
-                                            muted={autoplay}
+                                            muted={!previewUnmuted}
                                             controls={!hideControls}
                                             playsInline
                                             loop
                                           />
                                         ) : (
                                           <iframe
-                                            className="w-full h-full pointer-events-auto"
+                                            className={`w-full h-full ${antiLeak ? 'pointer-events-none' : ''}`}
                                             src={embedUrl}
                                             title={b.title || 'Vídeo de Vendas (VSL)'}
                                             frameBorder="0"
@@ -8260,18 +8342,20 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                         )}
                                       </div>
 
-                                      {/* Anti-Leak Shield: Blocks clicks from redirecting to YouTube */}
                                       {antiLeak && (
                                         <div
                                           className="absolute inset-0 z-10 cursor-pointer"
-                                          title="Modo Anti-Fuga Ativo: Cliques protegidos para manter o visitante na página"
+                                          onClick={() => setPreviewUnmuted(true)}
+                                          title="Player Blindado: Cliques protegidos contra saída da página"
                                         />
                                       )}
 
-                                      {/* Smart Autoplay Unmute Floating Banner */}
-                                      {autoplay && (
-                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[1px] transition-all duration-300 pointer-events-none">
-                                          <div className="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 border border-white/30 text-center max-w-sm mx-4 animate-pulse">
+                                      {autoplay && !previewUnmuted && (
+                                        <div
+                                          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all duration-300 cursor-pointer"
+                                          onClick={() => setPreviewUnmuted(true)}
+                                        >
+                                          <div className="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse border border-white/30 text-center max-w-sm mx-4 transform transition hover:scale-105">
                                             <span className="text-2xl animate-bounce">🔊</span>
                                             <div className="text-left">
                                               <p className="text-[10px] uppercase font-black tracking-wider text-amber-300">Seu vídeo já começou!</p>
@@ -8284,7 +8368,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                   ) : (
                                     <div className="rounded-2xl border-2 border-dashed border-slate-600 p-10 text-center text-slate-400 text-xs max-w-2xl mx-auto">
                                       <Play className="w-10 h-10 mx-auto mb-2 text-rose-500 opacity-80" />
-                                      Insira o link do YouTube, Vimeo ou arquivo MP4 da sua VSL
+                                      Insira o link do YouTube, Vimeo ou MP4 da sua VSL
                                     </div>
                                   )}
                                   {b.videoCaption && (
