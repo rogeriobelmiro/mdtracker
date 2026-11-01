@@ -332,7 +332,7 @@ interface LandingPagesManagerProps {
   onNavigateToTab?: (tab: NavTabId) => void;
 }
 
-// 4 Pre-built High-Converting Templates (RD Station Style)
+// Pre-built High-Converting Templates (RD Station Style with Modular Blocks)
 const TEMPLATES: Array<{
   id: string;
   name: string;
@@ -373,7 +373,7 @@ const TEMPLATES: Array<{
       },
       blocks: [
         {
-          id: 'blk-header-form-1',
+          id: 'blk-powerup-header',
           type: 'header_form',
           title: 'Como Acelerar seus Resultados com Power UP de Forma Previsível e Rápida',
           subtitle: 'Acesse o método prático e validado por centenas de clientes para economizar tempo, evitar erros comuns e maximizar seus retornos.',
@@ -391,6 +391,30 @@ const TEMPLATES: Array<{
           formCardButtonText: 'Quero Começar Agora Mesmo 🚀',
           formPosition: 'right',
           formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-powerup-features',
+          type: 'features',
+          title: 'Vantagens Exclusivas da Solução',
+          subtitle: 'Tudo planejado para destravar o seu crescimento comercial',
+          features: [
+            { id: 'f1', title: 'Ativação Rápida em Minutos', description: 'Metodologia simplificada para começar a operar sem perda de tempo.' },
+            { id: 'f2', title: 'Processo Validado', description: 'Modelos testados por centenas de negócios em múltiplos segmentos.' },
+            { id: 'f3', title: 'Suporte Consultivo', description: 'Acompanhamento focado nos seus objetivos de conversão.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-powerup-faq',
+          type: 'faq',
+          title: 'Perguntas Frequentes',
+          faqItems: [
+            { id: 'faq-1', question: 'Como recebo o acesso?', answer: 'Nossa equipe entrará em contato diretamente pelo WhatsApp informado com todos os dados.' },
+            { id: 'faq-2', question: 'Tem algum custo para se cadastrar?', answer: 'O cadastro nesta página é 100% gratuito e garante atendimento prioritário.' }
+          ],
           enabled: true,
           backgroundColor: 'white'
         }
@@ -443,29 +467,78 @@ const TEMPLATES: Array<{
         ctaText: 'Solicitar Meu Diagnóstico Gratuito',
         imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80'
       },
+      blocks: [
+        {
+          id: 'blk-consult-header',
+          type: 'header_form',
+          title: 'Descubra Como Aumentar Suas Vendas no WhatsApp em Até 42% Sem Gastar Mais em Tráfego',
+          subtitle: 'Receba uma análise detalhada do tempo de resposta, qualificação e scripts da sua equipe comercial com um especialista dedicado.',
+          headerNavbarEnabled: true,
+          headerLogoText: 'TrackerMD Growth Suite',
+          headerNavCtaText: 'Solicitar Meu Diagnóstico Gratuito →',
+          headerBadge: '🎯 Diagnóstico 100% Gratuito para Empresas',
+          headerHeadline: 'Descubra Como Aumentar Suas Vendas no WhatsApp em Até 42% Sem Gastar Mais em Tráfego',
+          headerSubheadline: 'Receba uma análise detalhada do tempo de resposta, qualificação e scripts da sua equipe comercial com um especialista dedicado.',
+          headerPrimaryCtaText: 'Solicitar Meu Diagnóstico Gratuito →',
+          headerTrustBadges: ['Diagnóstico 100% Gratuito', 'Reunião de 25 minutos', 'Plano em 24h'],
+          formCardBadge: 'DIAGNÓSTICO GRÁTIS',
+          formCardTitle: 'Solicite seu Diagnóstico Gratuito',
+          formCardSubtitle: 'Preencha abaixo. Nosso especialista entrará em contato via WhatsApp.',
+          formCardButtonText: 'Quero Meu Diagnóstico Gratuito 🚀',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-consult-features',
+          type: 'features',
+          title: 'O que avaliamos no seu processo comercial',
+          subtitle: 'Metodologia prática para gerar caixa rápido e eliminar desperdícios',
+          features: [
+            { id: 'f1', title: 'Mapeamento de Gargalos', description: 'Identifique em qual etapa seus leads estão esfriando ou desistindo do fechamento.' },
+            { id: 'f2', title: 'Atribuição Precisa de Campanhas', description: 'Entenda exatamente qual anúncio do Meta e Google traz o melhor retorno financeiro.' },
+            { id: 'f3', title: 'Scripts de Alta Conversão', description: 'Modelos validados de abordagem rápida que aceleram a decisão de compra.' },
+            { id: 'f4', title: 'Plano de Ação em 24h', description: 'Relatório executivo com os 3 passos prioritários para gerar caixa imediato.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-consult-social',
+          type: 'socialProof',
+          title: 'Resultados Comprovados de Quem Já Aplicou',
+          stats: [
+            { label: 'Empresas Aceleradas', value: '+450' },
+            { label: 'Aumento Médio de Conversão', value: '+42%' },
+            { label: 'Nota Média de Satisfação', value: '4.9/5' }
+          ],
+          testimonials: [
+            { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial - TechGrowth', text: 'O diagnóstico nos fez ajustar a abordagem inicial. Em 30 dias nossas vendas cresceram expressivamente!', rating: 5 },
+            { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O atendimento consultivo e a visão de tráfego direto com CRM no WhatsApp mudaram nossa empresa.', rating: 5 }
+          ],
+          enabled: true,
+          backgroundColor: 'slate'
+        },
+        {
+          id: 'blk-consult-faq',
+          type: 'faq',
+          title: 'Perguntas Frequentes',
+          faqItems: [
+            { id: 'faq-1', question: 'O diagnóstico é realmente gratuito?', answer: 'Sim, 100% gratuito e sem compromisso. Mostramos onde sua operação pode faturar mais.' },
+            { id: 'faq-2', question: 'Quanto tempo dura a apresentação?', answer: 'Cerca de 25 minutos em uma reunião rápida e objetiva no Google Meet ou WhatsApp.' },
+            { id: 'faq-3', question: 'Funciona para qualquer segmento?', answer: 'Sim, especialmente para empresas B2B, prestadores de serviço e e-commerces com atendimento ativo.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        }
+      ],
       features: [
         { id: 'f1', title: 'Mapeamento de Gargalos', description: 'Identifique em qual etapa seus leads estão esfriando ou desistindo do fechamento.' },
         { id: 'f2', title: 'Atribuição Precisa de Campanhas', description: 'Entenda exatamente qual anúncio do Meta e Google traz o melhor retorno financeiro.' },
         { id: 'f3', title: 'Scripts de Alta Conversão', description: 'Modelos validados de abordagem rápida que aceleram a decisão de compra.' },
         { id: 'f4', title: 'Plano de Ação em 24h', description: 'Relatório executivo com os 3 passos prioritários para gerar caixa imediato.' }
       ],
-      socialProof: {
-        enabled: true,
-        stats: [
-          { label: 'Empresas Aceleradas', value: '+450' },
-          { label: 'Aumento Médio de Conversão', value: '+42%' },
-          { label: 'Nota Média de Satisfação', value: '4.9/5' }
-        ],
-        testimonials: [
-          { id: 't1', name: 'Mariana Silveira', role: 'Diretora Comercial - TechGrowth', text: 'O diagnóstico nos fez ajustar a abordagem inicial. Em 30 dias nossas vendas cresceram expressivamente!', rating: 5 },
-          { id: 't2', name: 'Carlos Eduardo Ramos', role: 'Fundador - EcomBrasil', text: 'O atendimento consultivo e a visão de tráfego direto com CRM no WhatsApp mudaram nossa empresa.', rating: 5 }
-        ]
-      },
-      countdown: {
-        enabled: true,
-        title: 'Vagas com condição especial encerram em:',
-        endDate: new Date(Date.now() + 86400000 * 3).toISOString()
-      },
       form: {
         title: 'Solicite seu Diagnóstico Gratuito',
         subtitle: 'Preencha abaixo. Nosso especialista entrará em contato via WhatsApp.',
@@ -474,22 +547,13 @@ const TEMPLATES: Array<{
         fields: [
           { id: 'f-name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome ou da empresa', required: true },
           { id: 'f-phone', name: 'phone', label: 'WhatsApp com DDD', type: 'tel', placeholder: '(11) 99999-9999', required: true },
-          { id: 'f-email', name: 'email', label: 'Seu Melhor E-mail', type: 'email', placeholder: 'seu@email.com', required: true },
-          { id: 'f-role', name: 'cargo', label: 'Qual seu cargo ou segmento?', type: 'text', placeholder: 'Ex: Gerente Comercial / E-commerce', required: false }
+          { id: 'f-email', name: 'email', label: 'Seu Melhor E-mail', type: 'email', placeholder: 'seu@email.com', required: true }
         ],
         actionType: 'redirect_whatsapp',
         whatsappPhone: '5511999999999',
         whatsappMessage: 'Olá! Acabei de solicitar meu Diagnóstico de Vendas na Landing Page e gostaria de falar com um consultor.',
         targetStage: 'Novo Lead',
         tags: ['lp-consultoria', 'alta-intencao', 'rd-station']
-      },
-      faq: {
-        enabled: true,
-        items: [
-          { id: 'faq-1', question: 'O diagnóstico é realmente gratuito?', answer: 'Sim, 100% gratuito e sem compromisso. Mostramos onde sua operação pode faturar mais.' },
-          { id: 'faq-2', question: 'Quanto tempo dura a apresentação?', answer: 'Cerca de 25 minutos em uma reunião rápida e objetiva no Google Meet ou WhatsApp.' },
-          { id: 'faq-3', question: 'Funciona para qualquer segmento?', answer: 'Sim, especialmente para empresas B2B, prestadores de serviço e e-commerces com atendimento ativo.' }
-        ]
       },
       footer: {
         companyName: 'TrackerMD Growth Suite',
@@ -525,21 +589,65 @@ const TEMPLATES: Array<{
         ctaText: 'Baixar Material Gratuito Imediatamente',
         imageUrl: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1000&q=80'
       },
-      features: [
-        { id: 'f1', title: '7 Scripts Validados', description: 'Frases de abertura testadas que aumentam em 3x a resposta imediata do cliente.' },
-        { id: 'f2', title: 'Como Quebrar a Objeção "Tá Caro"', description: 'Técnica simples para ancorar valor e conduzir o prospect para o fechamento.' },
-        { id: 'f3', title: 'Sequência de Follow-up Invisível', description: 'Passo a passo para reengajar clientes indecisos sem parecer desesperado.' }
+      blocks: [
+        {
+          id: 'blk-ebook-header',
+          type: 'header_form',
+          title: 'O Guia Prático para Escalar Suas Vendas no WhatsApp Sem Desperdiçar Leads',
+          subtitle: 'Baixe agora os modelos testados de mensagens de abertura rápida, follow-up sem insistência e recuperação de contatos desinteressados.',
+          headerNavbarEnabled: true,
+          headerLogoText: 'TrackerMD Growth Suite',
+          headerNavCtaText: 'Baixar Material Gratuito →',
+          headerBadge: '📘 Material Rico em PDF + Planilha Bônus',
+          headerHeadline: 'O Guia Prático para Escalar Suas Vendas no WhatsApp Sem Desperdiçar Leads',
+          headerSubheadline: 'Baixe agora os modelos testados de mensagens de abertura rápida, follow-up sem insistência e recuperação de contatos desinteressados.',
+          headerPrimaryCtaText: 'Baixar Material Gratuito →',
+          headerTrustBadges: ['Download Imediato', 'Arquivo em PDF + Planilha', '100% Gratuito'],
+          formCardBadge: 'DOWNLOAD GRÁTIS',
+          formCardTitle: 'Onde devemos enviar o seu E-book?',
+          formCardSubtitle: 'Download imediato e 100% gratuito no seu e-mail e WhatsApp.',
+          formCardButtonText: 'Quero Baixar Meu E-book Grátis 📥',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-ebook-features',
+          type: 'features',
+          title: 'O que você vai aprender neste material',
+          subtitle: 'Metodologia direta ao ponto para aplicar hoje mesmo',
+          features: [
+            { id: 'f1', title: '7 Scripts Validados', description: 'Frases de abertura testadas que aumentam em 3x a resposta imediata do cliente.' },
+            { id: 'f2', title: 'Como Quebrar a Objeção "Tá Caro"', description: 'Técnica simples para ancorar valor e conduzir o prospect para o fechamento.' },
+            { id: 'f3', title: 'Sequência de Follow-up Invisível', description: 'Passo a passo para reengajar clientes indecisos sem parecer desesperado.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-ebook-social',
+          type: 'socialProof',
+          title: 'Quem já baixou aprovou',
+          stats: [
+            { label: 'Downloads Realizados', value: '+3.200' },
+            { label: 'Avaliação dos Leitores', value: '5.0 ⭐' }
+          ],
+          enabled: true,
+          backgroundColor: 'slate'
+        },
+        {
+          id: 'blk-ebook-faq',
+          type: 'faq',
+          title: 'Perguntas Frequentes',
+          faqItems: [
+            { id: 'f-1', question: 'Em qual formato receberei o conteúdo?', answer: 'Você receberá o arquivo em PDF de alta qualidade + link da planilha modelo.' },
+            { id: 'f-2', question: 'Posso compartilhar com meus vendedores?', answer: 'Com certeza! O material foi feito para capacitar sua equipe.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        }
       ],
-      socialProof: {
-        enabled: true,
-        stats: [
-          { label: 'Downloads Realizados', value: '+3.200' },
-          { label: 'Avaliação dos Leitores', value: '5.0 ⭐' }
-        ]
-      },
-      countdown: {
-        enabled: false
-      },
       form: {
         title: 'Onde devemos enviar o seu E-book?',
         subtitle: 'Download imediato e 100% gratuito.',
@@ -554,13 +662,6 @@ const TEMPLATES: Array<{
         successMessage: '🎉 Parabéns! Enviamos o link do E-book diretamente para seu WhatsApp e e-mail cadastrado. Verifique agora!',
         targetStage: 'Novo Lead',
         tags: ['ebook-whatsapp', 'topo-de-funil', 'rd-style']
-      },
-      faq: {
-        enabled: true,
-        items: [
-          { id: 'f-1', question: 'Em qual formato receberei o conteúdo?', answer: 'Você receberá o arquivo em PDF de alta qualidade + link da planilha modelo.' },
-          { id: 'f-2', question: 'Posso compartilhar com meus vendedores?', answer: 'Com certeza! O material foi feito para capacitar sua equipe.' }
-        ]
       },
       footer: {
         companyName: 'TrackerMD Growth Suite',
@@ -596,23 +697,74 @@ const TEMPLATES: Array<{
         ctaText: 'Garantir Desconto de Lançamento',
         imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1000&q=80'
       },
-      features: [
-        { id: 'f1', title: 'Economia Garantida de 30%', description: 'Valor exclusivo válido apenas para os primeiros cadastrados desta página.' },
-        { id: 'f2', title: 'Kit de Bônus Premium', description: 'Acesso imediato a templates, planilhas e grupo VIP de networking.' },
-        { id: 'f3', title: 'Garantia Incondicional de 7 Dias', description: 'Se não ficar satisfeito com os resultados, devolvemos 100% do seu dinheiro.' }
+      blocks: [
+        {
+          id: 'blk-launch-cd',
+          type: 'countdown',
+          title: 'Condição Especial de Lote Antecipado Encerra em:',
+          countdownTitle: 'Condição Especial de Lote 1 com 30% OFF',
+          countdownEndDate: new Date(Date.now() + 86400000 * 2).toISOString(),
+          enabled: true,
+          backgroundColor: 'dark'
+        },
+        {
+          id: 'blk-launch-header',
+          type: 'header_form',
+          title: 'O Momento de Transformar seus Resultados Chegou com Condições Imperdíveis',
+          subtitle: 'Garanta seu acesso antecipado antes da virada de lote e tenha direito a todos os bônus e suporte prioritário no WhatsApp.',
+          headerNavbarEnabled: true,
+          headerLogoText: 'TrackerMD Growth Suite',
+          headerNavCtaText: 'Garantir Desconto de Lote 1 →',
+          headerBadge: '⚡ Lote Antecipado com 30% OFF',
+          headerHeadline: 'O Momento de Transformar seus Resultados Chegou com Condições Imperdíveis',
+          headerSubheadline: 'Garanta seu acesso antecipado antes da virada de lote e tenha direito a todos os bônus e suporte prioritário no WhatsApp.',
+          headerPrimaryCtaText: 'Garantir Desconto de Lote 1 →',
+          headerTrustBadges: ['Acesso Imediato', 'Garantia de 7 Dias', 'Suporte VIP'],
+          formCardBadge: '30% DE DESCONTO',
+          formCardTitle: 'Reserve Seu Acesso com Desconto',
+          formCardSubtitle: 'Preencha seus dados para travar o valor do lote 1.',
+          formCardButtonText: 'Garantir Vaga com 30% OFF ⚡',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-launch-features',
+          type: 'features',
+          title: 'O que está incluso no seu acesso',
+          subtitle: 'Pacote completo para acelerar seu negócio',
+          features: [
+            { id: 'f1', title: 'Economia Garantida de 30%', description: 'Valor exclusivo válido apenas para os primeiros cadastrados desta página.' },
+            { id: 'f2', title: 'Kit de Bônus Premium', description: 'Acesso imediato a templates, planilhas e grupo VIP de networking.' },
+            { id: 'f3', title: 'Garantia Incondicional de 7 Dias', description: 'Se não ficar satisfeito com os resultados, devolvemos 100% do seu dinheiro.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-launch-social',
+          type: 'socialProof',
+          title: 'Quem já garantiu a vaga',
+          stats: [
+            { label: 'Vagas Restantes', value: '14 Vagas' },
+            { label: 'Taxa de Aprovação', value: '99.2%' }
+          ],
+          enabled: true,
+          backgroundColor: 'slate'
+        },
+        {
+          id: 'blk-launch-faq',
+          type: 'faq',
+          title: 'Perguntas Frequentes',
+          faqItems: [
+            { id: 'f1', question: 'Quando receberei o acesso?', answer: 'Imediatamente após a confirmação da inscrição pelo WhatsApp.' },
+            { id: 'f2', question: 'Quais são as formas de pagamento?', answer: 'Pix com liberação instantânea ou cartão de crédito em até 12x.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        }
       ],
-      socialProof: {
-        enabled: true,
-        stats: [
-          { label: 'Vagas Restantes', value: '14 Vagas' },
-          { label: 'Taxa de Aprovação', value: '99.2%' }
-        ]
-      },
-      countdown: {
-        enabled: true,
-        title: 'As condições de Lote Antecipado encerram em:',
-        endDate: new Date(Date.now() + 86400000 * 2).toISOString()
-      },
       form: {
         title: 'Reserve Seu Acesso com Desconto',
         subtitle: 'Preencha seus dados para travar o valor do lote 1.',
@@ -628,13 +780,6 @@ const TEMPLATES: Array<{
         whatsappMessage: 'Olá! Vim pela página de lançamento e quero travar meu cupom de 30% de desconto do lote 1.',
         targetStage: 'Em Negociação',
         tags: ['lancamento-lote1', 'oferta-vip', 'rd-style']
-      },
-      faq: {
-        enabled: true,
-        items: [
-          { id: 'f1', question: 'Quando receberei o acesso?', answer: 'Imediatamente após a confirmação da inscrição pelo WhatsApp.' },
-          { id: 'f2', question: 'Quais são as formas de pagamento?', answer: 'Pix com liberação instantânea ou cartão de crédito em até 12x.' }
-        ]
       },
       footer: {
         companyName: 'TrackerMD Growth Suite',
@@ -670,23 +815,74 @@ const TEMPLATES: Array<{
         ctaText: 'Garantir Meu Ingresso Gratuito',
         imageUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1000&q=80'
       },
-      features: [
-        { id: 'f1', title: 'Aulas 100% Práticas', description: 'Sem enrolação teórica: mostramos tela a tela o que funciona no mercado atual.' },
-        { id: 'f2', title: 'Sessão de Perguntas e Respostas', description: 'Tire suas dúvidas diretamente ao vivo com nossos mentores.' },
-        { id: 'f3', title: 'Certificado de Participação', description: 'Comprove seu aperfeiçoamento profissional com certificado digital incluso.' }
+      blocks: [
+        {
+          id: 'blk-event-cd',
+          type: 'countdown',
+          title: 'O Workshop ao Vivo Começa Em:',
+          countdownTitle: 'Transmissão Ao Vivo & 100% Gratuita',
+          countdownEndDate: new Date(Date.now() + 86400000 * 4).toISOString(),
+          enabled: true,
+          backgroundColor: 'dark'
+        },
+        {
+          id: 'blk-event-header',
+          type: 'header_form',
+          title: 'Workshop Prático: As Estratégias Secretas dos Maiores Vendedores do Brasil',
+          subtitle: 'Descubra como estruturar seu processo comercial, abordar leads qualificados e fechar contratos de alto valor sem depender da sorte.',
+          headerNavbarEnabled: true,
+          headerLogoText: 'TrackerMD Growth Suite',
+          headerNavCtaText: 'Garantir Meu Ingresso Grátis →',
+          headerBadge: '🔴 Transmissão Ao Vivo & 100% Gratuita',
+          headerHeadline: 'Workshop Prático: As Estratégias Secretas dos Maiores Vendedores do Brasil',
+          headerSubheadline: 'Descubra como estruturar seu processo comercial, abordar leads qualificados e fechar contratos de alto valor sem depender da sorte.',
+          headerPrimaryCtaText: 'Garantir Meu Ingresso Grátis →',
+          headerTrustBadges: ['100% Online', 'Material Didático Incluso', 'Certificado Digital'],
+          formCardBadge: 'INSCRIÇÃO GRATUITA',
+          formCardTitle: 'Inscreva-se Gratuitamente',
+          formCardSubtitle: 'Enviaremos o link exclusivo da sala no seu WhatsApp.',
+          formCardButtonText: 'Confirmar Minha Vaga Grátis 🎟️',
+          formPosition: 'right',
+          formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-event-features',
+          type: 'features',
+          title: 'Programação do Workshop',
+          subtitle: 'Conteúdo desenhado para gerar aprendizado prático imediato',
+          features: [
+            { id: 'f1', title: 'Aulas 100% Práticas', description: 'Sem enrolação teórica: mostramos tela a tela o que funciona no mercado atual.' },
+            { id: 'f2', title: 'Sessão de Perguntas e Respostas', description: 'Tire suas dúvidas diretamente ao vivo com nossos mentores.' },
+            { id: 'f3', title: 'Certificado de Participação', description: 'Comprove seu aperfeiçoamento profissional com certificado digital incluso.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        },
+        {
+          id: 'blk-event-social',
+          type: 'socialProof',
+          title: 'Edições Anteriores',
+          stats: [
+            { label: 'Inscritos Confirmados', value: '+1.800' },
+            { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
+          ],
+          enabled: true,
+          backgroundColor: 'slate'
+        },
+        {
+          id: 'blk-event-faq',
+          type: 'faq',
+          title: 'Dúvidas Frequentes',
+          faqItems: [
+            { id: 'f1', question: 'O evento terá gravação?', answer: 'Apenas os inscritos que participarem ao vivo terão acesso ao replay durante 48h.' },
+            { id: 'f2', question: 'Onde será a transmissão?', answer: 'Pelo YouTube em link privado enviado no grupo VIP de WhatsApp.' }
+          ],
+          enabled: true,
+          backgroundColor: 'white'
+        }
       ],
-      socialProof: {
-        enabled: true,
-        stats: [
-          { label: 'Inscritos Confirmados', value: '+1.800' },
-          { label: 'Nota das Edições Anteriores', value: '4.95 ⭐' }
-        ]
-      },
-      countdown: {
-        enabled: true,
-        title: 'O workshop ao vivo começa em:',
-        endDate: new Date(Date.now() + 86400000 * 4).toISOString()
-      },
       form: {
         title: 'Inscreva-se Gratuitamente',
         subtitle: 'Enviaremos o link exclusivo da sala no seu WhatsApp.',
@@ -702,13 +898,81 @@ const TEMPLATES: Array<{
         targetStage: 'Novo Lead',
         tags: ['webinar-vendas', 'evento-online', 'rd-station']
       },
-      faq: {
-        enabled: true,
-        items: [
-          { id: 'f1', question: 'O evento terá gravação?', answer: 'Apenas os inscritos que participarem ao vivo terão acesso ao replay durante 48h.' },
-          { id: 'f2', question: 'Onde será a transmissão?', answer: 'Pelo YouTube em link privado enviado no grupo VIP de WhatsApp.' }
-        ]
+      footer: {
+        companyName: 'TrackerMD Growth Suite',
+        copyrightText: 'Todos os direitos reservados.'
+      }
+    }
+  },
+  {
+    id: 'tpl-vsl',
+    name: 'VSL de Alta Conversão com Pitch Delay ⏱️',
+    category: 'product_launch',
+    categoryLabel: 'Vídeo de Vendas (VSL)',
+    badge: 'Pitch Delay 🔥',
+    description: 'Vídeo em destaque com retenção máxima e liberação automática do botão de compra, preço e garantias no momento exato do pitch.',
+    previewHeroTitle: 'Vídeo Revela a Estratégia dos Top Players',
+    pageData: {
+      title: 'Apresentação Exclusiva: O Método Definitivo de Escala',
+      slug: 'apresentacao-exclusiva-vsl',
+      description: 'Assista ao vídeo e descubra como acelerar seus resultados comerciais.',
+      category: 'product_launch',
+      status: 'published',
+      theme: {
+        primaryColor: '#6366f1',
+        accentColor: '#10b981',
+        backgroundColor: 'dark',
+        fontFamily: 'Inter',
+        buttonStyle: 'rounded-xl'
       },
+      blocks: [
+        {
+          id: 'blk-vsl-1',
+          type: 'vsl_pitch',
+          title: 'Assista à Apresentação Exclusiva',
+          subtitle: 'Descubra em detalhes o método validado para transformar seus resultados comerciais.',
+          videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoCaption: '🔊 Ligue o áudio. As informações e o botão de acesso serão liberados durante o vídeo.',
+          pitchDelayMinutes: 5,
+          pitchDelaySeconds: 30,
+          pitchHeadline: 'Oferta Especial Liberada no Vídeo!',
+          pitchSubheadline: 'Garanta sua condição única com todos os bônus e garantia incondicional de 7 dias.',
+          pitchPriceText: '12x de R$ 29,70 ou R$ 297 à vista',
+          pitchCtaText: 'Quero Garantir Minha Vaga Agora 🚀',
+          pitchCtaUrl: '#capture-form',
+          pitchCtaSubtext: '🔒 Compra 100% Segura • Acesso Imediato • 7 Dias de Garantia',
+          pitchBadge: '🔥 CONDIÇÃO EXCLUSIVA DO PITCH',
+          pitchAnimation: 'bounce',
+          pitchRememberVisitor: true,
+          pitchAutoScroll: true,
+          enabled: true,
+          backgroundColor: 'dark'
+        },
+        {
+          id: 'blk-vsl-features',
+          type: 'features',
+          title: 'O Que Você Vai Dominar',
+          subtitle: 'Pilares práticos explicados na apresentação',
+          features: [
+            { id: 'f1', title: 'Implementação Rápida', description: 'Coloque a estratégia para rodar em menos de 24 horas.' },
+            { id: 'f2', title: 'Sem Depender de Programação', description: 'Tudo pronto e configurado sem código.' },
+            { id: 'f3', title: 'Suporte Direto', description: 'Equipe dedicada para tirar dúvidas no WhatsApp.' }
+          ],
+          enabled: true,
+          backgroundColor: 'dark'
+        },
+        {
+          id: 'blk-vsl-faq',
+          type: 'faq',
+          title: 'Dúvidas Frequentes',
+          faqItems: [
+            { id: 'f1', question: 'Como recebo o acesso?', answer: 'Imediatamente após a confirmação do pagamento, você recebe o login por e-mail e WhatsApp.' },
+            { id: 'f2', question: 'Tem garantia?', answer: 'Sim! 7 dias de garantia incondicional. Se não gostar, devolvemos 100% do seu dinheiro.' }
+          ],
+          enabled: true,
+          backgroundColor: 'dark'
+        }
+      ],
       footer: {
         companyName: 'TrackerMD Growth Suite',
         copyrightText: 'Todos os direitos reservados.'
@@ -998,10 +1262,10 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     const newPage: LandingPage = {
       id: newId,
       companyId: currentCompany.id,
-      title: 'Minha Nova Landing Page',
-      slug: `oferta-${Math.floor(Math.random() * 10000)}`,
-      description: 'Cadastre-se para garantir condições exclusivas.',
-      status: 'published',
+      title: 'Nova Página em Branco',
+      slug: `pagina-${Math.floor(Math.random() * 10000)}`,
+      description: '',
+      status: 'draft',
       category: 'lead_magnet',
       theme: {
         primaryColor: '#2563eb',
@@ -1011,51 +1275,42 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
         buttonStyle: 'rounded-xl'
       },
       hero: {
-        badge: '🚀 Novidade Exclusiva',
-        headline: 'Transforme Seus Resultados Com Nossa Solução Completa',
-        subheadline: 'Preencha os campos abaixo e receba atendimento personalizado imediato no seu WhatsApp.',
-        ctaText: 'Quero Meu Acesso Agora',
-        imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80'
+        enabled: false,
+        badge: '',
+        headline: '',
+        subheadline: '',
+        ctaText: '',
+        imageUrl: ''
       },
-      features: [
-        { id: 'f1', title: 'Atendimento Rápido 24/7', description: 'Sem filas de espera, resposta direta com nossa equipe.' },
-        { id: 'f2', title: 'Metodologia Validada', description: 'Centenas de clientes já comprovaram a eficiência do processo.' },
-        { id: 'f3', title: 'Suporte Consultivo', description: 'Especialistas disponíveis para esclarecer qualquer dúvida.' }
-      ],
+      blocks: [], // Totalmente em branco: 0 blocos!
+      features: [],
       socialProof: {
-        enabled: true,
-        stats: [
-          { label: 'Clientes Atendidos', value: '+1.000' },
-          { label: 'Satisfação', value: '4.9 ⭐' }
-        ],
-        testimonials: [
-          { id: 't1', name: 'Juliana Costa', role: 'Gerente Comercial', text: 'Adorei a agilidade e a clareza das informações!', rating: 5 }
-        ]
+        enabled: false,
+        stats: [],
+        testimonials: []
       },
       countdown: {
         enabled: false
       },
       form: {
-        title: 'Garanta sua Vaga Agora',
-        subtitle: 'Leva menos de 1 minuto para preencher.',
-        buttonText: 'Quero Garantir Minha Vaga 🚀',
+        title: '',
+        subtitle: '',
+        buttonText: 'Enviar Dados',
         buttonColor: '#2563eb',
         fields: [
           { id: 'f-name', name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome completo', required: true },
-          { id: 'f-phone', name: 'phone', label: 'WhatsApp com DDD', type: 'tel', placeholder: '(11) 99999-9999', required: true },
+          { id: 'f-phone', name: 'phone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999', required: true },
           { id: 'f-email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true }
         ],
         actionType: 'redirect_whatsapp',
-        whatsappPhone: '5511999999999',
-        whatsappMessage: 'Olá! Vim pela Landing Page e quero mais informações.',
+        whatsappPhone: '',
+        whatsappMessage: '',
         targetStage: 'Novo Lead',
-        tags: ['landing-page', 'rd-style']
+        tags: []
       },
       faq: {
-        enabled: true,
-        items: [
-          { id: 'faq-1', question: 'Como recebo o contato?', answer: 'Nossa equipe entrará em contato diretamente pelo WhatsApp informado.' }
-        ]
+        enabled: false,
+        items: []
       },
       footer: {
         companyName: currentCompany.name,
@@ -1076,11 +1331,43 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
     const newId = `lp-${Date.now()}`;
     const newSlug = `${tpl.pageData.slug || 'oferta'}-${Math.floor(Math.random() * 1000)}`;
 
+    // Garantir que todos os blocos do template venham clonados com IDs únicos
+    const clonedBlocks: LandingPageCustomBlock[] = (tpl.pageData.blocks && tpl.pageData.blocks.length > 0)
+      ? tpl.pageData.blocks.map((b, bIdx) => ({
+          ...b,
+          id: `blk-${b.type}-${Date.now()}-${bIdx}`
+        }))
+      : [
+          {
+            id: `blk-header-${Date.now()}`,
+            type: 'header_form',
+            title: tpl.pageData.hero?.headline || tpl.pageData.title || 'Transforme Seus Resultados',
+            subtitle: tpl.pageData.hero?.subheadline || tpl.pageData.description || 'Preencha os campos abaixo e receba atendimento exclusivo.',
+            headerNavbarEnabled: true,
+            headerLogoText: currentCompany.name ? `${currentCompany.name} Growth Suite` : 'TrackerMD Growth Suite',
+            headerNavCtaText: tpl.pageData.hero?.ctaText || 'Quero Meu Acesso Agora →',
+            headerBadge: tpl.pageData.hero?.badge || '🚀 OPORTUNIDADE EXCLUSIVA',
+            headerHeadline: tpl.pageData.hero?.headline || tpl.pageData.title || 'Transforme Seus Resultados',
+            headerSubheadline: tpl.pageData.hero?.subheadline || tpl.pageData.description || 'Preencha os campos abaixo e receba atendimento exclusivo.',
+            headerPrimaryCtaText: tpl.pageData.hero?.ctaText || 'Quero Meu Acesso Agora →',
+            headerTrustBadges: ['Acesso Imediato', 'Sem Spam ou Mensagens Indesejadas', 'Privacidade Garantida'],
+            formCardBadge: 'CADASTRE-SE GRÁTIS',
+            formCardTitle: tpl.pageData.form?.title || 'Garanta sua Condição Especial',
+            formCardSubtitle: tpl.pageData.form?.subtitle || 'Preencha os campos abaixo e receba atendimento em minutos.',
+            formCardButtonText: tpl.pageData.form?.buttonText || 'Quero Começar Agora Mesmo 🚀',
+            formPosition: 'right',
+            formLgpdNotice: '🔒 Seus dados estão protegidos pela Lei Geral de Proteção de Dados (LGPD).',
+            enabled: true,
+            backgroundColor: 'white'
+          }
+        ];
+
     const newPage: LandingPage = {
       ...(tpl.pageData as LandingPage),
       id: newId,
       companyId: currentCompany.id,
       slug: newSlug,
+      blocks: clonedBlocks, // Já vem com os blocos modulares inseridos!
       viewsCount: 0,
       conversionsCount: 0,
       createdAt: new Date().toISOString(),
@@ -6547,8 +6834,10 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
               {(() => {
                 const primaryColor = editingPage.theme?.primaryColor || '#2563eb';
                 const companyName = editingPage.footer?.companyName || currentCompany.name || 'TrackerMD Growth';
-                const hasHeaderFormBlock = Boolean(editingPage.blocks && editingPage.blocks.some(b => b.type === 'header_form' && b.enabled !== false));
-                const showDefaultHero = (editingPage.hero as any)?.enabled !== false && !hasHeaderFormBlock;
+                const hasBlocks = Boolean(editingPage.blocks && editingPage.blocks.length > 0);
+                const hasHeaderFormBlock = Boolean(hasBlocks && editingPage.blocks!.some(b => b.type === 'header_form' && b.enabled !== false));
+                const isBlankPage = !hasBlocks && (!editingPage.hero?.headline || (editingPage.hero as any)?.enabled === false);
+                const showDefaultHero = !isBlankPage && (editingPage.hero as any)?.enabled !== false && !hasHeaderFormBlock;
                 const buttonShapeClass = getButtonShapeClass(editingPage.theme?.buttonStyle);
                 const heroTitleSizeClass = editingPage.theme?.titleSize === 'huge'
                   ? 'text-3xl sm:text-4xl lg:text-5xl'
@@ -6838,8 +7127,39 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                       </div>
                     )}
 
-                    {/* Simulated Top Nav Header & Hero Section */}
-                    {showDefaultHero && (
+                    {/* Blank Page State or Content */}
+                    {isBlankPage ? (
+                      <div className="min-h-[560px] flex flex-col items-center justify-center p-8 sm:p-14 text-center bg-white">
+                        <div className="w-16 h-16 rounded-3xl bg-slate-50 border border-slate-200/80 text-slate-400 flex items-center justify-center mb-4 shadow-inner">
+                          <Layers className="w-8 h-8 opacity-50" />
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-700">Página em Branco</h3>
+                        <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
+                          Nenhum bloco modular adicionado ainda. Escolha os blocos no menu à esquerda para construir sua página.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddBlockModalOpen(true)}
+                            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Adicionar Bloco</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={initializeDefaultBlocks}
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles className="w-4 h-4 text-blue-600" />
+                            <span>Usar Blocos Recomendados</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Simulated Top Nav Header & Hero Section */}
+                        {showDefaultHero && (
                       <>
                         <header className={`px-6 py-4 bg-white/95 border-b border-slate-200 flex items-center justify-between sticky z-40 backdrop-blur-md shadow-xs ${previewDevice === 'desktop' ? 'top-[37px]' : 'top-6'}`}>
                           <div className="flex items-center gap-2.5">
@@ -7972,6 +8292,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                         </div>
                       </div>
                     </footer>
+                      </>
+                    )}
 
                   </div>
                 );

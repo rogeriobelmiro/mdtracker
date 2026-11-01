@@ -16737,8 +16737,10 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             }).join('');
         };
 
-        const hasHeaderFormBlock = Boolean(lp.blocks && lp.blocks.some((b: any) => b.type === 'header_form' && b.enabled !== false));
-        const showDefaultHero = lp.hero?.enabled !== false && !hasHeaderFormBlock;
+        const hasBlocks = Boolean(lp.blocks && lp.blocks.length > 0);
+        const hasHeaderFormBlock = Boolean(hasBlocks && lp.blocks.some((b: any) => b.type === 'header_form' && b.enabled !== false));
+        const isBlankPage = !hasBlocks && (!lp.hero?.headline || lp.hero?.enabled === false);
+        const showDefaultHero = !isBlankPage && lp.hero?.enabled !== false && !hasHeaderFormBlock;
 
         // Render high-converting standalone HTML
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -16999,11 +17001,20 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             </section>
             ` : ''}
 
+            ${isBlankPage ? `
+              <!-- Blank Page / Clean Canvas State -->
+              <div class="flex-1 flex flex-col items-center justify-center p-8 sm:p-14 text-center my-auto min-h-[60vh]">
+                <div class="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+                  <svg class="w-8 h-8 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-800">${lp.title || 'Página em Construção'}</h2>
+                <p class="text-sm text-slate-500 max-w-sm mt-1">Esta página está sendo construída e estará disponível em breve.</p>
+              </div>
+            ` : `
             <!-- Modular Custom Blocks (or Default Sections) -->
             <div class="${offerSectionDelayClass}">
               ${renderCustomBlocks()}
             </div>
-
 
             <!-- Footer -->
             <footer class="bg-slate-900 text-slate-400 py-10 border-t border-slate-800 text-xs">
@@ -17020,6 +17031,7 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 </div>
               </div>
             </footer>
+            `}
 
             <!-- Form & Cross-Campaign Recognition Scripts -->
             <script>
