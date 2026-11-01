@@ -151,6 +151,11 @@ ADD COLUMN IF NOT EXISTS affiliate_plan JSONB DEFAULT '{
     ]
 }'::jsonb;
 
+-- Inserir ou atualizar registro padrão de configuração global da Hotmart
+INSERT INTO hotmart_config (id, hottok, checkout_url, trial_days, webhook_url)
+VALUES ('global_hotmart_config', '', 'https://pay.hotmart.com', 1, 'https://trackermd.mudadigital.com.br/api/webhooks/hotmart')
+ON CONFLICT (id) DO UPDATE SET updated_at = NOW();
+
 -- ==============================================================================
 -- 4. LOG DE EVENTOS E WEBHOOKS DA HOTMART
 -- ==============================================================================
