@@ -74,6 +74,23 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<NavTabId>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('mdtracker_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('mdtracker_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const [chatSelectedLeadId, setChatSelectedLeadId] = useState<string | null>(null);
   const [activeCallTarget, setActiveCallTarget] = useState<{ leadId: string; leadName: string; leadPhone: string } | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
@@ -682,6 +699,8 @@ export default function App() {
         onLogout={handleLogout}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleToggleSidebarCollapse}
       />
 
       {/* Main Content Area: Topbar + Scrollable Viewport + Footer */}
@@ -734,6 +753,8 @@ export default function App() {
           }}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onOpenActivityLogs={() => setIsActivityLogsModalOpen(true)}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebarCollapse={handleToggleSidebarCollapse}
         />
 
         {/* Scrollable Viewport */}

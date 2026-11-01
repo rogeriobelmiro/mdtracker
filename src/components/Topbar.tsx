@@ -31,7 +31,9 @@ import {
   Check,
   ArrowUpRight,
   GraduationCap,
-  Activity
+  Activity,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { User, Company, HotmartPlanOption, SetupTrainingConfig } from '../types';
 import { NavTabId } from './Sidebar';
@@ -48,6 +50,8 @@ interface TopbarProps {
   onOpenCreateModal: () => void;
   onToggleMobileMenu: () => void;
   onOpenActivityLogs?: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebarCollapse?: () => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -60,7 +64,9 @@ export const Topbar: React.FC<TopbarProps> = ({
   setEndDate,
   onOpenCreateModal,
   onToggleMobileMenu,
-  onOpenActivityLogs
+  onOpenActivityLogs,
+  isSidebarCollapsed,
+  onToggleSidebarCollapse
 }) => {
   // Page titles and breadcrumb metadata
   const getTabMeta = () => {
@@ -229,8 +235,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header className="bg-white border-b border-slate-200/90 sticky top-0 z-10 px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs">
       
-      {/* Left: Mobile Menu Toggle & Page Title / Breadcrumb */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Left: Mobile Menu Toggle & Desktop Sidebar Toggle & Page Title / Breadcrumb */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={onToggleMobileMenu}
           className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
@@ -238,6 +244,21 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Menu className="w-5 h-5" />
         </button>
+
+        {onToggleSidebarCollapse && (
+          <button
+            type="button"
+            onClick={onToggleSidebarCollapse}
+            className="hidden md:flex p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition items-center justify-center shrink-0"
+            title={isSidebarCollapsed ? "Expandir menu lateral (Ctrl+B)" : "Recolher menu lateral (Ctrl+B)"}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-blue-600" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+          </button>
+        )}
 
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="hidden sm:flex w-9 h-9 rounded-lg bg-blue-50 text-blue-600 items-center justify-center shrink-0 border border-blue-100/80">

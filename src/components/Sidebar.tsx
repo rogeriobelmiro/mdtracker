@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   Link as LinkIcon, 
@@ -31,7 +31,9 @@ import {
   BrainCircuit,
   Flame,
   GraduationCap,
-  HelpCircle
+  HelpCircle,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { User, Company } from '../types';
 
@@ -46,6 +48,8 @@ interface SidebarProps {
   onLogout: () => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface NavItem {
@@ -72,8 +76,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentCompany,
   onLogout,
   isMobileOpen,
-  setIsMobileOpen
+  setIsMobileOpen,
+  isCollapsed: propIsCollapsed,
+  onToggleCollapse
 }) => {
+  const [internalCollapsed, setInternalCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('mdtracker_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const isCollapsed = propIsCollapsed !== undefined ? propIsCollapsed : internalCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed(prev => {
+        const next = !prev;
+        try {
+          localStorage.setItem('mdtracker_sidebar_collapsed', String(next));
+        } catch {}
+        return next;
+      });
+    }
+  };
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar collapse
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        handleToggleCollapse();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleCollapse]);
+
   // Categorized navigation groups
   const navGroups: NavGroup[] = [
     {
@@ -342,78 +388,135 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const sidebarContent = (
+  const renderSidebarContent = (collapsed: boolean) => (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 select-none">
       
       {/* 1. Header: Logo & Company Switcher */}
-      <div className="p-4 border-b border-slate-800/80">
-        <div className="flex items-center justify-between">
+      {collapsed ? (
+        <div className="p-3 border-b border-slate-800/80 flex flex-col items-center">
+          {/* Logo Mark */}
           <div 
             onClick={() => handleSelectTab('dashboard')}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="cursor-pointer group flex flex-col items-center"
+            title="TrackerMD PRO"
           >
             {currentCompany.logoUrl ? (
               <img 
                 src={currentCompany.logoUrl} 
                 alt="Logo" 
-                className="h-8 w-8 object-contain rounded-lg bg-white p-0.5 shadow-sm" 
+                className="h-9 w-9 object-contain rounded-xl bg-white p-0.5 shadow-sm" 
               />
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
                 <span>{currentCompany.name.charAt(0).toUpperCase()}</span>
               </div>
             )}
-            <div className="flex flex-col leading-tight">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base text-white tracking-tight">TrackerMD</span>
-                <span className="bg-blue-500/20 text-blue-400 text-[9px] font-bold px-1.5 py-0.2 rounded border border-blue-500/30">
-                  PRO
-                </span>
+          </div>
+
+          {/* Expand Button */}
+          <button
+            onClick={handleToggleCollapse}
+            className="mt-3 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            title="Expandir menu lateral (Ctrl+B)"
+          >
+            <PanelLeftOpen className="w-5 h-5 text-blue-400" />
+          </button>
+
+          {/* Quick Action: Compact + button */}
+          {currentUser.role !== 'attendant' && (
+            <button
+              onClick={() => {
+                onOpenCreateModal();
+                if (isMobileOpen) setIsMobileOpen(false);
+              }}
+              className="mt-2.5 w-10 h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center shadow-sm shadow-blue-600/30 hover:shadow-md transition-all group"
+              title="Novo Link de Rastreio"
+            >
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="p-4 border-b border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <div 
+              onClick={() => handleSelectTab('dashboard')}
+              className="flex items-center gap-2.5 cursor-pointer group min-w-0"
+            >
+              {currentCompany.logoUrl ? (
+                <img 
+                  src={currentCompany.logoUrl} 
+                  alt="Logo" 
+                  className="h-8 w-8 object-contain rounded-lg bg-white p-0.5 shadow-sm shrink-0" 
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
+                  <span>{currentCompany.name.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+              <div className="flex flex-col leading-tight min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base text-white tracking-tight truncate">TrackerMD</span>
+                  <span className="bg-blue-500/20 text-blue-400 text-[9px] font-bold px-1.5 py-0.2 rounded border border-blue-500/30 shrink-0">
+                    PRO
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 truncate">Growth & Marketing CRM</span>
               </div>
-              <span className="text-[10px] text-slate-400">Growth & Marketing CRM</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {/* Desktop Collapse Button */}
+              <button
+                onClick={handleToggleCollapse}
+                className="hidden md:flex p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                title="Recolher menu lateral (Ctrl+B)"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+
+              {/* Mobile close button */}
+              <button
+                onClick={() => setIsMobileOpen(false)}
+                className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          {/* Mobile close button */}
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Active Company Pill Card */}
-        <div className="mt-3.5 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 rounded bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0">
-              <Building2 className="w-3.5 h-3.5" />
+          {/* Active Company Pill Card */}
+          <div className="mt-3.5 bg-slate-800/60 border border-slate-700/60 rounded-lg p-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <div className="truncate">
+                <p className="text-[11px] font-bold text-white truncate">{currentCompany.name}</p>
+                <p className="text-[9px] text-slate-400">Ambiente Multi-tenant</p>
+              </div>
             </div>
-            <div className="truncate">
-              <p className="text-[11px] font-bold text-white truncate">{currentCompany.name}</p>
-              <p className="text-[9px] text-slate-400">Ambiente Multi-tenant</p>
-            </div>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0 ml-2" title="Conectado"></span>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0 ml-2" title="Conectado"></span>
-        </div>
 
-        {/* Quick Action: Novo Link Button */}
-        {currentUser.role !== 'attendant' && (
-          <button
-            onClick={() => {
-              onOpenCreateModal();
-              if (isMobileOpen) setIsMobileOpen(false);
-            }}
-            className="mt-3 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-2 shadow-sm shadow-blue-600/30 hover:shadow-md transition-all group"
-          >
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-            <span>Novo Link de Rastreio</span>
-          </button>
-        )}
-      </div>
+          {/* Quick Action: Novo Link Button */}
+          {currentUser.role !== 'attendant' && (
+            <button
+              onClick={() => {
+                onOpenCreateModal();
+                if (isMobileOpen) setIsMobileOpen(false);
+              }}
+              className="mt-3 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-2 shadow-sm shadow-blue-600/30 hover:shadow-md transition-all group"
+            >
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+              <span>Novo Link de Rastreio</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 2. Scrollable Navigation List */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
+      <div className={`flex-1 overflow-y-auto ${collapsed ? 'px-2 py-3 space-y-3' : 'px-3 py-4 space-y-6'} custom-scrollbar`}>
         {displayedNavGroups.map((group, groupIndex) => {
           // Filter items based on user role
           const visibleItems = group.items.filter(
@@ -424,16 +527,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           return (
             <div key={groupIndex} className="space-y-1">
-              {/* Category Header */}
-              <div className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                <span>{group.title}</span>
-              </div>
+              {!collapsed ? (
+                /* Category Header */
+                <div className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                  <span>{group.title}</span>
+                </div>
+              ) : groupIndex > 0 ? (
+                /* Divider in collapsed mode */
+                <div className="my-2 border-t border-slate-800/80 mx-2" />
+              ) : null}
 
               {/* Items */}
-              <div className="space-y-0.5">
+              <div className={collapsed ? "space-y-1.5 flex flex-col items-center" : "space-y-0.5"}>
                 {visibleItems.map(item => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
+
+                  if (collapsed) {
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelectTab(item.id)}
+                        title={`${item.label}${item.badge ? ` • ${item.badge.text}` : ''}`}
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all relative group ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/40'
+                            : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
+                        }`}
+                      >
+                        <Icon 
+                          className={`w-5 h-5 shrink-0 transition-colors ${
+                            isActive 
+                              ? 'text-white' 
+                              : 'text-slate-400 group-hover:text-blue-400'
+                          }`} 
+                        />
+                        {item.badge && (
+                          <span className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
+                            item.badge.variant === 'emerald' ? 'bg-emerald-400' :
+                            item.badge.variant === 'amber' ? 'bg-amber-400' :
+                            item.badge.variant === 'purple' ? 'bg-purple-400' : 'bg-blue-400'
+                          }`} />
+                        )}
+                      </button>
+                    );
+                  }
 
                   return (
                     <button
@@ -483,41 +621,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* 3. User Profile & Logout Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/90">
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-slate-700 to-slate-600 border border-slate-600 flex items-center justify-center font-bold text-xs text-white shrink-0">
-                {currentUser.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
-                <div className="mt-0.5">{getRoleBadge()}</div>
-              </div>
+      <div className={`border-t border-slate-800/80 bg-slate-900/90 ${collapsed ? 'p-2 flex flex-col items-center space-y-2' : 'p-3'}`}>
+        {collapsed ? (
+          <>
+            <div 
+              className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-600 border border-slate-600 flex items-center justify-center font-bold text-xs text-white shadow-2xs"
+              title={`${currentUser.name} (${currentUser.role})`}
+            >
+              {currentUser.name.charAt(0).toUpperCase()}
             </div>
-
             <button
               onClick={onLogout}
-              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
               title="Sair da Conta ou Trocar de Empresa"
             >
               <LogOut className="w-4 h-4" />
             </button>
-          </div>
+          </>
+        ) : (
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2.5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-slate-700 to-slate-600 border border-slate-600 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="truncate">
+                  <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
+                  <div className="mt-0.5">{getRoleBadge()}</div>
+                </div>
+              </div>
 
-          <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between text-[10px] text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              Isolamento CAPI
-            </span>
-            <button 
-              onClick={onLogout}
-              className="hover:text-slate-200 transition underline underline-offset-2"
-            >
-              Trocar Empresa
-            </button>
+              <button
+                onClick={onLogout}
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                title="Sair da Conta ou Trocar de Empresa"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between text-[10px] text-slate-400">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Isolamento CAPI
+              </span>
+              <button 
+                onClick={onLogout}
+                className="hover:text-slate-200 transition underline underline-offset-2"
+              >
+                Trocar Empresa
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
     </div>
@@ -525,12 +681,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Desktop Sidebar (Fixed Left) */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 h-screen sticky top-0 z-20 border-r border-slate-800 shadow-xl">
-        {sidebarContent}
+      {/* Desktop Sidebar (Fixed Left) with collapsible width */}
+      <aside className={`hidden md:flex flex-col shrink-0 h-screen sticky top-0 z-20 border-r border-slate-800 shadow-xl transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'w-[72px]' : 'w-64'
+      }`}>
+        {renderSidebarContent(isCollapsed)}
       </aside>
 
-      {/* Mobile Sidebar (Drawer Overlay) */}
+      {/* Mobile Sidebar (Drawer Overlay, always full content) */}
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           {/* Backdrop */}
@@ -541,7 +699,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Slide-out Panel */}
           <div className="relative flex-1 flex flex-col max-w-xs w-full h-full z-10 shadow-2xl animate-in slide-in-from-left duration-200">
-            {sidebarContent}
+            {renderSidebarContent(false)}
           </div>
         </div>
       )}
