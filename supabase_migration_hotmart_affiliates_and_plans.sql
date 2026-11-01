@@ -113,8 +113,43 @@ CREATE TABLE IF NOT EXISTS hotmart_config (
             "Acompanhamento assistido nas primeiras campanhas"
         ]
     }'::jsonb,
+    affiliate_plan JSONB DEFAULT '{
+        "enabled": true,
+        "title": "Credenciamento & Formação de Representante Oficial",
+        "price": 497,
+        "period": "anual",
+        "description": "Taxa de habilitação oficial de representante, acesso à plataforma para demonstrações, material de vendas e capacitação técnica.",
+        "checkoutUrl": "https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO",
+        "features": [
+            "50% de comissão imediata sobre taxas de treinamento e implantação",
+            "20% de comissão recorrente mensal em todas as assinaturas ativas",
+            "Acesso ao painel TrackerMD para demonstrações a clientes",
+            "Kit oficial de vendas, scripts de abordagem e criativos",
+            "Treinamento ao vivo com coordenação técnica",
+            "Certificação oficial de representante regional"
+        ]
+    }'::jsonb,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Suporte a tabelas já existentes
+ALTER TABLE hotmart_config 
+ADD COLUMN IF NOT EXISTS affiliate_plan JSONB DEFAULT '{
+    "enabled": true,
+    "title": "Credenciamento & Formação de Representante Oficial",
+    "price": 497,
+    "period": "anual",
+    "description": "Taxa de habilitação oficial de representante, acesso à plataforma para demonstrações, material de vendas e capacitação técnica.",
+    "checkoutUrl": "https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO",
+    "features": [
+        "50% de comissão imediata sobre taxas de treinamento e implantação",
+        "20% de comissão recorrente mensal em todas as assinaturas ativas",
+        "Acesso ao painel TrackerMD para demonstrações a clientes",
+        "Kit oficial de vendas, scripts de abordagem e criativos",
+        "Treinamento ao vivo com coordenação técnica",
+        "Certificação oficial de representante regional"
+    ]
+}'::jsonb;
 
 -- ==============================================================================
 -- 4. LOG DE EVENTOS E WEBHOOKS DA HOTMART

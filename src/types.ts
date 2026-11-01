@@ -256,6 +256,16 @@ export interface SetupTrainingConfig {
   features?: string[];
 }
 
+export interface AffiliatePlanConfig {
+  enabled: boolean;
+  title: string;
+  price: number;
+  period: 'mensal' | 'anual' | 'unico';
+  description: string;
+  checkoutUrl: string;
+  features: string[];
+}
+
 export interface HotmartConfig {
   hottok: string;
   checkoutUrl: string;
@@ -264,6 +274,7 @@ export interface HotmartConfig {
   webhookUrl: string;
   plans?: HotmartPlanOption[];
   setupTraining?: SetupTrainingConfig;
+  affiliatePlan?: AffiliatePlanConfig;
 }
 
 export interface Affiliate {

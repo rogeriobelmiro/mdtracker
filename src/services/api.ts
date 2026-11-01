@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1632,6 +1632,7 @@ export async function fetchSubscriptionCheckoutData(): Promise<{
   checkoutUrl: string;
   plans?: HotmartPlanOption[];
   setupTraining?: SetupTrainingConfig;
+  affiliatePlan?: AffiliatePlanConfig;
 }> {
   try {
     const res = await fetch('/api/subscription/checkout-url');
@@ -1640,6 +1641,32 @@ export async function fetchSubscriptionCheckoutData(): Promise<{
   } catch {
     return { checkoutUrl: 'https://pay.hotmart.com' };
   }
+}
+
+export async function fetchAffiliatePlan(): Promise<AffiliatePlanConfig> {
+  try {
+    const res = await fetch('/api/public/affiliate-plan');
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return {
+    enabled: true,
+    title: 'Credenciamento & Licenciamento de Representante Oficial TrackerMD',
+    price: 497,
+    period: 'anual',
+    description: 'Taxa de adesão e credenciamento oficial para representantes autorizados. Inclui link de comissões, habilitação no mapa nacional, kit de vendas e treinamento técnico ao vivo.',
+    checkoutUrl: 'https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO',
+    features: [
+      'Comissão de 20% recorrente mensal sobre todas as mensalidades das empresas indicadas',
+      'Comissão de 50% sobre todas as taxas de implantação e treinamento VIP vendidas',
+      'Link de indicação exclusivo com rastreamento permanente de cookies e sessões',
+      'Destaque com pino oficial e WhatsApp no Mapa Interativo de Representantes do Brasil',
+      'Treinamento técnico intensivo ao vivo de 2h com a coordenação nacional',
+      'Kit completo de materiais, apresentações comerciais e roteiros de demonstração',
+      'Acesso ao painel exclusivo de acompanhamento de empresas ativas e repasses'
+    ]
+  };
 }
 
 export async function fetchPublicAffiliates(): Promise<Array<{

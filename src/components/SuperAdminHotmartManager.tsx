@@ -40,7 +40,7 @@ import {
   ChevronRight,
   Award
 } from 'lucide-react';
-import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, Affiliate } from '../types';
+import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate } from '../types';
 import { 
   fetchAdminCompanies, 
   updateCompanySubscription, 
@@ -131,6 +131,24 @@ const DEFAULT_SETUP_TRAINING: SetupTrainingConfig = {
   ]
 };
 
+const DEFAULT_AFFILIATE_PLAN: AffiliatePlanConfig = {
+  enabled: true,
+  title: 'Credenciamento & Licenciamento de Representante Oficial TrackerMD',
+  price: 497,
+  period: 'anual',
+  description: 'Taxa de adesão e credenciamento oficial para representantes autorizados. Inclui link de comissões, habilitação no mapa nacional, kit de vendas e treinamento técnico ao vivo.',
+  checkoutUrl: '',
+  features: [
+    'Comissão de 20% recorrente mensal sobre todas as mensalidades das empresas indicadas',
+    'Comissão de 50% sobre todas as taxas de implantação e treinamento VIP vendidas',
+    'Link de indicação exclusivo com rastreamento permanente de cookies e sessões',
+    'Destaque com pino oficial e WhatsApp no Mapa Interativo de Representantes do Brasil',
+    'Treinamento técnico intensivo ao vivo de 2h com a coordenação nacional',
+    'Kit completo de materiais, apresentações comerciais e roteiros de demonstração',
+    'Acesso ao painel exclusivo de acompanhamento de empresas ativas e repasses'
+  ]
+};
+
 const BRAZIL_STATES = [
   { uf: 'AC', name: 'Acre' },
   { uf: 'AL', name: 'Alagoas' },
@@ -200,11 +218,13 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     trialDays: 1,
     webhookUrl: '',
     plans: DEFAULT_PLANS,
-    setupTraining: DEFAULT_SETUP_TRAINING
+    setupTraining: DEFAULT_SETUP_TRAINING,
+    affiliatePlan: DEFAULT_AFFILIATE_PLAN
   });
   const [savingConfig, setSavingConfig] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [newTrainingFeature, setNewTrainingFeature] = useState('');
+  const [newAffiliatePlanFeature, setNewAffiliatePlanFeature] = useState('');
 
   // Affiliates State
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
@@ -256,7 +276,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       setHotmartConfig({
         ...config,
         plans: Array.isArray(config.plans) && config.plans.length > 0 ? config.plans : DEFAULT_PLANS,
-        setupTraining: config.setupTraining || DEFAULT_SETUP_TRAINING
+        setupTraining: config.setupTraining || DEFAULT_SETUP_TRAINING,
+        affiliatePlan: config.affiliatePlan || DEFAULT_AFFILIATE_PLAN
       });
     } catch (err) {
       console.error(err);
@@ -364,6 +385,44 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       ...hotmartConfig,
       setupTraining: {
         ...currentSetup,
+        features: currentFeatures.filter((_, i) => i !== idx)
+      }
+    });
+  };
+
+  // Handle Affiliate Plan Field
+  const handleAffiliatePlanChange = (field: keyof AffiliatePlanConfig, value: any) => {
+    const currentPlan = hotmartConfig.affiliatePlan || DEFAULT_AFFILIATE_PLAN;
+    setHotmartConfig({
+      ...hotmartConfig,
+      affiliatePlan: {
+        ...currentPlan,
+        [field]: value
+      }
+    });
+  };
+
+  const handleAddAffiliatePlanFeature = () => {
+    if (!newAffiliatePlanFeature.trim()) return;
+    const currentPlan = hotmartConfig.affiliatePlan || DEFAULT_AFFILIATE_PLAN;
+    const currentFeatures = currentPlan.features || [];
+    setHotmartConfig({
+      ...hotmartConfig,
+      affiliatePlan: {
+        ...currentPlan,
+        features: [...currentFeatures, newAffiliatePlanFeature.trim()]
+      }
+    });
+    setNewAffiliatePlanFeature('');
+  };
+
+  const handleRemoveAffiliatePlanFeature = (idx: number) => {
+    const currentPlan = hotmartConfig.affiliatePlan || DEFAULT_AFFILIATE_PLAN;
+    const currentFeatures = currentPlan.features || [];
+    setHotmartConfig({
+      ...hotmartConfig,
+      affiliatePlan: {
+        ...currentPlan,
         features: currentFeatures.filter((_, i) => i !== idx)
       }
     });
@@ -1337,6 +1396,162 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     type="button"
                     onClick={handleAddTrainingFeature}
                     className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shrink-0"
+                  >
+                    + Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ========================================================= */}
+            {/* PLANO / TAXA DE CREDENCIAMENTO DE AFILIADOS & REPRESENTANTES */}
+            {/* ========================================================= */}
+            <div className="bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-white rounded-3xl border border-emerald-200/80 p-6 sm:p-8 space-y-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-emerald-100 pb-4">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-800 text-[11px] font-black uppercase tracking-wider border border-emerald-200">
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Plano de Credenciamento Oficial de Representantes</span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    Taxa / Licença de Ativação do Afiliado & Representante
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Assim que um novo afiliado se cadastra, este plano é apresentado em popup para pagamento na Hotmart e liberação imediata do acesso.
+                  </p>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer self-start sm:self-center">
+                  <input
+                    type="checkbox"
+                    checked={hotmartConfig.affiliatePlan?.enabled !== false}
+                    onChange={(e) => handleAffiliatePlanChange('enabled', e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Habilitar Cobrança de Licenciamento</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Título do Plano de Credenciamento
+                    </label>
+                    <input
+                      type="text"
+                      value={hotmartConfig.affiliatePlan?.title || DEFAULT_AFFILIATE_PLAN.title}
+                      onChange={(e) => handleAffiliatePlanChange('title', e.target.value)}
+                      placeholder="Ex: Licenciamento & Credenciamento de Representante Oficial TrackerMD"
+                      className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Descrição Promocional
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={hotmartConfig.affiliatePlan?.description || DEFAULT_AFFILIATE_PLAN.description}
+                      onChange={(e) => handleAffiliatePlanChange('description', e.target.value)}
+                      placeholder="Descreva o que o representante recebe ao se credenciar..."
+                      className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 bg-white/80 p-5 rounded-2xl border border-emerald-100">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Valor da Licença (R$)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-700">R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={hotmartConfig.affiliatePlan?.price || 497}
+                        onChange={(e) => handleAffiliatePlanChange('price', Number(e.target.value))}
+                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-base font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Periodicidade
+                    </label>
+                    <select
+                      value={hotmartConfig.affiliatePlan?.period || 'anual'}
+                      onChange={(e) => handleAffiliatePlanChange('period', e.target.value as any)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="anual">Anual (Renovação a cada 12 meses)</option>
+                      <option value="mensal">Mensal (Assinatura Recorrente)</option>
+                      <option value="unico">Taxa Única (Vitalícia)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                      Link de Checkout Hotmart (Plano Afiliado) *
+                    </label>
+                    <input
+                      type="url"
+                      value={hotmartConfig.affiliatePlan?.checkoutUrl || ''}
+                      onChange={(e) => handleAffiliatePlanChange('checkoutUrl', e.target.value)}
+                      placeholder="https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Link do checkout Hotmart para o afiliado pagar a taxa.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Affiliate Features List */}
+              <div className="pt-4 border-t border-emerald-100/80 space-y-3">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Benefícios Inclusos no Pacote de Credenciamento
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(hotmartConfig.affiliatePlan?.features || DEFAULT_AFFILIATE_PLAN.features || []).map((feat, idx) => (
+                    <span 
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-xs font-semibold text-slate-700 shadow-2xs"
+                    >
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>{feat}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAffiliatePlanFeature(idx)}
+                        className="text-slate-400 hover:text-rose-500 ml-1"
+                        title="Remover benefício"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 max-w-lg mt-2">
+                  <input
+                    type="text"
+                    value={newAffiliatePlanFeature}
+                    onChange={(e) => setNewAffiliatePlanFeature(e.target.value)}
+                    placeholder="Adicionar benefício (ex: Suporte prioritário via WhatsApp com Rogério Belmiro)..."
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddAffiliatePlanFeature();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddAffiliatePlanFeature}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0"
                   >
                     + Adicionar
                   </button>
@@ -2443,6 +2658,51 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold"
                     >
                       <span>Contratar Treinamento</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Credenciamento de Afiliados / Representantes */}
+            {hotmartConfig.affiliatePlan?.enabled !== false && (
+              <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border border-emerald-800/60 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-2 max-w-xl text-center md:text-left">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Programa Oficial de Representantes</span>
+                  </div>
+                  <h4 className="text-lg font-black text-white">
+                    {hotmartConfig.affiliatePlan?.title || DEFAULT_AFFILIATE_PLAN.title}
+                  </h4>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {hotmartConfig.affiliatePlan?.description || DEFAULT_AFFILIATE_PLAN.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {(hotmartConfig.affiliatePlan?.features || DEFAULT_AFFILIATE_PLAN.features).slice(0, 3).map((feat, fi) => (
+                      <span key={fi} className="text-[11px] bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-400" /> {feat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center md:text-right shrink-0 space-y-2">
+                  <div className="text-xs text-slate-400 font-semibold">
+                    Taxa {hotmartConfig.affiliatePlan?.period === 'unico' ? 'Única' : hotmartConfig.affiliatePlan?.period === 'anual' ? 'Anual' : 'Mensal'} de Adesão
+                  </div>
+                  <div className="text-2xl font-black text-emerald-300">
+                    {formatCurrency(hotmartConfig.affiliatePlan?.price || 497)}
+                  </div>
+                  {hotmartConfig.affiliatePlan?.checkoutUrl && (
+                    <a
+                      href={hotmartConfig.affiliatePlan.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold"
+                    >
+                      <span>Quero ser Representante</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
                     </a>
                   )}

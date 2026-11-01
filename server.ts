@@ -318,13 +318,32 @@ const defaultSetupTraining = {
     ]
 };
 
+const defaultAffiliatePlan = {
+    enabled: true,
+    title: 'Credenciamento & Licenciamento de Representante Oficial TrackerMD',
+    price: 497,
+    period: 'anual',
+    description: 'Taxa de adesão e credenciamento oficial para representantes autorizados. Inclui link de comissões, habilitação no mapa nacional, kit de vendas e treinamento técnico ao vivo.',
+    checkoutUrl: 'https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO',
+    features: [
+        'Comissão de 20% recorrente mensal sobre todas as mensalidades das empresas indicadas',
+        'Comissão de 50% sobre todas as taxas de implantação e treinamento VIP vendidas',
+        'Link de indicação exclusivo com rastreamento permanente de cookies e sessões',
+        'Destaque com pino oficial e WhatsApp no Mapa Interativo de Representantes do Brasil',
+        'Treinamento técnico intensivo ao vivo de 2h com a coordenação nacional',
+        'Kit completo de materiais, apresentações comerciais e roteiros de demonstração',
+        'Acesso ao painel exclusivo de acompanhamento de empresas ativas e repasses'
+    ]
+};
+
 let inMemoryHotmartConfig: any = {
     hottok: '',
     checkoutUrl: '',
     productId: '',
     trialDays: 1,
     plans: defaultHotmartPlans,
-    setupTraining: defaultSetupTraining
+    setupTraining: defaultSetupTraining,
+    affiliatePlan: defaultAffiliatePlan
 };
 
 const initialAffiliates = [
@@ -698,7 +717,8 @@ try {
                 ...inMemoryHotmartConfig,
                 ...parsed,
                 plans: Array.isArray(parsed.plans) && parsed.plans.length > 0 ? parsed.plans : defaultHotmartPlans,
-                setupTraining: parsed.setupTraining || defaultSetupTraining
+                setupTraining: parsed.setupTraining || defaultSetupTraining,
+                affiliatePlan: parsed.affiliatePlan || defaultAffiliatePlan
             };
         }
     }
@@ -13777,7 +13797,8 @@ app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             superadminEmail: s.superadmin_email || 'rogerio@mudadigital.com.br',
             webhookUrl,
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
-            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13791,7 +13812,7 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
-        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining } = req.body;
+        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining, affiliatePlan } = req.body;
         
         inMemoryHotmartConfig = {
             ...inMemoryHotmartConfig,
@@ -13800,7 +13821,8 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             productId: productId !== undefined ? productId : inMemoryHotmartConfig.productId,
             trialDays: trialDays !== undefined ? Number(trialDays) : inMemoryHotmartConfig.trialDays,
             plans: Array.isArray(plans) && plans.length > 0 ? plans : inMemoryHotmartConfig.plans,
-            setupTraining: setupTraining !== undefined ? setupTraining : inMemoryHotmartConfig.setupTraining
+            setupTraining: setupTraining !== undefined ? setupTraining : inMemoryHotmartConfig.setupTraining,
+            affiliatePlan: affiliatePlan !== undefined ? affiliatePlan : inMemoryHotmartConfig.affiliatePlan
         };
         saveLocalHotmartConfigStore();
 
@@ -13860,15 +13882,21 @@ app.get('/api/subscription/checkout-url', async (req: Request, res: Response) =>
         res.json({
             checkoutUrl,
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
-            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
         });
     } catch {
         res.json({
             checkoutUrl: inMemoryHotmartConfig.checkoutUrl || 'https://pay.hotmart.com',
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
-            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
         });
     }
+});
+
+app.get('/api/public/affiliate-plan', (req: Request, res: Response) => {
+    res.json(inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan);
 });
 
 // ============================================================================

@@ -20,10 +20,13 @@ import {
   Check,
   MessageCircle,
   Phone,
-  ArrowRight
+  ArrowRight,
+  X,
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
-import { User, Company, Affiliate } from '../types';
-import { createCompany, createUser, loginUser, registerPublicAffiliate } from '../services/api';
+import { User, Company, Affiliate, AffiliatePlanConfig } from '../types';
+import { createCompany, createUser, loginUser, registerPublicAffiliate, fetchAffiliatePlan } from '../services/api';
 
 interface LoginScreenProps {
   companies: Company[];
@@ -62,6 +65,23 @@ const BRAZIL_STATES = [
   { uf: 'SE', name: 'Sergipe' },
   { uf: 'TO', name: 'Tocantins' }
 ];
+
+const DEFAULT_AFFILIATE_PLAN: AffiliatePlanConfig = {
+  enabled: true,
+  title: 'Credenciamento & Formação de Representante Oficial',
+  price: 497,
+  period: 'anual',
+  description: 'Taxa de habilitação oficial de representante, acesso à plataforma para demonstrações, material de vendas e capacitação técnica.',
+  checkoutUrl: 'https://pay.hotmart.com/CREDENCIAMENTO_AFILIADO',
+  features: [
+    '50% de comissão imediata sobre taxas de treinamento e implantação',
+    '20% de comissão recorrente mensal em todas as assinaturas ativas',
+    'Acesso ao painel TrackerMD para demonstrações a clientes',
+    'Kit oficial de vendas, scripts de abordagem e criativos',
+    'Treinamento ao vivo com coordenação técnica',
+    'Certificação oficial de representante regional'
+  ]
+};
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   companies,
@@ -105,6 +125,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [affPixKey, setAffPixKey] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
 
+  // Affiliate Plan & Payment Modal State
+  const [affiliatePlan, setAffiliatePlan] = useState<AffiliatePlanConfig>(DEFAULT_AFFILIATE_PLAN);
+  const [showAffiliatePaymentModal, setShowAffiliatePaymentModal] = useState(false);
+
   // Success State for Affiliate Registration
   const [affiliateSuccess, setAffiliateSuccess] = useState<{
     affiliate: Affiliate;
@@ -135,11 +159,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setScreenMode(mode);
     setAuthError('');
     setAffiliateSuccess(null);
+    setShowAffiliatePaymentModal(false);
     generateCaptcha();
   };
 
   useEffect(() => {
     generateCaptcha();
+    // Carregar plano de credenciamento de afiliados
+    fetchAffiliatePlan()
+      .then((plan) => {
+        if (plan) setAffiliatePlan(plan);
+      })
+      .catch(() => {});
+
     try {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get('ref') || params.get('affiliate') || params.get('rep');
@@ -291,6 +323,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         affiliate: res.affiliate,
         referralLink: res.referralLink
       });
+      // Abre automaticamente o popup de pagamento para liberar o acesso ao sistema
+      setShowAffiliatePaymentModal(true);
     } catch (err: any) {
       setAuthError(err.message || 'Erro ao realizar cadastro de afiliado');
       generateCaptcha();
@@ -730,11 +764,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       </p>
                     </div>
 
-                    {/* Next Step: Training */}
+                    {/* Next Step: Payment & Training */}
+                    <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 text-left space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-emerald-950 font-black text-xs uppercase">
+                          <CreditCard className="w-4 h-4 text-emerald-600" />
+                          <span>Credenciamento Oficial do Representante</span>
+                        </div>
+                        <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-200">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(affiliatePlan.price)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        Para ativar oficialmente sua franquia regional, receber o kit de vendas e agendar a capacitação técnica para treinar empresas, conclua seu credenciamento na Hotmart.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowAffiliatePaymentModal(true)}
+                        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Efetuar Pagamento & Liberar Acesso ao Sistema 🚀</span>
+                      </button>
+                    </div>
+
+                    {/* Support & Training Box */}
                     <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-left space-y-2">
                       <div className="flex items-center gap-2 text-indigo-900 font-black text-xs uppercase">
                         <GraduationCap className="w-4 h-4 text-indigo-600" />
-                        <span>Próximo Passo: Agendamento do Treinamento VIP</span>
+                        <span>Agendamento do Treinamento VIP</span>
                       </div>
                       <p className="text-xs text-slate-700 leading-relaxed">
                         Nossa equipe de coordenação entrará em contato pelo seu WhatsApp cadastrado ({affiliateSuccess.affiliate.phone}) para agendar sua sessão de capacitação online.
@@ -745,9 +803,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full mt-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md transition"
+                        className="w-full mt-2 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition"
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <MessageCircle className="w-4 h-4 text-emerald-400" />
                         <span>Falar com Coordenador no WhatsApp Agora</span>
                       </a>
                     </div>
@@ -956,6 +1014,114 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </div>
 
       </div>
+
+      {/* ========================================================= */}
+      {/* POPUP: PAGAMENTO DO CREDENCIAMENTO & LIBERAÇÃO DE ACESSO */}
+      {/* ========================================================= */}
+      {showAffiliatePaymentModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 text-white relative shadow-2xl animate-in zoom-in-95 duration-200 my-8">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowAffiliatePaymentModal(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 transition"
+              title="Fechar e ver link de indicação"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center space-y-2 pt-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
+                <GraduationCap className="w-4 h-4" />
+                <span>Credenciamento Oficial de Representante</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white">
+                {affiliateSuccess?.affiliate ? `Parabéns, ${affiliateSuccess.affiliate.name}!` : 'Ative seu Credenciamento Oficial!'}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+                Seu cadastro foi pré-aprovado com sucesso! Para liberar seu acesso ao sistema, painel de demonstrações e agendar seu treinamento VIP, conclua o pagamento da taxa de habilitação.
+              </p>
+            </div>
+
+            {/* Plan Card */}
+            <div className="rounded-2xl p-5 bg-gradient-to-b from-slate-800/90 to-slate-900/90 border-2 border-emerald-500/50 shadow-xl shadow-emerald-500/10 space-y-4">
+              <div className="flex items-start justify-between gap-3 border-b border-slate-700/80 pb-3">
+                <div>
+                  <h4 className="text-base font-black text-white">{affiliatePlan.title}</h4>
+                  <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">{affiliatePlan.description}</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider shrink-0 border border-emerald-500/30">
+                  {affiliatePlan.period === 'unico' ? 'Taxa Única' : affiliatePlan.period === 'anual' ? 'Plano Anual' : 'Plano Mensal'}
+                </span>
+              </div>
+
+              <div className="flex items-baseline justify-between pt-1">
+                <span className="text-xs text-slate-400 font-semibold">Investimento:</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-emerald-400">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(affiliatePlan.price)}
+                  </span>
+                  <span className="text-xs text-slate-400 font-semibold">
+                    {affiliatePlan.period === 'unico' ? '/único' : affiliatePlan.period === 'anual' ? '/ano' : '/mês'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Benefits list */}
+              <div className="border-t border-slate-800 pt-3 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Vantagens & Benefícios Inclusos:
+                </span>
+                <ul className="space-y-2 text-xs text-slate-200">
+                  {(affiliatePlan.features || []).map((feat, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Buttons & Actions */}
+            <div className="space-y-2.5 pt-1">
+              <a
+                href={affiliatePlan.checkoutUrl || 'https://pay.hotmart.com'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Efetuar Pagamento na Hotmart & Liberar Acesso 🚀</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+
+              <a
+                href={`https://wa.me/5565981150758?text=${encodeURIComponent(
+                  `Olá Rogério! Acabei de me cadastrar como representante no TrackerMD (${affiliateSuccess?.affiliate?.name || affName} - ${affiliateSuccess?.affiliate?.city || affCity}/${affiliateSuccess?.affiliate?.state || affState}) e gostaria de tirar dúvidas sobre o credenciamento e pagamento do plano de afiliados!`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span>Dúvidas? Falar com Rogério Belmiro (WhatsApp)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setShowAffiliatePaymentModal(false)}
+                className="w-full text-center text-xs text-slate-400 hover:text-white transition pt-1"
+              >
+                Continuar e ver meu link de indicação gerado
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
