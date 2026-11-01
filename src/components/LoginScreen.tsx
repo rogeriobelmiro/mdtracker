@@ -125,6 +125,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setCaptchaError(false);
   };
 
+  const switchMode = (mode: 'login' | 'register_company' | 'register_affiliate') => {
+    setScreenMode(mode);
+    setAuthError('');
+    setAffiliateSuccess(null);
+    generateCaptcha();
+  };
+
   useEffect(() => {
     generateCaptcha();
     try {
@@ -190,6 +197,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleRegisterCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setCaptchaError(false);
+
+    // Validate Math Captcha
+    const expectedSum = num1 + num2;
+    if (parseInt(captchaInput.trim(), 10) !== expectedSum) {
+      setCaptchaError(true);
+      setAuthError('Desafio de segurança incorreto. Digite o resultado correto da soma.');
+      generateCaptcha();
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -220,6 +238,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       onLoginSuccess(newUser, newCompany);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Erro ao realizar cadastro');
+      generateCaptcha();
     } finally {
       setIsSubmitting(false);
     }
@@ -228,9 +247,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleRegisterAffiliateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setCaptchaError(false);
 
-    if (!affName.trim() || !affEmail.trim() || !affPhone.trim() || !affPixKey.trim()) {
-      setAuthError('Por favor, preencha nome, e-mail, telefone/WhatsApp e chave PIX.');
+    if (!affName.trim() || !affEmail.trim() || !affPhone.trim()) {
+      setAuthError('Por favor, preencha seu nome completo, e-mail e telefone/WhatsApp.');
+      return;
+    }
+
+    // Validate Math Captcha
+    const expectedSum = num1 + num2;
+    if (parseInt(captchaInput.trim(), 10) !== expectedSum) {
+      setCaptchaError(true);
+      setAuthError('Desafio de segurança incorreto. Digite o resultado correto da soma.');
+      generateCaptcha();
       return;
     }
 
@@ -247,8 +276,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         complement: affComplement.trim(),
         city: affCity.trim(),
         state: affState.toUpperCase().trim(),
-        pixKeyType: affPixKeyType,
-        pixKey: affPixKey.trim(),
+        pixKeyType: affPixKeyType || 'cpf',
+        pixKey: affPixKey.trim() || '',
         notes: 'Cadastro com endereço completo para capacitação e treinamento oficial de representantes.'
       });
 
@@ -258,6 +287,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       });
     } catch (err: any) {
       setAuthError(err.message || 'Erro ao realizar cadastro de afiliado');
+      generateCaptcha();
     } finally {
       setIsSubmitting(false);
     }
@@ -390,7 +420,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   {screenMode !== 'login' && (
                     <button
                       type="button"
-                      onClick={() => { setScreenMode('login'); setAuthError(''); setAffiliateSuccess(null); }}
+                      onClick={() => switchMode('login')}
                       className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg transition"
                     >
                       Entrar
@@ -403,7 +433,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
                 <button
                   type="button"
-                  onClick={() => { setScreenMode('login'); setAuthError(''); setAffiliateSuccess(null); }}
+                  onClick={() => switchMode('login')}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
                     screenMode === 'login' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -412,7 +442,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setScreenMode('register_company'); setAuthError(''); setAffiliateSuccess(null); }}
+                  onClick={() => switchMode('register_company')}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
                     screenMode === 'register_company' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -421,7 +451,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setScreenMode('register_affiliate'); setAuthError(''); setAffiliateSuccess(null); }}
+                  onClick={() => switchMode('register_affiliate')}
                   className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 ${
                     screenMode === 'register_affiliate' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -600,6 +630,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       onChange={(e) => setRegUserPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-white border border-slate-300 rounded-lg px-3.5 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Math Captcha Challenge */}
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Desafio de Segurança (Captcha de Soma)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={generateCaptcha}
+                      className="text-[10px] text-blue-600 hover:text-blue-700 flex items-center gap-1 font-bold"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Trocar
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-slate-900 text-white font-mono font-black text-sm px-3 py-1.5 rounded-lg select-none tracking-wider">
+                      {num1} + {num2} = ?
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value)}
+                      placeholder="Resultado"
+                      className={`flex-1 bg-white border rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none ${
+                        captchaError ? 'border-red-500 ring-2 ring-red-200' : 'border-slate-300 focus:border-blue-500'
+                      }`}
                     />
                   </div>
                 </div>
@@ -822,39 +885,51 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       </div>
                     </div>
 
-                    {/* Dados PIX para Repasse */}
-                    <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 space-y-3">
-                      <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Dados Financeiros para Repasse PIX
-                      </h3>
+                    {/* Chave PIX cadastrada dentro do sistema */}
+                    <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/60 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                          Chave PIX para Recebimento de Comissões
+                        </h4>
+                        <p className="text-[11px] text-emerald-800 leading-relaxed">
+                          Por segurança, a sua chave PIX de repasse das comissões mensais (20%) e de treinamento (50%) será configurada diretamente dentro do seu painel interno do sistema após o primeiro acesso.
+                        </p>
+                      </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Tipo de Chave *</label>
-                          <select
-                            value={affPixKeyType}
-                            onChange={(e) => setAffPixKeyType(e.target.value as any)}
-                            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none"
-                          >
-                            <option value="cpf">CPF</option>
-                            <option value="cnpj">CNPJ</option>
-                            <option value="email">E-mail</option>
-                            <option value="phone">Celular</option>
-                            <option value="random">Aleatória</option>
-                          </select>
+                    {/* Math Captcha Challenge */}
+                    <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          Desafio de Segurança (Captcha de Soma)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={generateCaptcha}
+                          className="text-[10px] text-emerald-700 hover:text-emerald-800 flex items-center gap-1 font-bold"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Trocar
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="bg-slate-900 text-white font-mono font-black text-sm px-3 py-1.5 rounded-lg select-none tracking-wider">
+                          {num1} + {num2} = ?
                         </div>
-
-                        <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Chave PIX *</label>
-                          <input
-                            type="text"
-                            required
-                            value={affPixKey}
-                            onChange={(e) => setAffPixKey(e.target.value.trim())}
-                            placeholder="Informe sua chave PIX para repasses"
-                            className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono font-bold focus:border-emerald-500 focus:outline-none"
-                          />
-                        </div>
+                        <input
+                          type="number"
+                          required
+                          value={captchaInput}
+                          onChange={(e) => setCaptchaInput(e.target.value)}
+                          placeholder="Resultado"
+                          className={`flex-1 bg-white border rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none ${
+                            captchaError ? 'border-red-500 ring-2 ring-red-200' : 'border-slate-300 focus:border-emerald-500'
+                          }`}
+                        />
                       </div>
                     </div>
 

@@ -13672,8 +13672,8 @@ app.post('/api/public/affiliates/register', async (req: Request, res: Response) 
         const phone = (req.body.phone || '').trim();
         const pixKey = (req.body.pixKey || '').trim();
 
-        if (!name || !email || !phone || !pixKey) {
-            return res.status(400).json({ error: 'Por favor, preencha nome, e-mail, telefone e chave PIX.' });
+        if (!name || !email || !phone) {
+            return res.status(400).json({ error: 'Por favor, preencha nome, e-mail e telefone/WhatsApp.' });
         }
 
         // Check if affiliate with this email already exists
