@@ -331,6 +331,15 @@ export interface AffiliatePlanConfig {
   features: string[];
 }
 
+export interface AffiliateGoalsConfig {
+  enabled: boolean;
+  defaultSalesTargetMonthly: number;
+  defaultTrainingsTargetMonthly: number;
+  bonusRewardAmount: number;
+  bonusRewardDescription: string;
+  salesCommissionBonusPct: number;
+}
+
 export interface HotmartConfig {
   hottok: string;
   checkoutUrl: string;
@@ -340,6 +349,7 @@ export interface HotmartConfig {
   plans?: HotmartPlanOption[];
   setupTraining?: SetupTrainingConfig;
   affiliatePlan?: AffiliatePlanConfig;
+  affiliateGoals?: AffiliateGoalsConfig;
 }
 
 export interface Affiliate {

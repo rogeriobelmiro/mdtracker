@@ -42,7 +42,7 @@ import {
   Target,
   Trophy
 } from 'lucide-react';
-import { User, Company, Affiliate, ProductRelease, SupportTicket, TrainingVideo } from '../types';
+import { User, Company, Affiliate, ProductRelease, SupportTicket, TrainingVideo, AffiliateGoalsConfig } from '../types';
 import { 
   fetchAffiliatePortalData, 
   updateAffiliatePixKey, 
@@ -167,6 +167,7 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
   const [companies, setCompanies] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expired'>('all');
+  const [goalsConfig, setGoalsConfig] = useState<AffiliateGoalsConfig | null>(null);
 
   // Copy Link State
   const [copiedLink, setCopiedLink] = useState(false);
@@ -215,6 +216,9 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
       }
       if (data.stats) {
         setStats(data.stats);
+      }
+      if (data.goalsConfig) {
+        setGoalsConfig(data.goalsConfig);
       }
       if (Array.isArray(data.companies)) {
         setCompanies(data.companies);
@@ -567,81 +571,139 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
       {activeTab === 'clients' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           
-          {/* Metas Comerciais do Afiliado */}
+          {/* Metas Comerciais do Afiliado & Premiações */}
           {(() => {
-            const targetSales = affiliate?.targetSalesMonthly || (stats as any)?.targetSales || 10;
-            const targetTrainings = affiliate?.targetTrainingsMonthly || (stats as any)?.targetTrainings || 3;
+            const targetSales = affiliate?.targetSalesMonthly || goalsConfig?.defaultSalesTargetMonthly || (stats as any)?.targetSales || 10;
+            const targetTrainings = affiliate?.targetTrainingsMonthly || goalsConfig?.defaultTrainingsTargetMonthly || (stats as any)?.targetTrainings || 3;
             const completedTrainingsCount = companies.filter(c => c.trainingCompleted).length;
             const salesPct = Math.min(100, Math.round((stats.activeCompanies / targetSales) * 100));
             const trainingsPct = Math.min(100, Math.round((completedTrainingsCount / targetTrainings) * 100));
+            const bonusRewardAmount = goalsConfig?.bonusRewardAmount ?? 1000;
+            const commissionBonusPct = goalsConfig?.salesCommissionBonusPct ?? 5;
+            const bothAchieved = stats.activeCompanies >= targetSales && completedTrainingsCount >= targetTrainings;
 
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Meta de Vendas */}
-                <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border border-emerald-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <Target className="w-4 h-4" />
+              <div className="space-y-4">
+                {/* Banner de Bonificação e Gamificação */}
+                {(bonusRewardAmount > 0 || (goalsConfig?.bonusRewardDescription)) && (
+                  <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                    bothAchieved 
+                      ? 'bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 border-emerald-500/50 shadow-lg text-emerald-100'
+                      : 'bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-800/60 text-white shadow-sm'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                          bothAchieved 
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-500/30 animate-bounce' 
+                            : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                        }`}>
+                          <Trophy className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 uppercase tracking-wider">
+                              {bothAchieved ? '🏆 Metas Conquistadas!' : '🎯 Super Bônus no PIX'}
+                            </span>
+                            {bonusRewardAmount > 0 && (
+                              <span className="text-sm font-black text-amber-300">
+                                +R$ {bonusRewardAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            )}
+                            {commissionBonusPct > 0 && (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/30 border border-indigo-400/30 text-indigo-200">
+                                +{commissionBonusPct}% de comissão extra
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-200 mt-1 font-medium">
+                            {bothAchieved 
+                              ? 'Sensacional! Você atingiu as metas de assinaturas ativas e treinamentos deste mês! Seu Super Bônus será creditado diretamente na sua chave PIX.'
+                              : (goalsConfig?.bonusRewardDescription || `Bata a meta de ${targetSales} assinaturas ativas e ${targetTrainings} treinamentos VIP no mês para receber bonificação extra via PIX!`)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">Meta de Vendas do Mês</span>
-                        <h4 className="text-sm font-black text-white">Assinaturas Ativas</h4>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <span className={`text-xs font-black px-3 py-1.5 rounded-xl border ${
+                          bothAchieved
+                            ? 'bg-emerald-500 text-white border-emerald-400 shadow-xs'
+                            : 'bg-white/10 text-slate-300 border-white/10'
+                        }`}>
+                          {bothAchieved ? 'Bônus Liberado ✅' : 'Em Andamento ⏳'}
+                        </span>
                       </div>
                     </div>
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
-                      {salesPct}% Atingido
-                    </span>
                   </div>
+                )}
 
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="text-slate-300">
-                      Realizado: <strong className="text-white text-base">{stats.activeCompanies}</strong> de {targetSales} empresas
-                    </span>
-                    <span className="text-slate-400 text-[11px]">
-                      {stats.activeCompanies >= targetSales ? '🎉 Meta Superada!' : `Faltam ${targetSales - stats.activeCompanies} empresas`}
-                    </span>
-                  </div>
-
-                  <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
-                    <div 
-                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${salesPct}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Meta de Treinamentos */}
-                <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 border border-indigo-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                        <Trophy className="w-4 h-4" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Meta de Vendas */}
+                  <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border border-emerald-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                          <Target className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">Meta de Vendas do Mês</span>
+                          <h4 className="text-sm font-black text-white">Assinaturas Ativas</h4>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider block">Meta de Treinamentos VIP</span>
-                        <h4 className="text-sm font-black text-white">Implantação & Setup</h4>
-                      </div>
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
+                        {salesPct}% Atingido
+                      </span>
                     </div>
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">
-                      {trainingsPct}% Atingido
-                    </span>
+
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-slate-300">
+                        Realizado: <strong className="text-white text-base">{stats.activeCompanies}</strong> de {targetSales} empresas
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        {stats.activeCompanies >= targetSales ? '🎉 Meta Superada!' : `Faltam ${targetSales - stats.activeCompanies} empresas`}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
+                      <div 
+                        className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-500"
+                        style={{ width: `${salesPct}%` }}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex items-baseline justify-between text-xs">
-                    <span className="text-slate-300">
-                      Realizado: <strong className="text-white text-base">{completedTrainingsCount}</strong> de {targetTrainings} treinamentos
-                    </span>
-                    <span className="text-slate-400 text-[11px]">
-                      {completedTrainingsCount >= targetTrainings ? '🏆 Meta Superada!' : `Faltam ${targetTrainings - completedTrainingsCount} treinamentos`}
-                    </span>
-                  </div>
+                  {/* Meta de Treinamentos */}
+                  <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 border border-indigo-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                          <Trophy className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider block">Meta de Treinamentos VIP</span>
+                          <h4 className="text-sm font-black text-white">Implantação & Setup</h4>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">
+                        {trainingsPct}% Atingido
+                      </span>
+                    </div>
 
-                  <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
-                    <div 
-                      className="bg-gradient-to-r from-indigo-500 to-purple-400 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${trainingsPct}%` }}
-                    />
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-slate-300">
+                        Realizado: <strong className="text-white text-base">{completedTrainingsCount}</strong> de {targetTrainings} treinamentos
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        {completedTrainingsCount >= targetTrainings ? '🏆 Meta Superada!' : `Faltam ${targetTrainings - completedTrainingsCount} treinamentos`}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
+                      <div 
+                        className="bg-gradient-to-r from-indigo-500 to-purple-400 h-2.5 rounded-full transition-all duration-500"
+                        style={{ width: `${trainingsPct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

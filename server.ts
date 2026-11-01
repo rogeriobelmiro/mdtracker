@@ -564,6 +564,15 @@ const defaultAffiliatePlan = {
     ]
 };
 
+const defaultAffiliateGoals = {
+    enabled: true,
+    defaultSalesTargetMonthly: 10,
+    defaultTrainingsTargetMonthly: 3,
+    bonusRewardAmount: 1000,
+    bonusRewardDescription: 'Super Bônus de R$ 1.000,00 no PIX ao atingir as metas de 10 assinaturas ativas e 3 treinamentos VIP no mês!',
+    salesCommissionBonusPct: 5
+};
+
 let inMemoryHotmartConfig: any = {
     hottok: '',
     checkoutUrl: '',
@@ -571,7 +580,8 @@ let inMemoryHotmartConfig: any = {
     trialDays: 1,
     plans: defaultHotmartPlans,
     setupTraining: defaultSetupTraining,
-    affiliatePlan: defaultAffiliatePlan
+    affiliatePlan: defaultAffiliatePlan,
+    affiliateGoals: defaultAffiliateGoals
 };
 
 const initialAffiliates = [
@@ -950,7 +960,8 @@ try {
                 ...parsed,
                 plans: Array.isArray(parsed.plans) && parsed.plans.length > 0 ? parsed.plans : defaultHotmartPlans,
                 setupTraining: parsed.setupTraining || defaultSetupTraining,
-                affiliatePlan: parsed.affiliatePlan || defaultAffiliatePlan
+                affiliatePlan: parsed.affiliatePlan || defaultAffiliatePlan,
+                affiliateGoals: parsed.affiliateGoals || defaultAffiliateGoals
             };
         }
     }
@@ -14093,7 +14104,8 @@ app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             webhookUrl,
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
             setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
-            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan,
+            affiliateGoals: inMemoryHotmartConfig.affiliateGoals || defaultAffiliateGoals
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -14107,7 +14119,7 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
-        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining, affiliatePlan } = req.body;
+        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining, affiliatePlan, affiliateGoals } = req.body;
         
         inMemoryHotmartConfig = {
             ...inMemoryHotmartConfig,
@@ -14117,7 +14129,8 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             trialDays: trialDays !== undefined ? Number(trialDays) : inMemoryHotmartConfig.trialDays,
             plans: Array.isArray(plans) && plans.length > 0 ? plans : inMemoryHotmartConfig.plans,
             setupTraining: setupTraining !== undefined ? setupTraining : inMemoryHotmartConfig.setupTraining,
-            affiliatePlan: affiliatePlan !== undefined ? affiliatePlan : inMemoryHotmartConfig.affiliatePlan
+            affiliatePlan: affiliatePlan !== undefined ? affiliatePlan : inMemoryHotmartConfig.affiliatePlan,
+            affiliateGoals: affiliateGoals !== undefined ? affiliateGoals : inMemoryHotmartConfig.affiliateGoals
         };
         saveLocalHotmartConfigStore();
 
@@ -14178,14 +14191,16 @@ app.get('/api/subscription/checkout-url', async (req: Request, res: Response) =>
             checkoutUrl,
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
             setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
-            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan,
+            affiliateGoals: inMemoryHotmartConfig.affiliateGoals || defaultAffiliateGoals
         });
     } catch {
         res.json({
             checkoutUrl: inMemoryHotmartConfig.checkoutUrl || 'https://pay.hotmart.com',
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
             setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
-            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan
+            affiliatePlan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan,
+            affiliateGoals: inMemoryHotmartConfig.affiliateGoals || defaultAffiliateGoals
         });
     }
 });
@@ -14265,6 +14280,8 @@ app.post('/api/public/affiliates/register', async (req: Request, res: Response) 
             referralCode,
             status: 'active',
             trainingStatus: 'pending',
+            targetSalesMonthly: inMemoryHotmartConfig.affiliateGoals?.defaultSalesTargetMonthly || 10,
+            targetTrainingsMonthly: inMemoryHotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly || 3,
             notes: (req.body.notes || 'Autocadastro pelo site / tela de login. Aguardando treinamento oficial.').trim(),
             createdAt: new Date().toISOString()
         };
@@ -14391,8 +14408,8 @@ app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
             referralCode,
             status: req.body.status || 'active',
             trainingStatus: req.body.trainingStatus || 'pending',
-            targetSalesMonthly: req.body.targetSalesMonthly !== undefined ? Number(req.body.targetSalesMonthly) : 10,
-            targetTrainingsMonthly: req.body.targetTrainingsMonthly !== undefined ? Number(req.body.targetTrainingsMonthly) : 3,
+            targetSalesMonthly: req.body.targetSalesMonthly !== undefined ? Number(req.body.targetSalesMonthly) : (inMemoryHotmartConfig.affiliateGoals?.defaultSalesTargetMonthly || 10),
+            targetTrainingsMonthly: req.body.targetTrainingsMonthly !== undefined ? Number(req.body.targetTrainingsMonthly) : (inMemoryHotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly || 3),
             notes: (req.body.notes || '').trim(),
             createdAt: new Date().toISOString()
         };
@@ -14675,8 +14692,9 @@ app.get('/api/affiliate/my-portal', async (req: Request, res: Response) => {
             .filter(c => c.trainingCompleted)
             .reduce((acc, c) => acc + c.estimatedSetupCommission, 0);
 
-        const targetSales = affiliate?.targetSalesMonthly !== undefined ? Number(affiliate.targetSalesMonthly) : 10;
-        const targetTrainings = affiliate?.targetTrainingsMonthly !== undefined ? Number(affiliate.targetTrainingsMonthly) : 3;
+        const goalsConfig = inMemoryHotmartConfig.affiliateGoals || defaultAffiliateGoals;
+        const targetSales = affiliate?.targetSalesMonthly !== undefined ? Number(affiliate.targetSalesMonthly) : (goalsConfig.defaultSalesTargetMonthly || 10);
+        const targetTrainings = affiliate?.targetTrainingsMonthly !== undefined ? Number(affiliate.targetTrainingsMonthly) : (goalsConfig.defaultTrainingsTargetMonthly || 3);
         const completedTrainings = enrichedCompanies.filter(c => c.trainingCompleted).length;
 
         res.json({
@@ -14686,6 +14704,7 @@ app.get('/api/affiliate/my-portal', async (req: Request, res: Response) => {
                 targetSalesMonthly: targetSales,
                 targetTrainingsMonthly: targetTrainings
             },
+            goalsConfig,
             allAffiliates: userEmail === 'rogerio@mudadigital.com.br' ? inMemoryAffiliates : undefined,
             referralLink: `https://trackermd.mudadigital.com.br/?ref=${affiliate.referralCode}`,
             stats: {

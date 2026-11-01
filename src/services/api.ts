@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket, SystemActivityLog, TrainingVideo } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, AffiliateGoalsConfig, ProductRelease, SupportTicket, SystemActivityLog, TrainingVideo } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1775,6 +1775,7 @@ export async function fetchAffiliatePortalData(userEmail: string, affiliateId?: 
   affiliate: Affiliate;
   allAffiliates?: Affiliate[];
   referralLink: string;
+  goalsConfig?: AffiliateGoalsConfig;
   stats: {
     totalCompanies: number;
     activeCompanies: number;

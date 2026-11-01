@@ -46,7 +46,7 @@ import {
   Video,
   Play
 } from 'lucide-react';
-import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate, ProductRelease, TrainingVideo } from '../types';
+import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, AffiliateGoalsConfig, Affiliate, ProductRelease, TrainingVideo } from '../types';
 import { 
   fetchAdminCompanies, 
   updateCompanySubscription, 
@@ -164,6 +164,15 @@ const DEFAULT_AFFILIATE_PLAN: AffiliatePlanConfig = {
   ]
 };
 
+const DEFAULT_AFFILIATE_GOALS: AffiliateGoalsConfig = {
+  enabled: true,
+  defaultSalesTargetMonthly: 10,
+  defaultTrainingsTargetMonthly: 3,
+  bonusRewardAmount: 1000,
+  bonusRewardDescription: 'Super Bônus de R$ 1.000,00 no PIX ao bater as metas de 10 assinaturas ativas e 3 treinamentos VIP no mês!',
+  salesCommissionBonusPct: 5
+};
+
 const BRAZIL_STATES = [
   { uf: 'AC', name: 'Acre' },
   { uf: 'AL', name: 'Alagoas' },
@@ -275,7 +284,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     webhookUrl: '',
     plans: DEFAULT_PLANS,
     setupTraining: DEFAULT_SETUP_TRAINING,
-    affiliatePlan: DEFAULT_AFFILIATE_PLAN
+    affiliatePlan: DEFAULT_AFFILIATE_PLAN,
+    affiliateGoals: DEFAULT_AFFILIATE_GOALS
   });
   const [savingConfig, setSavingConfig] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -338,7 +348,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
         ...config,
         plans: Array.isArray(config.plans) && config.plans.length > 0 ? config.plans : DEFAULT_PLANS,
         setupTraining: config.setupTraining || DEFAULT_SETUP_TRAINING,
-        affiliatePlan: config.affiliatePlan || DEFAULT_AFFILIATE_PLAN
+        affiliatePlan: config.affiliatePlan || DEFAULT_AFFILIATE_PLAN,
+        affiliateGoals: config.affiliateGoals || DEFAULT_AFFILIATE_GOALS
       });
     } catch (err) {
       console.error(err);
@@ -1850,6 +1861,212 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Configuração de Metas Globais & Bonificações dos Afiliados */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/40 border border-indigo-200 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100 pb-4">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      🎯 Metas Globais & Bonificações dos Representantes e Afiliados
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Defina as metas padrão de vendas de assinaturas e treinamentos VIP aplicadas aos representantes, além do Super Bônus no PIX e acréscimo de comissão.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={hotmartConfig.affiliateGoals?.enabled !== false}
+                    onChange={(e) => {
+                      const currentGoals = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                      setHotmartConfig({
+                        ...hotmartConfig,
+                        affiliateGoals: { ...currentGoals, enabled: e.target.checked }
+                      });
+                    }}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <span className="ml-3 text-xs font-bold text-slate-700">
+                    {hotmartConfig.affiliateGoals?.enabled !== false ? 'Metas Ativas' : 'Metas Desativadas'}
+                  </span>
+                </label>
+              </div>
+
+              {hotmartConfig.affiliateGoals?.enabled !== false && (
+                <div className="space-y-5 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Meta Mensal de Vendas */}
+                    <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-indigo-600" />
+                        Meta Mensal de Vendas
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly ?? 10}
+                          onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value) || 1);
+                            const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                            setHotmartConfig({
+                              ...hotmartConfig,
+                              affiliateGoals: { ...current, defaultSalesTargetMonthly: val }
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">empresas/mês</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">Padrão aplicado a novos cadastros de afiliados.</p>
+                    </div>
+
+                    {/* Meta Mensal de Treinamentos */}
+                    <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                        Meta de Treinamentos VIP
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          value={hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly ?? 3}
+                          onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value) || 1);
+                            const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                            setHotmartConfig({
+                              ...hotmartConfig,
+                              affiliateGoals: { ...current, defaultTrainingsTargetMonthly: val }
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">treinamentos/mês</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">Implantações e aulas VIP ministradas no mês.</p>
+                    </div>
+
+                    {/* Valor da Bonificação no PIX */}
+                    <div className="space-y-1.5 p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                        Super Bônus no PIX (R$)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">R$</span>
+                        <input
+                          type="number"
+                          step="50"
+                          min="0"
+                          value={hotmartConfig.affiliateGoals?.bonusRewardAmount ?? 1000}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseFloat(e.target.value) || 0);
+                            const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                            setHotmartConfig({
+                              ...hotmartConfig,
+                              affiliateGoals: { ...current, bonusRewardAmount: val }
+                            });
+                          }}
+                          className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Prêmio pago via PIX ao bater as metas no mês.</p>
+                    </div>
+
+                    {/* Bônus Extra de Comissão */}
+                    <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Percent className="w-3.5 h-3.5 text-indigo-600" />
+                        Comissão Extra Superação
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={hotmartConfig.affiliateGoals?.salesCommissionBonusPct ?? 5}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                            setHotmartConfig({
+                              ...hotmartConfig,
+                              affiliateGoals: { ...current, salesCommissionBonusPct: val }
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">% adicional</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">Acréscimo de comissão para afiliados de alta performance.</p>
+                    </div>
+                  </div>
+
+                  {/* Descrição e Regulamento da Premiação */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                      Regulamento e Mensagem de Destaque da Bonificação
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={hotmartConfig.affiliateGoals?.bonusRewardDescription || ''}
+                      onChange={(e) => {
+                        const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                        setHotmartConfig({
+                          ...hotmartConfig,
+                          affiliateGoals: { ...current, bonusRewardDescription: e.target.value }
+                        });
+                      }}
+                      placeholder="Descreva o prêmio e a regra de bonificação..."
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Esta mensagem motivacional será exibida com destaque no Portal do Afiliado.
+                    </p>
+                  </div>
+
+                  {/* Preview Banner do Portal do Afiliado */}
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/60 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                        <Trophy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 uppercase tracking-wider">
+                            Preview no Portal do Afiliado
+                          </span>
+                          <span className="text-xs font-black text-emerald-400">
+                            +{formatCurrency(hotmartConfig.affiliateGoals?.bonusRewardAmount ?? 1000)} no PIX
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-0.5 font-medium">
+                          {hotmartConfig.affiliateGoals?.bonusRewardDescription || DEFAULT_AFFILIATE_GOALS.bonusRewardDescription}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs shrink-0">
+                      <span className="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 font-bold text-indigo-300">
+                        Meta Vendas: {hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly ?? 10}/mês
+                      </span>
+                      <span className="px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-400/30 font-bold text-purple-300">
+                        Meta Treinamentos: {hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly ?? 3}/mês
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Save Button Bar */}
