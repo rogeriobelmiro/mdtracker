@@ -16234,6 +16234,91 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     `;
                 }
 
+                if (b.type === 'text_cta') {
+                    const align = b.textAlignment === 'center' ? 'text-center' : b.textAlignment === 'right' ? 'text-right' : 'text-left';
+                    const btnFlexAlign = b.textAlignment === 'center' ? 'items-center' : b.textAlignment === 'right' ? 'items-end' : 'items-start';
+                    const ctaUrl = b.ctaButtonUrl || '#capture-form';
+                    return `
+                      <section class="py-14 md:py-20 ${bgClass}">
+                        <div class="max-w-3xl mx-auto px-4 ${align}">
+                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                          ${b.subtitle ? `<p class="text-base sm:text-lg font-semibold text-blue-600 mb-6">${b.subtitle}</p>` : ''}
+                          <div class="opacity-90 leading-relaxed space-y-4 text-base sm:text-lg mb-8">
+                            ${(b.textContent || '').split('\\n\\n').map((p: string) => `<p>${p.replace(/\\n/g, '<br/>')}</p>`).join('')}
+                          </div>
+                          ${b.ctaButtonText ? `
+                            <div class="flex flex-col ${btnFlexAlign}">
+                              <a href="${ctaUrl}" class="inline-flex items-center gap-2 px-8 py-4 text-base sm:text-lg font-bold text-white shadow-xl transition transform hover:-translate-y-0.5 ${buttonShape}" style="background-color: ${primaryColor}">
+                                <span>${b.ctaButtonText}</span>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                              </a>
+                              ${b.ctaSubtext ? `<p class="text-xs opacity-75 mt-2 font-medium">${b.ctaSubtext}</p>` : ''}
+                            </div>
+                          ` : ''}
+                        </div>
+                      </section>
+                    `;
+                }
+
+                if (b.type === 'media_text') {
+                    const isLeft = (b.imagePosition || 'left') === 'left';
+                    const bullets = b.bulletPoints || ['Configuração rápida e simplificada', 'Integração completa sem código', 'Atendimento prioritário dedicado'];
+                    const ctaUrl = b.ctaButtonUrl || '#capture-form';
+                    return `
+                      <section class="py-16 md:py-24 ${bgClass}">
+                        <div class="max-w-5xl mx-auto px-4">
+                          <div class="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+                            <div class="md:col-span-6 ${isLeft ? 'order-1 md:order-1' : 'order-1 md:order-2'}">
+                              ${b.imageUrl ? `
+                                <div class="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-black/10 aspect-4/3 sm:aspect-auto">
+                                  <img src="${b.imageUrl}" alt="${b.imageAlt || b.title || 'Imagem'}" class="w-full h-full object-cover max-h-[460px] transform hover:scale-102 transition duration-500" />
+                                </div>
+                              ` : `
+                                <div class="rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400 text-xs">
+                                  Insira a URL de uma imagem para este bloco
+                                </div>
+                              `}
+                            </div>
+                            <div class="md:col-span-6 text-left ${isLeft ? 'order-2 md:order-2' : 'order-2 md:order-1'}">
+                              ${b.subtitle ? `
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 mb-4">
+                                  <span>${b.subtitle}</span>
+                                </div>
+                              ` : ''}
+                              ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-4">${b.title}</h2>` : ''}
+                              ${b.textContent ? `
+                                <div class="text-sm sm:text-base opacity-85 leading-relaxed mb-6 space-y-3">
+                                  ${b.textContent.split('\\n\\n').map((p: string) => `<p>${p.replace(/\\n/g, '<br/>')}</p>`).join('')}
+                                </div>
+                              ` : ''}
+                              ${bullets.length > 0 ? `
+                                <ul class="space-y-3 mb-8">
+                                  ${bullets.map((bullet: string) => `
+                                    <li class="flex items-start gap-3 text-sm sm:text-base font-medium">
+                                      <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                      </div>
+                                      <span>${bullet}</span>
+                                    </li>
+                                  `).join('')}
+                                </ul>
+                              ` : ''}
+                              ${b.ctaButtonText ? `
+                                <div class="pt-1">
+                                  <a href="${ctaUrl}" class="inline-flex items-center justify-center gap-2 px-7 py-4 text-sm sm:text-base font-bold text-white shadow-xl transition transform hover:-translate-y-0.5 w-full sm:w-auto ${buttonShape}" style="background-color: ${primaryColor}">
+                                    <span>${b.ctaButtonText}</span>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                  </a>
+                                  ${b.ctaSubtext ? `<p class="text-xs opacity-75 mt-2 font-medium">${b.ctaSubtext}</p>` : ''}
+                                </div>
+                              ` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
                 if (b.type === 'features') {
                     const feats = b.features || lp.features || [];
                     return `

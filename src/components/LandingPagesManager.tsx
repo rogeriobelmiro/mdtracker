@@ -1625,6 +1625,43 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
           backgroundColor: 'white'
         };
         break;
+      case 'text_cta':
+        newBlock = {
+          id: newBlockId,
+          type: 'text_cta',
+          title: 'Por Que Nosso Método Gera Resultados Rápidos',
+          subtitle: 'Entenda os princípios práticos que diferenciam nossa abordagem',
+          textContent: 'Ao longo dos últimos anos, desenvolvemos uma metodologia validada por centenas de empresas.\\n\\nEliminamos o excesso de complexidade e focamos no que realmente gera receita previsível e agilidade de execução.',
+          textAlignment: 'center',
+          ctaButtonText: 'Quero Começar Agora Mesmo 🚀',
+          ctaButtonUrl: '#capture-form',
+          ctaSubtext: '🔒 Acesso Imediato • 100% Seguro',
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
+      case 'media_text':
+        newBlock = {
+          id: newBlockId,
+          type: 'media_text',
+          title: 'Acelere Seus Resultados com Nossa Tecnologia',
+          subtitle: 'DIFERENCIAL EXCLUSIVO',
+          textContent: 'Nossa plataforma unifica todos os pontos de contato com seus clientes em uma experiência fluida e moderna, permitindo que sua equipe venda mais em menos tempo.',
+          imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1000&q=80',
+          imageAlt: 'Equipe reunida analisando estratégias de crescimento',
+          imagePosition: 'left',
+          bulletPoints: [
+            'Configuração rápida e sem necessidade de código',
+            'Integração direta com WhatsApp e ferramentas de tráfego',
+            'Suporte prioritário e consultivo dedicado'
+          ],
+          ctaButtonText: 'Quero Conhecer a Solução Completa →',
+          ctaButtonUrl: '#capture-form',
+          ctaSubtext: '🔒 Atendimento Rápido • Sem Compromisso',
+          enabled: true,
+          backgroundColor: 'white'
+        };
+        break;
       case 'features':
         newBlock = {
           id: newBlockId,
@@ -2678,6 +2715,8 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             vsl_pitch: { label: 'Vídeo VSL com Pitch Delay 🔥', icon: Play, color: 'text-indigo-600 bg-indigo-50' },
                             image: { label: 'Imagem / Banner', icon: ImageIcon, color: 'text-indigo-600 bg-indigo-50' },
                             text: { label: 'Texto Narrativo', icon: TypeIcon, color: 'text-slate-700 bg-slate-100' },
+                            text_cta: { label: 'Texto com Botão (CTA)', icon: TypeIcon, color: 'text-purple-600 bg-purple-50' },
+                            media_text: { label: 'Imagem & Texto (Split)', icon: LayoutTemplate, color: 'text-sky-600 bg-sky-50' },
                             features: { label: 'Benefícios & Diferenciais', icon: Layers, color: 'text-blue-600 bg-blue-50' },
                             socialProof: { label: 'Prova Social & Depoimentos', icon: Star, color: 'text-amber-600 bg-amber-50' },
                             pricing: { label: 'Tabela de Preços / Planos', icon: CreditCard, color: 'text-emerald-600 bg-emerald-50' },
@@ -3799,6 +3838,322 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                           placeholder="Digite seus parágrafos aqui. Dê duas quebras de linha para separar parágrafos..."
                                           className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs leading-relaxed"
                                         />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: TEXT WITH CTA */}
+                                  {block.type === 'text_cta' && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-200">
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Alinhamento do Conteúdo
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {(['left', 'center', 'right'] as const).map(align => (
+                                            <button
+                                              key={align}
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, textAlignment: align };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className={`py-1.5 rounded-lg border text-xs font-semibold capitalize ${
+                                                (block.textAlignment || 'center') === align
+                                                  ? 'bg-blue-600 text-white border-blue-600'
+                                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                              }`}
+                                            >
+                                              {align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Conteúdo do Texto (Parágrafos)
+                                        </label>
+                                        <textarea
+                                          value={block.textContent || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, textContent: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={5}
+                                          placeholder="Digite os argumentos ou história aqui..."
+                                          className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs leading-relaxed"
+                                        />
+                                      </div>
+
+                                      {/* CTA Button Box */}
+                                      <div className="p-3.5 bg-purple-50/70 rounded-2xl border border-purple-100 space-y-3">
+                                        <div className="font-bold text-xs text-purple-900 flex items-center gap-1.5">
+                                          <Sparkles className="w-4 h-4 text-purple-600" />
+                                          <span>Botão de Chamada para Ação (CTA)</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Texto do Botão
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.ctaButtonText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, ctaButtonText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Quero Começar Agora 🚀"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Link de Destino
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.ctaButtonUrl || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, ctaButtonUrl: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: #capture-form ou URL externa"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Subtexto de Apoio / Garantia
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.ctaSubtext || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, ctaSubtext: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔒 Acesso Imediato • 100% Seguro"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: MEDIA + TEXT SPLIT */}
+                                  {block.type === 'media_text' && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-200">
+                                      {/* Position Selector */}
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Posição da Imagem
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, imagePosition: 'left' };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                              (block.imagePosition || 'left') === 'left'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                            }`}
+                                          >
+                                            <span>👈 Imagem à Esquerda</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, imagePosition: 'right' };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                                              block.imagePosition === 'right'
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                            }`}
+                                          >
+                                            <span>Imagem à Direita 👉</span>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Image URL */}
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          URL da Imagem
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.imageUrl || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, imageUrl: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="https://images.unsplash.com/..."
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Texto Alternativo (Alt)
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={block.imageAlt || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, imageAlt: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          placeholder="Ex: Foto do produto ou serviço"
+                                          className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                        />
+                                      </div>
+
+                                      {/* Text Content */}
+                                      <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                                          Texto Explicativo (Parágrafo)
+                                        </label>
+                                        <textarea
+                                          value={block.textContent || ''}
+                                          onChange={e => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            blocks[idx] = { ...block, textContent: e.target.value };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          rows={4}
+                                          placeholder="Explique os diferenciais e a solução..."
+                                          className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs leading-relaxed"
+                                        />
+                                      </div>
+
+                                      {/* Bullet Points */}
+                                      <div className="space-y-2">
+                                        <label className="block text-[11px] font-semibold text-slate-700 uppercase">
+                                          Itens com Checkmark (Diferenciais)
+                                        </label>
+                                        {(block.bulletPoints || ['Item 1', 'Item 2', 'Item 3']).map((bullet, bIdx) => (
+                                          <div key={bIdx} className="flex items-center gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <input
+                                              type="text"
+                                              value={bullet}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                const bullets = [...(block.bulletPoints || ['Item 1', 'Item 2', 'Item 3'])];
+                                                bullets[bIdx] = e.target.value;
+                                                blocks[idx] = { ...block, bulletPoints: bullets };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl bg-white text-xs"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                const bullets = [...(block.bulletPoints || ['Item 1', 'Item 2', 'Item 3'])];
+                                                bullets.splice(bIdx, 1);
+                                                blocks[idx] = { ...block, bulletPoints: bullets };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="text-slate-400 hover:text-red-500 p-1"
+                                            >
+                                              <X className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        ))}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const blocks = [...(editingPage.blocks || [])];
+                                            const bullets = [...(block.bulletPoints || [])];
+                                            bullets.push(`Novo diferencial ${bullets.length + 1}`);
+                                            blocks[idx] = { ...block, bulletPoints: bullets };
+                                            setEditingPage({ ...editingPage, blocks });
+                                          }}
+                                          className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                          <span>Adicionar Diferencial</span>
+                                        </button>
+                                      </div>
+
+                                      {/* CTA Button Box */}
+                                      <div className="p-3.5 bg-sky-50/70 rounded-2xl border border-sky-100 space-y-3">
+                                        <div className="font-bold text-xs text-sky-950 flex items-center gap-1.5">
+                                          <ArrowRight className="w-4 h-4 text-sky-600" />
+                                          <span>Botão de Ação (Abaixo do Texto)</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Texto do Botão
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.ctaButtonText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, ctaButtonText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Saiba Mais e Garanta o Seu →"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Link de Destino
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.ctaButtonUrl || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, ctaButtonUrl: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: #capture-form ou URL externa"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Subtexto de Apoio / Garantia
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.ctaSubtext || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, ctaSubtext: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔒 Atendimento Rápido • Sem Compromisso"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   )}
@@ -7873,6 +8228,107 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             );
                           }
 
+                          if (b.type === 'text_cta') {
+                            const alignClass = b.textAlignment === 'center' ? 'text-center' : b.textAlignment === 'right' ? 'text-right' : 'text-left';
+                            return (
+                              <section key={b.id || bIdx} className={`py-14 md:py-20 px-6 sm:px-10 ${bgClass}`}>
+                                <div className={`max-w-3xl mx-auto ${alignClass}`}>
+                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                  {b.subtitle && <p className="text-xs sm:text-sm font-semibold text-blue-600 mb-4">{b.subtitle}</p>}
+                                  <div className="opacity-90 leading-relaxed space-y-3 text-xs sm:text-sm whitespace-pre-line mb-8">
+                                    {b.textContent || 'Texto explicativo com argumentação de alta conversão.'}
+                                  </div>
+                                  {b.ctaButtonText && (
+                                    <div className={`flex flex-col ${b.textAlignment === 'center' ? 'items-center' : b.textAlignment === 'right' ? 'items-end' : 'items-start'}`}>
+                                      <a
+                                        href={b.ctaButtonUrl || '#capture-form'}
+                                        onClick={e => {
+                                          if (!b.ctaButtonUrl || b.ctaButtonUrl === '#capture-form') {
+                                            e.preventDefault();
+                                            const formEl = document.getElementById('preview-capture-form');
+                                            formEl?.scrollIntoView({ behavior: 'smooth' });
+                                          }
+                                        }}
+                                        className={`inline-flex items-center gap-2 px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer ${buttonShapeClass}`}
+                                        style={{ backgroundColor: primaryColor }}
+                                      >
+                                        <span>{b.ctaButtonText}</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                      </a>
+                                      {b.ctaSubtext && <p className="text-[11px] opacity-75 mt-2 font-medium">{b.ctaSubtext}</p>}
+                                    </div>
+                                  )}
+                                </div>
+                              </section>
+                            );
+                          }
+
+                          if (b.type === 'media_text') {
+                            const isLeft = (b.imagePosition || 'left') === 'left';
+                            const bullets = b.bulletPoints || ['Configuração rápida e simplificada', 'Integração completa sem código', 'Atendimento prioritário dedicado'];
+                            return (
+                              <section key={b.id || bIdx} className={`py-14 md:py-20 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-5xl mx-auto">
+                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+                                    <div className={`md:col-span-6 ${isLeft ? 'order-1 md:order-1' : 'order-1 md:order-2'}`}>
+                                      {b.imageUrl ? (
+                                        <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-black/10 aspect-4/3 sm:aspect-auto">
+                                          <img src={b.imageUrl} alt={b.imageAlt || b.title || 'Imagem'} className="w-full h-full object-cover max-h-[460px] transform hover:scale-102 transition duration-500" />
+                                        </div>
+                                      ) : (
+                                        <div className="rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400 text-xs">
+                                          <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                          Insira a URL de uma imagem para este bloco
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className={`md:col-span-6 text-left ${isLeft ? 'order-2 md:order-2' : 'order-2 md:order-1'}`}>
+                                      {b.subtitle && (
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 mb-3 shadow-2xs">
+                                          <span>{b.subtitle}</span>
+                                        </div>
+                                      )}
+                                      {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight mb-3">{b.title}</h2>}
+                                      {b.textContent && <p className="text-xs sm:text-sm opacity-85 leading-relaxed mb-5 whitespace-pre-line">{b.textContent}</p>}
+                                      {bullets.length > 0 && (
+                                        <ul className="space-y-2.5 mb-6">
+                                          {bullets.map((bullet, idx) => (
+                                            <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium">
+                                              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                                                <Check className="w-3 h-3 stroke-[3]" />
+                                              </div>
+                                              <span>{bullet}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                      {b.ctaButtonText && (
+                                        <div className="pt-1">
+                                          <a
+                                            href={b.ctaButtonUrl || '#capture-form'}
+                                            onClick={e => {
+                                              if (!b.ctaButtonUrl || b.ctaButtonUrl === '#capture-form') {
+                                                e.preventDefault();
+                                                const formEl = document.getElementById('preview-capture-form');
+                                                formEl?.scrollIntoView({ behavior: 'smooth' });
+                                              }
+                                            }}
+                                            className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer w-full sm:w-auto ${buttonShapeClass}`}
+                                            style={{ backgroundColor: primaryColor }}
+                                          >
+                                            <span>{b.ctaButtonText}</span>
+                                            <ArrowRight className="w-4 h-4" />
+                                          </a>
+                                          {b.ctaSubtext && <p className="text-[11px] opacity-75 mt-2 font-medium">{b.ctaSubtext}</p>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          }
+
                           if (b.type === 'features') {
                             const feats = b.features || editingPage.features || [];
                             return (
@@ -8364,12 +8820,28 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   description: 'Foto em alta resolução com galeria integrada do Unsplash ou URL personalizada.'
                 },
                 {
+                  type: 'media_text' as const,
+                  icon: LayoutTemplate,
+                  color: 'text-sky-600 bg-sky-50 border-sky-200',
+                  title: 'Imagem & Texto (Split)',
+                  tag: 'Destaque Visual 🖼️',
+                  description: 'Foto à esquerda ou direita com texto persuasivo, lista de benefícios e botão de CTA.'
+                },
+                {
                   type: 'text' as const,
                   icon: TypeIcon,
-                  color: 'text-purple-600 bg-purple-50 border-purple-200',
+                  color: 'text-slate-600 bg-slate-50 border-slate-200',
                   title: 'Texto & Storytelling',
                   tag: 'Copywriting',
                   description: 'Apresente sua história, explicação detalhada e proposta de valor com formatação.'
+                },
+                {
+                  type: 'text_cta' as const,
+                  icon: TypeIcon,
+                  color: 'text-purple-600 bg-purple-50 border-purple-200',
+                  title: 'Texto com Botão (CTA)',
+                  tag: 'Copywriting & Ação 🎯',
+                  description: 'Apresente sua proposta com um botão de chamada para ação chamativo logo abaixo.'
                 },
                 {
                   type: 'features' as const,

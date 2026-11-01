@@ -844,6 +844,8 @@ export type LandingPageBlockType =
   | 'vsl_pitch'
   | 'image' 
   | 'text' 
+  | 'text_cta'
+  | 'media_text'
   | 'features' 
   | 'socialProof' 
   | 'pricing' 
@@ -925,10 +927,15 @@ export interface LandingPageCustomBlock {
   imageCaption?: string;
   imageWidth?: 'contained' | 'full' | 'small' | 'medium';
   imageAlignment?: 'center' | 'left' | 'right';
+  imagePosition?: 'left' | 'right'; // For Split Media + Text block
 
   // Text / Storytelling block
   textContent?: string;
   textAlignment?: 'left' | 'center' | 'right';
+  bulletPoints?: string[]; // Checkmarks or benefit bullets
+
+  // CTA for Text & Split blocks
+  ctaSubtext?: string;
 
   // Features block
   features?: LandingPageFeature[];
