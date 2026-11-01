@@ -306,7 +306,7 @@ export const InstagramAutoDM: React.FC<InstagramAutoDMProps> = ({
     ]);
     setFormDirectMessage('Olá {{username}}! 🎉 Conforme você pediu no nosso post, aqui está o seu acesso exclusivo. Clique no link abaixo para acessar agora:');
     setFormCtaText('Acessar Conteúdo Grátis 🔗');
-    setFormCtaUrl('https://mdtracker.app/r/oferta-vip');
+    setFormCtaUrl('https://trackermd.mudadigital.com.br/r/oferta-vip');
     setFormCreateLead(true);
 
     // Follow-Gate defaults
@@ -426,7 +426,7 @@ export const InstagramAutoDM: React.FC<InstagramAutoDMProps> = ({
         directMessage: formDirectMessage.trim(),
         ctaButton: formCtaText.trim() ? {
           text: formCtaText.trim(),
-          url: formCtaUrl.trim() || 'https://mdtracker.app'
+          url: formCtaUrl.trim() || 'https://trackermd.mudadigital.com.br'
         } : undefined,
         createLeadInCrm: formCreateLead,
         followGateEnabled: formFollowGateEnabled,
@@ -2359,7 +2359,7 @@ export const InstagramAutoDM: React.FC<InstagramAutoDMProps> = ({
                       type="url"
                       value={formCtaUrl}
                       onChange={e => setFormCtaUrl(e.target.value)}
-                      placeholder="https://mudadigital.com.br"
+                      placeholder="https://trackermd.mudadigital.com.br/r/oferta-vip"
                       className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:border-purple-500 text-xs font-mono"
                     />
                   </div>

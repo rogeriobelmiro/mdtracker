@@ -195,8 +195,15 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const getSystemDomainOrigin = () => {
+    if (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1')) {
+      return window.location.origin;
+    }
+    return 'https://trackermd.mudadigital.com.br';
+  };
+
   const getFullRedirectUrl = (slug: string, source?: string, campaign?: string) => {
-    const origin = window.location.origin;
+    const origin = getSystemDomainOrigin();
     let url = `${origin}/r/${slug}`;
     const params = new URLSearchParams();
     if (source) params.append('utm_source', source);
@@ -754,7 +761,7 @@ export const LinkManager: React.FC<LinkManagerProps> = ({
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Identificador Único (Slug) *</label>
                 <div className="flex items-center bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-500">
-                  <span className="text-slate-400 select-none">{window.location.origin}/r/</span>
+                  <span className="text-slate-400 select-none">{getSystemDomainOrigin()}/r/</span>
                   <input
                     type="text"
                     required

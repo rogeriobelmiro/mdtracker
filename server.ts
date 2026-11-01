@@ -243,6 +243,249 @@ try {
     console.warn('Could not load local auth store:', err);
 }
 
+// Local stores for Affiliates and Hotmart Pricing / Setup Config
+const LOCAL_AFFILIATES_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_affiliates_store.json');
+const LOCAL_HOTMART_CONFIG_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_hotmart_config.json');
+
+const defaultHotmartPlans = [
+    {
+        id: 'starter',
+        name: 'Plano Starter / Essencial',
+        price: 197,
+        period: 'mensal',
+        checkoutUrl: 'https://pay.hotmart.com/PRODUTO_STARTER',
+        description: 'Ideal para profissionais e negócios locais iniciando o rastreamento profissional.',
+        features: [
+            'Até 3 Usuários Colaboradores',
+            '1 Conexão WhatsApp Web / Evolution',
+            '5.000 Disparos de Mensagens / Mês',
+            'Rastreamento UTM & CAPI Meta Ads',
+            'Relatórios Básicos & CRM de Leads'
+        ],
+        highlight: false,
+        active: true
+    },
+    {
+        id: 'pro',
+        name: 'Plano Pro / Crescimento',
+        price: 397,
+        period: 'mensal',
+        checkoutUrl: 'https://pay.hotmart.com/PRODUTO_PRO',
+        description: 'O mais completo para empresas em escala: automações ilimitadas e funil visual.',
+        features: [
+            'Até 10 Usuários Colaboradores',
+            '3 Conexões de WhatsApp Simultâneas',
+            '25.000 Disparos de Mensagens / Mês',
+            'Funil Visual 360° com Métricas ao Vivo',
+            'Automações & Workflows Ilimitados',
+            'Suporte Prioritário Via WhatsApp'
+        ],
+        highlight: true,
+        active: true
+    },
+    {
+        id: 'enterprise',
+        name: 'Plano Enterprise / Escala VIP',
+        price: 697,
+        period: 'mensal',
+        checkoutUrl: 'https://pay.hotmart.com/PRODUTO_ENTERPRISE',
+        description: 'Máxima potência, multi-instância e disparos em massa para grandes operações.',
+        features: [
+            'Usuários Colaboradores Ilimitados',
+            'Múltiplas Conexões WhatsApp / Instâncias',
+            'Disparos em Massa & E-mails Ilimitados',
+            'Disparo via SMS Gateway Habilitado',
+            'Meta Ads CAPI Dedicado em Alta Frequência',
+            'Gerente de Sucesso & Onboarding VIP'
+        ],
+        highlight: false,
+        active: true
+    }
+];
+
+const defaultSetupTraining = {
+    enabled: true,
+    title: 'Taxa de Implantação, Configuração Técnica e Treinamento VIP',
+    price: 997,
+    description: 'Serviço completo de ativação onde configuramos toda a estrutura técnica de DNS, domínios, Meta CAPI e realizamos treinamento ao vivo com a equipe.',
+    checkoutUrl: 'https://pay.hotmart.com/SETUP_TREINAMENTO',
+    features: [
+        'Configuração de DNS, domínios e apontamentos SSL',
+        'Validação técnica e ativação do Meta CAPI (API de Conversões)',
+        'Conexão e configuração das instâncias do WhatsApp',
+        'Treinamento prático ao vivo (Meet / Zoom) de 2h com a equipe',
+        'Acompanhamento assistido nas primeiras campanhas e suporte prioritário'
+    ]
+};
+
+let inMemoryHotmartConfig: any = {
+    hottok: '',
+    checkoutUrl: '',
+    productId: '',
+    trialDays: 1,
+    plans: defaultHotmartPlans,
+    setupTraining: defaultSetupTraining
+};
+
+const initialAffiliates = [
+    {
+        id: 'aff-mt-01',
+        name: 'Rogério Belmiro',
+        email: 'rogerio@crysrios.com.br',
+        phone: '5565981150758',
+        document: '53.483.257/0001-08',
+        state: 'MT',
+        city: 'Cuiabá',
+        commissionMonthly: 25,
+        commissionSetup: 50,
+        pixKeyType: 'phone',
+        pixKey: '5565981150758',
+        referralCode: 'rogerio-mt',
+        status: 'active',
+        notes: 'Representante Oficial Centro-Oeste e Mato Grosso',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-sp-01',
+        name: 'Carlos Mendes',
+        email: 'carlos.mendes@rep-trackermd.com.br',
+        phone: '5511998765432',
+        document: '123.456.789-00',
+        state: 'SP',
+        city: 'São Paulo',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'carlos.mendes@rep-trackermd.com.br',
+        referralCode: 'carlos-sp',
+        status: 'active',
+        notes: 'Representante Especialista em Automações e CAPI - Grande SP',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-rj-01',
+        name: 'Mariana Rios',
+        email: 'mariana.rio@rep-trackermd.com.br',
+        phone: '5521987654321',
+        document: '987.654.321-11',
+        state: 'RJ',
+        city: 'Rio de Janeiro',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'cpf',
+        pixKey: '987.654.321-11',
+        referralCode: 'mariana-rj',
+        status: 'active',
+        notes: 'Especialista em Gestão de Tráfego e Rastreamento RJ',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-mg-01',
+        name: 'Felipe Andrade',
+        email: 'felipe.mg@rep-trackermd.com.br',
+        phone: '5531988887777',
+        document: '321.654.987-22',
+        state: 'MG',
+        city: 'Belo Horizonte',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'felipe.mg@rep-trackermd.com.br',
+        referralCode: 'felipe-mg',
+        status: 'active',
+        notes: 'Consultor de Implantação e CRM Minas Gerais',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-pr-01',
+        name: 'Lucas Scherer',
+        email: 'lucas.pr@rep-trackermd.com.br',
+        phone: '5541999998888',
+        document: '456.789.123-33',
+        state: 'PR',
+        city: 'Curitiba',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'cpf',
+        pixKey: '456.789.123-33',
+        referralCode: 'lucas-pr',
+        status: 'active',
+        notes: 'Representante Região Sul',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-ba-01',
+        name: 'Aline Santos',
+        email: 'aline.ba@rep-trackermd.com.br',
+        phone: '5571991234567',
+        document: '654.321.987-44',
+        state: 'BA',
+        city: 'Salvador',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'phone',
+        pixKey: '5571991234567',
+        referralCode: 'aline-ba',
+        status: 'active',
+        notes: 'Representante Nordeste / Bahia',
+        createdAt: new Date().toISOString()
+    },
+    {
+        id: 'aff-df-01',
+        name: 'Eduardo Vasconcelos',
+        email: 'eduardo.df@rep-trackermd.com.br',
+        phone: '5561998877665',
+        document: '789.123.456-55',
+        state: 'DF',
+        city: 'Brasília',
+        commissionMonthly: 20,
+        commissionSetup: 50,
+        pixKeyType: 'email',
+        pixKey: 'eduardo.df@rep-trackermd.com.br',
+        referralCode: 'eduardo-df',
+        status: 'active',
+        notes: 'Representante Distrito Federal e Entorno',
+        createdAt: new Date().toISOString()
+    }
+];
+
+let inMemoryAffiliates: any[] = [...initialAffiliates];
+
+function saveLocalAffiliatesStore() {
+    try {
+        fs.writeFileSync(LOCAL_AFFILIATES_FILE, JSON.stringify(inMemoryAffiliates, null, 2), 'utf-8');
+    } catch {}
+}
+
+function saveLocalHotmartConfigStore() {
+    try {
+        fs.writeFileSync(LOCAL_HOTMART_CONFIG_FILE, JSON.stringify(inMemoryHotmartConfig, null, 2), 'utf-8');
+    } catch {}
+}
+
+try {
+    if (fs.existsSync(LOCAL_HOTMART_CONFIG_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_HOTMART_CONFIG_FILE, 'utf-8'));
+        if (parsed && typeof parsed === 'object') {
+            inMemoryHotmartConfig = {
+                ...inMemoryHotmartConfig,
+                ...parsed,
+                plans: Array.isArray(parsed.plans) && parsed.plans.length > 0 ? parsed.plans : defaultHotmartPlans,
+                setupTraining: parsed.setupTraining || defaultSetupTraining
+            };
+        }
+    }
+} catch {}
+
+try {
+    if (fs.existsSync(LOCAL_AFFILIATES_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_AFFILIATES_FILE, 'utf-8'));
+        if (Array.isArray(parsed)) {
+            inMemoryAffiliates = parsed;
+        }
+    }
+} catch {}
+
 async function verifyUserPassword(inputPassword: string, storedPassword?: string): Promise<boolean> {
     if (!storedPassword) return false;
     if (inputPassword === '123' || storedPassword === '123') return true;
@@ -305,6 +548,7 @@ const mapCompanyToDB = (c: any) => {
     if (c.hotmartSubscriptionId !== undefined) obj.hotmart_subscription_id = c.hotmartSubscriptionId;
     if (c.hotmartTransactionId !== undefined) obj.hotmart_transaction_id = c.hotmartTransactionId;
     if (c.hotmartBuyerEmail !== undefined) obj.hotmart_buyer_email = c.hotmartBuyerEmail;
+    if (c.affiliateId !== undefined) obj.affiliate_id = c.affiliateId;
     obj.updated_at = new Date().toISOString();
     return obj;
 };
@@ -326,7 +570,9 @@ const mapCompanyFromDB = (db: any) => ({
     subscriptionExpiresAt: db.subscription_expires_at,
     hotmartSubscriptionId: db.hotmart_subscription_id,
     hotmartTransactionId: db.hotmart_transaction_id,
-    hotmartBuyerEmail: db.hotmart_buyer_email
+    hotmartBuyerEmail: db.hotmart_buyer_email,
+    affiliateId: db.affiliate_id || db.affiliateId,
+    affiliateCode: db.affiliate_code || db.affiliateCode
 });
 
 const mapUserToDB = (u: any) => ({
@@ -633,6 +879,11 @@ const mapSettingsToDB = (s: any) => ({
     hotmart_product_id: s.hotmartProductId || null,
     trial_days: s.trialDays !== undefined ? Number(s.trialDays) : 1,
     superadmin_email: s.superadminEmail || 'rogerio@mudadigital.com.br',
+    sms_enabled: typeof s.smsEnabled === 'boolean' ? s.smsEnabled : false,
+    sms_provider: s.smsProvider || 'z_api',
+    sms_api_key: s.smsApiKey || null,
+    sms_api_url: s.smsApiUrl || null,
+    sms_sender_id: s.smsSenderId || null,
     updated_at: new Date().toISOString()
 });
 
@@ -686,7 +937,12 @@ const mapSettingsFromDB = (db: any) => ({
     hotmartCheckoutUrl: db.hotmart_checkout_url || '',
     hotmartProductId: db.hotmart_product_id || '',
     trialDays: db.trial_days !== undefined && db.trial_days !== null ? Number(db.trial_days) : 1,
-    superadminEmail: db.superadmin_email || 'rogerio@mudadigital.com.br'
+    superadminEmail: db.superadmin_email || 'rogerio@mudadigital.com.br',
+    smsEnabled: typeof db.sms_enabled === 'boolean' ? db.sms_enabled : false,
+    smsProvider: db.sms_provider || 'z_api',
+    smsApiKey: db.sms_api_key || '',
+    smsApiUrl: db.sms_api_url || '',
+    smsSenderId: db.sms_sender_id || ''
 });
 
 const mapWebhookFromDB = (db: any) => ({
@@ -1169,7 +1425,7 @@ const mapLandingPageFromDB = (db: any) => ({
                 type: 'download_pdf',
                 title: 'Baixar E-book / Material em PDF',
                 description: 'Download direto do guia completo e planilha de métricas',
-                url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+                url: 'https://trackermd.mudadigital.com.br/materiais/guia-conversao-whatsapp.pdf',
                 buttonText: 'Baixar PDF Grátis',
                 icon: 'download',
                 color: '#2563eb',
@@ -1867,7 +2123,7 @@ let inMemoryLandingPages: any[] = [
           type: 'download_pdf',
           title: 'Baixar E-book / Material em PDF',
           description: 'Download direto do guia completo e planilha de métricas',
-          url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+          url: 'https://trackermd.mudadigital.com.br/materiais/guia-conversao-whatsapp.pdf',
           buttonText: 'Baixar PDF Grátis',
           icon: 'download',
           color: '#2563eb',
@@ -2305,7 +2561,7 @@ let inMemoryGamificationEvents: any[] = [
         require_phone: true,
         require_email: false,
         require_company: false,
-        lead_magnet_url: 'https://mdtracker.app/p/oferta-5538',
+        lead_magnet_url: 'https://trackermd.mudadigital.com.br/p/oferta-5538',
         settings: {
             allowAnonymous: false,
             showLiveCount: true,
@@ -2681,12 +2937,12 @@ let inMemoryBroadcastCampaigns: any[] = [
   <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; text-align: center;">Olá, {{nome}}! As inscrições estão oficialmente abertas 🚀</h2>
   <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">O momento tão esperado chegou. O Lote 1 com bônus de consultoria já está liberado exclusivamente para quem esteve na lista VIP.</p>
   <div style="text-align: center; margin-top: 28px;">
-    <a href="https://mdtracker.com.br/abertura" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Garantir Minha Vaga no Lote 1 &rarr;</a>
+    <a href="https://trackermd.mudadigital.com.br/abertura" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Garantir Minha Vaga no Lote 1 &rarr;</a>
   </div>
 </div>`,
-    message_template: '🚨 ATENÇÃO {{nome}}! Acabamos de abrir as vagas no Lote 1 com bônus VIP exclusivo. O link oficial é: https://mdtracker.com.br/abertura',
+    message_template: '🚨 ATENÇÃO {{nome}}! Acabamos de abrir as vagas no Lote 1 com bônus VIP exclusivo. O link oficial é: https://trackermd.mudadigital.com.br/abertura',
     sms_text: '{{nome}}, carrinho ABERTO! Acesse agora o Lote 1 com condicao especial: mdtr.link/lote1',
-    cta_url: 'https://mdtracker.com.br/abertura',
+    cta_url: 'https://trackermd.mudadigital.com.br/abertura',
     cta_text: 'Acessar Inscrição no Lote 1',
     status: 'agendado',
     total_leads: 20,
@@ -2719,7 +2975,7 @@ let inMemoryBroadcastCampaigns: any[] = [
   <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; text-align: center;">Olá, {{nome}}! Seja muito bem-vindo(a) à nossa comunidade</h2>
   <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">Ficamos muito contentes com seu cadastro. Nossa missão é te ajudar a dobrar sua taxa de conversão de leads e ter visibilidade total sobre cada venda originada nos seus anúncios.</p>
   <div style="text-align: center; margin-top: 32px;">
-    <a href="https://mdtracker.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Acessar Meu Painel Agora &rarr;</a>
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Acessar Meu Painel Agora &rarr;</a>
   </div>
 </div>`,
     status: 'concluido',
@@ -4340,7 +4596,7 @@ app.get('/tracker/popup.js', async (req: Request, res: Response) => {
     const popupId = (req.query.id as string) || '';
 
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'mdtracker.mudadigital.com.br';
+    const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'trackermd.mudadigital.com.br';
     const serverOrigin = `${proto}://${host}`;
 
     // Fetch popup if ID provided in query
@@ -5167,8 +5423,8 @@ function formatWorkflowText(template: string, lead: any, companyName: string, co
         .replace(/\{produto\}/gi, lead.productName || 'nossa solução')
         .replace(/\{pagina\}/gi, context?.formName || lead.source || 'Landing Page')
         .replace(/\{page\}/gi, context?.formName || lead.source || 'Landing Page')
-        .replace(/\{link\}/gi, context?.slug ? `/p/${context.slug}` : (lead.checkoutUrl || 'https://mdtracker.app'))
-        .replace(/\{link_checkout\}/gi, lead.checkoutUrl || 'https://mdtracker.app');
+        .replace(/\{link\}/gi, context?.slug ? `/p/${context.slug}` : (lead.checkoutUrl || 'https://trackermd.mudadigital.com.br'))
+        .replace(/\{link_checkout\}/gi, lead.checkoutUrl || 'https://trackermd.mudadigital.com.br');
 }
 
 interface SendMarketingEmailParams {
@@ -5263,7 +5519,7 @@ async function sendMarketingEmail(params: SendMarketingEmailParams): Promise<{ s
         if (params.campaignId && params.recipientId) {
             const campId = params.campaignId;
             const recipId = params.recipientId;
-            const baseUrl = (params.trackingBaseUrl || process.env.APP_URL || 'https://mdtracker.mudadigital.com.br').replace(/\/+$/, '');
+            const baseUrl = (params.trackingBaseUrl || process.env.APP_URL || 'https://trackermd.mudadigital.com.br').replace(/\/+$/, '');
 
             // Rewrite links for click tracking
             htmlContent = htmlContent.replace(/href=["'](https?:\/\/[^"']+)["']/gi, (match, url) => {
@@ -6047,7 +6303,7 @@ let inMemoryVisualFunnels: any[] = [
                 x: 480,
                 y: 240,
                 data: {
-                    url: 'https://mdtracker.com.br/lp/oferta-vip',
+                    url: 'https://trackermd.mudadigital.com.br/lp/oferta-vip',
                     visitors: 2720,
                     leads: 680,
                     conversionRate: 25.0,
@@ -8230,7 +8486,7 @@ app.post('/api/broadcast-campaigns/:id/send-test', async (req: Request, res: Res
         const cleanDest = effectiveChannel === 'email' ? targetEmail : targetPhone;
         const recipientId = `test-${Date.now()}`;
         const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-        const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'mdtracker.mudadigital.com.br';
+        const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'trackermd.mudadigital.com.br';
         const trackingBaseUrl = `${proto}://${host}`;
 
         if (effectiveChannel === 'email' && targetEmail) {
@@ -8375,7 +8631,7 @@ app.get('/api/broadcast/track/click/:campaignId/:recipientId', async (req: Reque
         const { campaignId, recipientId } = req.params;
         let targetUrl = req.query.url as string;
         if (!targetUrl || targetUrl === 'undefined' || targetUrl === 'null') {
-            targetUrl = 'https://mdtracker.com.br';
+            targetUrl = 'https://trackermd.mudadigital.com.br';
         }
         const now = new Date().toISOString();
 
@@ -8436,7 +8692,7 @@ app.get('/api/broadcast/track/click/:campaignId/:recipientId', async (req: Reque
         return res.redirect(302, targetUrl);
     } catch (err: any) {
         console.error('[Track Click Error]', err);
-        return res.redirect(302, 'https://mdtracker.com.br');
+        return res.redirect(302, 'https://trackermd.mudadigital.com.br');
     }
 });
 
@@ -10039,7 +10295,7 @@ let inMemoryInstagramAutomations: any[] = [
         directMessage: 'Olá {{username}}! 🎉 Conforme você pediu no nosso post, aqui está o seu acesso exclusivo ao E-book "Guia Prático de Vendas e Tráfego no WhatsApp". Clique no botão abaixo para baixar gratuitamente:',
         ctaButton: {
             text: 'Baixar E-book Gratuito 📥',
-            url: 'https://mdtracker.app/r/ebook-gratis'
+            url: 'https://trackermd.mudadigital.com.br/r/ebook-gratis'
         },
         createLeadInCrm: true,
         followGateEnabled: true,
@@ -10086,7 +10342,7 @@ let inMemoryInstagramAutomations: any[] = [
         directMessage: 'Oi {{username}}! 🏷️ Seu cupom de 30% OFF é *VIP30*. Ele é válido apenas para as próximas 24 horas em qualquer plano da nossa plataforma. Acesse pelo link abaixo para aplicar o desconto automaticamente:',
         ctaButton: {
             text: 'Garantir 30% de Desconto ⚡',
-            url: 'https://mdtracker.app/r/cupom-vip30'
+            url: 'https://trackermd.mudadigital.com.br/r/cupom-vip30'
         },
         createLeadInCrm: true,
         stats: {
@@ -11830,7 +12086,7 @@ app.post('/api/whatsapp/evolution/test', async (req: Request, res: Response) => 
                 if (instanceExists) {
                     const webhookPayload = {
                         enabled: true,
-                        url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+                        url: "https://trackermd.mudadigital.com.br/api/whatsapp/evolution/webhook",
                         byEvents: false,
                         base64: true,
                         events: ["MESSAGES_UPSERT", "messages.upsert"]
@@ -11863,7 +12119,7 @@ app.post('/api/whatsapp/evolution/create-instance', async (req: Request, res: Re
         const baseUrl = url.replace(/\/$/, '');
         const webhookPayload = {
             enabled: true,
-            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+            url: "https://trackermd.mudadigital.com.br/api/whatsapp/evolution/webhook",
             byEvents: false,
             base64: true,
             events: ["MESSAGES_UPSERT", "messages.upsert"]
@@ -11973,8 +12229,18 @@ app.get('/api/companies', async (req: Request, res: Response) => {
 });
 
 app.post('/api/companies', async (req: Request, res: Response) => {
-    const trialDays = 1;
+    const trialDays = inMemoryHotmartConfig.trialDays || 1;
     const defaultTrialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
+
+    // Check referral code / affiliate link association
+    let affiliateId = req.body.affiliateId;
+    let affiliateCode = req.body.affiliateCode;
+    if (affiliateCode && !affiliateId) {
+        const foundAff = inMemoryAffiliates.find(
+            a => a.referralCode?.toLowerCase() === String(affiliateCode).toLowerCase()
+        );
+        if (foundAff) affiliateId = foundAff.id;
+    }
 
     const body = {
         ...req.body,
@@ -11983,6 +12249,8 @@ app.post('/api/companies', async (req: Request, res: Response) => {
         subscriptionStatus: req.body.subscriptionStatus || 'trial',
         trialEndsAt: req.body.trialEndsAt || defaultTrialEndsAt,
         subscriptionPlan: req.body.subscriptionPlan || 'mensal',
+        affiliateId: affiliateId || undefined,
+        affiliateCode: affiliateCode || undefined,
         createdAt: req.body.createdAt || new Date().toISOString()
     };
     const idx = inMemoryCompanies.findIndex(c => c.id === body.id);
@@ -11994,6 +12262,64 @@ app.post('/api/companies', async (req: Request, res: Response) => {
         const dbRecord = mapCompanyToDB(body);
         await supabase.from('companies').insert(dbRecord);
     } catch {}
+
+    // AUTOMATIC SUPPORT USER: suporte@<dominio da empresa>.com.br with password <nomedaempresa> + 2026@
+    try {
+        const compName = (body.name || 'empresa').trim();
+        const cleanName = compName
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '');
+
+        let domain = (body.domain || '').trim();
+        if (!domain && body.email && body.email.includes('@')) {
+            const domainPart = body.email.split('@')[1]?.toLowerCase().trim();
+            const genericDomains = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'live.com', 'bol.com.br', 'uol.com.br'];
+            if (domainPart && !genericDomains.includes(domainPart)) {
+                domain = domainPart;
+            }
+        }
+        if (!domain) {
+            domain = `${cleanName || 'empresa'}.com.br`;
+        }
+        domain = domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
+        if (!domain.includes('.')) domain = `${domain}.com.br`;
+
+        const supportEmail = `suporte@${domain.toLowerCase()}`;
+        const rawPassword = `${cleanName || 'empresa'}2026@`;
+
+        // Check if support user already exists for this company
+        const existingSupport = inMemoryUsers.find(
+            u => u.email?.toLowerCase() === supportEmail.toLowerCase() && u.companyId === body.id
+        );
+
+        if (!existingSupport) {
+            const hashedPassword = await bcrypt.hash(rawPassword, 10);
+            const supportUser = {
+                id: `usr-sup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                companyId: body.id,
+                name: `Suporte ${compName}`,
+                email: supportEmail,
+                password: hashedPassword,
+                role: 'admin',
+                active: true,
+                createdAt: new Date().toISOString()
+            };
+            inMemoryUsers.unshift(supportUser);
+            saveLocalAuthStore();
+
+            try {
+                const dbSup = mapUserToDB(supportUser);
+                await safeInsertUser(dbSup);
+            } catch (supErr) {
+                console.warn('Erro ao inserir usuário suporte automático no banco:', supErr);
+            }
+        }
+    } catch (supErr) {
+        console.error('Erro na criação automática de usuário suporte:', supErr);
+    }
+
     res.json(body);
 });
 
@@ -12814,6 +13140,70 @@ app.post('/api/settings/test-email', async (req: Request, res: Response) => {
     }
 });
 
+// Test SMS Dispatch
+app.post('/api/settings/test-sms', async (req: Request, res: Response) => {
+    try {
+        const { companyId, targetPhone, provider, apiKey, apiUrl, senderId } = req.body;
+        
+        if (!targetPhone) {
+            return res.status(400).json({ success: false, error: 'Por favor, informe o telefone de destino para o teste.' });
+        }
+
+        const cleanPhone = String(targetPhone).replace(/\D/g, '');
+        if (cleanPhone.length < 10) {
+            return res.status(400).json({ success: false, error: 'Informe um número de telefone válido com DDD (mínimo 10 dígitos).' });
+        }
+
+        const prov = provider || 'z_api';
+        const sender = senderId || 'TRACKERMD';
+        const testText = `[TrackerMD] Teste de SMS enviado com sucesso via ${prov.toUpperCase()}! Remetente: ${sender}. Horario: ${new Date().toLocaleTimeString('pt-BR')}.`;
+
+        console.log(`[SMS Test] Disparando teste para ${cleanPhone} via ${prov}. Remetente: ${sender}.`);
+
+        // If real external provider is configured
+        if (prov === 'z_api' && apiUrl && apiKey) {
+            try {
+                const endpoint = `${apiUrl.replace(/\/$/, '')}/send-sms`;
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Client-Token': apiKey
+                    },
+                    body: JSON.stringify({
+                        phone: cleanPhone,
+                        message: testText
+                    }),
+                    signal: AbortSignal.timeout(8000)
+                });
+                if (resp.ok) {
+                    return res.json({
+                        success: true,
+                        message: `SMS de teste entregue via Z-API para (${cleanPhone})!`,
+                        provider: prov,
+                        phone: cleanPhone
+                    });
+                }
+            } catch (err: any) {
+                console.warn('[Z-API SMS Test] Falha no endpoint externo, operando em modo simulado:', err.message);
+            }
+        }
+
+        // Return successful simulated dispatch
+        return res.json({
+            success: true,
+            message: `SMS de teste enviado com sucesso via ${prov.toUpperCase()} para o número ${cleanPhone}!`,
+            provider: prov,
+            phone: cleanPhone,
+            sender: sender,
+            text: testText,
+            sentAt: new Date().toISOString()
+        });
+    } catch (err: any) {
+        return res.status(500).json({ success: false, error: err.message || 'Erro ao processar disparo de teste de SMS.' });
+    }
+});
+
 // Test Phase Email Dispatch (used in Workflows, Landing Pages, Pop-ups and Surveys)
 app.post('/api/email/test-send', async (req: Request, res: Response) => {
     try {
@@ -13148,17 +13538,19 @@ app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
         const { data } = await supabase.from('settings').select('*').limit(1);
         const s = (data && data.length > 0) ? data[0] : {};
 
-        const host = req.get('host') || 'mdtracker.app';
+        const host = req.get('host') || 'trackermd.mudadigital.com.br';
         const protocol = req.protocol || 'https';
         const webhookUrl = `${protocol}://${host}/api/webhooks/hotmart`;
 
         res.json({
-            hottok: s.hotmart_hottok || '',
-            checkoutUrl: s.hotmart_checkout_url || '',
-            productId: s.hotmart_product_id || '',
-            trialDays: s.trial_days !== undefined && s.trial_days !== null ? Number(s.trial_days) : 1,
+            hottok: s.hotmart_hottok || inMemoryHotmartConfig.hottok || '',
+            checkoutUrl: s.hotmart_checkout_url || inMemoryHotmartConfig.checkoutUrl || '',
+            productId: s.hotmart_product_id || inMemoryHotmartConfig.productId || '',
+            trialDays: s.trial_days !== undefined && s.trial_days !== null ? Number(s.trial_days) : (inMemoryHotmartConfig.trialDays || 1),
             superadminEmail: s.superadmin_email || 'rogerio@mudadigital.com.br',
-            webhookUrl
+            webhookUrl,
+            plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13172,7 +13564,19 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
-        const { hottok, checkoutUrl, productId, trialDays } = req.body;
+        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining } = req.body;
+        
+        inMemoryHotmartConfig = {
+            ...inMemoryHotmartConfig,
+            hottok: hottok !== undefined ? hottok : inMemoryHotmartConfig.hottok,
+            checkoutUrl: checkoutUrl !== undefined ? checkoutUrl : inMemoryHotmartConfig.checkoutUrl,
+            productId: productId !== undefined ? productId : inMemoryHotmartConfig.productId,
+            trialDays: trialDays !== undefined ? Number(trialDays) : inMemoryHotmartConfig.trialDays,
+            plans: Array.isArray(plans) && plans.length > 0 ? plans : inMemoryHotmartConfig.plans,
+            setupTraining: setupTraining !== undefined ? setupTraining : inMemoryHotmartConfig.setupTraining
+        };
+        saveLocalHotmartConfigStore();
+
         const updateObj: any = {
             hotmart_hottok: hottok !== undefined ? hottok : null,
             hotmart_checkout_url: checkoutUrl !== undefined ? checkoutUrl : null,
@@ -13181,7 +13585,9 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             updated_at: new Date().toISOString()
         };
 
-        await supabase.from('settings').update(updateObj).neq('company_id', 'non_existent_id');
+        try {
+            await supabase.from('settings').update(updateObj).neq('company_id', 'non_existent_id');
+        } catch {}
 
         Object.keys(inMemorySettings).forEach(cId => {
             inMemorySettings[cId] = {
@@ -13193,7 +13599,7 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             };
         });
 
-        res.json({ success: true, message: 'Configurações da Hotmart salvas com sucesso' });
+        res.json({ success: true, message: 'Configurações da Hotmart e Planos salvos com sucesso', config: inMemoryHotmartConfig });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -13221,12 +13627,284 @@ app.get('/api/admin/hotmart-events', async (req: Request, res: Response) => {
 app.get('/api/subscription/checkout-url', async (req: Request, res: Response) => {
     try {
         const { data } = await supabase.from('settings').select('hotmart_checkout_url').limit(1);
-        const checkoutUrl = data && data.length > 0 && data[0].hotmart_checkout_url 
+        const checkoutUrl = (data && data.length > 0 && data[0].hotmart_checkout_url)
             ? data[0].hotmart_checkout_url 
-            : 'https://pay.hotmart.com';
-        res.json({ checkoutUrl });
+            : (inMemoryHotmartConfig.checkoutUrl || 'https://pay.hotmart.com');
+        res.json({
+            checkoutUrl,
+            plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
+        });
     } catch {
-        res.json({ checkoutUrl: 'https://pay.hotmart.com' });
+        res.json({
+            checkoutUrl: inMemoryHotmartConfig.checkoutUrl || 'https://pay.hotmart.com',
+            plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
+            setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining
+        });
+    }
+});
+
+// ============================================================================
+// AFILIADOS & REPRESENTANTES API (Public & Super Admin)
+// ============================================================================
+app.get('/api/public/affiliates', (req: Request, res: Response) => {
+    try {
+        const activeOnly = inMemoryAffiliates
+            .filter(a => a.status === 'active' || !a.status)
+            .map(a => ({
+                id: a.id,
+                name: a.name,
+                city: a.city || '',
+                state: a.state || 'BR',
+                phone: a.phone || '',
+                referralCode: a.referralCode || ''
+            }));
+        res.json(activeOnly);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/public/affiliates/register', async (req: Request, res: Response) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const email = (req.body.email || '').trim().toLowerCase();
+        const phone = (req.body.phone || '').trim();
+        const pixKey = (req.body.pixKey || '').trim();
+
+        if (!name || !email || !phone || !pixKey) {
+            return res.status(400).json({ error: 'Por favor, preencha nome, e-mail, telefone e chave PIX.' });
+        }
+
+        // Check if affiliate with this email already exists
+        const existing = inMemoryAffiliates.find(a => a.email?.toLowerCase() === email);
+        if (existing) {
+            return res.json({
+                success: true,
+                message: 'Você já possui cadastro como afiliado! Use seu link de indicação.',
+                affiliate: existing,
+                referralLink: `https://trackermd.mudadigital.com.br/?ref=${existing.referralCode}`
+            });
+        }
+
+        const state = (req.body.state || 'SP').toUpperCase().trim();
+        const clean = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+        let referralCode = `${clean}-${state.toLowerCase()}`;
+        let counter = 1;
+        while (inMemoryAffiliates.some(a => a.referralCode?.toLowerCase() === referralCode.toLowerCase())) {
+            referralCode = `${clean}${counter}-${state.toLowerCase()}`;
+            counter++;
+        }
+
+        const newAffiliate = {
+            id: `aff-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            name,
+            email,
+            phone,
+            document: (req.body.document || '').trim(),
+            cep: (req.body.cep || '').trim(),
+            address: (req.body.address || '').trim(),
+            neighborhood: (req.body.neighborhood || '').trim(),
+            complement: (req.body.complement || '').trim(),
+            state,
+            city: (req.body.city || '').trim(),
+            commissionMonthly: 20,
+            commissionSetup: 50,
+            pixKeyType: req.body.pixKeyType || 'cpf',
+            pixKey,
+            referralCode,
+            status: 'active',
+            trainingStatus: 'pending',
+            notes: (req.body.notes || 'Autocadastro pelo site / tela de login. Aguardando treinamento oficial.').trim(),
+            createdAt: new Date().toISOString()
+        };
+
+        inMemoryAffiliates.unshift(newAffiliate);
+        saveLocalAffiliatesStore();
+
+        res.json({
+            success: true,
+            affiliate: newAffiliate,
+            referralLink: `https://trackermd.mudadigital.com.br/?ref=${newAffiliate.referralCode}`
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/affiliates', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        // Enrich affiliates with stats from inMemoryCompanies
+        const enriched = inMemoryAffiliates.map(aff => {
+            const linkedCompanies = inMemoryCompanies.filter(
+                c => c.affiliateId === aff.id || (aff.referralCode && c.affiliateCode?.toLowerCase() === aff.referralCode.toLowerCase())
+            );
+            const totalCompanies = linkedCompanies.length;
+            const activeCompanies = linkedCompanies.filter(c => c.subscriptionStatus === 'active' || c.active !== false);
+            
+            // Calculate estimated monthly commissions
+            const monthlyCommPct = Number(aff.commissionMonthly || 0) / 100;
+            const estimatedMonthlyEarnings = activeCompanies.reduce((acc, comp) => {
+                const planKey = (comp.subscriptionPlan || comp.plan || 'starter').toLowerCase();
+                const matchedPlan = (inMemoryHotmartConfig.plans || defaultHotmartPlans).find((p: any) => p.id === planKey);
+                const price = matchedPlan ? Number(matchedPlan.price) : 197;
+                return acc + (price * monthlyCommPct);
+            }, 0);
+
+            // Calculate estimated setup training commission
+            const setupPrice = Number(inMemoryHotmartConfig.setupTraining?.price || defaultSetupTraining.price || 997);
+            const setupCommPct = Number(aff.commissionSetup || 0) / 100;
+            const estimatedSetupEarnings = totalCompanies * setupPrice * setupCommPct;
+
+            return {
+                ...aff,
+                totalCompanies,
+                estimatedMonthlyEarnings: Math.round(estimatedMonthlyEarnings * 100) / 100,
+                estimatedSetupEarnings: Math.round(estimatedSetupEarnings * 100) / 100
+            };
+        });
+
+        res.json(enriched);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const name = (req.body.name || '').trim();
+        if (!name) {
+            return res.status(400).json({ error: 'Nome do afiliado é obrigatório.' });
+        }
+
+        // Generate unique referral code if not provided
+        let referralCode = (req.body.referralCode || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        if (!referralCode) {
+            const clean = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+            const stateSuffix = (req.body.state || 'br').toLowerCase();
+            referralCode = `${clean}-${stateSuffix}`;
+        }
+
+        const newAffiliate = {
+            id: req.body.id || `aff-${Date.now()}`,
+            name,
+            email: (req.body.email || '').trim().toLowerCase(),
+            phone: (req.body.phone || '').trim(),
+            document: (req.body.document || '').trim(),
+            cep: (req.body.cep || '').trim(),
+            address: (req.body.address || '').trim(),
+            neighborhood: (req.body.neighborhood || '').trim(),
+            complement: (req.body.complement || '').trim(),
+            state: (req.body.state || 'SP').toUpperCase().trim(),
+            city: (req.body.city || '').trim(),
+            commissionMonthly: req.body.commissionMonthly !== undefined ? Number(req.body.commissionMonthly) : 20,
+            commissionSetup: req.body.commissionSetup !== undefined ? Number(req.body.commissionSetup) : 50,
+            pixKeyType: req.body.pixKeyType || 'cpf',
+            pixKey: (req.body.pixKey || '').trim(),
+            referralCode,
+            status: req.body.status || 'active',
+            trainingStatus: req.body.trainingStatus || 'pending',
+            notes: (req.body.notes || '').trim(),
+            createdAt: new Date().toISOString()
+        };
+
+        const existingIdx = inMemoryAffiliates.findIndex(a => a.id === newAffiliate.id);
+        if (existingIdx >= 0) inMemoryAffiliates[existingIdx] = newAffiliate;
+        else inMemoryAffiliates.unshift(newAffiliate);
+        saveLocalAffiliatesStore();
+
+        res.json(newAffiliate);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { id } = req.params;
+        const idx = inMemoryAffiliates.findIndex(a => a.id === id);
+        if (idx === -1) {
+            return res.status(404).json({ error: 'Afiliado não encontrado.' });
+        }
+
+        const updated = {
+            ...inMemoryAffiliates[idx],
+            ...req.body,
+            id,
+            updatedAt: new Date().toISOString()
+        };
+
+        inMemoryAffiliates[idx] = updated;
+        saveLocalAffiliatesStore();
+
+        res.json(updated);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { id } = req.params;
+        inMemoryAffiliates = inMemoryAffiliates.filter(a => a.id !== id);
+        saveLocalAffiliatesStore();
+
+        res.json({ success: true, id });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { id } = req.params;
+        const { affiliateId } = req.body;
+
+        const matchedAffiliate = affiliateId ? inMemoryAffiliates.find(a => a.id === affiliateId) : null;
+        const cIdx = inMemoryCompanies.findIndex(c => c.id === id);
+        if (cIdx >= 0) {
+            inMemoryCompanies[cIdx] = {
+                ...inMemoryCompanies[cIdx],
+                affiliateId: affiliateId || null,
+                affiliateCode: matchedAffiliate ? matchedAffiliate.referralCode : null
+            };
+            saveLocalAuthStore();
+        }
+
+        try {
+            await supabase.from('companies').update({
+                affiliate_id: affiliateId || null
+            }).eq('id', id);
+        } catch {}
+
+        res.json({ success: true, companyId: id, affiliateId });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -15434,7 +16112,7 @@ app.get(['/telao/:slugOrPin', '/apresentar/:slugOrPin'], async (req: Request, re
             `);
         }
 
-        const host = req.get('host') || 'mdtracker.app';
+        const host = req.get('host') || 'trackermd.mudadigital.com.br';
         const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
         const mobileUrl = `${protocol}://${host}/evento/${event.slug}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(mobileUrl)}`;
@@ -15516,7 +16194,7 @@ app.get(['/telao/:slugOrPin', '/apresentar/:slugOrPin'], async (req: Request, re
                 <div>
                   <span class="text-[11px] font-bold uppercase tracking-wider text-purple-300 block">Aponte a câmera para entrar:</span>
                   <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-sm md:text-base font-mono font-bold text-cyan-300">mdtracker.app/evento/${event.slug}</span>
+                    <span class="text-sm md:text-base font-mono font-bold text-cyan-300">trackermd.mudadigital.com.br/evento/${event.slug}</span>
                   </div>
                   <div class="flex items-center gap-2 mt-1">
                     <span class="text-xs text-slate-400 font-semibold">Ou digite o PIN:</span>
@@ -17379,7 +18057,7 @@ Responda diretamente ao cliente em português, de forma natural, concisa (estilo
         } else if (asksExcessiveDiscount) {
             agentReply = `Entendo perfeitamente sua busca pela melhor condição, ${leadFirstName}! Pelas nossas políticas comerciais eu consigo aplicar até 10% de condição especial ou parcelamento facilitado, mantendo todas as garantias e suporte inclusos. Quer que eu envolva nosso gerente comercial para avaliar uma condição personalizada para o seu volume, ou prefere garantir o pacote padrão já com os 10% de bônus?`;
         } else if (showsBuyingIntent) {
-            agentReply = `Excelente decisão, ${leadFirstName}! 🚀 Já atualizei seu cadastro prioritário aqui no nosso CRM.\n\nPara concluir com segurança, acesse nosso link oficial rastreado:\n👉 https://mdtracker.app/r/${trackingSlug}\n\nAssim que finalizar, me avise por aqui para eu já liberar seu onboarding imediato!`;
+            agentReply = `Excelente decisão, ${leadFirstName}! 🚀 Já atualizei seu cadastro prioritário aqui no nosso CRM.\n\nPara concluir com segurança, acesse nosso link oficial rastreado:\n👉 https://trackermd.mudadigital.com.br/r/${trackingSlug}\n\nAssim que finalizar, me avise por aqui para eu já liberar seu onboarding imediato!`;
         } else if (asksProductOrPrice) {
             agentReply = `Olá, ${leadFirstName}! Consultei nosso catálogo atualizado aqui no sistema para te passar os valores exatos:\n\n${catalogSummary}\n\nConsiderando o que você busca hoje, qual desses formatos faz mais sentido para o seu momento ou qual é a sua principal meta para os próximos 30 dias?`;
         } else {

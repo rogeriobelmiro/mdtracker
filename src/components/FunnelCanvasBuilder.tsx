@@ -50,7 +50,8 @@ import {
   Compass,
   Eye,
   Save,
-  CheckCheck
+  CheckCheck,
+  CheckCircle
 } from 'lucide-react';
 import {
   VisualFunnel,
@@ -76,6 +77,224 @@ import {
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
+// ==========================================
+// 1. OFFICIAL COMMUNITY TEMPLATES
+// ==========================================
+export const COMMUNITY_FUNNELS: VisualFunnel[] = [
+  {
+    id: 'comm-funnel-direct-traffic',
+    companyId: 'community',
+    name: 'Funil Direto - Tráfego Pago & WhatsApp',
+    description: 'Fluxo oficial de atração de anúncios Meta/Instagram para captura de leads, atendimento comercial no WhatsApp e nutrição automática.',
+    category: 'Tráfego Pago & WhatsApp',
+    isTemplate: true,
+    nodes: [
+      {
+        id: 'node-meta-ads',
+        type: 'traffic_meta',
+        title: 'Meta Ads',
+        subtitle: 'Campanha de Tráfego Direto',
+        x: 80,
+        y: 120,
+        data: {
+          visitors: 1240,
+          leads: 0,
+          investment: 420.00,
+          cpl: 3.25,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-creative-subflow',
+        type: 'traffic_creative',
+        title: 'Sub Workflow Criativos',
+        subtitle: 'Testes A/B de Vídeos',
+        x: 80,
+        y: 280,
+        data: {
+          visitors: 850,
+          leads: 0,
+          investment: 280.00,
+          cpl: 2.90,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-instagram-bio',
+        type: 'traffic_instagram',
+        title: 'Instagram Orgânico',
+        subtitle: 'Link da Bio & Stories',
+        x: 80,
+        y: 440,
+        data: {
+          visitors: 630,
+          leads: 0,
+          investment: 0,
+          cpl: 0,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-landing-page',
+        type: 'landing_page',
+        title: 'Página de Vendas / Captura',
+        subtitle: 'Alta Conversão com VSL',
+        x: 480,
+        y: 240,
+        data: {
+          url: 'https://trackermd.mudadigital.com.br/lp/oferta-vip',
+          visitors: 2720,
+          leads: 680,
+          conversionRate: 25.0,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-whatsapp-link',
+        type: 'whatsapp_link',
+        title: 'Link WhatsApp Oficial',
+        subtitle: 'Disparo Meta CAPI + Rotação',
+        x: 880,
+        y: 240,
+        data: {
+          visitors: 680,
+          leads: 410,
+          conversions: 410,
+          conversionRate: 60.3,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-automation-nurture',
+        type: 'automation_sequence',
+        title: 'Automação & Recuperação',
+        subtitle: 'E-mails + WhatsApp 24h',
+        x: 880,
+        y: 480,
+        data: {
+          visitors: 680,
+          leads: 270,
+          conversions: 34,
+          status: 'active'
+        }
+      },
+      {
+        id: 'node-checkout-hotmart',
+        type: 'checkout',
+        title: 'Checkout Hotmart / Kiwify',
+        subtitle: 'Pagamento Cartão/Pix',
+        x: 1240,
+        y: 240,
+        data: {
+          provider: 'Hotmart',
+          price: 297.00,
+          salesCount: 68,
+          revenue: 20196.00,
+          conversionRate: 16.6,
+          status: 'active'
+        }
+      }
+    ],
+    edges: [
+      { id: 'edge-1', source: 'node-meta-ads', target: 'node-landing-page', label: '1.240 cliques' },
+      { id: 'edge-2', source: 'node-creative-subflow', target: 'node-landing-page', label: '850 cliques' },
+      { id: 'edge-3', source: 'node-instagram-bio', target: 'node-landing-page', label: '630 cliques' },
+      { id: 'edge-4', source: 'node-landing-page', target: 'node-whatsapp-link', label: '25.0% conversão' },
+      { id: 'edge-5', source: 'node-whatsapp-link', target: 'node-checkout-hotmart', label: '60.3% avançam' },
+      { id: 'edge-6', source: 'node-landing-page', target: 'node-automation-nurture', label: 'Leads não-convertidos' }
+    ],
+    viewport: { x: 0, y: 0, zoom: 0.95 },
+    metrics: {
+      investment: 700.00,
+      totalLeads: 680,
+      cpl: 1.03,
+      conversionRate: 25.0,
+      totalSales: 68,
+      totalRevenue: 20196.00
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'comm-funnel-perpetual-vsl',
+    companyId: 'community',
+    name: 'Funil Perpétuo de Infoproduto (VSL + Checkout)',
+    description: 'Campanhas de vídeo no Facebook/Instagram jogando direto para página com VSL irresistível, checkout com order bump e recuperação ativa.',
+    category: 'Infoprodutos & Perpétuo',
+    isTemplate: true,
+    nodes: [
+      {
+        id: 'node-vsl-meta',
+        type: 'traffic_meta',
+        title: 'Meta Ads Vídeo VSL',
+        subtitle: 'Campanha de Conversão',
+        x: 80,
+        y: 200,
+        data: { visitors: 3400, leads: 0, investment: 1200, status: 'active' }
+      },
+      {
+        id: 'node-vsl-lp',
+        type: 'landing_page',
+        title: 'Página VSL com Pitch',
+        subtitle: 'Vídeo de Vendas 22min',
+        x: 480,
+        y: 200,
+        data: { visitors: 3400, leads: 510, conversionRate: 15.0, status: 'active' }
+      },
+      {
+        id: 'node-vsl-chk',
+        type: 'checkout',
+        title: 'Checkout Kiwify / Hotmart',
+        subtitle: 'Oferta Principal R$ 197',
+        x: 880,
+        y: 200,
+        data: { visitors: 510, salesCount: 82, revenue: 16154, conversionRate: 16.1, status: 'active' }
+      },
+      {
+        id: 'node-vsl-recup',
+        type: 'automation_sequence',
+        title: 'Recuperação WhatsApp Pix',
+        subtitle: 'Disparo via CAPI & Carrinho',
+        x: 880,
+        y: 400,
+        data: { visitors: 200, leads: 45, conversions: 19, status: 'active' }
+      }
+    ],
+    edges: [
+      { id: 'edge-v1', source: 'node-vsl-meta', target: 'node-vsl-lp', label: '3.400 acessos' },
+      { id: 'edge-v2', source: 'node-vsl-lp', target: 'node-vsl-chk', label: '15.0% clicam no botão' },
+      { id: 'edge-v3', source: 'node-vsl-chk', target: 'node-vsl-recup', label: 'Carrinho abandonado' }
+    ],
+    viewport: { x: 0, y: 0, zoom: 0.95 },
+    metrics: {
+      investment: 1200.00,
+      totalLeads: 510,
+      cpl: 2.35,
+      conversionRate: 15.0,
+      totalSales: 82,
+      totalRevenue: 16154.00
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Helper to create clean blank funnel
+const createBlankFunnel = (companyId: string): VisualFunnel => ({
+  id: `funnel-${Date.now()}`,
+  companyId,
+  name: 'Novo Funil em Branco',
+  description: 'Mapeamento visual da esteira de vendas e conversão.',
+  category: 'Geral',
+  isTemplate: false,
+  nodes: [],
+  edges: [],
+  viewport: { x: 0, y: 0, zoom: 1 },
+  metrics: { investment: 0, totalLeads: 0, cpl: 0, conversionRate: 0, totalSales: 0, totalRevenue: 0 },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+});
+
 interface FunnelCanvasBuilderProps {
   currentCompany: Company;
   leads: Lead[];
@@ -96,7 +315,11 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'funnels' | 'templates' | 'community'>('funnels');
 
-  // Related Entities in Company for 1-Click Integration
+  // Modals for Community & Templates
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+
+  // Related Entities in Company for 1-Click Integration (strictly filtered for multi-tenant isolation)
   const [companyLinks, setCompanyLinks] = useState<CampaignLink[]>([]);
   const [companyLps, setCompanyLps] = useState<LandingPage[]>([]);
   const [companyWorkflows, setCompanyWorkflows] = useState<MarketingWorkflow[]>([]);
@@ -122,40 +345,41 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
 
   // Left Sidebar Expand/Collapse
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    traffic: true,
-    pages: true,
-    conversion: true,
-    nurture: true
-  });
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Load all initial funnels and entities
+  // Load all initial funnels and entities with strict multi-tenant isolation
   const loadAll = async () => {
     try {
       setLoading(true);
-      const [fList, links, lps, wfs, pops] = await Promise.all([
+      const [fList, rawLinks, rawLps, rawWfs, rawPops] = await Promise.all([
         fetchVisualFunnels(currentCompany.id),
-        fetchLinks(currentCompany.id).catch(() => []),
+        fetchLinks(undefined, undefined, currentCompany.id).catch(() => []),
         fetchLandingPages(currentCompany.id).catch(() => []),
         fetchWorkflows(currentCompany.id).catch(() => []),
         fetchPopups(currentCompany.id).catch(() => [])
       ]);
 
-      setFunnels(fList);
-      setCompanyLinks(links || []);
-      setCompanyLps(lps || []);
-      setCompanyWorkflows(wfs || []);
-      setCompanyPopups(pops || []);
+      // Strict tenant isolation: strictly filter only records of this company
+      const filteredLinks = (rawLinks || []).filter(l => l.companyId === currentCompany.id);
+      const filteredLps = (rawLps || []).filter(p => !p.companyId || p.companyId === currentCompany.id);
+      const filteredWfs = (rawWfs || []).filter(w => !w.companyId || w.companyId === currentCompany.id);
+      const filteredPops = (rawPops || []).filter(p => !p.companyId || p.companyId === currentCompany.id);
 
-      if (fList.length > 0) {
-        setCurrentFunnel(fList[0]);
-        if (fList[0].viewport) {
-          setPan({ x: fList[0].viewport.x || 0, y: fList[0].viewport.y || 0 });
-          setZoom(fList[0].viewport.zoom || 1);
-        }
-      }
+      setFunnels(fList || []);
+      setCompanyLinks(filteredLinks);
+      setCompanyLps(filteredLps);
+      setCompanyWorkflows(filteredWfs);
+      setCompanyPopups(filteredPops);
+
+      // Requirement: "Sempre quando o cliente abrir o funil visual, mostrar em branco"
+      // Start with a clean blank canvas on open
+      const blank = createBlankFunnel(currentCompany.id);
+      setCurrentFunnel(blank);
+      setPan({ x: 0, y: 0 });
+      setZoom(1);
+      setSelectedNodeId(null);
+      setIsDrawerOpen(false);
     } catch (err: any) {
       console.error('Erro ao carregar funis:', err);
     } finally {
@@ -166,6 +390,20 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
   useEffect(() => {
     loadAll();
   }, [currentCompany.id]);
+
+  // Window-level mouseup listener to guarantee node drops even if released outside canvas/over other elements
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsPanning(false);
+      setDraggingNodeId(null);
+      setConnectingSourceId(null);
+    };
+
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, []);
 
   // Selected Node Object
   const selectedNode = useMemo(() => {
@@ -214,11 +452,14 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     setConnectingSourceId(null);
   };
 
-  // Node Drag Handlers
+  // Node Drag & Click Handlers:
+  // 1 Click / Hold = Drag / Select
+  // 2 Clicks (Double Click) = Open Configuration Drawer
   const handleNodeMouseDown = (e: React.MouseEvent, node: VisualFunnelNode) => {
+    if ((e.target as HTMLElement).closest('.node-pin')) return;
+
     e.stopPropagation();
     setSelectedNodeId(node.id);
-    setIsDrawerOpen(true);
     if (isLocked) return;
 
     setDraggingNodeId(node.id);
@@ -231,6 +472,12 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
         y: mouseCanvasY - node.y
       });
     }
+  };
+
+  const handleNodeDoubleClick = (e: React.MouseEvent, node: VisualFunnelNode) => {
+    e.stopPropagation();
+    setSelectedNodeId(node.id);
+    setIsDrawerOpen(true);
   };
 
   // Connect Two Nodes via Pin
@@ -304,6 +551,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
       setSaving(true);
       const payload: Partial<VisualFunnel> = {
         ...currentFunnel,
+        companyId: currentCompany.id,
         viewport: { x: pan.x, y: pan.y, zoom },
         isTemplate: saveAsTemplate ? true : currentFunnel.isTemplate,
         updatedAt: new Date().toISOString()
@@ -318,7 +566,10 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
       } else {
         const updated = await updateVisualFunnel(currentFunnel.id, payload);
         setCurrentFunnel(updated);
-        setFunnels(prev => prev.map(f => f.id === updated.id ? updated : f));
+        setFunnels(prev => {
+          const exists = prev.some(f => f.id === updated.id);
+          return exists ? prev.map(f => f.id === updated.id ? updated : f) : [updated, ...prev];
+        });
         await alert('✅ Fluxo do funil salvo com sucesso!', 'success');
       }
     } catch (err: any) {
@@ -328,51 +579,36 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     }
   };
 
-  // Create New Empty Funnel
-  const handleCreateNewFunnel = async () => {
-    const newFunnel: Partial<VisualFunnel> = {
-      companyId: currentCompany.id,
-      name: 'Novo Funil de Rastreamento',
-      description: 'Mapeamento visual da esteira de vendas e conversão.',
-      category: 'Geral',
-      isTemplate: false,
-      nodes: [
-        {
-          id: 'node-start',
-          type: 'traffic_meta',
-          title: 'Meta Ads',
-          subtitle: 'Anúncios no Instagram/Facebook',
-          x: 100,
-          y: 200,
-          data: { visitors: 0, leads: 0, status: 'active' }
-        },
-        {
-          id: 'node-link',
-          type: 'whatsapp_link',
-          title: 'Link WhatsApp Rastreado',
-          subtitle: 'Com disparo Meta CAPI',
-          x: 480,
-          y: 200,
-          data: { conversions: 0, status: 'active' }
-        }
-      ],
-      edges: [
-        { id: 'edge-1', source: 'node-start', target: 'node-link', label: 'Cliques' }
-      ],
-      viewport: { x: 0, y: 0, zoom: 1 },
-      metrics: { investment: 0, totalLeads: 0, cpl: 0, conversionRate: 0 }
-    };
+  // Create New Empty Funnel (Blank)
+  const handleCreateNewFunnel = () => {
+    const blank = createBlankFunnel(currentCompany.id);
+    setCurrentFunnel(blank);
+    setSelectedNodeId(null);
+    setIsDrawerOpen(false);
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  };
 
-    try {
-      const created = await createVisualFunnel(newFunnel);
-      setFunnels(prev => [created, ...prev]);
-      setCurrentFunnel(created);
-      setSelectedNodeId(null);
-      setPan({ x: 0, y: 0 });
-      setZoom(1);
-    } catch (err: any) {
-      await alert(err.message || 'Erro ao criar funil', 'error');
+  // Load Community Funnel Template into Canvas
+  const handleLoadCommunityFunnel = (template: VisualFunnel) => {
+    const clonedFunnel: VisualFunnel = {
+      ...template,
+      id: `funnel-community-${Date.now()}`,
+      companyId: currentCompany.id,
+      name: `${template.name} (Cópia da Comunidade)`,
+      isTemplate: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setCurrentFunnel(clonedFunnel);
+    if (template.viewport) {
+      setPan({ x: template.viewport.x || 0, y: template.viewport.y || 0 });
+      setZoom(template.viewport.zoom || 0.95);
     }
+    setSelectedNodeId(null);
+    setIsCommunityModalOpen(false);
+    setActiveTab('funnels');
+    alert(`⭐ Fluxo da comunidade "${template.name}" carregado com sucesso no canvas!`, 'success');
   };
 
   // Auto Organize Flow Layout
@@ -414,6 +650,385 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     });
   };
 
+  // ==========================================
+  // REQUIREMENT: PULL AUTOMATICALLY ALL SYSTEM CONFIGURATION
+  // ==========================================
+  const handleAutoImportSystemConfig = () => {
+    if (companyLinks.length === 0 && companyLps.length === 0 && companyWorkflows.length === 0) {
+      // If company has no links or landing pages yet, scaffold a starter Meta Ads -> WhatsApp structure
+      const starterMetaId = `node-meta-${Date.now()}`;
+      const starterWaId = `node-wa-${Date.now() + 1}`;
+      const starterNodes: VisualFunnelNode[] = [
+        {
+          id: starterMetaId,
+          type: 'traffic_meta',
+          title: 'Meta Ads',
+          subtitle: 'Facebook / Instagram Ads',
+          x: 80,
+          y: 200,
+          data: { visitors: 0, leads: 0, conversions: 0, status: 'active', linkId: 'ALL_LINKS' }
+        },
+        {
+          id: starterWaId,
+          type: 'whatsapp_link',
+          title: 'Link WhatsApp Oficial',
+          subtitle: 'Disparo Meta CAPI',
+          x: 480,
+          y: 200,
+          data: { visitors: 0, leads: 0, conversions: 0, status: 'active', linkId: 'ALL_LINKS' }
+        }
+      ];
+      const starterEdges: VisualFunnelEdge[] = [
+        { id: `edge-${Date.now()}`, source: starterMetaId, target: starterWaId, label: 'Cliques' }
+      ];
+
+      setCurrentFunnel({
+        id: `funnel-sys-${Date.now()}`,
+        companyId: currentCompany.id,
+        name: `Funil Sincronizado - ${currentCompany.name}`,
+        description: 'Estrutura base gerada automaticamente para Meta Ads e WhatsApp.',
+        category: 'Geral',
+        isTemplate: false,
+        nodes: starterNodes,
+        edges: starterEdges,
+        viewport: { x: 0, y: 0, zoom: 1 },
+        metrics: { investment: 0, totalLeads: 0, cpl: 0, conversionRate: 0 }
+      });
+      alert('Nenhum link ou página cadastrada ainda nesta empresa. Montamos uma estrutura base para Meta Ads e WhatsApp pronta para você!', 'info');
+      return;
+    }
+
+    const newNodes: VisualFunnelNode[] = [];
+    const newEdges: VisualFunnelEdge[] = [];
+
+    // Filter company links by source/intent
+    const metaLinks = companyLinks.filter(l =>
+      l.utmSource?.toLowerCase().includes('meta') ||
+      l.utmSource?.toLowerCase().includes('facebook') ||
+      l.utmSource?.toLowerCase().includes('face') ||
+      l.metaPixelId
+    );
+    const instaLinks = companyLinks.filter(l =>
+      l.utmSource?.toLowerCase().includes('instagram') ||
+      l.utmSource?.toLowerCase().includes('insta') ||
+      l.utmSource?.toLowerCase().includes('bio')
+    );
+    const otherLinks = companyLinks.filter(l =>
+      !metaLinks.includes(l) && !instaLinks.includes(l)
+    );
+
+    let trafficY = 120;
+
+    // 1. Meta Ads Block:
+    // If there is any link in the company, attach it to the Meta Ads component as requested!
+    const metaLinkToUse = metaLinks[0] || companyLinks[0];
+    const metaVisitors = metaLinks.length > 0
+      ? metaLinks.reduce((acc, l) => acc + (l.clicksCount || 0), 0)
+      : (metaLinkToUse?.clicksCount || 0);
+    const metaLeads = metaLinks.length > 0
+      ? metaLinks.reduce((acc, l) => acc + (l.leadsCount || 0), 0)
+      : (metaLinkToUse?.leadsCount || 0);
+
+    const metaNodeId = `node-meta-${Date.now()}`;
+    newNodes.push({
+      id: metaNodeId,
+      type: 'traffic_meta',
+      title: metaLinkToUse?.title || 'Meta Ads',
+      subtitle: metaLinkToUse?.utmCampaign ? `Campanha: ${metaLinkToUse.utmCampaign}` : 'Facebook / Instagram Ads',
+      x: 80,
+      y: trafficY,
+      data: {
+        linkId: metaLinkToUse ? metaLinkToUse.id : 'ALL_LINKS',
+        visitors: metaVisitors,
+        leads: metaLeads,
+        conversions: metaLeads,
+        conversionRate: metaVisitors > 0 ? Number(((metaLeads / metaVisitors) * 100).toFixed(1)) : 0,
+        status: 'active'
+      }
+    });
+    trafficY += 160;
+
+    // 2. Instagram Node (if present)
+    let instaNodeId: string | null = null;
+    if (instaLinks.length > 0 || otherLinks.length > 1) {
+      const lk = instaLinks[0] || otherLinks[1];
+      instaNodeId = `node-insta-${Date.now() + 1}`;
+      newNodes.push({
+        id: instaNodeId,
+        type: 'traffic_instagram',
+        title: lk?.title || 'Instagram Orgânico',
+        subtitle: lk?.utmCampaign || 'Link na Bio & Stories',
+        x: 80,
+        y: trafficY,
+        data: {
+          linkId: lk?.id,
+          visitors: lk?.clicksCount || 0,
+          leads: lk?.leadsCount || 0,
+          conversions: lk?.conversionsCount || lk?.leadsCount || 0,
+          status: 'active'
+        }
+      });
+      trafficY += 160;
+    }
+
+    // 3. Creative / Sub Workflow Node (if present)
+    let creativeNodeId: string | null = null;
+    if (otherLinks.length > 0 && otherLinks[0] !== metaLinkToUse) {
+      const lk = otherLinks[0];
+      creativeNodeId = `node-creative-${Date.now() + 2}`;
+      newNodes.push({
+        id: creativeNodeId,
+        type: 'traffic_creative',
+        title: lk?.title || 'Criativo / Anúncio',
+        subtitle: lk?.utmCampaign || 'Testes A/B de Criativos',
+        x: 80,
+        y: trafficY,
+        data: {
+          linkId: lk?.id,
+          visitors: lk?.clicksCount || 0,
+          leads: lk?.leadsCount || 0,
+          conversions: lk?.conversionsCount || 0,
+          status: 'active'
+        }
+      });
+      trafficY += 160;
+    }
+
+    // 4. Landing Pages (Column 1, x: 480)
+    let pageY = 160;
+    const lpNodeIds: string[] = [];
+
+    if (companyLps.length > 0) {
+      companyLps.slice(0, 2).forEach((lp, idx) => {
+        const lpId = `node-lp-${Date.now() + 10 + idx}`;
+        lpNodeIds.push(lpId);
+        const rate = lp.visitorsCount > 0 ? Number(((lp.leadsCount / lp.visitorsCount) * 100).toFixed(1)) : 0;
+        newNodes.push({
+          id: lpId,
+          type: 'landing_page',
+          title: lp.title || 'Página de Vendas / Captura',
+          subtitle: `/lp/${lp.slug}`,
+          x: 480,
+          y: pageY,
+          data: {
+            landingPageId: lp.id,
+            url: `https://trackermd.mudadigital.com.br/lp/${lp.slug}`,
+            visitors: lp.visitorsCount || 0,
+            leads: lp.leadsCount || 0,
+            conversions: lp.leadsCount || 0,
+            conversionRate: rate,
+            status: 'active',
+            linkId: 'ALL_LINKS'
+          }
+        });
+        pageY += 180;
+      });
+    } else {
+      const lpId = `node-lp-${Date.now() + 10}`;
+      lpNodeIds.push(lpId);
+      newNodes.push({
+        id: lpId,
+        type: 'landing_page',
+        title: 'Página de Vendas / Captura',
+        subtitle: '/lp/oferta-principal',
+        x: 480,
+        y: 200,
+        data: {
+          url: 'https://trackermd.mudadigital.com.br/lp/oferta',
+          visitors: metaVisitors,
+          leads: metaLeads,
+          conversions: metaLeads,
+          conversionRate: metaVisitors > 0 ? Number(((metaLeads / metaVisitors) * 100).toFixed(1)) : 0,
+          status: 'active',
+          linkId: 'ALL_LINKS'
+        }
+      });
+    }
+
+    // Connect Traffic to Primary Landing Page
+    const primaryLpId = lpNodeIds[0];
+    newEdges.push({
+      id: `edge-meta-lp`,
+      source: metaNodeId,
+      target: primaryLpId,
+      label: `${metaVisitors} cliques`
+    });
+    if (instaNodeId) {
+      newEdges.push({
+        id: `edge-insta-lp`,
+        source: instaNodeId,
+        target: primaryLpId,
+        label: 'Instagram'
+      });
+    }
+    if (creativeNodeId) {
+      newEdges.push({
+        id: `edge-creative-lp`,
+        source: creativeNodeId,
+        target: primaryLpId,
+        label: 'Criativos'
+      });
+    }
+
+    // 5. WhatsApp Link (Column 2, x: 880)
+    const waNodeId = `node-wa-${Date.now() + 20}`;
+    const totalWaClicks = companyLinks.reduce((acc, l) => acc + (l.clicksCount || 0), 0);
+    const totalWaLeads = companyLinks.reduce((acc, l) => acc + (l.leadsCount || 0), 0);
+    newNodes.push({
+      id: waNodeId,
+      type: 'whatsapp_link',
+      title: 'Link WhatsApp Oficial',
+      subtitle: 'Disparo Meta CAPI + Rotação',
+      x: 880,
+      y: 180,
+      data: {
+        linkId: companyLinks[0]?.id || 'ALL_LINKS',
+        visitors: totalWaClicks,
+        leads: totalWaLeads,
+        conversions: totalWaLeads,
+        conversionRate: totalWaClicks > 0 ? Number(((totalWaLeads / totalWaClicks) * 100).toFixed(1)) : 0,
+        status: 'active'
+      }
+    });
+
+    newEdges.push({
+      id: `edge-lp-wa`,
+      source: primaryLpId,
+      target: waNodeId,
+      label: 'Conversão WhatsApp'
+    });
+
+    // 6. Workflow / Automação (if present)
+    if (companyWorkflows.length > 0) {
+      const wf = companyWorkflows[0];
+      const wfNodeId = `node-wf-${Date.now() + 21}`;
+      newNodes.push({
+        id: wfNodeId,
+        type: 'automation_sequence',
+        title: wf.name || 'Automação & Recuperação',
+        subtitle: `${wf.steps?.length || 0} passos de nutrição`,
+        x: 880,
+        y: 380,
+        data: {
+          workflowId: wf.id,
+          linkId: 'ALL_LINKS',
+          visitors: wf.enrolledCount || 0,
+          leads: wf.executedCount || 0,
+          conversions: wf.conversionsCount || 0,
+          status: 'active'
+        }
+      });
+
+      newEdges.push({
+        id: `edge-lp-wf`,
+        source: primaryLpId,
+        target: wfNodeId,
+        label: 'Recuperação'
+      });
+    }
+
+    // 7. Checkout / Conversão (Column 3, x: 1240)
+    const checkoutNodeId = `node-checkout-${Date.now() + 30}`;
+    newNodes.push({
+      id: checkoutNodeId,
+      type: 'checkout',
+      title: 'Checkout Hotmart / Kiwify',
+      subtitle: 'Pagamento Cartão / Pix',
+      x: 1240,
+      y: 180,
+      data: {
+        linkId: 'ALL_LINKS',
+        visitors: totalWaLeads,
+        salesCount: Math.round(totalWaLeads * 0.15),
+        revenue: Math.round(totalWaLeads * 0.15) * 197,
+        conversionRate: 15.0,
+        status: 'active'
+      }
+    });
+
+    newEdges.push({
+      id: `edge-wa-chk`,
+      source: waNodeId,
+      target: checkoutNodeId,
+      label: 'Avançam Checkout'
+    });
+
+    const generatedFunnel: VisualFunnel = {
+      id: `funnel-auto-${Date.now()}`,
+      companyId: currentCompany.id,
+      name: `Funil Sincronizado - ${currentCompany.name}`,
+      description: 'Mapeamento automático integrado com as configurações e links da empresa.',
+      category: 'Geral',
+      isTemplate: false,
+      nodes: newNodes,
+      edges: newEdges,
+      viewport: { x: 0, y: 0, zoom: 0.95 },
+      metrics: {
+        investment: 0,
+        totalLeads: totalWaLeads,
+        cpl: 0,
+        conversionRate: 0,
+        totalSales: Math.round(totalWaLeads * 0.15),
+        totalRevenue: Math.round(totalWaLeads * 0.15) * 197
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setCurrentFunnel(generatedFunnel);
+    setSelectedNodeId(null);
+    setIsDrawerOpen(false);
+    setPan({ x: 0, y: 0 });
+    setZoom(0.95);
+    alert(`⚡ Configurações do sistema importadas com sucesso! Encontrados: ${companyLinks.length} links, ${companyLps.length} páginas e ${companyWorkflows.length} automações.`, 'success');
+  };
+
+  // ==========================================
+  // REQUIREMENT: LINK SELECTION HANDLER FOR ANY COMPONENT
+  // Supports "ALL_LINKS" (summing all data) or a specific link
+  // ==========================================
+  const handleLinkSelectionChange = (linkId: string) => {
+    if (!currentFunnel || !selectedNode) return;
+
+    let visitors = selectedNode.data.visitors || 0;
+    let leadsCount = selectedNode.data.leads || 0;
+    let conversions = selectedNode.data.conversions || 0;
+
+    if (linkId === 'ALL_LINKS') {
+      visitors = companyLinks.reduce((acc, l) => acc + (l.clicksCount || 0), 0);
+      leadsCount = leads.filter(ld => companyLinks.some(cl => cl.id === ld.linkId)).length || companyLinks.reduce((acc, l) => acc + (l.leadsCount || 0), 0);
+      conversions = companyLinks.reduce((acc, l) => acc + (l.conversionsCount || 0), 0) || leadsCount;
+    } else if (linkId) {
+      const lk = companyLinks.find(l => l.id === linkId);
+      if (lk) {
+        visitors = lk.clicksCount || 0;
+        leadsCount = leads.filter(ld => ld.linkId === lk.id).length || lk.leadsCount || 0;
+        conversions = lk.conversionsCount || leadsCount;
+      }
+    }
+
+    const rate = visitors > 0 ? Number(((conversions / visitors) * 100).toFixed(1)) : 0;
+
+    setCurrentFunnel({
+      ...currentFunnel,
+      nodes: currentFunnel.nodes.map(n =>
+        n.id === selectedNode.id
+          ? {
+            ...n,
+            data: {
+              ...n.data,
+              linkId: linkId || undefined,
+              visitors,
+              leads: leadsCount,
+              conversions,
+              conversionRate: rate
+            }
+          }
+          : n
+      )
+    });
+  };
+
   // Pull Real System Metrics into Selected Node
   const handleSyncRealMetrics = (node: VisualFunnelNode) => {
     if (!currentFunnel) return;
@@ -421,12 +1036,16 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     let leadsCount = node.data.leads || 0;
     let conversions = node.data.conversions || 0;
 
-    if (node.data.linkId) {
+    if (node.data.linkId === 'ALL_LINKS') {
+      visitors = companyLinks.reduce((acc, l) => acc + (l.clicksCount || 0), 0);
+      leadsCount = leads.filter(ld => companyLinks.some(cl => cl.id === ld.linkId)).length || companyLinks.reduce((acc, l) => acc + (l.leadsCount || 0), 0);
+      conversions = companyLinks.reduce((acc, l) => acc + (l.conversionsCount || 0), 0) || leadsCount;
+    } else if (node.data.linkId) {
       const lk = companyLinks.find(l => l.id === node.data.linkId);
       if (lk) {
         visitors = lk.clicksCount || 0;
-        leadsCount = leads.filter(ld => ld.linkId === lk.id).length;
-        conversions = leadsCount;
+        leadsCount = leads.filter(ld => ld.linkId === lk.id).length || lk.leadsCount || 0;
+        conversions = lk.conversionsCount || leadsCount;
       }
     } else if (node.data.landingPageId) {
       const lp = companyLps.find(p => p.id === node.data.landingPageId);
@@ -448,15 +1067,15 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
     const updatedNodes = currentFunnel.nodes.map(n =>
       n.id === node.id
         ? {
-            ...n,
-            data: {
-              ...n.data,
-              visitors,
-              leads: leadsCount,
-              conversions,
-              conversionRate: rate
-            }
+          ...n,
+          data: {
+            ...n.data,
+            visitors,
+            leads: leadsCount,
+            conversions,
+            conversionRate: rate
           }
+        }
         : n
     );
 
@@ -464,6 +1083,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
       ...currentFunnel,
       nodes: updatedNodes
     });
+    alert('Métricas sincronizadas com sucesso a partir dos dados reais do sistema!', 'success');
   };
 
   // Node Color & Icon Resolver
@@ -575,39 +1195,53 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
   }, [currentFunnel]);
 
   return (
-    <div className={`flex flex-col bg-[#070A11] text-slate-100 select-none overflow-hidden ${
-      fullScreen ? 'fixed inset-0 z-50' : 'h-[calc(100vh-80px)] rounded-2xl border border-slate-800/80 shadow-2xl'
-    }`}>
+    <div className={`flex flex-col bg-[#070A11] text-slate-100 select-none overflow-hidden ${fullScreen ? 'fixed inset-0 z-50' : 'h-[calc(100vh-80px)] rounded-2xl border border-slate-800/80 shadow-2xl'
+      }`}>
       {/* 1. TOP HEADER TOOLBAR */}
       <div className="bg-[#0B0F19] border-b border-slate-800/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
-        
+
         {/* Left: Tabs & Funnel Select */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* View Tabs */}
           <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs">
             <button
-              onClick={() => setActiveTab('funnels')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
-                activeTab === 'funnels' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => {
+                setActiveTab('funnels');
+                setIsCommunityModalOpen(false);
+                setIsTemplatesModalOpen(false);
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${activeTab === 'funnels' && !isCommunityModalOpen && !isTemplatesModalOpen
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Folder className="w-3.5 h-3.5" />
               <span>Meus Fluxos ({funnels.filter(f => !f.isTemplate).length})</span>
             </button>
             <button
-              onClick={() => setActiveTab('templates')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
-                activeTab === 'templates' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => {
+                setActiveTab('templates');
+                setIsTemplatesModalOpen(true);
+                setIsCommunityModalOpen(false);
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${activeTab === 'templates' || isTemplatesModalOpen
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Bookmark className="w-3.5 h-3.5 text-amber-400" />
-              <span>Meus Templates</span>
+              <span>Meus Templates ({funnels.filter(f => f.isTemplate).length})</span>
             </button>
             <button
-              onClick={() => setActiveTab('community')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
-                activeTab === 'community' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => {
+                setActiveTab('community');
+                setIsCommunityModalOpen(true);
+                setIsTemplatesModalOpen(false);
+              }}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${activeTab === 'community' || isCommunityModalOpen
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Compass className="w-3.5 h-3.5 text-emerald-400" />
               <span>Comunidade</span>
@@ -620,7 +1254,13 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             <select
               value={currentFunnel?.id || ''}
               onChange={(e) => {
-                const found = funnels.find(f => f.id === e.target.value);
+                const val = e.target.value;
+                if (val.startsWith('comm-')) {
+                  const foundComm = COMMUNITY_FUNNELS.find(c => c.id === val);
+                  if (foundComm) handleLoadCommunityFunnel(foundComm);
+                  return;
+                }
+                const found = funnels.find(f => f.id === val);
                 if (found) {
                   setCurrentFunnel(found);
                   setSelectedNodeId(null);
@@ -632,28 +1272,54 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
               }}
               className="bg-transparent text-white font-bold outline-none cursor-pointer max-w-[200px] truncate"
             >
-              {funnels.map(f => (
-                <option key={f.id} value={f.id} className="bg-slate-900 text-white">
-                  {f.name} {f.isTemplate ? '(Template)' : ''}
+              {currentFunnel && !funnels.some(f => f.id === currentFunnel.id) && (
+                <option value={currentFunnel.id} className="bg-slate-900 text-white">
+                  {currentFunnel.name}
                 </option>
-              ))}
+              )}
+              {funnels.length > 0 && (
+                <optgroup label="Meus Fluxos Salvos" className="bg-slate-900 text-slate-400 font-bold">
+                  {funnels.map(f => (
+                    <option key={f.id} value={f.id} className="bg-slate-900 text-white font-normal">
+                      {f.name} {f.isTemplate ? '(Template)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Exemplos da Comunidade" className="bg-slate-900 text-emerald-400 font-bold">
+                {COMMUNITY_FUNNELS.map(cf => (
+                  <option key={cf.id} value={cf.id} className="bg-slate-900 text-white font-normal">
+                    {cf.name} (Comunidade)
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
           <button
             onClick={handleCreateNewFunnel}
-            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition"
-            title="Criar Novo Funil Vazio"
+            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition cursor-pointer"
+            title="Criar Novo Funil Vazio (Em Branco)"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Right: Actions (Auto layout, Save, Save as template) */}
-        <div className="flex items-center gap-2">
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* REQUIREMENT: BUTTON TO PULL AUTOMATICALLY ALL SYSTEM CONFIGURATION */}
+          <button
+            onClick={handleAutoImportSystemConfig}
+            className="bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 border border-blue-500/40 hover:border-blue-400/60 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer group"
+            title="Puxar automaticamente toda a configuração que foi feita no sistema (links, landing pages, Meta Ads, WhatsApp, automações)"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-blue-400 group-hover:rotate-180 transition-transform duration-500" />
+            <span>Puxar Configurações do Sistema</span>
+          </button>
+
           <button
             onClick={handleAutoOrganize}
-            className="bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border border-purple-800/60 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            className="bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border border-purple-800/60 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             title="Organizar nós automaticamente em colunas lineares"
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
@@ -663,7 +1329,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
           <button
             onClick={() => handleSave(true)}
             disabled={saving || !currentFunnel}
-            className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
           >
             <Bookmark className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">Salvar como Template</span>
@@ -672,7 +1338,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
           <button
             onClick={() => handleSave(false)}
             disabled={saving || !currentFunnel}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40 cursor-pointer"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40 cursor-pointer disabled:opacity-50"
           >
             <Save className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
             <span>{saving ? 'Salvando...' : 'Salvar Fluxo'}</span>
@@ -684,9 +1350,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* LEFT COMPONENT PALETTE */}
-        <div className={`bg-[#0B0F19]/95 border-r border-slate-800/80 transition-all duration-300 z-10 flex flex-col shrink-0 ${
-          sidebarCollapsed ? 'w-12' : 'w-64'
-        }`}>
+        <div className={`bg-[#0B0F19]/95 border-r border-slate-800/80 transition-all duration-300 z-10 flex flex-col shrink-0 ${sidebarCollapsed ? 'w-12' : 'w-64'
+          }`}>
           <div className="p-3 border-b border-slate-800/80 flex items-center justify-between">
             {!sidebarCollapsed && (
               <span className="text-xs font-black tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
@@ -696,7 +1361,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition ml-auto"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition ml-auto cursor-pointer"
             >
               {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -704,13 +1369,13 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
 
           {!sidebarCollapsed ? (
             <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
-              
+
               {/* Category 1: Tráfego & Origem */}
               <div className="space-y-1.5">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Tráfego & Origem</p>
                 <button
-                  onClick={() => handleAddComponent('traffic_meta', 'Meta Ads', 'Campanha Facebook/Instagram')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-blue-950/50 hover:border-blue-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('traffic_meta', 'Meta Ads', 'Facebook / Instagram Ads')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-blue-950/50 hover:border-blue-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
                     <Globe className="w-3.5 h-3.5" />
@@ -722,8 +1387,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleAddComponent('traffic_creative', 'Criativo / Anúncio', 'Vídeo ou Carrossel')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-violet-950/50 hover:border-violet-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('traffic_creative', 'Anúncio / Criativo', 'Teste A/B de Criativos')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-violet-950/50 hover:border-violet-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-violet-600/20 text-violet-400 flex items-center justify-center font-bold">
                     <Sparkles className="w-3.5 h-3.5" />
@@ -735,8 +1400,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleAddComponent('traffic_instagram', 'Instagram Orgânico', 'Bio & Stories')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-pink-950/50 hover:border-pink-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('traffic_instagram', 'Instagram', 'Link na Bio / Direct')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-pink-950/50 hover:border-pink-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-pink-600/20 text-pink-400 flex items-center justify-center font-bold">
                     <Share2 className="w-3.5 h-3.5" />
@@ -752,8 +1417,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
               <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Páginas & Rastreamento</p>
                 <button
-                  onClick={() => handleAddComponent('landing_page', 'Página de Vendas / VSL', 'Landing Page de Alta Conversão')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-orange-950/50 hover:border-orange-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('landing_page', 'Landing Page / VSL', 'Captura ou Oferta')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-orange-950/50 hover:border-orange-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-orange-600/20 text-orange-400 flex items-center justify-center font-bold">
                     <Layout className="w-3.5 h-3.5" />
@@ -765,8 +1430,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleAddComponent('whatsapp_link', 'Link WhatsApp Oficial', 'Disparo Meta CAPI & Rotação')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 hover:border-emerald-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('whatsapp_link', 'Link WhatsApp CAPI', 'Redirecionamento Seguro')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 hover:border-emerald-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
                     <MessageSquare className="w-3.5 h-3.5" />
@@ -778,8 +1443,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleAddComponent('popup', 'Pop-up de Captura', 'Formulário Nome & WhatsApp')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-purple-950/50 hover:border-purple-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('popup', 'Pop-up Inteligente', 'Pré-qualificação do Lead')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-purple-950/50 hover:border-purple-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold">
                     <Layers className="w-3.5 h-3.5" />
@@ -795,8 +1460,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
               <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Conversão & Checkout</p>
                 <button
-                  onClick={() => handleAddComponent('checkout', 'Checkout Hotmart / Kiwify', 'Página de Pagamento')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-cyan-950/50 hover:border-cyan-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('checkout', 'Checkout Externo', 'Hotmart / Kiwify / Asaas')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-cyan-950/50 hover:border-cyan-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold">
                     <ShoppingCart className="w-3.5 h-3.5" />
@@ -808,8 +1473,8 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleAddComponent('conversion_sale', 'Venda Concluída', 'Lead Convertido em Cliente')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 hover:border-emerald-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('conversion_sale', 'Conversão / Venda', 'Fechamento do Funil')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 hover:border-emerald-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
                     <DollarSign className="w-3.5 h-3.5" />
@@ -825,15 +1490,15 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
               <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Automação & Nutrição</p>
                 <button
-                  onClick={() => handleAddComponent('automation_sequence', 'Sequência de Nutrição', 'Fluxo E-mails & WhatsApp')}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-indigo-950/50 hover:border-indigo-700/60 border border-slate-800 text-left transition group"
+                  onClick={() => handleAddComponent('automation_sequence', 'Automações (Workflows)', 'E-mails + WhatsApp 24h')}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-900/80 hover:bg-indigo-950/50 hover:border-indigo-700/60 border border-slate-800 text-left transition group cursor-pointer"
                 >
                   <div className="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold">
                     <Zap className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-200 group-hover:text-indigo-300">Fluxo de Automação</p>
-                    <p className="text-[10px] text-slate-500">Cron 24h & Webinário</p>
+                    <p className="font-bold text-slate-200 group-hover:text-indigo-300">Automação / E-mails</p>
+                    <p className="text-[10px] text-slate-500">Disparo Mensagens & CRM</p>
                   </div>
                 </button>
               </div>
@@ -843,28 +1508,28 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             <div className="p-2 space-y-2 flex flex-col items-center">
               <button
                 onClick={() => handleAddComponent('traffic_meta', 'Meta Ads')}
-                className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition"
+                className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center hover:bg-blue-600 hover:text-white transition cursor-pointer"
                 title="Adicionar Meta Ads"
               >
                 <Globe className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleAddComponent('landing_page', 'Landing Page')}
-                className="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-400 flex items-center justify-center hover:bg-orange-600 hover:text-white transition"
+                className="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-400 flex items-center justify-center hover:bg-orange-600 hover:text-white transition cursor-pointer"
                 title="Adicionar Landing Page"
               >
                 <Layout className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleAddComponent('whatsapp_link', 'Link WhatsApp')}
-                className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition"
+                className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition cursor-pointer"
                 title="Adicionar Link WhatsApp"
               >
                 <MessageSquare className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleAddComponent('checkout', 'Checkout')}
-                className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center hover:bg-cyan-600 hover:text-white transition"
+                className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center hover:bg-cyan-600 hover:text-white transition cursor-pointer"
                 title="Adicionar Checkout"
               >
                 <ShoppingCart className="w-4 h-4" />
@@ -890,7 +1555,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
           <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl shadow-lg backdrop-blur-xs">
             <button
               onClick={() => setZoom(prev => Math.min(prev + 0.1, 2.0))}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title="Aumentar Zoom"
             >
               <ZoomIn className="w-4 h-4" />
@@ -898,7 +1563,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             <span className="text-[11px] font-bold text-slate-400 px-1">{Math.round(zoom * 100)}%</span>
             <button
               onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.4))}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title="Diminuir Zoom"
             >
               <ZoomOut className="w-4 h-4" />
@@ -906,23 +1571,22 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
             <button
               onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); }}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[10px] font-bold"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[10px] font-bold cursor-pointer"
               title="Resetar Posição"
             >
               Reset
             </button>
             <button
               onClick={() => setIsLocked(!isLocked)}
-              className={`p-1.5 rounded-lg transition ${
-                isLocked ? 'text-amber-400 bg-amber-950/40' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`p-1.5 rounded-lg transition cursor-pointer ${isLocked ? 'text-amber-400 bg-amber-950/40' : 'text-slate-400 hover:text-white'
+                }`}
               title={isLocked ? 'Desbloquear Canvas' : 'Travar Movimentação'}
             >
               {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setFullScreen(!fullScreen)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title={fullScreen ? 'Sair da Tela Cheia' : 'Modo Tela Cheia'}
             >
               {fullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -993,9 +1657,9 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                   {/* Edge Label Pill */}
                   {edge.label && (
                     <foreignObject
-                      x={midX - 50}
+                      x={midX - 55}
                       y={midY - 14}
-                      width={100}
+                      width={110}
                       height={28}
                       className="pointer-events-auto"
                     >
@@ -1033,6 +1697,37 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
             })()}
           </svg>
 
+          {/* EMPTY CANVAS WELCOME STATE */}
+          {(!currentFunnel || currentFunnel.nodes.length === 0) && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
+              <div className="bg-[#0B0F19]/90 border border-slate-800 p-8 rounded-3xl max-w-lg text-center pointer-events-auto backdrop-blur-md shadow-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/20">
+                  <GitBranch className="w-8 h-8 text-blue-400" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">Funil Visual 360° em Branco</h3>
+                <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                  Seu funil está limpo e pronto. Você pode adicionar componentes manualmente pelo menu à esquerda, carregar o <strong>fluxo oficial da comunidade</strong> ou puxar automaticamente todas as configurações que sua empresa já criou.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    onClick={handleAutoImportSystemConfig}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition cursor-pointer"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Puxar Configurações
+                  </button>
+                  <button
+                    onClick={() => setIsCommunityModalOpen(true)}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 border border-emerald-500/40 transition cursor-pointer"
+                  >
+                    <Compass className="w-4 h-4 text-emerald-400" />
+                    Ver Comunidade
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* NODES DOM CONTAINER */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -1049,17 +1744,19 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 <div
                   key={node.id}
                   onMouseDown={(e) => handleNodeMouseDown(e, node)}
+                  onDoubleClick={(e) => handleNodeDoubleClick(e, node)}
+                  onMouseUp={() => setDraggingNodeId(null)}
                   style={{ left: `${node.x}px`, top: `${node.y}px` }}
-                  className={`absolute w-60 rounded-2xl p-3.5 border transition-all cursor-move pointer-events-auto select-none shadow-xl ${
-                    isSelected
-                      ? 'border-blue-400 ring-2 ring-blue-500/50 bg-[#0F172A] shadow-blue-900/30'
-                      : 'border-slate-800/90 hover:border-slate-700 bg-[#0B0F19]/95 hover:shadow-2xl'
-                  }`}
+                  className={`absolute w-60 rounded-2xl p-3.5 border transition-all cursor-move pointer-events-auto select-none shadow-xl ${isSelected
+                    ? 'border-blue-400 ring-2 ring-blue-500/50 bg-[#0F172A] shadow-blue-900/30'
+                    : 'border-slate-800/90 hover:border-slate-700 bg-[#0B0F19]/95 hover:shadow-2xl'
+                    }`}
+                  title="Clique para arrastar • 2 cliques para configurar"
                 >
                   {/* Left Input Pin (for connecting into this node) */}
                   <div
                     onMouseUp={(e) => handleEndConnecting(e, node.id)}
-                    className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-900 border-2 border-emerald-400 hover:bg-emerald-400 hover:scale-125 transition-all flex items-center justify-center cursor-pointer z-30"
+                    className="node-pin absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-900 border-2 border-emerald-400 hover:bg-emerald-400 hover:scale-125 transition-all flex items-center justify-center cursor-pointer z-30"
                     title="Solte aqui para conectar"
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1068,7 +1765,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                   {/* Right Output Pin (for starting connection) */}
                   <div
                     onMouseDown={(e) => handleStartConnecting(e, node.id)}
-                    className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-900 border-2 border-blue-400 hover:bg-blue-400 hover:scale-125 transition-all flex items-center justify-center cursor-crosshair z-30"
+                    className="node-pin absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-900 border-2 border-blue-400 hover:bg-blue-400 hover:scale-125 transition-all flex items-center justify-center cursor-crosshair z-30"
                     title="Arraste para conectar a outro nó"
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -1083,7 +1780,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                         <span className="w-2 h-2 rounded-full bg-emerald-500/80" />
                       </div>
                       <span className="truncate max-w-[120px] font-mono text-[9px] text-slate-500">
-                        {node.data.url ? new URL(node.data.url).pathname : '/lp/oferta'}
+                        {node.data.url ? new URL(node.data.url).pathname : '/lp/oferta-vip'}
                       </span>
                     </div>
                   )}
@@ -1095,18 +1792,31 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                         {cfg.icon}
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs text-white truncate max-w-[130px]" title={node.title}>
+                        <h4 className="font-bold text-xs text-white truncate max-w-[120px]" title={node.title}>
                           {node.title}
                         </h4>
-                        <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
+                        <span className="text-[10px] text-slate-400 block truncate max-w-[120px]">
                           {node.subtitle}
                         </span>
                       </div>
                     </div>
 
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${cfg.badgeColor}`}>
-                      {cfg.badge}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedNodeId(node.id);
+                          setIsDrawerOpen(true);
+                        }}
+                        className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                        title="Configurar Etapa (ou 2 cliques no bloco)"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${cfg.badgeColor}`}>
+                        {cfg.badge}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Node Metrics Box */}
@@ -1155,12 +1865,12 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-xs">Configurar Etapa</h3>
-                  <p className="text-[10px] text-slate-400">{selectedNode.title}</p>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[170px]">{selectedNode.title}</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1205,7 +1915,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
               </div>
             </div>
 
-            {/* Direct 1-Click System Binding ("Criar tudo por dentro do funil") */}
+            {/* REQUIREMENT: DIRECT SYSTEM BINDING - IN ALL COMPONENTS, DROPDOWN TO SELECT COMPANY LINKS (OR ALL LINKS) */}
             <div className="pt-3 border-t border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -1214,7 +1924,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </span>
                 <button
                   onClick={() => handleSyncRealMetrics(selectedNode)}
-                  className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold"
+                  className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold cursor-pointer"
                   title="Puxar métricas reais do link, página ou automação"
                 >
                   <RefreshCw className="w-3 h-3" />
@@ -1222,44 +1932,32 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </button>
               </div>
 
-              {/* Binding for WhatsApp Link */}
-              {selectedNode.type === 'whatsapp_link' && (
-                <div>
-                  <label className="block text-[10px] text-slate-400 mb-1">Vincular Link de WhatsApp Existente</label>
-                  <select
-                    value={selectedNode.data.linkId || ''}
-                    onChange={(e) => {
-                      if (!currentFunnel) return;
-                      const lk = companyLinks.find(l => l.id === e.target.value);
-                      setCurrentFunnel({
-                        ...currentFunnel,
-                        nodes: currentFunnel.nodes.map(n =>
-                          n.id === selectedNode.id
-                            ? {
-                                ...n,
-                                data: {
-                                  ...n.data,
-                                  linkId: e.target.value,
-                                  visitors: lk?.clicksCount || n.data.visitors
-                                }
-                              }
-                            : n
-                        )
-                      });
-                    }}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none"
-                  >
-                    <option value="">Selecione um link rastreado...</option>
-                    {companyLinks.map(lk => (
-                      <option key={lk.id} value={lk.id}>
-                        {lk.title} ({lk.clicksCount || 0} cliques)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* Requirement: In ALL components, have dropdown for company links, with "Todos os links" or specific link */}
+              <div>
+                <label className="block text-[10px] text-slate-400 mb-1">
+                  Vincular Link Rastreado da Empresa
+                </label>
+                <select
+                  value={selectedNode.data.linkId || ''}
+                  onChange={(e) => handleLinkSelectionChange(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="">Selecione um link rastreado...</option>
+                  <option value="ALL_LINKS">📊 Todos os Links da Empresa (Somar Dados)</option>
+                  {companyLinks.map(lk => (
+                    <option key={lk.id} value={lk.id}>
+                      {lk.title} ({lk.clicksCount || 0} cliques)
+                    </option>
+                  ))}
+                </select>
+                {companyLinks.length === 0 && (
+                  <p className="text-[10px] text-amber-400/80 mt-1">
+                    Nenhum link criado nesta empresa ainda. Crie links no Gerador de Links.
+                  </p>
+                )}
+              </div>
 
-              {/* Binding for Landing Page */}
+              {/* Specific Entity Binding: Landing Page */}
               {selectedNode.type === 'landing_page' && (
                 <div>
                   <label className="block text-[10px] text-slate-400 mb-1">Vincular Landing Page</label>
@@ -1273,20 +1971,20 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                         nodes: currentFunnel.nodes.map(n =>
                           n.id === selectedNode.id
                             ? {
-                                ...n,
-                                data: {
-                                  ...n.data,
-                                  landingPageId: e.target.value,
-                                  url: lp ? `https://mdtracker.com.br/lp/${lp.slug}` : n.data.url,
-                                  visitors: lp?.visitorsCount || n.data.visitors,
-                                  leads: lp?.leadsCount || n.data.leads
-                                }
+                              ...n,
+                              data: {
+                                ...n.data,
+                                landingPageId: e.target.value,
+                                url: lp ? `https://trackermd.mudadigital.com.br/lp/${lp.slug}` : n.data.url,
+                                visitors: lp?.visitorsCount || n.data.visitors,
+                                leads: lp?.leadsCount || n.data.leads
                               }
+                            }
                             : n
                         )
                       });
                     }}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
                   >
                     <option value="">Selecione uma Landing Page...</option>
                     {companyLps.map(lp => (
@@ -1298,7 +1996,27 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                 </div>
               )}
 
-              {/* Binding for Automation Workflow */}
+              {/* Specific Entity Binding: WhatsApp Link */}
+              {selectedNode.type === 'whatsapp_link' && (
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">Número / WhatsApp Configurado</label>
+                  <select
+                    value={selectedNode.data.linkId || ''}
+                    onChange={(e) => handleLinkSelectionChange(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Selecione um link com WhatsApp...</option>
+                    <option value="ALL_LINKS">📊 Todos os Links da Empresa (Somar Dados)</option>
+                    {companyLinks.map(lk => (
+                      <option key={lk.id} value={lk.id}>
+                        {lk.title} {lk.phone ? `(${lk.phone})` : ''} - {lk.clicksCount || 0} cliques
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Specific Entity Binding: Automation Workflow */}
               {selectedNode.type === 'automation_sequence' && (
                 <div>
                   <label className="block text-[10px] text-slate-400 mb-1">Vincular Fluxo de Automação</label>
@@ -1312,18 +2030,19 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                         nodes: currentFunnel.nodes.map(n =>
                           n.id === selectedNode.id
                             ? {
-                                ...n,
-                                data: {
-                                  ...n.data,
-                                  workflowId: e.target.value,
-                                  leads: wf?.executedCount || n.data.leads
-                                }
+                              ...n,
+                              data: {
+                                ...n.data,
+                                workflowId: e.target.value,
+                                leads: wf?.executedCount || n.data.leads,
+                                conversions: wf?.conversionsCount || n.data.conversions
                               }
+                            }
                             : n
                         )
                       });
                     }}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
                   >
                     <option value="">Selecione uma automação...</option>
                     {companyWorkflows.map(wf => (
@@ -1334,12 +2053,77 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                   </select>
                 </div>
               )}
+
+              {/* Specific Entity Binding: Popup */}
+              {selectedNode.type === 'popup' && (
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">Vincular Pop-up Inteligente</label>
+                  <select
+                    value={selectedNode.data.popupId || ''}
+                    onChange={(e) => {
+                      if (!currentFunnel) return;
+                      const pop = companyPopups.find(p => p.id === e.target.value);
+                      setCurrentFunnel({
+                        ...currentFunnel,
+                        nodes: currentFunnel.nodes.map(n =>
+                          n.id === selectedNode.id
+                            ? {
+                              ...n,
+                              data: {
+                                ...n.data,
+                                popupId: e.target.value,
+                                visitors: pop?.viewsCount || n.data.visitors,
+                                leads: pop?.conversionsCount || n.data.leads
+                              }
+                            }
+                            : n
+                        )
+                      });
+                    }}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Selecione um Pop-up...</option>
+                    {companyPopups.map(pop => (
+                      <option key={pop.id} value={pop.id}>
+                        {pop.name} ({pop.viewsCount || 0} visualizações)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Specific Entity Binding: Checkout */}
+              {selectedNode.type === 'checkout' && (
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">Plataforma / Checkout</label>
+                  <select
+                    value={selectedNode.data.provider || 'Hotmart'}
+                    onChange={(e) => {
+                      if (!currentFunnel) return;
+                      setCurrentFunnel({
+                        ...currentFunnel,
+                        nodes: currentFunnel.nodes.map(n =>
+                          n.id === selectedNode.id ? { ...n, data: { ...n.data, provider: e.target.value } } : n
+                        )
+                      });
+                    }}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="Hotmart">Hotmart</option>
+                    <option value="Kiwify">Kiwify</option>
+                    <option value="Eduzz">Eduzz</option>
+                    <option value="Monetizze">Monetizze</option>
+                    <option value="Asaas">Asaas</option>
+                    <option value="Stripe">Stripe</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Metrics Override / Simulator */}
             <div className="pt-3 border-t border-slate-800 space-y-3">
               <p className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Métricas do Bloco</p>
-              
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[10px] text-slate-400 mb-1">Visitantes</label>
@@ -1417,7 +2201,7 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
                   setSelectedNodeId(null);
                   setIsDrawerOpen(false);
                 }}
-                className="text-red-400 hover:text-red-300 font-bold text-xs flex items-center gap-1.5 p-2 rounded-xl hover:bg-red-950/40 transition"
+                className="text-red-400 hover:text-red-300 font-bold text-xs flex items-center gap-1.5 p-2 rounded-xl hover:bg-red-950/40 transition cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Excluir Bloco</span>
@@ -1427,10 +2211,10 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
         )}
       </div>
 
-      {/* 3. BOTTOM METRICS BAR (EXACT MATCH TO POWER UP SCREENSHOT) */}
+      {/* 3. BOTTOM METRICS BAR */}
       <div className="bg-[#0B0F19] border-t border-slate-800/90 px-6 py-3 flex items-center justify-between gap-4 shrink-0 z-20">
         <div className="flex items-center gap-8 text-xs">
-          
+
           {/* Total Leads */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
@@ -1505,7 +2289,193 @@ export const FunnelCanvasBuilder: React.FC<FunnelCanvasBuilderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ==========================================
+          MODAL: COMUNIDADE (COMMUNITY TEMPLATES)
+      ========================================== */}
+      {isCommunityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0B0F19] border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    Biblioteca de Funis da Comunidade
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                      Exemplos Oficiais
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Modelos comprovados e prontos para carregar direto no seu canvas.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCommunityModalOpen(false);
+                  setActiveTab('funnels');
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {COMMUNITY_FUNNELS.map((cf, idx) => (
+                <div
+                  key={cf.id}
+                  className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 transition flex flex-col md:flex-row md:items-center justify-between gap-5 group"
+                >
+                  <div className="space-y-2.5 max-w-2xl">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        {cf.category}
+                      </span>
+                      {idx === 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                          ⭐ Exemplo Oficial do Print
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-500">
+                        {cf.nodes.length} blocos • {cf.edges.length} conexões
+                      </span>
+                    </div>
+
+                    <h4 className="text-base font-bold text-white group-hover:text-blue-300 transition">
+                      {cf.name}
+                    </h4>
+
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {cf.description}
+                    </p>
+
+                    {/* Nodes Pills Preview */}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      {cf.nodes.map(n => (
+                        <span key={n.id} className="text-[9px] bg-slate-800/90 text-slate-300 border border-slate-700/60 px-2 py-0.5 rounded-md">
+                          {n.title}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Metric preview */}
+                    {cf.metrics && (
+                      <div className="flex items-center gap-4 pt-2 text-[11px] text-slate-400">
+                        <span>Leads: <strong className="text-white">{cf.metrics.totalLeads}</strong></span>
+                        <span>Investimento: <strong className="text-emerald-400">R$ {cf.metrics.investment}</strong></span>
+                        {cf.metrics.totalSales && (
+                          <span>Vendas: <strong className="text-cyan-400">{cf.metrics.totalSales} (R$ {cf.metrics.totalRevenue})</strong></span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 flex items-center gap-2">
+                    <button
+                      onClick={() => handleLoadCommunityFunnel(cf)}
+                      className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Carregar no Canvas</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          MODAL: MEUS TEMPLATES
+      ========================================== */}
+      {isTemplatesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0B0F19] border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">Meus Templates Salvos</h3>
+                  <p className="text-xs text-slate-400">
+                    Modelos personalizados salvos pela sua empresa.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsTemplatesModalOpen(false);
+                  setActiveTab('funnels');
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-3">
+              {funnels.filter(f => f.isTemplate).length === 0 ? (
+                <div className="text-center py-12 text-slate-400 space-y-3">
+                  <Bookmark className="w-12 h-12 text-slate-600 mx-auto" />
+                  <p className="text-sm font-bold text-slate-300">Nenhum template salvo ainda</p>
+                  <p className="text-xs max-w-sm mx-auto">
+                    Para salvar um modelo próprio, monte seu funil no canvas e clique no botão <strong>"Salvar como Template"</strong> no topo.
+                  </p>
+                </div>
+              ) : (
+                funnels.filter(f => f.isTemplate).map(tpl => (
+                  <div
+                    key={tpl.id}
+                    className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-4"
+                  >
+                    <div>
+                      <h4 className="font-bold text-white text-xs">{tpl.name}</h4>
+                      <p className="text-[10px] text-slate-400">{tpl.nodes.length} blocos • {tpl.edges.length} conexões</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setCurrentFunnel({
+                            ...tpl,
+                            id: `funnel-${Date.now()}`,
+                            isTemplate: false,
+                            name: `${tpl.name.replace('(Template)', '')} (Novo)`,
+                            updatedAt: new Date().toISOString()
+                          });
+                          setIsTemplatesModalOpen(false);
+                          setActiveTab('funnels');
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer"
+                      >
+                        Carregar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const ok = await confirm('Excluir este template da sua biblioteca?');
+                          if (ok) {
+                            await deleteVisualFunnel(tpl.id);
+                            setFunnels(prev => prev.filter(f => f.id !== tpl.id));
+                          }
+                        }}
+                        className="p-2 text-red-400 hover:bg-red-950/40 rounded-xl cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
-

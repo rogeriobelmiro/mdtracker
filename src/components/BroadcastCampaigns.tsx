@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Send, 
   Mail, 
@@ -34,7 +34,17 @@ import {
   Calendar,
   CalendarDays,
   MousePointerClick,
-  Flame
+  Flame,
+  Code,
+  Type,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  List,
+  ListOrdered
 } from 'lucide-react';
 import { 
   Lead, 
@@ -92,7 +102,7 @@ const EMAIL_TEMPLATES = [
     </ul>
   </div>
   <div style="text-align: center; margin-top: 32px;">
-    <a href="https://mdtracker.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Falar com um Especialista Agora &rarr;</a>
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Falar com um Especialista Agora &rarr;</a>
   </div>
   <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 36px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
     {{empresa}} • Caso não queira receber mais e-mails, <a href="#" style="color: #64748b; text-decoration: underline;">descadastre-se aqui</a>.
@@ -118,7 +128,7 @@ const EMAIL_TEMPLATES = [
     <div style="font-size: 24px; font-weight: 900; color: #059669; letter-spacing: 0.1em; margin-top: 6px;">VIP15OFF</div>
   </div>
   <div style="text-align: center;">
-    <a href="https://mdtracker.com.br" style="display: inline-block; background: #059669; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">Resgatar Meu Desconto Imediato &rarr;</a>
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #059669; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(5,150,105,0.25);">Resgatar Meu Desconto Imediato &rarr;</a>
   </div>
 </div>`
   },
@@ -133,7 +143,7 @@ const EMAIL_TEMPLATES = [
   <p style="color: #475569; font-size: 15px; line-height: 1.6;">Faz algum tempo desde que nos falamos pela primeira vez. Lançamos melhorias significativas em nossa operação que tornaram a implementação muito mais rápida e acessível.</p>
   <p style="color: #475569; font-size: 15px; line-height: 1.6;">Se você ainda tem como objetivo acelerar suas vendas este mês, adoraria agendar um rápido alinhamento de 15 minutos para te apresentar as novidades.</p>
   <div style="margin: 28px 0; text-align: center;">
-    <a href="https://mdtracker.com.br" style="background: #2563eb; color: #ffffff; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 10px; text-decoration: none; display: inline-block;">Conversar com o Especialista &rarr;</a>
+    <a href="https://trackermd.mudadigital.com.br" style="background: #2563eb; color: #ffffff; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 10px; text-decoration: none; display: inline-block;">Conversar com o Especialista &rarr;</a>
   </div>
   <p style="color: #64748b; font-size: 13px;">Um abraço,<br/><strong>Equipe {{empresa}}</strong></p>
 </div>`
@@ -207,6 +217,72 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   const [emailSenderEmail, setEmailSenderEmail] = useState('contato@empresa.com.br');
   const [emailBodyHtml, setEmailBodyHtml] = useState(EMAIL_TEMPLATES[0].bodyHtml);
   
+  // Email editor format mode: 'normal' (Visual / WYSIWYG) vs 'html' (Código fonte)
+  const [emailEditorMode, setEmailEditorMode] = useState<'normal' | 'html'>('normal');
+  const emailVisualEditorRef = useRef<HTMLDivElement>(null);
+
+  const syncVisualEditorFromHtml = (html: string) => {
+    if (emailVisualEditorRef.current) {
+      emailVisualEditorRef.current.innerHTML = html;
+    }
+  };
+
+  const handleVisualEditorInput = () => {
+    if (emailVisualEditorRef.current) {
+      setEmailBodyHtml(emailVisualEditorRef.current.innerHTML);
+    }
+  };
+
+  const handleSwitchEmailEditorMode = (mode: 'normal' | 'html') => {
+    setEmailEditorMode(mode);
+    if (mode === 'normal') {
+      setTimeout(() => {
+        syncVisualEditorFromHtml(emailBodyHtml);
+      }, 30);
+    }
+  };
+
+  const execFormat = (command: string, value: string | undefined = undefined) => {
+    if (emailVisualEditorRef.current) {
+      emailVisualEditorRef.current.focus();
+    }
+    document.execCommand(command, false, value);
+    if (emailVisualEditorRef.current) {
+      setEmailBodyHtml(emailVisualEditorRef.current.innerHTML);
+    }
+  };
+
+  const insertVariableToEmail = (variableName: string) => {
+    if (emailEditorMode === 'normal') {
+      if (emailVisualEditorRef.current) {
+        emailVisualEditorRef.current.focus();
+        document.execCommand('insertText', false, variableName);
+        setEmailBodyHtml(emailVisualEditorRef.current.innerHTML);
+      }
+    } else {
+      setEmailBodyHtml(prev => prev + variableName);
+    }
+  };
+
+  const insertCtaButtonToEmail = () => {
+    const text = prompt('Texto do Botão:', ctaText || 'Garantir Minha Vaga');
+    if (!text) return;
+    const url = prompt('Link do Botão (URL):', ctaUrl || 'https://');
+    if (!url) return;
+
+    const btnHtml = `<div style="text-align: center; margin: 24px 0;"><a href="${url}" target="_blank" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; font-size: 14px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">${text}</a></div><p></p>`;
+
+    if (emailEditorMode === 'normal') {
+      if (emailVisualEditorRef.current) {
+        emailVisualEditorRef.current.focus();
+        document.execCommand('insertHTML', false, btnHtml);
+        setEmailBodyHtml(emailVisualEditorRef.current.innerHTML);
+      }
+    } else {
+      setEmailBodyHtml(prev => prev + '\n' + btnHtml);
+    }
+  };
+  
   // SMS fields
   const [smsText, setSmsText] = useState(SMS_TEMPLATES[0].text);
   
@@ -241,6 +317,14 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const companyId = currentCompany?.id || 'comp-alfa';
+
+  useEffect(() => {
+    if (isModalOpen && emailEditorMode === 'normal' && emailVisualEditorRef.current) {
+      if (emailVisualEditorRef.current.innerHTML !== emailBodyHtml) {
+        emailVisualEditorRef.current.innerHTML = emailBodyHtml;
+      }
+    }
+  }, [isModalOpen, emailEditorMode]);
 
   // Load campaigns from backend
   const loadCampaigns = async () => {
@@ -350,7 +434,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
     setScheduledTime('09:00');
 
     // CTA Link Tracking Defaults
-    setCtaUrl('https://mdtracker.com.br');
+    setCtaUrl('https://trackermd.mudadigital.com.br');
     setCtaText('Garantir Minha Vaga com Bônus');
 
     // Defaults for email
@@ -359,6 +443,10 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
     setEmailSenderName(currentCompany?.name || 'Equipe de Vendas');
     setEmailSenderEmail('contato@empresa.com.br');
     setEmailBodyHtml(EMAIL_TEMPLATES[0].bodyHtml);
+    setEmailEditorMode('normal');
+    setTimeout(() => {
+      syncVisualEditorFromHtml(EMAIL_TEMPLATES[0].bodyHtml);
+    }, 50);
 
     // Defaults for SMS
     setSmsText(SMS_TEMPLATES[0].text);
@@ -402,6 +490,10 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
     setEmailSenderName(camp.emailSenderName || currentCompany?.name || 'Equipe');
     setEmailSenderEmail(camp.emailSenderEmail || 'contato@empresa.com.br');
     setEmailBodyHtml(camp.emailBodyHtml || EMAIL_TEMPLATES[0].bodyHtml);
+    setEmailEditorMode('normal');
+    setTimeout(() => {
+      syncVisualEditorFromHtml(camp.emailBodyHtml || EMAIL_TEMPLATES[0].bodyHtml);
+    }, 50);
     setSmsText(camp.smsText || '');
     setMessageTemplate(camp.messageTemplate || '');
     setDelaySeconds(camp.delaySeconds || 5);
@@ -579,7 +671,10 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
           if (res.emailSubject) setEmailSubject(res.emailSubject);
           if (res.emailPreheader) setEmailPreheader(res.emailPreheader);
           if (res.emailSenderName) setEmailSenderName(res.emailSenderName);
-          if (res.emailBodyHtml) setEmailBodyHtml(res.emailBodyHtml);
+          if (res.emailBodyHtml) {
+            setEmailBodyHtml(res.emailBodyHtml);
+            syncVisualEditorFromHtml(res.emailBodyHtml);
+          }
         } else if (channel === 'sms') {
           if (res.smsText) setSmsText(res.smsText);
         } else {
@@ -1393,8 +1488,9 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                               setEmailSubject(tpl.subject);
                               setEmailPreheader(tpl.preheader);
                               setEmailBodyHtml(tpl.bodyHtml);
+                              syncVisualEditorFromHtml(tpl.bodyHtml);
                             }}
-                            className="p-2 border border-slate-200 hover:border-blue-500 rounded-lg text-left text-[11px] bg-slate-50 transition"
+                            className="p-2 border border-slate-200 hover:border-blue-500 rounded-lg text-left text-[11px] bg-slate-50 transition cursor-pointer"
                           >
                             <div className="font-bold text-slate-800 truncate">{tpl.name}</div>
                             <div className="text-[10px] text-slate-500 truncate">{tpl.category}</div>
@@ -1404,13 +1500,237 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Corpo do E-mail (HTML / Rich Text)</label>
-                      <textarea
-                        value={emailBodyHtml}
-                        onChange={e => setEmailBodyHtml(e.target.value)}
-                        rows={8}
-                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl font-mono text-xs"
-                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-semibold text-slate-700">Corpo do E-mail</label>
+                        
+                        {/* Format Switcher (Normal vs HTML) */}
+                        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => handleSwitchEmailEditorMode('normal')}
+                            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                              emailEditorMode === 'normal' 
+                                ? 'bg-white text-blue-600 shadow-xs' 
+                                : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                            title="Editar texto formatado visualmente (sem código)"
+                          >
+                            <Type className="w-3.5 h-3.5" />
+                            <span>Formato Normal (Visual)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSwitchEmailEditorMode('html')}
+                            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                              emailEditorMode === 'html' 
+                                ? 'bg-white text-blue-600 shadow-xs' 
+                                : 'text-slate-500 hover:text-slate-900'
+                            }`}
+                            title="Editar código fonte HTML"
+                          >
+                            <Code className="w-3.5 h-3.5" />
+                            <span>Código HTML</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* FORMATO NORMAL (VISUAL / WYSIWYG) */}
+                      {emailEditorMode === 'normal' ? (
+                        <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                          {/* Formatting Toolbar */}
+                          <div className="flex flex-wrap items-center justify-between gap-1 p-2 bg-slate-50 border-b border-slate-200 text-xs">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {/* Bold */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('bold')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Negrito (Ctrl+B)"
+                              >
+                                <Bold className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Italic */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('italic')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Itálico (Ctrl+I)"
+                              >
+                                <Italic className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Underline */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('underline')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Sublinhado (Ctrl+U)"
+                              >
+                                <Underline className="w-3.5 h-3.5" />
+                              </button>
+
+                              <span className="w-px h-4 bg-slate-200 mx-0.5" />
+
+                              {/* Headings */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('formatBlock', '<h2>')}
+                                className="px-2 py-1 hover:bg-slate-200 text-slate-700 rounded font-bold text-[11px] transition cursor-pointer"
+                                title="Título"
+                              >
+                                H2
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => execFormat('formatBlock', '<p>')}
+                                className="px-2 py-1 hover:bg-slate-200 text-slate-700 rounded text-[11px] transition cursor-pointer"
+                                title="Parágrafo Normal"
+                              >
+                                Parágrafo
+                              </button>
+
+                              <span className="w-px h-4 bg-slate-200 mx-0.5" />
+
+                              {/* Alignment */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('justifyLeft')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Alinhar à Esquerda"
+                              >
+                                <AlignLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => execFormat('justifyCenter')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Centralizar"
+                              >
+                                <AlignCenter className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => execFormat('justifyRight')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Alinhar à Direita"
+                              >
+                                <AlignRight className="w-3.5 h-3.5" />
+                              </button>
+
+                              <span className="w-px h-4 bg-slate-200 mx-0.5" />
+
+                              {/* Lists */}
+                              <button
+                                type="button"
+                                onClick={() => execFormat('insertUnorderedList')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Lista com Marcadores"
+                              >
+                                <List className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => execFormat('insertOrderedList')}
+                                className="p-1.5 hover:bg-slate-200 text-slate-700 rounded transition cursor-pointer"
+                                title="Lista Numerada"
+                              >
+                                <ListOrdered className="w-3.5 h-3.5" />
+                              </button>
+
+                              <span className="w-px h-4 bg-slate-200 mx-0.5" />
+
+                              {/* Insert CTA button */}
+                              <button
+                                type="button"
+                                onClick={insertCtaButtonToEmail}
+                                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                                title="Inserir Botão de Ação / Chamada"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Botão CTA</span>
+                              </button>
+                            </div>
+
+                            {/* Variable shortcuts */}
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-slate-400 font-semibold mr-1">Variáveis:</span>
+                              <button
+                                type="button"
+                                onClick={() => insertVariableToEmail('{{nome}}')}
+                                className="px-1.5 py-0.5 bg-slate-200/80 hover:bg-blue-100 hover:text-blue-700 text-slate-600 rounded text-[10px] font-mono transition cursor-pointer"
+                                title="Inserir nome do lead"
+                              >
+                                + nome
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => insertVariableToEmail('{{empresa}}')}
+                                className="px-1.5 py-0.5 bg-slate-200/80 hover:bg-blue-100 hover:text-blue-700 text-slate-600 rounded text-[10px] font-mono transition cursor-pointer"
+                                title="Inserir empresa"
+                              >
+                                + empresa
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Visual ContentEditable Area */}
+                          <div
+                            ref={emailVisualEditorRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={handleVisualEditorInput}
+                            className="min-h-[220px] max-h-[380px] overflow-y-auto p-4 text-slate-800 text-sm focus:outline-none leading-relaxed font-sans"
+                            style={{ minHeight: '220px' }}
+                          />
+
+                          {/* Status footer */}
+                          <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
+                            <span>✏️ Edição visual ativa: clique e digite diretamente no texto acima sem tags HTML.</span>
+                            <span className="text-blue-600 font-semibold">Modo Visual Normal</span>
+                          </div>
+                        </div>
+                      ) : (
+                        /* FORMATO HTML (CÓDIGO PURO) */
+                        <div className="border border-slate-300 rounded-xl overflow-hidden bg-slate-900 shadow-xs">
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800 border-b border-slate-700 text-xs">
+                            <span className="text-slate-300 font-mono text-[11px] flex items-center gap-1.5">
+                              <Code className="w-3.5 h-3.5 text-blue-400" />
+                              Código HTML do E-mail
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400">
+                                {emailBodyHtml.length} caracteres
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(emailBodyHtml);
+                                  alert('Código HTML copiado!');
+                                }}
+                                className="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-0.5 rounded transition cursor-pointer"
+                              >
+                                Copiar HTML
+                              </button>
+                            </div>
+                          </div>
+                          <textarea
+                            value={emailBodyHtml}
+                            onChange={e => {
+                              setEmailBodyHtml(e.target.value);
+                              if (emailVisualEditorRef.current) {
+                                emailVisualEditorRef.current.innerHTML = e.target.value;
+                              }
+                            }}
+                            rows={10}
+                            className="w-full px-3.5 py-2.5 bg-slate-900 text-emerald-400 font-mono text-xs focus:outline-none resize-y leading-relaxed border-0"
+                            placeholder="<div>...</div>"
+                          />
+                          <div className="px-3 py-1.5 bg-slate-800/70 border-t border-slate-800 text-[11px] text-slate-400">
+                            💡 Alterne para o &quot;Formato Normal&quot; a qualquer momento para ver e editar o texto sem tags.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -44,7 +44,7 @@ export const startWhatsApp = async (companyId: string): Promise<void> => {
         
         const webhookPayload = {
             enabled: true,
-            url: "https://mdtracker.mudadigital.com.br/api/whatsapp/evolution/webhook",
+            url: "https://trackermd.mudadigital.com.br/api/whatsapp/evolution/webhook",
             byEvents: false,
             base64: true,
             events: ["MESSAGES_UPSERT", "messages.upsert"] // Send both formats just in case

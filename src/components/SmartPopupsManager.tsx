@@ -226,7 +226,7 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
   // Toggle Active
   const handleToggleActive = async (popup: SmartPopup) => {
     try {
-      await onUpdatePopup(popup.id, { active: !popup.active, companyId: currentCompany.id });
+      await onUpdatePopup(popup.id, { ...popup, active: !popup.active, companyId: currentCompany.id });
     } catch (err: any) {
       await alert('Erro ao atualizar status: ' + err.message);
     }
@@ -294,7 +294,7 @@ export const SmartPopupsManager: React.FC<SmartPopupsManagerProps> = ({
   // Copy Snippet
   const getEmbedCode = (popup: SmartPopup) => {
     const origin = (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
-      ? 'https://mdtracker.mudadigital.com.br'
+      ? 'https://trackermd.mudadigital.com.br'
       : window.location.origin;
     return `<!-- Início Pop-up Inteligente TrackerMD -->\n<script src="${origin}/tracker/popup.js?id=${popup.id}" async></script>\n<!-- Fim Pop-up Inteligente TrackerMD -->`;
   };

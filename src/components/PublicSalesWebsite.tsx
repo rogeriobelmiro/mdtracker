@@ -42,14 +42,16 @@ import {
   Instagram,
   ShoppingCart,
   UserPlus,
-  GitBranch
+  GitBranch,
+  MapPin
 } from 'lucide-react';
 import { Company, User } from '../types';
 import { createCompany, createUser, fetchSubscriptionCheckoutUrl } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
+import { BrazilAffiliatesMap } from './BrazilAffiliatesMap';
 
 interface PublicSalesWebsiteProps {
-  onOpenLogin: () => void;
+  onOpenLogin: (initialMode?: 'login' | 'register_company' | 'register_affiliate') => void;
   onLoginSuccess: (user: User, company: Company) => void;
 }
 
@@ -73,11 +75,18 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  // Load Hotmart Checkout URL
+  // Load Hotmart Checkout URL & capture affiliate referral code
   useEffect(() => {
     fetchSubscriptionCheckoutUrl().then(url => {
       if (url) setCheckoutUrl(url);
     });
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref') || params.get('affiliate') || params.get('rep');
+      if (ref) {
+        localStorage.setItem('trackermd_ref', ref.trim().toLowerCase());
+      }
+    } catch {}
   }, []);
 
   // Handle Trial Registration (1 Day Free Test)
@@ -90,15 +99,18 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
 
     setIsSubmittingTrial(true);
     try {
-      // 1. Create company with 1 day trial
+      // 1. Create company with 1 day trial and affiliate link
       const trialEndsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const refCode = localStorage.getItem('trackermd_ref') || undefined;
       const newComp = await createCompany({
         name: regCompanyName,
         phone: regPhone,
+        email: regEmail.toLowerCase().trim(),
         plan: 'starter',
         active: true,
         subscriptionStatus: 'trial',
-        trialEndsAt: trialEndsAt
+        trialEndsAt: trialEndsAt,
+        affiliateCode: refCode
       });
 
       // 2. Create admin user for this company
@@ -165,6 +177,9 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             <a href="#recursos" className="hover:text-white transition">Recursos (24)</a>
             <a href="#comparativo" className="hover:text-white transition">Comparativo</a>
             <a href="#planos" className="hover:text-white transition">Planos & Assinaturas</a>
+            <a href="#mapa-brasil" className="hover:text-white transition flex items-center gap-1 text-emerald-400 font-bold">
+              <span>Representantes Brasil 📍</span>
+            </a>
             <a href="#depoimentos" className="hover:text-white transition">Clientes</a>
             <a href="#faq" className="hover:text-white transition">Dúvidas</a>
           </nav>
@@ -1041,6 +1056,18 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
       </section>
 
       {/* ========================================================= */}
+      {/* SECTION: MAPA DO BRASIL DE AFILIADOS E REPRESENTANTES */}
+      {/* ========================================================= */}
+      <div id="mapa-brasil" className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <BrazilAffiliatesMap 
+          theme="dark" 
+          title="Mapa de Afiliados e Representantes TrackerMD no Brasil"
+          subtitle="Encontre o representante mais próximo da sua cidade e chame direto no WhatsApp para tirar dúvidas, agendar implantação ou contratar com suporte VIP local."
+          onRegisterAffiliate={() => onOpenLogin('register_affiliate')}
+        />
+      </div>
+
+      {/* ========================================================= */}
       {/* TESTIMONIALS */}
       {/* ========================================================= */}
       <section className="py-20 bg-slate-900/40 border-t border-slate-800 px-4 sm:px-6" id="depoimentos">
@@ -1200,12 +1227,15 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button onClick={onOpenLogin} className="hover:text-white transition">
+          <div className="flex items-center gap-6 flex-wrap">
+            <button onClick={() => onOpenLogin('login')} className="hover:text-white transition">
               Acessar Plataforma (Login)
             </button>
             <button onClick={() => setIsTrialModalOpen(true)} className="hover:text-white transition">
               Criar Teste Gratuito
+            </button>
+            <button onClick={() => onOpenLogin('register_affiliate')} className="hover:text-emerald-300 transition text-emerald-400 font-semibold flex items-center gap-1">
+              <span>Seja um Representante (Afiliados)</span>
             </button>
             <a href="#planos" className="hover:text-white transition">
               Planos Hotmart

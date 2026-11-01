@@ -17,6 +17,7 @@ export interface Company {
   logoUrl?: string;
   responsibleName?: string;
   phone?: string;
+  email?: string;
   address?: string;
   createdAt: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -26,6 +27,8 @@ export interface Company {
   hotmartSubscriptionId?: string;
   hotmartTransactionId?: string;
   hotmartBuyerEmail?: string;
+  affiliateId?: string;
+  affiliateCode?: string;
   userCount?: number;
   leadCount?: number;
 }
@@ -210,6 +213,11 @@ export interface IntegrationSettings {
   hotmartProductId?: string;
   trialDays?: number;
   superadminEmail?: string;
+  smsEnabled?: boolean;
+  smsProvider?: 'z_api' | 'twilio' | 'totalvoice' | 'comtele' | 'simulado';
+  smsApiKey?: string;
+  smsApiUrl?: string;
+  smsSenderId?: string;
 }
 
 export interface HotmartEvent {
@@ -227,12 +235,62 @@ export interface HotmartEvent {
   createdAt: string;
 }
 
+export interface HotmartPlanOption {
+  id: string; // 'starter' | 'pro' | 'enterprise'
+  name: string;
+  price: number;
+  period: string; // 'mensal' | 'anual'
+  checkoutUrl: string;
+  description: string;
+  features?: string[];
+  highlight?: boolean;
+  active: boolean;
+}
+
+export interface SetupTrainingConfig {
+  enabled: boolean;
+  title: string;
+  price: number;
+  description: string;
+  checkoutUrl?: string;
+  features?: string[];
+}
+
 export interface HotmartConfig {
   hottok: string;
   checkoutUrl: string;
   productId: string;
   trialDays: number;
   webhookUrl: string;
+  plans?: HotmartPlanOption[];
+  setupTraining?: SetupTrainingConfig;
+}
+
+export interface Affiliate {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  document: string; // CPF ou CNPJ
+  state: string; // UF
+  city: string; // Cidade
+  cep?: string;
+  address?: string;
+  neighborhood?: string;
+  complement?: string;
+  commissionMonthly: number; // % comissão recorrente (ex: 20)
+  commissionSetup: number; // % comissão instalação e treinamento (ex: 50)
+  pixKeyType: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
+  pixKey: string;
+  referralCode: string; // Slug único para link de indicação
+  status: 'active' | 'inactive';
+  trainingStatus?: 'pending' | 'scheduled' | 'completed';
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+  totalCompanies?: number;
+  estimatedMonthlyEarnings?: number;
+  estimatedSetupEarnings?: number;
 }
 
 export type ChatbotMode = 'prompt' | 'visual_flow';
@@ -934,7 +992,7 @@ export type FitGrade = 'A' | 'B' | 'C' | 'D';
 
 export interface SmartListCondition {
   field: 'score' | 'qualificationLevel' | 'stage' | 'utmSource' | 'hasPhone' | 'hasEmail' | 'minLtv' | 'hasCalls';
-  operator: 'equals' | 'greater_than' | 'less_than' | 'contains' | 'is_true';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'is_true';
   value: string | number | boolean;
 }
 

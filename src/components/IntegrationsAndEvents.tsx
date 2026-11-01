@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { IntegrationSettings, WebhookLog, FunnelStage, StageEventConfig, AutoStageKeywordRule, Company, ChatbotConfig } from '../types';
-import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink, Bot, Sparkles, AlertTriangle, Mail } from 'lucide-react';
+import { Zap, Send, Code, CheckCircle, AlertCircle, Copy, Check, ShieldCheck, Globe, RefreshCw, Terminal, Sliders, MessageSquare, Plus, Trash2, ExternalLink, Bot, Sparkles, AlertTriangle, Mail, Smartphone } from 'lucide-react';
 import { WhatsAppConnectionCard } from './WhatsAppConnectionCard';
-import { simulateChatbot, testSmtpEmail } from '../services/api';
+import { simulateChatbot, testSmtpEmail, testSmsDispatch } from '../services/api';
 
 interface IntegrationsAndEventsProps {
   settings: IntegrationSettings;
@@ -76,6 +76,8 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
   const [metaTestStatus, setMetaTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [smtpTestEmail, setSmtpTestEmail] = useState('');
   const [smtpTestStatus, setSmtpTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
+  const [smsTestPhone, setSmsTestPhone] = useState('');
+  const [smsTestStatus, setSmsTestStatus] = useState<{ loading: boolean; message?: string; success?: boolean }>({ loading: false });
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -318,6 +320,36 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       }
     } catch (err: any) {
       setSmtpTestStatus({ loading: false, message: err.message || 'Erro de conexão com o servidor SMTP.', success: false });
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!smsTestPhone) {
+      setSmsTestStatus({ loading: false, message: 'Digite um número de telefone com DDD para testar o envio.', success: false });
+      return;
+    }
+    const clean = smsTestPhone.replace(/\D/g, '');
+    if (clean.length < 10) {
+      setSmsTestStatus({ loading: false, message: 'Informe um número com DDD válido (mínimo 10 dígitos, ex: 11999998888).', success: false });
+      return;
+    }
+    setSmsTestStatus({ loading: true, message: 'Disparando SMS de teste para o número informado...' });
+    try {
+      const res = await testSmsDispatch({
+        companyId: currentCompany.id,
+        targetPhone: clean,
+        provider: formData.smsProvider || 'z_api',
+        apiKey: formData.smsApiKey,
+        apiUrl: formData.smsApiUrl,
+        senderId: formData.smsSenderId
+      });
+      if (res.success) {
+        setSmsTestStatus({ loading: false, message: `✅ ${res.message || 'SMS de teste enviado com sucesso!'}`, success: true });
+      } else {
+        setSmsTestStatus({ loading: false, message: `❌ ${res.error || 'Falha ao enviar SMS.'}`, success: false });
+      }
+    } catch (err: any) {
+      setSmsTestStatus({ loading: false, message: `❌ Erro: ${err.message || 'Falha de comunicação com o servidor.'}`, success: false });
     }
   };
 
@@ -1148,6 +1180,137 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     {smtpTestStatus.message}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: SMS Gateway Dispatch Configuration */}
+          <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Disparo de Mensagens SMS</h3>
+                  <p className="text-[11px] text-slate-500">Envio automático de SMS para recuperação de leads, avisos e campanhas.</p>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border self-start sm:self-auto ${
+                formData.smsEnabled 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}>
+                {formData.smsEnabled ? '● SMS Ativo' : '○ SMS Desativado'}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {/* Toggle Habilitar SMS */}
+              <div>
+                <label className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs cursor-pointer hover:bg-slate-100/70 transition">
+                  <div>
+                    <span className="text-slate-800 font-bold block">Habilitar Disparo por SMS</span>
+                    <span className="text-[11px] text-slate-500">Ativa o envio de SMS em campanhas multicanal, fluxos de automação e alertas.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formData.smsEnabled ?? false}
+                    onChange={(e) => setFormData({ ...formData, smsEnabled: e.target.checked })}
+                    className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              {/* SMS Config Fields */}
+              <div className={`space-y-3 transition-opacity ${formData.smsEnabled ? 'opacity-100' : 'opacity-70'}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Provedor / Gateway SMS *</label>
+                    <select
+                      value={formData.smsProvider || 'z_api'}
+                      onChange={(e) => setFormData({ ...formData, smsProvider: e.target.value as any })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:bg-white focus:border-blue-600 cursor-pointer"
+                    >
+                      <option value="z_api">Z-API (Instância WhatsApp / SMS)</option>
+                      <option value="twilio">Twilio SMS Gateway</option>
+                      <option value="totalvoice">TotalVoice / Zenvia</option>
+                      <option value="comtele">Comtele SMS</option>
+                      <option value="simulado">Simulador / Ambiente de Testes (Mock)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">ID do Remetente (Sender ID)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: TRACKERMD"
+                      value={formData.smsSenderId || ''}
+                      onChange={(e) => setFormData({ ...formData, smsSenderId: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Token de Acesso / API Key</label>
+                    <input
+                      type="password"
+                      placeholder="••••••••••••••••••••••••"
+                      value={formData.smsApiKey || ''}
+                      onChange={(e) => setFormData({ ...formData, smsApiKey: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">URL da API / Endpoint (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="https://api.z-api.io/instances/..."
+                      value={formData.smsApiUrl || ''}
+                      onChange={(e) => setFormData({ ...formData, smsApiUrl: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Test Dispatch */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <label className="block text-[11px] font-semibold text-slate-700">Testar Disparo de SMS em Tempo Real</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      placeholder="DDD + Número (ex: 11999998888)"
+                      value={smsTestPhone}
+                      onChange={(e) => setSmsTestPhone(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-mono focus:outline-none focus:bg-white focus:border-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestSms}
+                      disabled={smsTestStatus.loading || !smsTestPhone}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+                    >
+                      {smsTestStatus.loading ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>Enviar SMS</span>
+                    </button>
+                  </div>
+                  {smsTestStatus.message && (
+                    <div className={`p-2 rounded text-xs font-semibold ${
+                      smsTestStatus.success ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}>
+                      {smsTestStatus.message}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

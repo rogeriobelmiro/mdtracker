@@ -1,66 +1,66 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Trophy, 
-  Sparkles, 
-  Play, 
-  Users, 
-  QrCode, 
-  ExternalLink, 
-  CheckCircle2, 
-  HelpCircle, 
-  Clock, 
-  Gift, 
-  BarChart3, 
-  MessageSquare, 
-  Layers, 
-  Settings2, 
-  Download, 
-  RefreshCw, 
-  Copy, 
-  Check, 
-  Flame, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Eye, 
-  ChevronRight, 
-  ChevronUp, 
-  ChevronDown, 
-  X, 
-  Monitor, 
-  Smartphone, 
-  Radio, 
-  Award, 
-  Share2, 
-  ThumbsUp, 
-  FileSpreadsheet, 
+import {
+  Trophy,
+  Sparkles,
+  Play,
+  Users,
+  QrCode,
+  ExternalLink,
+  CheckCircle2,
+  HelpCircle,
+  Clock,
+  Gift,
+  BarChart3,
+  MessageSquare,
+  Layers,
+  Settings2,
+  Download,
+  RefreshCw,
+  Copy,
+  Check,
+  Flame,
+  Plus,
+  Trash2,
+  Edit3,
+  Eye,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Monitor,
+  Smartphone,
+  Radio,
+  Award,
+  Share2,
+  ThumbsUp,
+  FileSpreadsheet,
   Search,
   Dice5,
   Volume2,
   VolumeX,
   Maximize2
 } from 'lucide-react';
-import { 
-  Company, 
-  GamificationEvent, 
-  GamificationActivity, 
-  GamificationActivityType, 
-  GamificationParticipant, 
-  GamificationResponse 
+import {
+  Company,
+  GamificationEvent,
+  GamificationActivity,
+  GamificationActivityType,
+  GamificationParticipant,
+  GamificationResponse
 } from '../types';
-import { 
-  fetchGamificationEvents, 
-  fetchGamificationEventDetails, 
-  createGamificationEvent, 
-  updateGamificationEvent, 
-  deleteGamificationEvent, 
-  addGamificationActivity, 
-  updateGamificationActivity, 
-  deleteGamificationActivity, 
-  setActiveGamificationActivity, 
-  triggerLuckyDraw, 
-  resetGamificationResponses, 
-  exportGamificationLeadsToCRM 
+import {
+  fetchGamificationEvents,
+  fetchGamificationEventDetails,
+  createGamificationEvent,
+  updateGamificationEvent,
+  deleteGamificationEvent,
+  addGamificationActivity,
+  updateGamificationActivity,
+  deleteGamificationActivity,
+  setActiveGamificationActivity,
+  triggerLuckyDraw,
+  resetGamificationResponses,
+  exportGamificationLeadsToCRM
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
@@ -220,10 +220,14 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
 
     try {
       setIsSaving(true);
+      const payload = {
+        ...editingEvent,
+        companyId: editingEvent.companyId || currentCompany.id
+      };
       if (editingEvent.id) {
-        await updateGamificationEvent(editingEvent.id, editingEvent);
+        await updateGamificationEvent(editingEvent.id, payload);
       } else {
-        await createGamificationEvent(editingEvent);
+        await createGamificationEvent(payload);
       }
       setIsEditorOpen(false);
       await loadEvents();
@@ -312,7 +316,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
       await navigator.clipboard.writeText(url);
       setCopiedPin(pin);
       setTimeout(() => setCopiedPin(null), 2500);
-    } catch {}
+    } catch { }
   };
 
   // Add Activity helper
@@ -390,7 +394,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
   };
 
   const filteredEvents = useMemo(() => {
-    return events.filter(e => 
+    return events.filter(e =>
       e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.pinCode.toLowerCase().includes(searchQuery.toLowerCase())
@@ -399,7 +403,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
 
   return (
     <div className="space-y-6">
-      
+
       {/* Top Banner / Hero Header */}
       <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden border border-purple-800/50">
         <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -481,7 +485,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
             const activeActivity = event.activities?.find(a => a.id === event.currentActivityId) || event.activities?.[0];
 
             return (
-              <div 
+              <div
                 key={event.id}
                 className="bg-white rounded-3xl border border-slate-200/90 shadow-lg shadow-slate-200/40 p-6 flex flex-col justify-between hover:border-purple-300 hover:shadow-xl transition group relative overflow-hidden"
               >
@@ -530,11 +534,11 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                       <span className="text-xs font-bold text-emerald-600 truncate block mt-1">
                         {activeActivity ? (
                           activeActivity.type === 'word_cloud' ? '☁️ Nuvem' :
-                          activeActivity.type === 'quiz' ? '⏱️ Quiz' :
-                          activeActivity.type === 'multiple_choice' ? '📊 Enquete' :
-                          activeActivity.type === 'lucky_draw' ? '🎰 Sorteio' :
-                          activeActivity.type === 'qa' ? '💬 Q&A' :
-                          activeActivity.type === 'ranking' ? '🏆 Pódio' : '⚡ Ativa'
+                            activeActivity.type === 'quiz' ? '⏱️ Quiz' :
+                              activeActivity.type === 'multiple_choice' ? '📊 Enquete' :
+                                activeActivity.type === 'lucky_draw' ? '🎰 Sorteio' :
+                                  activeActivity.type === 'qa' ? '💬 Q&A' :
+                                    activeActivity.type === 'ranking' ? '🏆 Pódio' : '⚡ Ativa'
                         ) : 'Nenhuma'}
                       </span>
                     </div>
@@ -620,7 +624,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
       {isEditorOpen && editingEvent && (
         <div className="fixed inset-0 z-60 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
           <div className="bg-white rounded-3xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-scale-in">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/50">
               <div className="flex items-center gap-3">
@@ -660,11 +664,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
               <button
                 type="button"
                 onClick={() => setActiveEditorTab('activities')}
-                className={`py-3.5 border-b-2 flex items-center gap-2 transition ${
-                  activeEditorTab === 'activities'
-                    ? 'border-purple-600 text-purple-600 font-bold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                className={`py-3.5 border-b-2 flex items-center gap-2 transition ${activeEditorTab === 'activities'
+                  ? 'border-purple-600 text-purple-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
               >
                 <Layers className="w-4 h-4" />
                 <span>Dinâmicas da Apresentação ({editingEvent.activities?.length || 0})</span>
@@ -673,11 +676,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
               <button
                 type="button"
                 onClick={() => setActiveEditorTab('settings')}
-                className={`py-3.5 border-b-2 flex items-center gap-2 transition ${
-                  activeEditorTab === 'settings'
-                    ? 'border-purple-600 text-purple-600 font-bold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                className={`py-3.5 border-b-2 flex items-center gap-2 transition ${activeEditorTab === 'settings'
+                  ? 'border-purple-600 text-purple-600 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
               >
                 <Settings2 className="w-4 h-4" />
                 <span>Configurações & Captura de Leads</span>
@@ -686,7 +688,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
 
             {/* Tab Contents */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
+
               {/* TAB 1: ACTIVITIES BUILDER */}
               {activeEditorTab === 'activities' && (
                 <div className="space-y-4">
@@ -723,11 +725,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                       const typeInfo = typeIcons[activity.type] || { icon: '⚡', label: 'Dinâmica', bg: 'bg-slate-50 text-slate-700' };
 
                       return (
-                        <div 
+                        <div
                           key={activity.id}
-                          className={`rounded-2xl border transition overflow-hidden bg-white ${
-                            isActiveOnStage ? 'border-2 border-purple-500 shadow-md' : 'border-slate-200'
-                          }`}
+                          className={`rounded-2xl border transition overflow-hidden bg-white ${isActiveOnStage ? 'border-2 border-purple-500 shadow-md' : 'border-slate-200'
+                            }`}
                         >
                           <div className="p-4 flex items-center justify-between gap-3 bg-slate-50/50">
                             <div className="flex items-center gap-3">
@@ -755,11 +756,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                               <button
                                 type="button"
                                 onClick={() => handleSwitchActivity(editingEvent.id || '', activity.id)}
-                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                                  isActiveOnStage 
-                                    ? 'bg-purple-600 text-white shadow-xs' 
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                                }`}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${isActiveOnStage
+                                  ? 'bg-purple-600 text-white shadow-xs'
+                                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                  }`}
                               >
                                 {isActiveOnStage ? 'No Telão' : 'Projetar'}
                               </button>
@@ -796,7 +796,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                                   type="text"
                                   value={activity.title}
                                   onChange={e => {
-                                    const updated = (editingEvent.activities || []).map(a => 
+                                    const updated = (editingEvent.activities || []).map(a =>
                                       a.id === activity.id ? { ...a, title: e.target.value } : a
                                     );
                                     setEditingEvent({ ...editingEvent, activities: updated });
@@ -813,7 +813,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                                   type="text"
                                   value={activity.subtitle || ''}
                                   onChange={e => {
-                                    const updated = (editingEvent.activities || []).map(a => 
+                                    const updated = (editingEvent.activities || []).map(a =>
                                       a.id === activity.id ? { ...a, subtitle: e.target.value } : a
                                     );
                                     setEditingEvent({ ...editingEvent, activities: updated });
@@ -835,7 +835,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                                         <select
                                           value={activity.timeLimitSeconds || 20}
                                           onChange={e => {
-                                            const updated = (editingEvent.activities || []).map(a => 
+                                            const updated = (editingEvent.activities || []).map(a =>
                                               a.id === activity.id ? { ...a, timeLimitSeconds: Number(e.target.value) } : a
                                             );
                                             setEditingEvent({ ...editingEvent, activities: updated });
@@ -865,11 +865,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                                             });
                                             setEditingEvent({ ...editingEvent, activities: updated });
                                           }}
-                                          className={`p-1.5 rounded-lg text-xs font-bold transition ${
-                                            opt.isCorrect 
-                                              ? 'bg-emerald-600 text-white' 
-                                              : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                                          }`}
+                                          className={`p-1.5 rounded-lg text-xs font-bold transition ${opt.isCorrect
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                            }`}
                                           title="Marcar como Resposta Correta"
                                         >
                                           <Check className="w-3.5 h-3.5" />
@@ -881,7 +880,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                                         onChange={e => {
                                           const updated = (editingEvent.activities || []).map(a => {
                                             if (a.id !== activity.id) return a;
-                                            const opts = (a.options || []).map((o, idx2) => 
+                                            const opts = (a.options || []).map((o, idx2) =>
                                               idx2 === oIdx ? { ...o, text: e.target.value } : o
                                             );
                                             return { ...a, options: opts };
@@ -1078,7 +1077,7 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
       {isRemoteOpen && remoteEvent && (
         <div className="fixed inset-0 z-70 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
           <div className="bg-slate-900 text-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-purple-800/80 animate-scale-in space-y-6">
-            
+
             {/* Remote Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
@@ -1130,11 +1129,10 @@ export const EventGamificationManager: React.FC<EventGamificationManagerProps> =
                       key={activity.id}
                       type="button"
                       onClick={() => handleSwitchActivity(remoteEvent.id, activity.id)}
-                      className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition ${
-                        isActive 
-                          ? 'bg-purple-600/30 border-purple-500 text-white font-bold' 
-                          : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
-                      }`}
+                      className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition ${isActive
+                        ? 'bg-purple-600/30 border-purple-500 text-white font-bold'
+                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <span className="text-xs font-mono opacity-60">#{idx + 1}</span>

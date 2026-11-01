@@ -127,11 +127,21 @@ export default function App() {
       const hash = window.location.hash || '';
       const path = window.location.pathname || '';
       const search = window.location.search || '';
-      if (hash === '#login' || path === '/login' || search.includes('login=true')) {
+      if (hash === '#login' || path === '/login' || search.includes('login=true') || search.includes('afiliado=') || search.includes('representante=')) {
         return 'login';
       }
     }
     return 'site';
+  });
+  const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register_company' | 'register_affiliate'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      if (hash === '#afiliado' || hash === '#representante' || search.includes('cadastro=afiliado') || search.includes('representante=true')) {
+        return 'register_affiliate';
+      }
+    }
+    return 'login';
   });
   const [leadPurchases, setLeadPurchases] = useState<LeadPurchase[]>([]);
   const [popups, setPopups] = useState<SmartPopup[]>([]);
@@ -531,6 +541,7 @@ export default function App() {
         <LoginScreen
           companies={companies}
           users={users}
+          initialMode={loginInitialMode}
           onLoginSuccess={handleLoginSuccess}
           onBackToSite={() => setAuthView('site')}
         />
@@ -538,7 +549,10 @@ export default function App() {
     }
     return (
       <PublicSalesWebsite
-        onOpenLogin={() => setAuthView('login')}
+        onOpenLogin={(mode) => {
+          setLoginInitialMode(mode || 'login');
+          setAuthView('login');
+        }}
         onLoginSuccess={handleLoginSuccess}
       />
     );

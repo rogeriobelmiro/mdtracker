@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Users, UserPlus, Shield, UserCheck, Key, Mail, Lock, CheckCircle2, 
   XCircle, Trash2, Edit3, Building2, ShieldAlert, Sparkles, AlertCircle,
-  Phone, Radio, Globe, Home
+  Phone, Radio, Globe, Home, RefreshCw
 } from 'lucide-react';
 import { User, UserRole, Company } from '../types';
 
@@ -10,10 +10,20 @@ interface UserManagementProps {
   currentCompany: Company;
   currentUser: User;
   users: User[];
-  onAddUser: (newUser: Omit<User, 'id' | 'createdAt'>) => void;
-  onUpdateUser: (userId: string, updates: Partial<User>) => void;
-  onDeleteUser: (userId: string) => void;
+  onAddUser: (newUser: Omit<User, 'id' | 'createdAt'>) => Promise<void> | void;
+  onUpdateUser: (userId: string, updates: Partial<User>) => Promise<void> | void;
+  onDeleteUser: (userId: string) => Promise<void> | void;
 }
+
+const DEFAULT_FORM_DATA = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'attendant' as UserRole,
+  phone: '',
+  extension: '',
+  isExternal: false
+};
 
 export const UserManagement: React.FC<UserManagementProps> = ({
   currentCompany,
@@ -25,77 +35,82 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'attendant' as UserRole,
-    phone: '',
-    extension: '',
-    isExternal: false
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [formError, setFormError] = useState('');
 
   // Filter users belonging to current company
   const companyUsers = users.filter(u => u.companyId === currentCompany.id);
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
-    if (!formData.name.trim() || !formData.email.trim()) {
+    const name = (formData.name || '').trim();
+    const email = (formData.email || '').trim();
+    const phone = (formData.phone || '').trim();
+    const extension = (formData.extension || '').trim();
+
+    if (!name || !email) {
       setFormError('Por favor, preencha o nome e o e-mail.');
       return;
     }
 
     // Check if email already exists in company
-    const exists = users.some(
-      u => u.email.toLowerCase() === formData.email.trim().toLowerCase() && u.id !== editingUserId
+    const exists = companyUsers.some(
+      u => (u.email || '').toLowerCase() === email.toLowerCase() && u.id !== editingUserId
     );
     if (exists) {
-      setFormError('Este e-mail já está cadastrado no sistema.');
+      setFormError('Este e-mail já está cadastrado nesta empresa.');
       return;
     }
 
-    if (editingUserId) {
-      const updates: Partial<User> = {
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        role: formData.role,
-        phone: formData.phone.trim() || undefined,
-        extension: formData.extension.trim() || undefined,
-        isExternal: formData.isExternal
-      };
-      if (formData.password) {
-        updates.password = formData.password;
+    setIsSubmitting(true);
+    try {
+      if (editingUserId) {
+        const updates: Partial<User> = {
+          name,
+          email,
+          role: formData.role,
+          phone: phone || undefined,
+          extension: extension || undefined,
+          isExternal: !!formData.isExternal
+        };
+        if (formData.password) {
+          updates.password = formData.password;
+        }
+        await onUpdateUser(editingUserId, updates);
+      } else {
+        await onAddUser({
+          companyId: currentCompany.id,
+          name,
+          email,
+          password: formData.password || '123',
+          role: formData.role,
+          phone: phone || undefined,
+          extension: extension || undefined,
+          isExternal: !!formData.isExternal,
+          active: true
+        });
       }
-      onUpdateUser(editingUserId, updates);
-    } else {
-      onAddUser({
-        companyId: currentCompany.id,
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        password: formData.password || '123',
-        role: formData.role,
-        phone: formData.phone.trim() || undefined,
-        extension: formData.extension.trim() || undefined,
-        isExternal: formData.isExternal,
-        active: true
-      });
-    }
 
-    setFormData({ name: '', email: '', password: '', role: 'attendant', phone: '', extension: '', isExternal: false });
-    setEditingUserId(null);
-    setIsModalOpen(false);
+      setFormData(DEFAULT_FORM_DATA);
+      setEditingUserId(null);
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setFormError(err.message || 'Erro ao processar cadastro do colaborador.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const openEditModal = (user: User) => {
     setEditingUserId(user.id);
     setFormData({
-      name: user.name,
-      email: user.email,
+      name: user.name || '',
+      email: user.email || '',
       password: '',
-      role: user.role,
+      role: user.role || 'attendant',
       phone: user.phone || '',
       extension: user.extension || '',
       isExternal: user.isExternal || false
@@ -107,7 +122,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   const closeAndResetModal = () => {
     setIsModalOpen(false);
     setEditingUserId(null);
-    setFormData({ name: '', email: '', password: '', role: 'attendant', phone: '', extension: '', isExternal: false });
+    setFormData(DEFAULT_FORM_DATA);
     setFormError('');
   };
 
@@ -171,7 +186,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
           <button
             onClick={() => {
               setEditingUserId(null);
-              setFormData({ name: '', email: '', password: '', role: 'attendant' });
+              setFormData(DEFAULT_FORM_DATA);
               setFormError('');
               setIsModalOpen(true);
             }}
@@ -519,9 +534,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow-xs"
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  {editingUserId ? 'Salvar Alterações' : 'Confirmar Cadastro'}
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    editingUserId ? 'Salvar Alterações' : 'Confirmar Cadastro'
+                  )}
                 </button>
               </div>
 

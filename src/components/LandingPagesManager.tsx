@@ -2349,6 +2349,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             faq: { label: 'Perguntas Frequentes (FAQ)', icon: HelpCircle, color: 'text-purple-600 bg-purple-50' },
                             countdown: { label: 'Timer de Escassez', icon: Clock, color: 'text-orange-600 bg-orange-50' },
                             cta_banner: { label: 'Banner de Ação (CTA)', icon: Sparkles, color: 'text-cyan-600 bg-cyan-50' },
+                            comparison: { label: 'Tabela Comparativa', icon: Sliders, color: 'text-violet-600 bg-violet-50' },
                             hero: { label: 'Hero / Destaque', icon: Layout, color: 'text-blue-600 bg-blue-50' }
                           };
 
@@ -4700,7 +4701,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                 buttonText: 'Baixar PDF Grátis 📥',
                                 icon: 'download',
                                 color: '#2563eb',
-                                url: 'https://mdtracker.app/materiais/guia-conversao-whatsapp.pdf',
+                                url: 'https://trackermd.mudadigital.com.br/materiais/guia-conversao-whatsapp.pdf',
                                 badge: 'Download Imediato'
                               };
                               setEditingPage({
@@ -6043,7 +6044,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             </div>
                             <div className="bg-white border border-slate-200 px-3 py-1 rounded-md text-[11px] text-slate-500 font-mono flex items-center gap-1.5 shadow-xs">
                               <Globe className="w-3 h-3 text-purple-600" />
-                              <span>https://mdtracker.app/p/{editingPage.slug}/obrigado</span>
+                              <span>https://trackermd.mudadigital.com.br/p/{editingPage.slug}/obrigado</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -6205,7 +6206,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           </div>
                           <div className="bg-white border border-slate-200 px-3 py-1 rounded-md text-[11px] text-slate-500 font-mono flex items-center gap-1.5 shadow-xs">
                             <Globe className="w-3 h-3 text-slate-400" />
-                            <span>https://mdtracker.app/p/{editingPage.slug}</span>
+                            <span>https://trackermd.mudadigital.com.br/p/{editingPage.slug}</span>
                           </div>
                         </div>
                         <div className="text-[11px] text-slate-400 font-medium hidden md:block">

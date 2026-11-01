@@ -38,7 +38,8 @@ import {
   ChevronUp,
   ChevronDown,
   FileText,
-  Send
+  Send,
+  Zap
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 

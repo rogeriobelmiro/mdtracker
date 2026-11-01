@@ -31,7 +31,9 @@ import {
   Code,
   Check,
   RefreshCw,
-  Calendar
+  Calendar,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { 
   MarketingWorkflow, 
@@ -79,6 +81,24 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'workflows' | 'templates' | 'logs' | 'queue'>('workflows');
+  const [displayMode, setDisplayMode] = useState<'cards' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('mdtracker_workflows_view_mode');
+      if (saved === 'cards' || saved === 'list') return saved;
+    } catch (e) {
+      // ignore
+    }
+    return 'cards';
+  });
+
+  const handleSetDisplayMode = (mode: 'cards' | 'list') => {
+    setDisplayMode(mode);
+    try {
+      localStorage.setItem('mdtracker_workflows_view_mode', mode);
+    } catch (e) {
+      // ignore
+    }
+  };
   const [queueActions, setQueueActions] = useState<ScheduledWorkflowAction[]>([]);
   const [processingQueue, setProcessingQueue] = useState(false);
 
@@ -86,6 +106,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<MarketingWorkflow> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [emailStepEditorMode, setEmailStepEditorMode] = useState<Record<string, 'normal' | 'html'>>({});
 
   // Embed & Webhooks Guide Modal
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
@@ -742,61 +763,91 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
       </div>
 
       {/* 2. View Switcher Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold">
-        <button
-          onClick={() => setActiveView('workflows')}
-          className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-            activeView === 'workflows'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <GitBranch className="w-3.5 h-3.5" />
-          <span>Meus Fluxos ({workflows.length})</span>
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 pb-2 text-xs font-semibold">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <button
+            onClick={() => setActiveView('workflows')}
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+              activeView === 'workflows'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <GitBranch className="w-3.5 h-3.5" />
+            <span>Meus Fluxos ({workflows.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveView('templates')}
-          className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-            activeView === 'templates'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span>Biblioteca de Templates (6)</span>
-        </button>
+          <button
+            onClick={() => setActiveView('templates')}
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+              activeView === 'templates'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Biblioteca de Templates (6)</span>
+          </button>
 
-        <button
-          onClick={() => setActiveView('logs')}
-          className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-            activeView === 'logs'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Histórico de Execuções ({logs.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveView('logs')}
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+              activeView === 'logs'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Histórico de Execuções ({logs.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveView('queue')}
-          className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-            activeView === 'queue'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5 text-indigo-500" />
-          <span>Fila Agendada 24h</span>
-          {queueActions.filter(a => a.status === 'pending').length > 0 && (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-              activeView === 'queue' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'
-            }`}>
-              {queueActions.filter(a => a.status === 'pending').length}
-            </span>
-          )}
-        </button>
+          <button
+            onClick={() => setActiveView('queue')}
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 whitespace-nowrap ${
+              activeView === 'queue'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Fila Agendada 24h</span>
+            {queueActions.filter(a => a.status === 'pending').length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeView === 'queue' ? 'bg-white text-indigo-700' : 'bg-indigo-100 text-indigo-700'
+              }`}>
+                {queueActions.filter(a => a.status === 'pending').length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* View Mode Toggle (Cards vs List) */}
+        {activeView === 'workflows' && workflows.length > 0 && (
+          <div className="flex items-center self-end sm:self-auto bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button
+              type="button"
+              onClick={() => handleSetDisplayMode('cards')}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                displayMode === 'cards' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Visualização em Cards"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Cards</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetDisplayMode('list')}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                displayMode === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Visualização em Lista"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Lista</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 3. Main Views */}
@@ -828,7 +879,145 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                 </button>
               </div>
             </div>
+          ) : displayMode === 'cards' ? (
+            /* Cards View */
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {workflows.map(wf => (
+                <div 
+                  key={wf.id}
+                  className={`bg-white border rounded-2xl p-5 shadow-xs transition-all flex flex-col justify-between hover:shadow-md ${
+                    wf.active ? 'border-slate-200 hover:border-blue-400' : 'border-slate-200/60 opacity-80 bg-slate-50/40'
+                  }`}
+                >
+                  <div>
+                    {/* Top row: Status Badge & Actions */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${wf.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          wf.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {wf.active ? 'Ativo' : 'Pausado'}
+                        </span>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+                          {wf.steps?.length || 0} passos
+                        </span>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleToggleActive(wf)}
+                          className={`p-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                            wf.active 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={wf.active ? 'Pausar Automação' : 'Ativar Automação'}
+                        >
+                          {wf.active ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setTestModalWorkflow(wf);
+                            setTestResult(null);
+                          }}
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer"
+                          title="Simular e Testar Fluxo"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditingWorkflow(JSON.parse(JSON.stringify(wf)));
+                            setIsEditorOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer"
+                          title="Editar Fluxo"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(wf)}
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-red-50 text-slate-400 hover:text-red-600 transition cursor-pointer"
+                          title="Excluir Fluxo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Title: 2 or 3 lines without ellipsis truncation */}
+                    <h4 
+                      className="font-bold text-sm text-slate-900 line-clamp-2 sm:line-clamp-3 leading-snug break-words"
+                      title={wf.name}
+                    >
+                      {wf.name}
+                    </h4>
+
+                    {/* Description: 2 or 3 lines */}
+                    {wf.description && (
+                      <p 
+                        className="text-xs text-slate-500 line-clamp-2 sm:line-clamp-3 leading-relaxed break-words mt-1.5"
+                        title={wf.description}
+                      >
+                        {wf.description}
+                      </p>
+                    )}
+
+                    {/* Trigger & Deadline */}
+                    <div className="flex flex-wrap items-center gap-2 pt-2.5 text-[11px]">
+                      <span className="text-slate-400 font-semibold text-[10px]">Gatilho:</span>
+                      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-blue-200">
+                        <Zap className="w-3 h-3 text-blue-600 shrink-0" />
+                        <span className="line-clamp-1">{getTriggerLabel(wf.triggerType, wf.triggerConfig)}</span>
+                      </span>
+                      {wf.hasEventDeadline && wf.eventDate && (
+                        <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200" title="Automação com prazo de evento">
+                          <Calendar className="w-3 h-3 text-indigo-600 shrink-0" />
+                          <span>Prazo: {new Date(wf.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Sequence Steps Flow Preview */}
+                    {wf.steps && wf.steps.length > 0 && (
+                      <div className="mt-3 py-2 px-2.5 bg-slate-50 border border-slate-200/80 rounded-xl overflow-x-auto flex items-center gap-1.5">
+                        {wf.steps.map((step, idx) => (
+                          <React.Fragment key={step.id}>
+                            {idx > 0 && <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />}
+                            <div className="shrink-0" title={step.title}>
+                              {getActionBadge(step.type)}
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Metrics Footer */}
+                  <div className="grid grid-cols-3 gap-2 pt-3 mt-4 border-t border-slate-100 text-center">
+                    <div className="bg-slate-50/70 rounded-lg py-1.5 px-1 border border-slate-100">
+                      <p className="text-[10px] text-slate-400 font-semibold">Inscritos</p>
+                      <p className="font-bold text-xs text-slate-800 mt-0.5">{wf.enrolledCount || 0}</p>
+                    </div>
+                    <div className="bg-blue-50/50 rounded-lg py-1.5 px-1 border border-blue-100/60">
+                      <p className="text-[10px] text-blue-500 font-semibold">Executados</p>
+                      <p className="font-bold text-xs text-blue-600 mt-0.5">{wf.executedCount || 0}</p>
+                    </div>
+                    <div className="bg-emerald-50/50 rounded-lg py-1.5 px-1 border border-emerald-100/60">
+                      <p className="text-[10px] text-emerald-500 font-semibold">Conversões</p>
+                      <p className="font-bold text-xs text-emerald-600 mt-0.5">{wf.conversionsCount || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
+            /* List View */
             <div className="grid grid-cols-1 gap-4">
               {workflows.map(wf => (
                 <div 
@@ -842,34 +1031,44 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                     {/* Left: Info & Trigger */}
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2.5">
-                        <span className={`w-2 h-2 rounded-full ${wf.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                        <h4 className="font-bold text-sm text-slate-900 truncate">{wf.name}</h4>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${wf.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                        <h4 
+                          className="font-bold text-sm text-slate-900 line-clamp-2 sm:line-clamp-3 leading-snug break-words"
+                          title={wf.name}
+                        >
+                          {wf.name}
+                        </h4>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium shrink-0">
                           {wf.steps?.length || 0} passos
                         </span>
                       </div>
                       {wf.description && (
-                        <p className="text-xs text-slate-500 line-clamp-1">{wf.description}</p>
+                        <p 
+                          className="text-xs text-slate-500 line-clamp-2 sm:line-clamp-3 leading-relaxed break-words"
+                          title={wf.description}
+                        >
+                          {wf.description}
+                        </p>
                       )}
                       
                       {/* Trigger & Deadline Badges */}
                       <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                         <span className="text-slate-400 font-semibold">Gatilho:</span>
                         <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-blue-200">
-                          <Zap className="w-3 h-3 text-blue-600" />
-                          {getTriggerLabel(wf.triggerType, wf.triggerConfig)}
+                          <Zap className="w-3 h-3 text-blue-600 shrink-0" />
+                          <span className="line-clamp-1">{getTriggerLabel(wf.triggerType, wf.triggerConfig)}</span>
                         </span>
                         {wf.hasEventDeadline && wf.eventDate && (
                           <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold text-[10px] border border-indigo-200" title="Automação com prazo de evento">
-                            <Calendar className="w-3 h-3 text-indigo-600" />
-                            Prazo: {new Date(wf.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            <Calendar className="w-3 h-3 text-indigo-600 shrink-0" />
+                            <span>Prazo: {new Date(wf.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                           </span>
                         )}
                       </div>
                     </div>
 
                     {/* Middle: Sequence Preview */}
-                    <div className="hidden xl:flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 max-w-md overflow-x-auto">
+                    <div className="hidden xl:flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 max-w-md overflow-x-auto shrink-0">
                       {(wf.steps || []).map((step, idx) => (
                         <React.Fragment key={step.id}>
                           {idx > 0 && <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />}
@@ -881,7 +1080,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                     </div>
 
                     {/* Right: Metrics & Actions */}
-                    <div className="flex items-center justify-between lg:justify-end gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <div className="flex items-center justify-between lg:justify-end gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 shrink-0">
                       <div className="flex items-center gap-4 text-center text-xs">
                         <div>
                           <p className="text-[10px] text-slate-400 font-semibold">Inscritos</p>
@@ -901,7 +1100,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                         {/* Toggle Active Button */}
                         <button
                           onClick={() => handleToggleActive(wf)}
-                          className={`p-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 ${
+                          className={`p-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
                             wf.active 
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
                               : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
@@ -917,7 +1116,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                             setTestModalWorkflow(wf);
                             setTestResult(null);
                           }}
-                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer"
                           title="Simular e Testar Fluxo"
                         >
                           <Zap className="w-3.5 h-3.5 text-amber-500" />
@@ -929,7 +1128,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                             setEditingWorkflow(JSON.parse(JSON.stringify(wf)));
                             setIsEditorOpen(true);
                           }}
-                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition cursor-pointer"
                           title="Editar Fluxo"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-blue-600" />
@@ -938,7 +1137,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                         {/* Delete Button */}
                         <button
                           onClick={() => handleDelete(wf)}
-                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-red-50 text-slate-400 hover:text-red-600 transition"
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-red-50 text-slate-400 hover:text-red-600 transition cursor-pointer"
                           title="Excluir Fluxo"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1750,14 +1949,77 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                               />
                             </div>
                             <div>
-                              <span className="text-[10px] font-bold text-slate-500 block mb-1">Mensagem / Corpo do E-mail:</span>
-                              <textarea
-                                rows={3}
-                                value={step.emailBody || ''}
-                                onChange={(e) => handleUpdateStep(step.id, { emailBody: e.target.value })}
-                                placeholder="Corpo do e-mail..."
-                                className="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 outline-none focus:border-blue-500 focus:bg-white font-sans"
-                              />
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-bold text-slate-500">Mensagem / Corpo do E-mail:</span>
+                                <div className="flex items-center gap-1 bg-slate-200/60 p-0.5 rounded">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEmailStepEditorMode(prev => ({ ...prev, [step.id]: 'normal' }))}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
+                                      (emailStepEditorMode[step.id] || 'normal') === 'normal' 
+                                        ? 'bg-white text-blue-600 shadow-xs' 
+                                        : 'text-slate-500 hover:text-slate-800'
+                                    }`}
+                                  >
+                                    Texto Normal
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEmailStepEditorMode(prev => ({ ...prev, [step.id]: 'html' }))}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
+                                      (emailStepEditorMode[step.id] || 'normal') === 'html' 
+                                        ? 'bg-white text-blue-600 shadow-xs' 
+                                        : 'text-slate-500 hover:text-slate-800'
+                                    }`}
+                                  >
+                                    Código HTML
+                                  </button>
+                                </div>
+                              </div>
+
+                              {(emailStepEditorMode[step.id] || 'normal') === 'normal' ? (
+                                <div className="space-y-1">
+                                  <textarea
+                                    rows={4}
+                                    value={step.emailBody || ''}
+                                    onChange={(e) => handleUpdateStep(step.id, { emailBody: e.target.value })}
+                                    placeholder="Digite o texto do e-mail de forma simples..."
+                                    className="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 outline-none focus:border-blue-500 focus:bg-white font-sans leading-relaxed"
+                                  />
+                                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                    <span>Formato simples (o sistema formata e estiliza automaticamente)</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateStep(step.id, { emailBody: (step.emailBody || '') + ' {nome}' })}
+                                        className="text-blue-600 hover:underline cursor-pointer"
+                                      >
+                                        + {'{nome}'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateStep(step.id, { emailBody: (step.emailBody || '') + ' {empresa}' })}
+                                        className="text-blue-600 hover:underline cursor-pointer"
+                                      >
+                                        + {'{empresa}'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <textarea
+                                    rows={6}
+                                    value={step.emailBody || ''}
+                                    onChange={(e) => handleUpdateStep(step.id, { emailBody: e.target.value })}
+                                    placeholder="<div style='...'>...</div>"
+                                    className="w-full bg-slate-900 text-emerald-400 border border-slate-800 rounded p-2 text-xs font-mono outline-none focus:border-blue-500 leading-relaxed"
+                                  />
+                                  <div className="text-[10px] text-slate-400">
+                                    Modo HTML avançado para templates customizados com tags e CSS.
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             {/* Direct Test Bar for This Email Step / Phase */}

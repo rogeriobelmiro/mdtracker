@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1456,6 +1456,22 @@ export async function testSmtpEmail(data: {
   return res.json();
 }
 
+export async function testSmsDispatch(data: {
+  companyId?: string;
+  targetPhone: string;
+  provider: string;
+  apiKey?: string;
+  apiUrl?: string;
+  senderId?: string;
+}): Promise<{ success: boolean; messageId?: string; message?: string; error?: string }> {
+  const res = await fetch('/api/settings/test-sms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
 export async function sendTestPhaseEmail(payload: {
   companyId?: string;
   targetEmail: string;
@@ -1478,6 +1494,12 @@ export async function sendTestPhaseEmail(payload: {
 export async function fetchVisualFunnels(companyId?: string): Promise<VisualFunnel[]> {
   const url = companyId ? `/api/visual-funnels?companyId=${encodeURIComponent(companyId)}` : '/api/visual-funnels';
   const res = await fetch(url);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchCommunityFunnels(): Promise<VisualFunnel[]> {
+  const res = await fetch('/api/visual-funnels/community');
   if (!res.ok) return [];
   return res.json();
 }
@@ -1603,6 +1625,121 @@ export async function fetchSubscriptionCheckoutUrl(): Promise<string> {
     return data.checkoutUrl || 'https://pay.hotmart.com';
   } catch {
     return 'https://pay.hotmart.com';
+  }
+}
+
+export async function fetchSubscriptionCheckoutData(): Promise<{
+  checkoutUrl: string;
+  plans?: HotmartPlanOption[];
+  setupTraining?: SetupTrainingConfig;
+}> {
+  try {
+    const res = await fetch('/api/subscription/checkout-url');
+    if (!res.ok) return { checkoutUrl: 'https://pay.hotmart.com' };
+    return res.json();
+  } catch {
+    return { checkoutUrl: 'https://pay.hotmart.com' };
+  }
+}
+
+export async function fetchPublicAffiliates(): Promise<Array<{
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  phone: string;
+  referralCode: string;
+}>> {
+  try {
+    const res = await fetch('/api/public/affiliates');
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function registerPublicAffiliate(data: Partial<Affiliate>): Promise<{
+  success: boolean;
+  message?: string;
+  affiliate: Affiliate;
+  referralLink: string;
+}> {
+  const res = await fetch('/api/public/affiliates/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao realizar cadastro de afiliado');
+  }
+  return res.json();
+}
+
+export async function fetchAffiliates(userEmail: string): Promise<Affiliate[]> {
+  const res = await fetch(`/api/admin/affiliates?userEmail=${encodeURIComponent(userEmail)}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createAffiliate(userEmail: string, data: Partial<Affiliate>): Promise<Affiliate> {
+  const res = await fetch('/api/admin/affiliates', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao cadastrar afiliado');
+  }
+  return res.json();
+}
+
+export async function updateAffiliate(userEmail: string, id: string, data: Partial<Affiliate>): Promise<Affiliate> {
+  const res = await fetch(`/api/admin/affiliates/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar afiliado');
+  }
+  return res.json();
+}
+
+export async function deleteAffiliate(userEmail: string, id: string): Promise<void> {
+  const res = await fetch(`/api/admin/affiliates/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao excluir afiliado');
+  }
+}
+
+export async function updateCompanyAffiliate(userEmail: string, companyId: string, affiliateId: string | null): Promise<void> {
+  const res = await fetch(`/api/admin/companies/${companyId}/affiliate`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify({ affiliateId })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao vincular afiliado à empresa');
   }
 }
 
