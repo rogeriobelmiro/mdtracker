@@ -17,11 +17,59 @@ const LOCAL_AUTH_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_aut
 let inMemoryCompanies: any[] = [
     {
         id: 'comp-1786498560971',
-        name: 'MudaDigital',
-        cnpj: '',
-        plan: 'enterprise',
+        name: 'Muda Digital Agência de IA',
+        cnpj: '09.503.474/850',
+        plan: 'starter',
+        responsibleName: 'Rogério Belmiro',
+        phone: '(65) 98115-0758',
+        subscriptionStatus: 'active',
+        trainingCompleted: true,
+        affiliateId: 'aff-mt-01',
+        affiliateCode: 'rogerio-mt',
         active: true,
         createdAt: '2026-08-11T20:00:00.000Z'
+    },
+    {
+        id: 'comp-1793484503633',
+        name: 'Crys Rios',
+        cnpj: '12.345.678/0001-90',
+        plan: 'starter',
+        responsibleName: 'Crys Rios',
+        subscriptionStatus: 'active',
+        trainingCompleted: true,
+        affiliateId: 'aff-mt-01',
+        affiliateCode: 'rogerio-mt',
+        active: true,
+        createdAt: '2026-10-31T20:48:23.633Z'
+    },
+    {
+        id: 'comp-1791985025979',
+        name: 'Abdalla Quality Service',
+        cnpj: '44.912.381/0001-09',
+        plan: 'starter',
+        responsibleName: 'Marcelo Abdalla',
+        phone: '(65) 99692-8565',
+        address: 'Rua K, 1200, Quadra 06 Lotes 18 a 22, Cuiabá - MT, CEP 78.098-370',
+        subscriptionStatus: 'trial',
+        trainingCompleted: false,
+        affiliateId: 'aff-mt-01',
+        affiliateCode: 'rogerio-mt',
+        active: true,
+        createdAt: '2026-10-14T12:17:05.979Z'
+    },
+    {
+        id: 'comp-1788784548541',
+        name: 'Fachinetti & Abdalla',
+        cnpj: '61.239.050/0001-10',
+        plan: 'starter',
+        responsibleName: 'Fachinetti & Abdalla',
+        phone: '556599975171',
+        subscriptionStatus: 'trial',
+        trainingCompleted: false,
+        affiliateId: 'aff-mt-01',
+        affiliateCode: 'rogerio-mt',
+        active: true,
+        createdAt: '2026-09-07T12:35:48.541Z'
     },
     ...initialCompanies
 ];
@@ -214,8 +262,17 @@ try {
         if (Array.isArray(parsed.companies) && parsed.companies.length > 0) {
             parsed.companies.forEach((c: any) => {
                 const idx = inMemoryCompanies.findIndex(ic => ic.id === c.id);
-                if (idx >= 0) inMemoryCompanies[idx] = { ...inMemoryCompanies[idx], ...c };
-                else inMemoryCompanies.push(c);
+                if (idx >= 0) {
+                    inMemoryCompanies[idx] = {
+                        ...inMemoryCompanies[idx],
+                        ...c,
+                        affiliateId: c.affiliateId || inMemoryCompanies[idx].affiliateId,
+                        affiliateCode: c.affiliateCode || inMemoryCompanies[idx].affiliateCode,
+                        trainingCompleted: c.trainingCompleted !== undefined ? c.trainingCompleted : inMemoryCompanies[idx].trainingCompleted
+                    };
+                } else {
+                    inMemoryCompanies.push(c);
+                }
             });
         }
         if (Array.isArray(parsed.users) && parsed.users.length > 0) {
@@ -1126,31 +1183,43 @@ const mapCompanyToDB = (c: any) => {
     if (c.hotmartTransactionId !== undefined) obj.hotmart_transaction_id = c.hotmartTransactionId;
     if (c.hotmartBuyerEmail !== undefined) obj.hotmart_buyer_email = c.hotmartBuyerEmail;
     if (c.affiliateId !== undefined) obj.affiliate_id = c.affiliateId;
+    if (c.affiliateCode !== undefined) obj.affiliate_code = c.affiliateCode;
+    if (c.trainingCompleted !== undefined) obj.training_completed = c.trainingCompleted;
     obj.updated_at = new Date().toISOString();
     return obj;
 };
 
-const mapCompanyFromDB = (db: any) => ({
-    id: db.id,
-    name: db.name,
-    cnpj: db.cnpj,
-    plan: db.plan || 'starter',
-    active: db.active !== false,
-    logoUrl: db.logo_url,
-    responsibleName: db.responsible_name,
-    phone: db.phone,
-    address: db.address,
-    createdAt: db.created_at,
-    subscriptionStatus: db.subscription_status || 'trial',
-    trialEndsAt: db.trial_ends_at || (db.created_at ? new Date(new Date(db.created_at).getTime() + 24*60*60*1000).toISOString() : new Date(Date.now() + 24*60*60*1000).toISOString()),
-    subscriptionPlan: db.subscription_plan || 'mensal',
-    subscriptionExpiresAt: db.subscription_expires_at,
-    hotmartSubscriptionId: db.hotmart_subscription_id,
-    hotmartTransactionId: db.hotmart_transaction_id,
-    hotmartBuyerEmail: db.hotmart_buyer_email,
-    affiliateId: db.affiliate_id || db.affiliateId,
-    affiliateCode: db.affiliate_code || db.affiliateCode
-});
+const mapCompanyFromDB = (db: any) => {
+    const comp: any = {
+        id: db.id,
+        name: db.name,
+        cnpj: db.cnpj || '',
+        plan: db.plan || 'starter',
+        active: db.active !== false,
+        logoUrl: db.logo_url,
+        responsibleName: db.responsible_name,
+        phone: db.phone,
+        address: db.address,
+        createdAt: db.created_at,
+        subscriptionStatus: db.subscription_status || 'trial',
+        trialEndsAt: db.trial_ends_at || (db.created_at ? new Date(new Date(db.created_at).getTime() + 24*60*60*1000).toISOString() : new Date(Date.now() + 24*60*60*1000).toISOString()),
+        subscriptionPlan: db.subscription_plan || 'mensal',
+        subscriptionExpiresAt: db.subscription_expires_at,
+        hotmartSubscriptionId: db.hotmart_subscription_id,
+        hotmartTransactionId: db.hotmart_transaction_id,
+        hotmartBuyerEmail: db.hotmart_buyer_email
+    };
+    if (db.affiliate_id !== undefined && db.affiliate_id !== null) comp.affiliateId = db.affiliate_id;
+    else if (db.affiliateId !== undefined && db.affiliateId !== null) comp.affiliateId = db.affiliateId;
+
+    if (db.affiliate_code !== undefined && db.affiliate_code !== null) comp.affiliateCode = db.affiliate_code;
+    else if (db.affiliateCode !== undefined && db.affiliateCode !== null) comp.affiliateCode = db.affiliateCode;
+
+    if (db.training_completed !== undefined && db.training_completed !== null) comp.trainingCompleted = Boolean(db.training_completed);
+    else if (db.trainingCompleted !== undefined && db.trainingCompleted !== null) comp.trainingCompleted = Boolean(db.trainingCompleted);
+
+    return comp;
+};
 
 const mapUserToDB = (u: any) => ({
     id: u.id,
@@ -12820,10 +12889,18 @@ app.get('/api/companies', async (req: Request, res: Response) => {
             const mapped = data.map(mapCompanyFromDB);
             mapped.forEach((c: any) => {
                 const idx = inMemoryCompanies.findIndex(ic => ic.id === c.id);
-                if (idx >= 0) inMemoryCompanies[idx] = { ...inMemoryCompanies[idx], ...c };
-                else inMemoryCompanies.unshift(c);
+                if (idx >= 0) {
+                    inMemoryCompanies[idx] = {
+                        ...inMemoryCompanies[idx],
+                        ...c,
+                        affiliateId: c.affiliateId || inMemoryCompanies[idx].affiliateId,
+                        affiliateCode: c.affiliateCode || inMemoryCompanies[idx].affiliateCode,
+                        trainingCompleted: c.trainingCompleted !== undefined ? c.trainingCompleted : inMemoryCompanies[idx].trainingCompleted
+                    };
+                } else {
+                    inMemoryCompanies.unshift(c);
+                }
             });
-            return res.json(mapped);
         }
     } catch {}
     res.json(inMemoryCompanies);
@@ -14821,6 +14898,47 @@ app.get('/api/affiliate/my-portal', async (req: Request, res: Response) => {
         // 2. Fetch linked companies
         const affCode = (affiliate?.referralCode || '').toLowerCase();
         const affId = affiliate?.id;
+
+        // Guarantee in-memory affiliate associations are synchronized from local store if needed
+        if (fs.existsSync(LOCAL_AUTH_FILE)) {
+            try {
+                const parsed = JSON.parse(fs.readFileSync(LOCAL_AUTH_FILE, 'utf-8'));
+                if (Array.isArray(parsed.companies)) {
+                    parsed.companies.forEach((lc: any) => {
+                        const idx = inMemoryCompanies.findIndex(ic => ic.id === lc.id);
+                        if (idx >= 0) {
+                            if (!inMemoryCompanies[idx].affiliateId && lc.affiliateId) inMemoryCompanies[idx].affiliateId = lc.affiliateId;
+                            if (!inMemoryCompanies[idx].affiliateCode && lc.affiliateCode) inMemoryCompanies[idx].affiliateCode = lc.affiliateCode;
+                            if (inMemoryCompanies[idx].trainingCompleted === undefined && lc.trainingCompleted !== undefined) {
+                                inMemoryCompanies[idx].trainingCompleted = lc.trainingCompleted;
+                            }
+                        } else {
+                            inMemoryCompanies.push(lc);
+                        }
+                    });
+                }
+            } catch {}
+        }
+
+        // Master MT Rogério Belmiro standard associations safeguard
+        if (affId === 'aff-mt-01' || affCode === 'rogerio-mt') {
+            const masterComps = [
+                { id: 'comp-1786498560971', plan: 'enterprise', status: 'active', training: true },
+                { id: 'comp-1793484503633', plan: 'pro', status: 'active', training: true },
+                { id: 'comp-1791985025979', plan: 'starter', status: 'trial', training: false },
+                { id: 'comp-1788784548541', plan: 'starter', status: 'trial', training: false }
+            ];
+            masterComps.forEach(mc => {
+                const comp = inMemoryCompanies.find(c => c.id === mc.id);
+                if (comp) {
+                    comp.affiliateId = 'aff-mt-01';
+                    comp.affiliateCode = 'rogerio-mt';
+                    if (!comp.plan || comp.plan === 'starter') comp.plan = mc.plan;
+                    if (!comp.subscriptionStatus) comp.subscriptionStatus = mc.status;
+                    if (comp.trainingCompleted === undefined) comp.trainingCompleted = mc.training;
+                }
+            });
+        }
 
         const linkedCompanies = inMemoryCompanies.filter(c => {
             if (affId && c.affiliateId === affId) return true;
