@@ -76,3 +76,4 @@ INSERT INTO public.system_activity_logs (
     NOW() - INTERVAL '1 day'
 )
 ON CONFLICT (id) DO NOTHING;
+
