@@ -484,7 +484,7 @@ const defaultHotmartPlans = [
         checkoutUrl: 'https://pay.hotmart.com/PRODUTO_STARTER',
         description: 'Ideal para profissionais e negócios locais iniciando o rastreamento profissional.',
         features: [
-            'Até 3 Usuários Colaboradores',
+            'Até 2 Usuários Colaboradores',
             '1 Conexão WhatsApp Web / Evolution',
             '5.000 Disparos de Mensagens / Mês',
             'Rastreamento UTM & CAPI Meta Ads',
@@ -501,7 +501,7 @@ const defaultHotmartPlans = [
         checkoutUrl: 'https://pay.hotmart.com/PRODUTO_PRO',
         description: 'O mais completo para empresas em escala: automações ilimitadas e funil visual.',
         features: [
-            'Até 10 Usuários Colaboradores',
+            'Até 5 Usuários Colaboradores',
             '3 Conexões de WhatsApp Simultâneas',
             '25.000 Disparos de Mensagens / Mês',
             'Funil Visual 360° com Métricas ao Vivo',
@@ -519,7 +519,7 @@ const defaultHotmartPlans = [
         checkoutUrl: 'https://pay.hotmart.com/PRODUTO_ENTERPRISE',
         description: 'Máxima potência, multi-instância e disparos em massa para grandes operações.',
         features: [
-            'Usuários Colaboradores Ilimitados',
+            'Até 10 Usuários Colaboradores',
             'Múltiplas Conexões WhatsApp / Instâncias',
             'Disparos em Massa & E-mails Ilimitados',
             'Disparo via SMS Gateway Habilitado',
@@ -12891,6 +12891,46 @@ app.get('/api/users', async (req: Request, res: Response) => {
 });
 
 app.post('/api/users', async (req: Request, res: Response) => {
+    const targetCompanyId = req.body.companyId;
+    const isNewUser = !req.body.id || !inMemoryUsers.some(u => u.id === req.body.id || (req.body.email && u.email?.toLowerCase() === String(req.body.email).toLowerCase()));
+
+    // Validar limites de usuários por plano (Starter: até 2 | Pro: até 5 | Enterprise: até 10)
+    if (isNewUser && targetCompanyId) {
+        let companyPlan = 'starter';
+        const comp = inMemoryCompanies.find(c => c.id === targetCompanyId);
+        if (comp && comp.plan) {
+            companyPlan = String(comp.plan).toLowerCase();
+        }
+
+        const PLAN_USER_LIMITS: Record<string, number> = {
+            starter: 2,
+            pro: 5,
+            enterprise: 10
+        };
+        const maxLimit = PLAN_USER_LIMITS[companyPlan] ?? 2;
+        const currentCount = inMemoryUsers.filter(u => u.companyId === targetCompanyId && u.active !== false).length;
+
+        if (currentCount >= maxLimit) {
+            if (companyPlan === 'enterprise') {
+                return res.status(403).json({
+                    error: 'Limite máximo de 10 usuários do Plano Enterprise atingido. Para operações com mais de 10 colaboradores, consulte nosso time comercial.',
+                    code: 'COMMERCIAL_UPGRADE_REQUIRED',
+                    plan: 'enterprise',
+                    limit: 10,
+                    currentCount
+                });
+            } else {
+                return res.status(403).json({
+                    error: `Limite de ${maxLimit} pessoas do Plano ${companyPlan.toUpperCase()} atingido. Faça o upgrade de plano para cadastrar mais colaboradores.`,
+                    code: 'PLAN_LIMIT_REACHED',
+                    plan: companyPlan,
+                    limit: maxLimit,
+                    currentCount
+                });
+            }
+        }
+    }
+
     const body = {
         ...req.body,
         id: req.body.id || `usr-${Date.now()}`,

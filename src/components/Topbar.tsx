@@ -472,7 +472,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     price: 197,
                     description: 'Ideal para profissionais e negócios locais.',
                     checkoutUrl: checkoutData?.checkoutUrl || 'https://pay.hotmart.com',
-                    features: ['Até 3 Usuários', '1 Conexão WhatsApp', '5.000 Disparos/mês', 'Rastreamento CAPI Meta']
+                    features: ['Até 2 Usuários Colaboradores', '1 Conexão WhatsApp', '5.000 Disparos/mês', 'Rastreamento CAPI Meta']
                   },
                   {
                     id: 'pro',
@@ -481,7 +481,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     highlight: true,
                     description: 'Aceleração completa com funil 360° e automações.',
                     checkoutUrl: checkoutData?.checkoutUrl || 'https://pay.hotmart.com',
-                    features: ['Até 10 Usuários', '3 Conexões WhatsApp', '25.000 Disparos/mês', 'Funil Visual 360°', 'Suporte Prioritário']
+                    features: ['Até 5 Usuários Colaboradores', '3 Conexões WhatsApp', '25.000 Disparos/mês', 'Funil Visual 360°', 'Suporte Prioritário']
                   },
                   {
                     id: 'enterprise',
@@ -489,7 +489,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     price: 697,
                     description: 'Potência máxima para grandes operações.',
                     checkoutUrl: checkoutData?.checkoutUrl || 'https://pay.hotmart.com',
-                    features: ['Usuários Ilimitados', 'WhatsApp Multi-instância', 'Disparos Ilimitados', 'Gerente de Conta VIP']
+                    features: ['Até 10 Usuários Colaboradores', 'WhatsApp Multi-instância', 'Disparos Ilimitados', 'Gerente de Conta VIP']
                   }
                 ]).map((p: any, i: number) => (
                   <div 

@@ -622,7 +622,7 @@ CREATE TABLE IF NOT EXISTS public.hotmart_config (
             "period": "mensal",
             "checkoutUrl": "",
             "description": "Ideal para empresas validando o fluxo de aquisição e atendimento.",
-            "features": ["Até 3 Usuários", "1 Conexão WhatsApp", "5.000 Disparos/mês", "Meta CAPI Básico"],
+            "features": ["Até 2 Usuários Colaboradores", "1 Conexão WhatsApp", "5.000 Disparos/mês", "Meta CAPI Básico"],
             "active": true
         },
         {
@@ -632,7 +632,7 @@ CREATE TABLE IF NOT EXISTS public.hotmart_config (
             "period": "mensal",
             "checkoutUrl": "",
             "description": "Aceleração completa com automações ilimitadas e funil 360°.",
-            "features": ["Até 10 Usuários", "3 Conexões WhatsApp", "25.000 Disparos/mês", "Funil Visual 360°", "Automações Ilimitadas"],
+            "features": ["Até 5 Usuários Colaboradores", "3 Conexões WhatsApp", "25.000 Disparos/mês", "Funil Visual 360°", "Automações Ilimitadas"],
             "highlight": true,
             "active": true
         },
@@ -643,7 +643,7 @@ CREATE TABLE IF NOT EXISTS public.hotmart_config (
             "period": "mensal",
             "checkoutUrl": "",
             "description": "Máxima potência, multi-instância e disparos em massa.",
-            "features": ["Usuários Ilimitados", "Múltiplas Conexões WhatsApp", "Disparo SMS Gateway", "Meta Ads CAPI Alta Freq.", "Gerente de Sucesso"],
+            "features": ["Até 10 Usuários Colaboradores", "Múltiplas Conexões WhatsApp", "Disparo SMS Gateway", "Meta Ads CAPI Alta Freq.", "Gerente de Sucesso"],
             "active": true
         }
     ]'::jsonb,

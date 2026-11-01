@@ -85,7 +85,7 @@ const DEFAULT_PLANS: HotmartPlanOption[] = [
     checkoutUrl: '',
     description: 'Ideal para profissionais e negócios locais iniciando no rastreamento profissional.',
     features: [
-      'Até 3 Usuários Colaboradores',
+      'Até 2 Usuários Colaboradores',
       '1 Conexão WhatsApp Web / Evolution',
       '5.000 Disparos de Mensagens / Mês',
       'Rastreamento UTM & CAPI Meta Ads',
@@ -102,7 +102,7 @@ const DEFAULT_PLANS: HotmartPlanOption[] = [
     checkoutUrl: '',
     description: 'Aceleração completa com automações ilimitadas e funil visual 360° interativo.',
     features: [
-      'Até 10 Usuários Colaboradores',
+      'Até 5 Usuários Colaboradores',
       '3 Conexões de WhatsApp Simultâneas',
       '25.000 Disparos de Mensagens / Mês',
       'Funil Visual 360° com Métricas ao Vivo',
@@ -120,7 +120,7 @@ const DEFAULT_PLANS: HotmartPlanOption[] = [
     checkoutUrl: '',
     description: 'Máxima potência, multi-instância e disparos em massa para grandes operações.',
     features: [
-      'Usuários Colaboradores Ilimitados',
+      'Até 10 Usuários Colaboradores',
       'Múltiplas Conexões WhatsApp / Instâncias',
       'Disparos em Massa & E-mails Ilimitados',
       'Disparo via SMS Gateway Habilitado',
