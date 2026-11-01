@@ -15953,11 +15953,11 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             const url = rawUrl.trim();
             if (url.includes('youtube.com/watch?v=')) {
                 const id = url.split('watch?v=')[1]?.split('&')[0];
-                return `https://www.youtube.com/embed/${id}?rel=0`;
+                return `https://www.youtube.com/embed/${id}?rel=0&enablejsapi=1`;
             }
             if (url.includes('youtu.be/')) {
                 const id = url.split('youtu.be/')[1]?.split('?')[0];
-                return `https://www.youtube.com/embed/${id}?rel=0`;
+                return `https://www.youtube.com/embed/${id}?rel=0&enablejsapi=1`;
             }
             if (url.includes('vimeo.com/')) {
                 const id = url.split('vimeo.com/')[1]?.split('?')[0];
@@ -16876,15 +16876,22 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
               .hidden-pitch-delay {
                 display: none !important;
                 opacity: 0 !important;
+                pointer-events: none !important;
               }
               .revealed-pitch-delay {
                 display: block !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
               }
               .revealed-pitch-delay-flex {
                 display: flex !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
               }
               .revealed-pitch-delay-inline {
                 display: inline-flex !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
               }
               .anim-fade {
                 animation: lpPitchFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -17399,23 +17406,22 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             <!-- Pitch Delay / Delayed Reveal System -->
             <script>
               (function() {
-                var isEnabled = ${pitchDelayEnabled ? 'true' : 'false'};
-                var delaySeconds = ${totalPitchDelaySeconds};
-                var rememberVisitor = ${pitchDelay.rememberVisitor !== false ? 'true' : 'false'};
-                var autoScroll = ${pitchDelay.autoScrollToOffer ? 'true' : 'false'};
-                var pageSlug = ${JSON.stringify(lp.slug)};
-                var animClass = '${pitchAnimClass}';
-
-                if (!isEnabled || delaySeconds <= 0) return;
-
-                var storageKey = 'mdtracker_pitch_revealed_' + pageSlug;
                 var urlParams = new URLSearchParams(window.location.search);
                 var bypass = urlParams.get('delay') === '0' || 
                              urlParams.get('preview') === 'true' || 
                              urlParams.get('pitch') === 'show' || 
                              urlParams.get('bypass_delay') === 'true';
+                var pageSlug = ${JSON.stringify(lp.slug)};
 
-                function doReveal() {
+                // 1. Global Page-Level Pitch Delay (if configured on landing page)
+                var isGlobalEnabled = ${pitchDelayEnabled ? 'true' : 'false'};
+                var globalDelaySeconds = ${totalPitchDelaySeconds};
+                var globalRemember = ${pitchDelay.rememberVisitor !== false ? 'true' : 'false'};
+                var globalAutoScroll = ${pitchDelay.autoScrollToOffer ? 'true' : 'false'};
+                var globalAnimClass = '${pitchAnimClass}';
+                var globalStorageKey = 'mdtracker_pitch_revealed_' + pageSlug;
+
+                function doGlobalReveal() {
                   var delayedElements = document.querySelectorAll('.lp-pitch-delayed');
                   if (!delayedElements || delayedElements.length === 0) return;
 
@@ -17432,14 +17438,14 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     } else {
                       el.classList.add('revealed-pitch-delay');
                     }
-                    el.classList.add(animClass);
+                    el.classList.add(globalAnimClass);
                   });
 
-                  if (rememberVisitor) {
-                    try { localStorage.setItem(storageKey, '1'); } catch(e) {}
+                  if (globalRemember) {
+                    try { localStorage.setItem(globalStorageKey, '1'); } catch(e) {}
                   }
 
-                  if (autoScroll) {
+                  if (globalAutoScroll) {
                     var target = document.querySelector('.lp-pitch-delayed');
                     if (target) {
                       setTimeout(function() {
@@ -17447,16 +17453,18 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                       }, 250);
                     }
                   }
-                  console.log('[MDTracker] Pitch delay revelado com sucesso após ' + delaySeconds + ' segundos.');
+                  console.log('[MDTracker] Pitch delay global revelado após ' + globalDelaySeconds + 's.');
                 }
 
-                if (bypass || (rememberVisitor && localStorage.getItem(storageKey) === '1')) {
-                  doReveal();
-                } else {
-                  setTimeout(doReveal, delaySeconds * 1000);
+                if (isGlobalEnabled && globalDelaySeconds > 0) {
+                  if (bypass || (globalRemember && localStorage.getItem(globalStorageKey) === '1')) {
+                    doGlobalReveal();
+                  } else {
+                    setTimeout(doGlobalReveal, globalDelaySeconds * 1000);
+                  }
                 }
 
-                // Individual VSL Pitch Delay Blocks
+                // 2. Individual VSL Pitch Delay Blocks (Always independently initialized)
                 var vslBlocks = document.querySelectorAll('.vsl-block-delayed');
                 if (vslBlocks && vslBlocks.length > 0) {
                   vslBlocks.forEach(function(vslEl) {
@@ -17466,8 +17474,11 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     var bRemember = vslEl.getAttribute('data-remember') !== 'false';
                     var bAutoScroll = vslEl.getAttribute('data-autoscroll') === 'true';
                     var vslStorageKey = 'mdtracker_vsl_block_' + pageSlug + '_' + bId;
+                    var isRevealed = false;
 
                     function revealThisVsl() {
+                      if (isRevealed) return;
+                      isRevealed = true;
                       vslEl.classList.remove('hidden-pitch-delay');
                       vslEl.classList.add('revealed-pitch-delay');
                       vslEl.classList.add(bAnim);
@@ -17485,7 +17496,21 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     if (bypass || (bRemember && localStorage.getItem(vslStorageKey) === '1') || bDelay <= 0) {
                       revealThisVsl();
                     } else {
-                      setTimeout(revealThisVsl, bDelay * 1000);
+                      // Wall-clock fallback countdown
+                      var fallbackTimer = setTimeout(revealThisVsl, bDelay * 1000);
+
+                      // YouTube IFrame API postMessage listener for exact video timestamp
+                      window.addEventListener('message', function(evt) {
+                        try {
+                          var msg = typeof evt.data === 'string' ? JSON.parse(evt.data) : evt.data;
+                          if (msg && msg.info && typeof msg.info.currentTime === 'number') {
+                            if (msg.info.currentTime >= bDelay) {
+                              clearTimeout(fallbackTimer);
+                              revealThisVsl();
+                            }
+                          }
+                        } catch(e) {}
+                      });
                     }
                   });
                 }

@@ -2552,26 +2552,31 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                 </button>
               </div>
 
-              {/* Pitch Delay Simulation Toggle */}
-              {editingPage.pitchDelay?.enabled && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewPitchRevealed(!previewPitchRevealed)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
-                    previewPitchRevealed
-                      ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
-                      : 'bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/35 animate-pulse'
-                  }`}
-                  title="Clique para alternar entre ver o estado antes do pitch delay e após a revelação"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>
-                    {previewPitchRevealed
-                      ? '✨ Oferta Revelada'
-                      : `⏱️ Oculto (${editingPage.pitchDelay.delayMinutes || 0}m ${editingPage.pitchDelay.delaySeconds || 0}s)`}
-                  </span>
-                </button>
-              )}
+              {/* Pitch Delay Simulation Toggle (Global or VSL Block) */}
+              {(editingPage.pitchDelay?.enabled || editingPage.blocks?.some(b => b.type === 'vsl_pitch' && b.enabled !== false)) && (() => {
+                const vslBlock = editingPage.blocks?.find(b => b.type === 'vsl_pitch' && b.enabled !== false);
+                const delayM = editingPage.pitchDelay?.enabled ? (editingPage.pitchDelay.delayMinutes || 0) : (vslBlock?.pitchDelayMinutes || 0);
+                const delayS = editingPage.pitchDelay?.enabled ? (editingPage.pitchDelay.delaySeconds || 0) : (vslBlock?.pitchDelaySeconds || 0);
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPitchRevealed(!previewPitchRevealed)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                      previewPitchRevealed
+                        ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
+                        : 'bg-amber-500/25 text-amber-300 border-amber-500/50 hover:bg-amber-500/35 animate-pulse'
+                    }`}
+                    title="Clique para alternar entre ver o estado antes do pitch delay e após a revelação"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>
+                      {previewPitchRevealed
+                        ? '✨ Oferta Revelada'
+                        : `⏱️ Oculto (${delayM}m ${delayS}s)`}
+                    </span>
+                  </button>
+                );
+              })()}
 
               {/* Generate AI button */}
               <button
