@@ -291,20 +291,61 @@ const TITLE_SIZES: Array<{ id: 'normal' | 'large' | 'huge'; label: string; desc:
   { id: 'huge', label: 'Impacto Máximo (Enorme)', desc: 'Headlines gigantes para ofertas agressivas (60px a 72px)' },
 ];
 
-const normalizeEmbedUrl = (rawUrl?: string) => {
+const isDirectVideo = (url?: string) => {
+  if (!url) return false;
+  const clean = url.trim().toLowerCase().split('?')[0];
+  return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.mov') || clean.endsWith('.m4v') || clean.endsWith('.ogg');
+};
+
+const normalizeEmbedUrl = (rawUrl?: string, options?: { autoplay?: boolean; hideControls?: boolean; antiLeak?: boolean }) => {
   if (!rawUrl) return '';
   const url = rawUrl.trim();
+  const autoplay = options?.autoplay !== false;
+  const hideControls = options?.hideControls !== false;
+
+  const buildYtParams = (id: string) => {
+    const params = new URLSearchParams();
+    params.set('rel', '0');
+    params.set('enablejsapi', '1');
+    params.set('playsinline', '1');
+    if (autoplay) {
+      params.set('autoplay', '1');
+      params.set('mute', '1');
+    }
+    if (hideControls) {
+      params.set('controls', '0');
+      params.set('disablekb', '1');
+      params.set('fs', '0');
+      params.set('iv_load_policy', '3');
+      params.set('modestbranding', '1');
+    }
+    return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+  };
+
   if (url.includes('youtube.com/watch?v=')) {
     const id = url.split('watch?v=')[1]?.split('&')[0];
-    return `https://www.youtube.com/embed/${id}?rel=0`;
+    return buildYtParams(id);
   }
   if (url.includes('youtu.be/')) {
     const id = url.split('youtu.be/')[1]?.split('?')[0];
-    return `https://www.youtube.com/embed/${id}?rel=0`;
+    return buildYtParams(id);
+  }
+  if (url.includes('youtube.com/embed/')) {
+    const id = url.split('youtube.com/embed/')[1]?.split('?')[0];
+    return buildYtParams(id);
   }
   if (url.includes('vimeo.com/')) {
-    const id = url.split('vimeo.com/')[1]?.split('?')[0];
-    return `https://player.vimeo.com/video/${id}`;
+    const id = url.split('vimeo.com/')[1]?.split('?')[0]?.replace('video/', '');
+    const params = new URLSearchParams();
+    if (autoplay) {
+      params.set('autoplay', '1');
+      params.set('muted', '1');
+    }
+    if (hideControls) {
+      params.set('controls', '0');
+      params.set('background', '1');
+    }
+    return `https://player.vimeo.com/video/${id}?${params.toString()}`;
   }
   return url;
 };
@@ -3294,6 +3335,95 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                             className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
                                           />
                                         </div>
+                                      </div>
+
+                                      {/* Custom VSL Player Controls: Anti-Fuga, Hide Controls, Autoplay */}
+                                      <div className="p-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl border border-slate-700/60 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="font-bold text-xs flex items-center gap-1.5 text-white">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                            <span>Player VSL Estilo Hospedagem Própria</span>
+                                          </div>
+                                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                            Anti-Fuga Ativo 🛡️
+                                          </span>
+                                        </div>
+
+                                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                                          Transforma o vídeo do YouTube em um player limpo idêntico ao PandaVideo e VTurb, ocultando botões, controles e bloqueando cliques na logo do YouTube para que o visitante permaneça na página.
+                                        </p>
+
+                                        <div className="space-y-2.5 pt-1 text-xs">
+                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoHideControls !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoHideControls: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
+                                            />
+                                            <div>
+                                              <span className="font-bold block text-white">Ocultar todos os controles do player</span>
+                                              <span className="text-[11px] text-slate-400">Remove barra de tempo, botão de volume, tela cheia e barra de reprodução.</span>
+                                            </div>
+                                          </label>
+
+                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoAutoplay !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoAutoplay: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
+                                            />
+                                            <div>
+                                              <span className="font-bold block text-white">Iniciar vídeo automaticamente (Smart Autoplay)</span>
+                                              <span className="text-[11px] text-slate-400">Inicia mudo de imediato ao carregar e exibe banner animado "Clique para ouvir com áudio".</span>
+                                            </div>
+                                          </label>
+
+                                          <label className="flex items-start gap-2.5 cursor-pointer text-slate-200">
+                                            <input
+                                              type="checkbox"
+                                              checked={block.videoAntiLeakShield !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoAntiLeakShield: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-500 rounded-md mt-0.5 accent-indigo-600"
+                                            />
+                                            <div>
+                                              <span className="font-bold block text-white">Tirar Logo do YouTube & Bloquear Fuga</span>
+                                              <span className="text-[11px] text-slate-400">Aplica recorte anti-logo e escudo de clique para impedir que o visitante saia para o YouTube.</span>
+                                            </div>
+                                          </label>
+                                        </div>
+
+                                        {block.videoAutoplay !== false && (
+                                          <div className="pt-2 border-t border-slate-800">
+                                            <label className="block text-[10px] font-bold text-slate-300 uppercase mb-1">
+                                              Texto do Banner de Ativação do Som
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.videoUnmuteBannerText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, videoUnmuteBannerText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: 🔊 SEU VÍDEO JÁ COMEÇOU! Clique para ouvir com áudio"
+                                              className="w-full px-3 py-1.5 border border-slate-700 rounded-xl bg-slate-800/80 text-white text-xs placeholder-slate-500"
+                                            />
+                                          </div>
+                                        )}
                                       </div>
 
                                       {/* Pitch Timing */}
@@ -8092,7 +8222,11 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           }
 
                           if (b.type === 'vsl_pitch') {
-                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                            const isDirect = isDirectVideo(b.videoUrl);
+                            const hideControls = b.videoHideControls !== false;
+                            const autoplay = b.videoAutoplay !== false;
+                            const antiLeak = b.videoAntiLeakShield !== false;
+                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls });
                             const isDark = b.backgroundColor === 'dark';
                             return (
                               <section key={b.id || bIdx} className={`py-14 md:py-20 px-6 sm:px-10 ${bgClass}`}>
@@ -8101,20 +8235,56 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                   {b.subtitle && <p className={`text-xs sm:text-sm mb-6 max-w-xl mx-auto ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{b.subtitle}</p>}
 
                                   {embedUrl ? (
-                                    <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-700/50 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10">
-                                      <iframe
-                                        className="w-full h-full"
-                                        src={embedUrl}
-                                        title={b.title || 'Vídeo de Vendas (VSL)'}
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                      />
+                                    <div className="vsl-player-wrapper relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-700/50 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10 select-none group">
+                                      {/* Video Media Container (with anti-leak scale crop to remove YouTube logo and top bar) */}
+                                      <div className={`absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'scale-105 origin-center' : ''}`}>
+                                        {isDirect ? (
+                                          <video
+                                            className="w-full h-full object-cover"
+                                            src={embedUrl}
+                                            autoPlay={autoplay}
+                                            muted={autoplay}
+                                            controls={!hideControls}
+                                            playsInline
+                                            loop
+                                          />
+                                        ) : (
+                                          <iframe
+                                            className="w-full h-full pointer-events-auto"
+                                            src={embedUrl}
+                                            title={b.title || 'Vídeo de Vendas (VSL)'}
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                          />
+                                        )}
+                                      </div>
+
+                                      {/* Anti-Leak Shield: Blocks clicks from redirecting to YouTube */}
+                                      {antiLeak && (
+                                        <div
+                                          className="absolute inset-0 z-10 cursor-pointer"
+                                          title="Modo Anti-Fuga Ativo: Cliques protegidos para manter o visitante na página"
+                                        />
+                                      )}
+
+                                      {/* Smart Autoplay Unmute Floating Banner */}
+                                      {autoplay && (
+                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[1px] transition-all duration-300 pointer-events-none">
+                                          <div className="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 border border-white/30 text-center max-w-sm mx-4 animate-pulse">
+                                            <span className="text-2xl animate-bounce">🔊</span>
+                                            <div className="text-left">
+                                              <p className="text-[10px] uppercase font-black tracking-wider text-amber-300">Seu vídeo já começou!</p>
+                                              <p className="text-xs sm:text-sm font-bold leading-tight">{b.videoUnmuteBannerText || 'Clique para ouvir com áudio 👆'}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="rounded-2xl border-2 border-dashed border-slate-600 p-10 text-center text-slate-400 text-xs max-w-2xl mx-auto">
                                       <Play className="w-10 h-10 mx-auto mb-2 text-rose-500 opacity-80" />
-                                      Insira o link do YouTube ou Vimeo da sua VSL
+                                      Insira o link do YouTube, Vimeo ou arquivo MP4 da sua VSL
                                     </div>
                                   )}
                                   {b.videoCaption && (

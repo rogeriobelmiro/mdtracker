@@ -16080,20 +16080,61 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
             { id: 'email', name: 'email', label: 'Seu E-mail', type: 'email', placeholder: 'seu@email.com', required: true }
         ];
 
-        const normalizeEmbedUrl = (rawUrl: string) => {
+        const isDirectVideo = (url?: string) => {
+            if (!url) return false;
+            const clean = url.trim().toLowerCase().split('?')[0];
+            return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.mov') || clean.endsWith('.m4v') || clean.endsWith('.ogg');
+        };
+
+        const normalizeEmbedUrl = (rawUrl: string, options?: { autoplay?: boolean; hideControls?: boolean; antiLeak?: boolean }) => {
             if (!rawUrl) return '';
             const url = rawUrl.trim();
+            const autoplay = options?.autoplay !== false;
+            const hideControls = options?.hideControls !== false;
+
+            const buildYt = (id: string) => {
+                const params = new URLSearchParams();
+                params.set('rel', '0');
+                params.set('enablejsapi', '1');
+                params.set('playsinline', '1');
+                if (autoplay) {
+                    params.set('autoplay', '1');
+                    params.set('mute', '1');
+                }
+                if (hideControls) {
+                    params.set('controls', '0');
+                    params.set('disablekb', '1');
+                    params.set('fs', '0');
+                    params.set('iv_load_policy', '3');
+                    params.set('modestbranding', '1');
+                }
+                return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+            };
+
             if (url.includes('youtube.com/watch?v=')) {
                 const id = url.split('watch?v=')[1]?.split('&')[0];
-                return `https://www.youtube.com/embed/${id}?rel=0&enablejsapi=1`;
+                return buildYt(id);
             }
             if (url.includes('youtu.be/')) {
                 const id = url.split('youtu.be/')[1]?.split('?')[0];
-                return `https://www.youtube.com/embed/${id}?rel=0&enablejsapi=1`;
+                return buildYt(id);
+            }
+            if (url.includes('youtube.com/embed/')) {
+                const id = url.split('youtube.com/embed/')[1]?.split('?')[0];
+                return buildYt(id);
             }
             if (url.includes('vimeo.com/')) {
-                const id = url.split('vimeo.com/')[1]?.split('?')[0];
-                return `https://player.vimeo.com/video/${id}`;
+                const id = url.split('vimeo.com/')[1]?.split('?')[0]?.replace('video/', '');
+                const params = new URLSearchParams();
+                if (autoplay) {
+                    params.set('autoplay', '1');
+                    params.set('muted', '1');
+                }
+                if (hideControls) {
+                    params.set('controls', '0');
+                    params.set('background', '1');
+                }
+                return `https://player.vimeo.com/video/${id}?${params.toString()}`;
             }
             return url;
         };
@@ -16246,13 +16287,18 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 }
 
                 if (b.type === 'vsl_pitch') {
-                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                    const isDirect = isDirectVideo(b.videoUrl);
+                    const hideControls = b.videoHideControls !== false;
+                    const autoplay = b.videoAutoplay !== false;
+                    const antiLeak = b.videoAntiLeakShield !== false;
+                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '', { autoplay, hideControls, antiLeak });
                     const isDark = b.backgroundColor === 'dark';
                     const delaySec = ((Number(b.pitchDelayMinutes || 0)) * 60) + Number(b.pitchDelaySeconds || 0);
                     const animClass = b.pitchAnimation === 'slide_up' ? 'anim-slide-up' :
                                       b.pitchAnimation === 'zoom' ? 'anim-zoom' :
                                       b.pitchAnimation === 'fade' ? 'anim-fade' : 'anim-bounce';
                     const ctaUrl = b.pitchCtaUrl || '#capture-form';
+                    const bannerText = b.videoUnmuteBannerText || 'Clique para ouvir com áudio';
                     
                     return `
                       <section class="py-14 md:py-20 ${bgClass}">
@@ -16260,8 +16306,33 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                           ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
                           ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
                           ${embedUrl ? `
-                            <div class="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800/60 bg-black aspect-video max-w-3xl mx-auto ring-4 ring-black/10">
-                              <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            <div class="vsl-player-wrapper relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800/80 bg-black aspect-video max-w-3xl mx-auto ring-4 ring-black/20 select-none group">
+                              <!-- Video Media Container (scaled slightly to crop YouTube title and logo when antiLeak is active) -->
+                              <div class="vsl-media-container absolute inset-0 w-full h-full overflow-hidden ${antiLeak && !isDirect ? 'vsl-crop-scale' : ''}">
+                                ${isDirect ? `
+                                  <video id="vsl-video-${b.id}" class="w-full h-full object-cover" src="${embedUrl}" ${autoplay ? 'autoplay muted' : ''} ${!hideControls ? 'controls' : ''} playsinline loop></video>
+                                ` : `
+                                  <iframe id="vsl-iframe-${b.id}" class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                `}
+                              </div>
+
+                              ${antiLeak ? `
+                                <!-- Anti-Fuga Click Shield: blocks clicks from reaching YouTube links -->
+                                <div id="vsl-shield-${b.id}" class="vsl-click-shield absolute inset-0 z-10 cursor-pointer" data-vsl-id="${b.id}" title="Clique para pausar ou continuar"></div>
+                              ` : ''}
+
+                              ${autoplay ? `
+                                <!-- Smart Autoplay Unmute Floating Banner -->
+                                <div id="vsl-unmute-${b.id}" class="vsl-unmute-badge absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all duration-300 cursor-pointer" data-vsl-id="${b.id}">
+                                  <div class="px-5 py-3.5 bg-gradient-to-r from-rose-600 via-indigo-600 to-rose-600 text-white rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse border border-white/30 text-center max-w-md mx-4 transform transition hover:scale-105">
+                                    <span class="text-2xl animate-bounce">🔊</span>
+                                    <div class="text-left">
+                                      <p class="text-[11px] uppercase font-black tracking-wider text-amber-300">Seu vídeo já começou!</p>
+                                      <p class="text-xs sm:text-sm font-bold leading-tight">${bannerText} 👆</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ` : ''}
                             </div>
                           ` : `
                             <div class="rounded-2xl border-2 border-dashed border-slate-600 p-12 text-center text-slate-400">
@@ -17054,6 +17125,26 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                 60% { opacity: 1; transform: translateY(-8px) scale(1.02); }
                 100% { opacity: 1; transform: translateY(0) scale(1); }
               }
+              /* Clean VSL Player & Anti-Fuga Shield */
+              .vsl-crop-scale {
+                transform: scale(1.08);
+                transform-origin: center center;
+              }
+              .vsl-player-wrapper {
+                position: relative;
+                isolation: isolate;
+              }
+              .vsl-click-shield {
+                background: transparent;
+                -webkit-tap-highlight-color: transparent;
+              }
+              .vsl-unmute-badge {
+                cursor: pointer;
+                transition: opacity 0.3s ease, transform 0.3s ease;
+              }
+              .vsl-unmute-badge:hover {
+                background-color: rgba(0, 0, 0, 0.55);
+              }
             </style>
           </head>
           <body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white min-h-screen flex flex-col justify-between">
@@ -17646,6 +17737,86 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     }
                   });
                 }
+
+                // 3. Smart VSL Players (Anti-Fuga, Autoplay & Unmute Controller)
+                document.querySelectorAll('.vsl-player-wrapper').forEach(function(wrapper) {
+                  var shield = wrapper.querySelector('.vsl-click-shield');
+                  var unmuteBadge = wrapper.querySelector('.vsl-unmute-badge');
+                  var iframe = wrapper.querySelector('iframe');
+                  var video = wrapper.querySelector('video');
+                  var isPlaying = true;
+                  var isMuted = true;
+
+                  function sendCmd(func, args) {
+                    if (iframe && iframe.contentWindow) {
+                      try {
+                        iframe.contentWindow.postMessage(JSON.stringify({
+                          event: 'command',
+                          func: func,
+                          args: args || []
+                        }), '*');
+                      } catch(e) {}
+                    }
+                  }
+
+                  function handleUnmute() {
+                    isMuted = false;
+                    if (unmuteBadge) {
+                      unmuteBadge.style.opacity = '0';
+                      setTimeout(function() { 
+                        if (unmuteBadge && unmuteBadge.parentNode) unmuteBadge.parentNode.removeChild(unmuteBadge); 
+                      }, 300);
+                    }
+                    if (video) {
+                      video.muted = false;
+                      video.volume = 1;
+                      video.play().catch(function(){});
+                    } else {
+                      sendCmd('unMute');
+                      sendCmd('setVolume', [100]);
+                      sendCmd('playVideo');
+                    }
+                  }
+
+                  function togglePlay() {
+                    if (isMuted && unmuteBadge) {
+                      handleUnmute();
+                      return;
+                    }
+                    if (video) {
+                      if (video.paused) {
+                        video.play().catch(function(){});
+                        isPlaying = true;
+                      } else {
+                        video.pause();
+                        isPlaying = false;
+                      }
+                    } else {
+                      if (isPlaying) {
+                        sendCmd('pauseVideo');
+                        isPlaying = false;
+                      } else {
+                        sendCmd('playVideo');
+                        isPlaying = true;
+                      }
+                    }
+                  }
+
+                  if (unmuteBadge) {
+                    unmuteBadge.addEventListener('click', function(e) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnmute();
+                    });
+                  }
+
+                  if (shield) {
+                    shield.addEventListener('click', function(e) {
+                      e.preventDefault();
+                      togglePlay();
+                    });
+                  }
+                });
               })();
             </script>
           </body>
