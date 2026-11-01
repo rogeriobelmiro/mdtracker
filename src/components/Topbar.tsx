@@ -191,6 +191,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           title: 'Minha Empresa & Perfil',
           icon: Building2
         };
+      case 'saas_admin':
+        return {
+          section: 'Super Admin',
+          title: 'Hotmart & Assinaturas SaaS',
+          icon: Flame
+        };
+      case 'saas_goals':
+        return {
+          section: 'Super Admin',
+          title: 'Metas & Premiações dos Afiliados',
+          icon: Target
+        };
       default:
         return {
           section: 'Visão Geral',

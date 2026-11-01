@@ -1086,9 +1086,10 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'saas_admin' && (
+            {(activeTab === 'saas_admin' || activeTab === 'saas_goals') && (
               <SuperAdminHotmartManager
                 currentUser={currentUser}
+                initialSubTab={activeTab === 'saas_goals' ? 'affiliate_goals' : undefined}
               />
             )}
 

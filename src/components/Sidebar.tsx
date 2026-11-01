@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin' | 'affiliate_clients' | 'affiliate_trainings' | 'affiliate_news' | 'affiliate_support';
+export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin' | 'saas_goals' | 'affiliate_clients' | 'affiliate_trainings' | 'affiliate_news' | 'affiliate_support';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -301,13 +301,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: Building2,
           allowedRoles: ['admin']
         },
-        ...(currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br' ? [{
-          id: 'saas_admin' as NavTabId,
-          label: 'Hotmart & Assinaturas SaaS',
-          icon: Flame,
-          badge: { text: 'Super Admin', variant: 'amber' as const },
-          allowedRoles: ['admin' as const]
-        }] : [])
+        ...(currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br' ? [
+          {
+            id: 'saas_admin' as NavTabId,
+            label: 'Hotmart & Assinaturas SaaS',
+            icon: Flame,
+            badge: { text: 'Super Admin', variant: 'amber' as const },
+            allowedRoles: ['admin' as const]
+          },
+          {
+            id: 'saas_goals' as NavTabId,
+            label: 'Metas Globais dos Afiliados',
+            icon: Target,
+            badge: { text: 'Metas & Bônus', variant: 'purple' as const },
+            allowedRoles: ['admin' as const]
+          }
+        ] : [])
       ]
     },
     ...(currentUser.role === 'affiliate' ||

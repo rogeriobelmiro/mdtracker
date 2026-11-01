@@ -73,6 +73,7 @@ import { BrazilAffiliatesMap } from './BrazilAffiliatesMap';
 
 interface SuperAdminHotmartManagerProps {
   currentUser: User;
+  initialSubTab?: 'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log';
 }
 
 const DEFAULT_PLANS: HotmartPlanOption[] = [
@@ -226,11 +227,17 @@ const DEFAULT_AFFILIATE_FORM = {
   notes: ''
 };
 
-export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> = ({ currentUser }) => {
+export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> = ({ currentUser, initialSubTab }) => {
   const { alert, confirm, success } = useDialog();
   const isSuperAdmin = currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br';
 
-  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>('companies');
+  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>(initialSubTab || 'companies');
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -574,6 +581,18 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       await success('Configurações da Hotmart, Planos e Treinamento salvas com sucesso!');
     } catch (err: any) {
       await alert(err.message || 'Erro ao salvar configurações da Hotmart');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleQuickSaveGoals = async () => {
+    setSavingConfig(true);
+    try {
+      await updateHotmartSettings(currentUser.email, hotmartConfig);
+      await success('Metas globais e regulamento de bonificação salvos com sucesso!');
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao salvar metas dos afiliados');
     } finally {
       setSavingConfig(false);
     }
@@ -1053,6 +1072,18 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             <Users className="w-4 h-4 text-cyan-400" />
             <span>Afiliados & Representantes Brasil ({totalAffiliates})</span>
             <span className="px-1.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-bold">Novo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('affiliate_goals')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${activeSubTab === 'affiliate_goals'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+          >
+            <Target className="w-4 h-4 text-amber-400" />
+            <span>Metas & Gamificação ({totalAffiliates})</span>
+            <span className="px-1.5 py-0.5 text-[10px] bg-amber-500/20 text-amber-300 rounded-full font-bold">Super Bônus PIX</span>
           </button>
 
           <button
@@ -2468,6 +2499,417 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB: METAS GLOBAIS & PREMIAÇÕES DOS AFILIADOS */}
+      {/* ========================================================= */}
+      {activeSubTab === 'affiliate_goals' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Target className="w-5 h-5 text-indigo-600" />
+                <span>Metas & Gamificação dos Representantes e Afiliados</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Defina os parâmetros padrão de metas mensais de vendas e treinamentos, bonificação no PIX e acompanhe o progresso de cada representante.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadAffiliatesData}
+                disabled={loadingAffiliates}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingAffiliates ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleQuickSaveGoals}
+                disabled={savingConfig}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingConfig ? 'Salvando...' : 'Salvar Alterações'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards das Metas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Meta Mensal de Vendas</p>
+                <h3 className="text-2xl font-black text-slate-900 mt-1">
+                  {hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly ?? 10}
+                  <span className="text-xs font-medium text-slate-400 ml-1.5">empresas</span>
+                </h3>
+                <p className="text-[11px] text-indigo-600 font-semibold mt-1">Padrão por representante</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <Target className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Meta de Treinamentos VIP</p>
+                <h3 className="text-2xl font-black text-slate-900 mt-1">
+                  {hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly ?? 3}
+                  <span className="text-xs font-medium text-slate-400 ml-1.5">aulas</span>
+                </h3>
+                <p className="text-[11px] text-purple-600 font-semibold mt-1">Implantações por mês</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Super Bônus no PIX</p>
+                <h3 className="text-2xl font-black text-emerald-600 mt-1">
+                  {formatCurrency(hotmartConfig.affiliateGoals?.bonusRewardAmount ?? 1000)}
+                </h3>
+                <p className="text-[11px] text-emerald-700 font-semibold mt-1">Ao bater as duas metas</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Trophy className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Bônus Extra Comissão</p>
+                <h3 className="text-2xl font-black text-amber-600 mt-1">
+                  +{hotmartConfig.affiliateGoals?.salesCommissionBonusPct ?? 5}%
+                </h3>
+                <p className="text-[11px] text-amber-700 font-semibold mt-1">Sobre as mensalidades</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                <Percent className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+
+          {/* Card de Configuração das Metas Globais */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/40 border border-indigo-200 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100 pb-4">
+              <div>
+                <h4 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-indigo-600" />
+                  <span>Configuração de Metas Globais & Regulamento de Bônus</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Ajuste os valores padrão aplicados a novos afiliados cadastrados.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={hotmartConfig.affiliateGoals?.enabled !== false}
+                  onChange={(e) => {
+                    const currentGoals = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                    setHotmartConfig({
+                      ...hotmartConfig,
+                      affiliateGoals: { ...currentGoals, enabled: e.target.checked }
+                    });
+                  }}
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span className="ml-3 text-xs font-bold text-slate-700">
+                  {hotmartConfig.affiliateGoals?.enabled !== false ? 'Sistema de Metas Ativo' : 'Sistema Desativado'}
+                </span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-600" />
+                  Meta Mensal de Vendas
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly ?? 10}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                      setHotmartConfig({
+                        ...hotmartConfig,
+                        affiliateGoals: { ...current, defaultSalesTargetMonthly: val }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">empresas/mês</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Padrão aplicado a novos cadastros.</p>
+              </div>
+
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                  Meta de Treinamentos VIP
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly ?? 3}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                      setHotmartConfig({
+                        ...hotmartConfig,
+                        affiliateGoals: { ...current, defaultTrainingsTargetMonthly: val }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium">treinamentos/mês</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Implantações técnicas no mês.</p>
+              </div>
+
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                  Super Bônus no PIX (R$)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">R$</span>
+                  <input
+                    type="number"
+                    step="50"
+                    min="0"
+                    value={hotmartConfig.affiliateGoals?.bonusRewardAmount ?? 1000}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseFloat(e.target.value) || 0);
+                      const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                      setHotmartConfig({
+                        ...hotmartConfig,
+                        affiliateGoals: { ...current, bonusRewardAmount: val }
+                      });
+                    }}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">Prêmio via PIX ao bater as metas.</p>
+              </div>
+
+              <div className="space-y-1.5 p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-indigo-600" />
+                  Comissão Extra Superação
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={hotmartConfig.affiliateGoals?.salesCommissionBonusPct ?? 5}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                      setHotmartConfig({
+                        ...hotmartConfig,
+                        affiliateGoals: { ...current, salesCommissionBonusPct: val }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">% adicional</span>
+                </div>
+                <p className="text-[11px] text-slate-500">Acréscimo na comissão recorrente.</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                Mensagem Motivacional & Regulamento da Bonificação
+              </label>
+              <textarea
+                rows={2}
+                value={hotmartConfig.affiliateGoals?.bonusRewardDescription || ''}
+                onChange={(e) => {
+                  const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
+                  setHotmartConfig({
+                    ...hotmartConfig,
+                    affiliateGoals: { ...current, bonusRewardDescription: e.target.value }
+                  });
+                }}
+                placeholder="Descreva a regra de premiação..."
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Quadro de Acompanhamento / Desempenho dos Representantes & Afiliados */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-500" />
+                  <span>Acompanhamento de Metas por Representante ({affiliates.length})</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Monitore em tempo real o progresso de empresas cadastradas e treinamentos de cada parceiro oficial.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-100">
+                  <tr>
+                    <th className="py-3.5 px-4">Representante / Afiliado</th>
+                    <th className="py-3.5 px-4">Localização & Chave PIX</th>
+                    <th className="py-3.5 px-4">Meta de Vendas (Assinaturas)</th>
+                    <th className="py-3.5 px-4">Meta de Treinamentos VIP</th>
+                    <th className="py-3.5 px-4 text-center">Status da Premiação</th>
+                    <th className="py-3.5 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {affiliates.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        Nenhum afiliado cadastrado ainda.
+                      </td>
+                    </tr>
+                  ) : (
+                    affiliates.map((aff) => {
+                      const targetSales = aff.targetSalesMonthly || hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly || 10;
+                      const targetTrainings = aff.targetTrainingsMonthly || hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly || 3;
+                      const activeCompanies = aff.totalCompanies || 0;
+                      const completedTrainings = aff.trainingStatus === 'completed' ? 1 : 0;
+                      const salesPct = Math.min(100, Math.round((activeCompanies / targetSales) * 100));
+                      const trainingsPct = Math.min(100, Math.round((completedTrainings / targetTrainings) * 100));
+                      const isGoalAchieved = activeCompanies >= targetSales && completedTrainings >= targetTrainings;
+
+                      return (
+                        <tr key={aff.id} className="hover:bg-slate-50/80 transition">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                                {aff.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-900 block">{aff.name}</span>
+                                <span className="text-[11px] text-slate-400">{aff.email}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-slate-700 font-medium">
+                                <MapPin className="w-3 h-3 text-slate-400" />
+                                {aff.city ? `${aff.city} - ${aff.state}` : aff.state}
+                              </span>
+                              {aff.pixKey && (
+                                <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px] truncate max-w-[150px]">
+                                    PIX: {aff.pixKey}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyPix(aff.pixKey, aff.id)}
+                                    className="text-slate-400 hover:text-emerald-600 transition"
+                                    title="Copiar Chave PIX"
+                                  >
+                                    {copiedPixKey === aff.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1.5 min-w-[150px]">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-slate-800">
+                                  {activeCompanies} de {targetSales} empresas
+                                </span>
+                                <span className="font-semibold text-emerald-600">{salesPct}%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${salesPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1.5 min-w-[150px]">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-slate-800">
+                                  {completedTrainings} de {targetTrainings} aulas
+                                </span>
+                                <span className="font-semibold text-purple-600">{trainingsPct}%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${trainingsPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            {isGoalAchieved ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                                🏆 Super Bônus Liberado!
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold">
+                                ⏳ Em Andamento
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAffiliateForCompanies(aff)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                                title="Ver Clientes Vinculados"
+                              >
+                                <Building2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditAffiliateModal(aff)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                                title="Editar Metas Individuais do Afiliado"
+                              >
+                                <Target className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
