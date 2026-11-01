@@ -234,9 +234,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
   const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>(initialSubTab || 'companies');
 
   useEffect(() => {
-    if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
-    }
+    setActiveSubTab(initialSubTab || 'companies');
   }, [initialSubTab]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
