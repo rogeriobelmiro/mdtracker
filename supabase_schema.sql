@@ -677,6 +677,14 @@ CREATE TABLE IF NOT EXISTS public.hotmart_config (
             "Certificação oficial de representante regional"
         ]
     }'::jsonb,
+    affiliate_goals JSONB DEFAULT '{
+        "enabled": true,
+        "defaultSalesTargetMonthly": 10,
+        "defaultTrainingsTargetMonthly": 3,
+        "bonusRewardAmount": 1000,
+        "salesCommissionBonusPct": 5,
+        "bonusRewardDescription": "Bônus especial pago via PIX para o representante que atingir ou superar as duas metas no mês vigente."
+    }'::jsonb,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

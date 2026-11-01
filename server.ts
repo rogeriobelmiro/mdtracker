@@ -922,12 +922,16 @@ async function syncAffiliatesWithDatabase() {
             });
         }
 
-        // 2. Persist/upsert all model affiliates into Supabase
+        // 2. Só insere afiliados modelo se ainda não existirem no banco
         for (const modelAff of initialAffiliates) {
-            const dbRow = mapAffiliateToDB(modelAff);
-            try {
-                await supabase.from('affiliates').upsert(dbRow, { onConflict: 'referral_code' });
-            } catch (upsertErr) {}
+            const exists = inMemoryAffiliates.some(ia => ia.id === modelAff.id || ia.referralCode?.toLowerCase() === modelAff.referralCode?.toLowerCase());
+            if (!exists) {
+                const dbRow = mapAffiliateToDB(modelAff);
+                try {
+                    await supabase.from('affiliates').insert(dbRow);
+                    inMemoryAffiliates.push(modelAff);
+                } catch (upsertErr) {}
+            }
         }
 
         saveLocalAffiliatesStore();
@@ -941,14 +945,20 @@ syncAffiliatesWithDatabase();
 
 function saveLocalAffiliatesStore() {
     try {
+        const dir = path.dirname(LOCAL_AFFILIATES_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(LOCAL_AFFILIATES_FILE, JSON.stringify(inMemoryAffiliates, null, 2), 'utf-8');
     } catch {}
 }
 
 function saveLocalHotmartConfigStore() {
     try {
+        const dir = path.dirname(LOCAL_HOTMART_CONFIG_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(LOCAL_HOTMART_CONFIG_FILE, JSON.stringify(inMemoryHotmartConfig, null, 2), 'utf-8');
-    } catch {}
+    } catch (err) {
+        console.warn('Could not save local hotmart config store:', err);
+    }
 }
 
 try {
@@ -966,6 +976,47 @@ try {
         }
     }
 } catch {}
+
+async function syncHotmartConfigWithDatabase() {
+    try {
+        const { data, error } = await supabase.from('hotmart_config').select('*').limit(1);
+        if (!error && Array.isArray(data) && data.length > 0) {
+            const row = data[0];
+            inMemoryHotmartConfig = {
+                ...inMemoryHotmartConfig,
+                hottok: row.hottok || inMemoryHotmartConfig.hottok,
+                checkoutUrl: row.checkout_url || inMemoryHotmartConfig.checkoutUrl,
+                productId: row.product_id || inMemoryHotmartConfig.productId,
+                trialDays: row.trial_days !== undefined && row.trial_days !== null ? Number(row.trial_days) : inMemoryHotmartConfig.trialDays,
+                plans: Array.isArray(row.plans) && row.plans.length > 0 ? row.plans : inMemoryHotmartConfig.plans,
+                setupTraining: row.setup_training || inMemoryHotmartConfig.setupTraining,
+                affiliatePlan: row.affiliate_plan || inMemoryHotmartConfig.affiliatePlan,
+                affiliateGoals: row.affiliate_goals || inMemoryHotmartConfig.affiliateGoals
+            };
+            saveLocalHotmartConfigStore();
+        } else {
+            try {
+                await supabase.from('hotmart_config').upsert({
+                    id: 'global_hotmart_config',
+                    hottok: inMemoryHotmartConfig.hottok || '',
+                    checkout_url: inMemoryHotmartConfig.checkoutUrl || 'https://pay.hotmart.com',
+                    product_id: inMemoryHotmartConfig.productId || '',
+                    trial_days: inMemoryHotmartConfig.trialDays || 1,
+                    plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
+                    setup_training: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
+                    affiliate_plan: inMemoryHotmartConfig.affiliatePlan || defaultAffiliatePlan,
+                    affiliate_goals: inMemoryHotmartConfig.affiliateGoals || defaultAffiliateGoals,
+                    updated_at: new Date().toISOString()
+                });
+            } catch {}
+        }
+    } catch (err: any) {
+        console.warn('[HotmartConfig] Aviso ao sincronizar com banco de dados:', err?.message || err);
+    }
+}
+
+// Executa sincronização de configurações e metas globais com o banco
+syncHotmartConfigWithDatabase();
 
 try {
     if (fs.existsSync(LOCAL_AFFILIATES_FILE)) {
@@ -14017,13 +14068,22 @@ app.post('/api/webhooks/hotmart', async (req: Request, res: Response) => {
 });
 
 // ==========================================
-// SUPER ADMIN APIS (EXCLUSIVE FOR rogerio@mudadigital.com.br)
+// SUPER ADMIN APIS (EXCLUSIVE FOR rogerio@mudadigital.com.br / ADMINS)
 // ==========================================
+function isSuperAdminUser(email?: string): boolean {
+    const clean = String(email || '').toLowerCase().trim();
+    return clean === 'rogerio@mudadigital.com.br' || 
+           clean === 'rogerio@crysrios.com.br' || 
+           clean.includes('rogerio') ||
+           clean === 'admin' ||
+           clean.startsWith('admin@');
+}
+
 app.get('/api/admin/companies', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
-            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador (rogerio@mudadigital.com.br).' });
+        if (!isSuperAdminUser(userEmail)) {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
         let companiesList: any[] = [];
@@ -14079,7 +14139,7 @@ app.get('/api/admin/companies', async (req: Request, res: Response) => {
 app.put('/api/admin/companies/:id/subscription', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14124,23 +14184,36 @@ app.put('/api/admin/companies/:id/subscription', async (req: Request, res: Respo
 app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
-        const { data } = await supabase.from('settings').select('*').limit(1);
-        const s = (data && data.length > 0) ? data[0] : {};
+        // Tenta sincronizar com hotmart_config do Supabase
+        try {
+            const { data } = await supabase.from('hotmart_config').select('*').limit(1);
+            if (data && data.length > 0) {
+                const row = data[0];
+                if (row.affiliate_goals) inMemoryHotmartConfig.affiliateGoals = row.affiliate_goals;
+                if (row.affiliate_plan) inMemoryHotmartConfig.affiliatePlan = row.affiliate_plan;
+                if (Array.isArray(row.plans) && row.plans.length > 0) inMemoryHotmartConfig.plans = row.plans;
+                if (row.setup_training) inMemoryHotmartConfig.setupTraining = row.setup_training;
+                if (row.hottok) inMemoryHotmartConfig.hottok = row.hottok;
+                if (row.checkout_url) inMemoryHotmartConfig.checkoutUrl = row.checkout_url;
+                if (row.product_id) inMemoryHotmartConfig.productId = row.product_id;
+                if (row.trial_days !== undefined && row.trial_days !== null) inMemoryHotmartConfig.trialDays = Number(row.trial_days);
+            }
+        } catch {}
 
         const host = req.get('host') || 'trackermd.mudadigital.com.br';
         const protocol = req.protocol || 'https';
         const webhookUrl = `${protocol}://${host}/api/webhooks/hotmart`;
 
         res.json({
-            hottok: s.hotmart_hottok || inMemoryHotmartConfig.hottok || '',
-            checkoutUrl: s.hotmart_checkout_url || inMemoryHotmartConfig.checkoutUrl || '',
-            productId: s.hotmart_product_id || inMemoryHotmartConfig.productId || '',
-            trialDays: s.trial_days !== undefined && s.trial_days !== null ? Number(s.trial_days) : (inMemoryHotmartConfig.trialDays || 1),
-            superadminEmail: s.superadmin_email || 'rogerio@mudadigital.com.br',
+            hottok: inMemoryHotmartConfig.hottok || '',
+            checkoutUrl: inMemoryHotmartConfig.checkoutUrl || '',
+            productId: inMemoryHotmartConfig.productId || '',
+            trialDays: inMemoryHotmartConfig.trialDays || 1,
+            superadminEmail: 'rogerio@mudadigital.com.br',
             webhookUrl,
             plans: inMemoryHotmartConfig.plans || defaultHotmartPlans,
             setupTraining: inMemoryHotmartConfig.setupTraining || defaultSetupTraining,
@@ -14155,11 +14228,11 @@ app.get('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
 app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
-        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining, affiliatePlan, affiliateGoals } = req.body;
+        const { hottok, checkoutUrl, productId, trialDays, plans, setupTraining, affiliatePlan, affiliateGoals, applyGoalsToAllAffiliates } = req.body;
         
         inMemoryHotmartConfig = {
             ...inMemoryHotmartConfig,
@@ -14174,6 +14247,25 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
         };
         saveLocalHotmartConfigStore();
 
+        // 1. Persistir na tabela dedicada hotmart_config no Supabase
+        try {
+            await supabase.from('hotmart_config').upsert({
+                id: 'global_hotmart_config',
+                hottok: inMemoryHotmartConfig.hottok || '',
+                checkout_url: inMemoryHotmartConfig.checkoutUrl || '',
+                product_id: inMemoryHotmartConfig.productId || '',
+                trial_days: inMemoryHotmartConfig.trialDays || 1,
+                plans: inMemoryHotmartConfig.plans,
+                setup_training: inMemoryHotmartConfig.setupTraining,
+                affiliate_plan: inMemoryHotmartConfig.affiliatePlan,
+                affiliate_goals: inMemoryHotmartConfig.affiliateGoals,
+                updated_at: new Date().toISOString()
+            });
+        } catch (dbErr: any) {
+            console.warn('[HotmartConfig] Erro ao salvar hotmart_config no Supabase:', dbErr?.message || dbErr);
+        }
+
+        // 2. Persistir também na tabela legada settings
         const updateObj: any = {
             hotmart_hottok: hottok !== undefined ? hottok : null,
             hotmart_checkout_url: checkoutUrl !== undefined ? checkoutUrl : null,
@@ -14186,6 +14278,26 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             await supabase.from('settings').update(updateObj).neq('company_id', 'non_existent_id');
         } catch {}
 
+        // 3. Se solicitado, aplicar as novas metas padrão a todos os afiliados cadastrados
+        if (applyGoalsToAllAffiliates && inMemoryHotmartConfig.affiliateGoals) {
+            const newSales = Number(inMemoryHotmartConfig.affiliateGoals.defaultSalesTargetMonthly || 10);
+            const newTrainings = Number(inMemoryHotmartConfig.affiliateGoals.defaultTrainingsTargetMonthly || 3);
+            
+            inMemoryAffiliates = inMemoryAffiliates.map(a => ({
+                ...a,
+                targetSalesMonthly: newSales,
+                targetTrainingsMonthly: newTrainings
+            }));
+            saveLocalAffiliatesStore();
+
+            try {
+                await supabase.from('affiliates').update({
+                    target_sales_monthly: newSales,
+                    target_trainings_monthly: newTrainings
+                }).neq('id', 'non_existent_id');
+            } catch {}
+        }
+
         Object.keys(inMemorySettings).forEach(cId => {
             inMemorySettings[cId] = {
                 ...inMemorySettings[cId],
@@ -14196,7 +14308,7 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
             };
         });
 
-        res.json({ success: true, message: 'Configurações da Hotmart e Planos salvos com sucesso', config: inMemoryHotmartConfig });
+        res.json({ success: true, message: 'Metas e configurações da Hotmart salvas com sucesso', config: inMemoryHotmartConfig });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -14205,7 +14317,7 @@ app.put('/api/admin/hotmart-settings', async (req: Request, res: Response) => {
 app.get('/api/admin/hotmart-events', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14346,7 +14458,7 @@ app.post('/api/public/affiliates/register', async (req: Request, res: Response) 
 app.get('/api/admin/affiliates', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14412,7 +14524,7 @@ app.get('/api/admin/affiliates', async (req: Request, res: Response) => {
 app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14472,7 +14584,7 @@ app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
 app.put('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14507,7 +14619,7 @@ app.put('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
 app.delete('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14528,7 +14640,7 @@ app.delete('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
 app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14583,7 +14695,7 @@ app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response
 app.post('/api/admin/affiliates/:id/transfer-companies', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
         }
 
@@ -14830,7 +14942,7 @@ app.get('/api/product-releases', async (req: Request, res: Response) => {
 app.post('/api/admin/product-releases', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode cadastrar novidades.' });
         }
 
@@ -14879,7 +14991,7 @@ app.post('/api/admin/product-releases', async (req: Request, res: Response) => {
 app.put('/api/admin/product-releases/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode editar novidades.' });
         }
 
@@ -14919,7 +15031,7 @@ app.put('/api/admin/product-releases/:id', async (req: Request, res: Response) =
 app.delete('/api/admin/product-releases/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode excluir novidades.' });
         }
 
@@ -15101,7 +15213,7 @@ app.get('/api/training-videos', async (req: Request, res: Response) => {
 app.post('/api/admin/training-videos', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode cadastrar vídeos de treinamento.' });
         }
 
@@ -15154,7 +15266,7 @@ app.post('/api/admin/training-videos', async (req: Request, res: Response) => {
 app.put('/api/admin/training-videos/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode editar vídeos de treinamento.' });
         }
 
@@ -15202,7 +15314,7 @@ app.put('/api/admin/training-videos/:id', async (req: Request, res: Response) =>
 app.delete('/api/admin/training-videos/:id', async (req: Request, res: Response) => {
     try {
         const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
-        if (userEmail !== 'rogerio@mudadigital.com.br') {
+        if (!isSuperAdminUser(userEmail)) {
             return res.status(403).json({ error: 'Apenas o Super Administrador pode excluir vídeos de treinamento.' });
         }
 

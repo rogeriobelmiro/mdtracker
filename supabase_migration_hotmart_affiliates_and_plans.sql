@@ -29,10 +29,18 @@ CREATE TABLE IF NOT EXISTS affiliates (
     status VARCHAR(20) NOT NULL DEFAULT 'active',            -- 'active', 'inactive'
     training_status VARCHAR(20) NOT NULL DEFAULT 'pending',  -- 'pending', 'scheduled', 'completed'
     
+    -- Metas Comerciais Individuais
+    target_sales_monthly INTEGER DEFAULT 10,
+    target_trainings_monthly INTEGER DEFAULT 3,
+
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE affiliates 
+ADD COLUMN IF NOT EXISTS target_sales_monthly INTEGER DEFAULT 10,
+ADD COLUMN IF NOT EXISTS target_trainings_monthly INTEGER DEFAULT 3;
 
 CREATE INDEX IF NOT EXISTS idx_affiliates_referral_code ON affiliates(referral_code);
 CREATE INDEX IF NOT EXISTS idx_affiliates_state ON affiliates(state);
@@ -129,6 +137,14 @@ CREATE TABLE IF NOT EXISTS hotmart_config (
             "Certificação oficial de representante regional"
         ]
     }'::jsonb,
+    affiliate_goals JSONB DEFAULT '{
+        "enabled": true,
+        "defaultSalesTargetMonthly": 10,
+        "defaultTrainingsTargetMonthly": 3,
+        "bonusRewardAmount": 1000,
+        "salesCommissionBonusPct": 5,
+        "bonusRewardDescription": "Bônus especial pago via PIX para o representante que atingir ou superar as duas metas no mês vigente."
+    }'::jsonb,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -149,6 +165,14 @@ ADD COLUMN IF NOT EXISTS affiliate_plan JSONB DEFAULT '{
         "Treinamento ao vivo com coordenação técnica",
         "Certificação oficial de representante regional"
     ]
+}'::jsonb,
+ADD COLUMN IF NOT EXISTS affiliate_goals JSONB DEFAULT '{
+    "enabled": true,
+    "defaultSalesTargetMonthly": 10,
+    "defaultTrainingsTargetMonthly": 3,
+    "bonusRewardAmount": 1000,
+    "salesCommissionBonusPct": 5,
+    "bonusRewardDescription": "Bônus especial pago via PIX para o representante que atingir ou superar as duas metas no mês vigente."
 }'::jsonb;
 
 -- Inserir ou atualizar registro padrão de configuração global da Hotmart

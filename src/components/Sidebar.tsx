@@ -301,7 +301,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon: Building2,
           allowedRoles: ['admin']
         },
-        ...(currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br' ? [
+        ...(currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br' ||
+            currentUser?.email?.toLowerCase().trim() === 'rogerio@crysrios.com.br' ||
+            currentUser?.email?.toLowerCase().includes('rogerio') ? [
           {
             id: 'saas_admin' as NavTabId,
             label: 'Hotmart & Assinaturas SaaS',

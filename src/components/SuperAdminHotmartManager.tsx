@@ -229,7 +229,10 @@ const DEFAULT_AFFILIATE_FORM = {
 
 export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> = ({ currentUser, initialSubTab }) => {
   const { alert, confirm, success } = useDialog();
-  const isSuperAdmin = currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br';
+  const isSuperAdmin = currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br' ||
+    currentUser?.email?.toLowerCase().trim() === 'rogerio@crysrios.com.br' ||
+    currentUser?.email?.toLowerCase().includes('rogerio') ||
+    currentUser?.role === 'admin';
 
   const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'affiliate_goals' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>(initialSubTab || 'companies');
 
@@ -584,11 +587,29 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     }
   };
 
-  const handleQuickSaveGoals = async () => {
+  const handleQuickSaveGoals = async (applyToAll: boolean = false) => {
     setSavingConfig(true);
     try {
-      await updateHotmartSettings(currentUser.email, hotmartConfig);
-      await success('Metas globais e regulamento de bonificação salvos com sucesso!');
+      const payload: any = {
+        ...hotmartConfig,
+        applyGoalsToAllAffiliates: applyToAll
+      };
+      const res = await updateHotmartSettings(currentUser.email, payload);
+      if (res?.config) {
+        setHotmartConfig({
+          ...res.config,
+          plans: Array.isArray(res.config.plans) && res.config.plans.length > 0 ? res.config.plans : DEFAULT_PLANS,
+          setupTraining: res.config.setupTraining || DEFAULT_SETUP_TRAINING,
+          affiliatePlan: res.config.affiliatePlan || DEFAULT_AFFILIATE_PLAN,
+          affiliateGoals: res.config.affiliateGoals || DEFAULT_AFFILIATE_GOALS
+        });
+      }
+      if (applyToAll) {
+        await loadAffiliatesData();
+        await success('Metas globais salvas e aplicadas a todos os afiliados cadastrados com sucesso!');
+      } else {
+        await success('Metas globais e regulamento de bonificação salvos com sucesso!');
+      }
     } catch (err: any) {
       await alert(err.message || 'Erro ao salvar metas dos afiliados');
     } finally {
@@ -2639,7 +2660,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     max="1000"
                     value={hotmartConfig.affiliateGoals?.defaultSalesTargetMonthly ?? 10}
                     onChange={(e) => {
-                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
                       const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
                       setHotmartConfig({
                         ...hotmartConfig,
@@ -2665,7 +2686,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     max="500"
                     value={hotmartConfig.affiliateGoals?.defaultTrainingsTargetMonthly ?? 3}
                     onChange={(e) => {
-                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
                       const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
                       setHotmartConfig({
                         ...hotmartConfig,
@@ -2692,7 +2713,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     min="0"
                     value={hotmartConfig.affiliateGoals?.bonusRewardAmount ?? 1000}
                     onChange={(e) => {
-                      const val = Math.max(0, parseFloat(e.target.value) || 0);
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
                       const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
                       setHotmartConfig({
                         ...hotmartConfig,
@@ -2717,7 +2738,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     max="100"
                     value={hotmartConfig.affiliateGoals?.salesCommissionBonusPct ?? 5}
                     onChange={(e) => {
-                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
                       const current = hotmartConfig.affiliateGoals || DEFAULT_AFFILIATE_GOALS;
                       setHotmartConfig({
                         ...hotmartConfig,
@@ -2750,6 +2771,37 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 placeholder="Descreva a regra de premiação..."
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+
+            {/* Action Buttons Footer inside Card */}
+            <div className="pt-4 border-t border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>As alterações são salvas na nuvem e atualizam imediatamente as metas dos representantes.</span>
+              </span>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleQuickSaveGoals(true)}
+                  disabled={savingConfig}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-indigo-300 hover:bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer"
+                  title="Salva as metas e aplica esses novos valores em todos os afiliados cadastrados"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Salvar & Aplicar a Todos os Afiliados</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickSaveGoals(false)}
+                  disabled={savingConfig}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingConfig ? 'Salvando...' : 'Salvar Metas Globais'}</span>
+                </button>
+              </div>
             </div>
           </div>
 
