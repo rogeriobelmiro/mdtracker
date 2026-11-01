@@ -212,7 +212,7 @@ export const PublicSalesWebsite: React.FC<PublicSalesWebsiteProps> = ({
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
             <button
-              onClick={onOpenLogin}
+              onClick={() => onOpenLogin('login')}
               className="text-xs font-bold text-slate-300 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-900 transition flex items-center gap-1.5"
             >
               <Lock className="w-3.5 h-3.5 text-blue-400" />

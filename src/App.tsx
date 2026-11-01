@@ -550,7 +550,8 @@ export default function App() {
     return (
       <PublicSalesWebsite
         onOpenLogin={(mode) => {
-          setLoginInitialMode(mode || 'login');
+          const validMode = (mode === 'register_company' || mode === 'register_affiliate') ? mode : 'login';
+          setLoginInitialMode(validMode);
           setAuthView('login');
         }}
         onLoginSuccess={handleLoginSuccess}

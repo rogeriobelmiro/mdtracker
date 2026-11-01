@@ -70,7 +70,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   onBackToSite
 }) => {
-  const [screenMode, setScreenMode] = useState<'login' | 'register_company' | 'register_affiliate'>(initialMode);
+  const safeInitialMode = (initialMode === 'register_company' || initialMode === 'register_affiliate') ? initialMode : 'login';
+  const [screenMode, setScreenMode] = useState<'login' | 'register_company' | 'register_affiliate'>(safeInitialMode);
+
+  useEffect(() => {
+    const valid = (initialMode === 'register_company' || initialMode === 'register_affiliate') ? initialMode : 'login';
+    setScreenMode(valid);
+  }, [initialMode]);
   
   // Login State
   const [email, setEmail] = useState('');

@@ -172,3 +172,4 @@ INSERT INTO affiliates (
     'completed',
     'Representante Master e Coordenador Técnico Nacional'
 ) ON CONFLICT (referral_code) DO NOTHING;
+
