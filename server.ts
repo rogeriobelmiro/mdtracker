@@ -779,6 +779,8 @@ function mapAffiliateToDB(a: any) {
         referral_code: (a.referralCode || '').toLowerCase().trim(),
         status: a.status || 'active',
         training_status: a.trainingStatus || 'pending',
+        target_sales_monthly: a.targetSalesMonthly !== undefined ? Number(a.targetSalesMonthly) : 10,
+        target_trainings_monthly: a.targetTrainingsMonthly !== undefined ? Number(a.targetTrainingsMonthly) : 3,
         notes: a.notes || null,
         created_at: a.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -805,6 +807,8 @@ function mapAffiliateFromDB(row: any) {
         referralCode: row.referral_code,
         status: row.status || 'active',
         trainingStatus: row.training_status || 'pending',
+        targetSalesMonthly: row.target_sales_monthly !== undefined ? Number(row.target_sales_monthly) : 10,
+        targetTrainingsMonthly: row.target_trainings_monthly !== undefined ? Number(row.target_trainings_monthly) : 3,
         notes: row.notes || '',
         createdAt: row.created_at || new Date().toISOString(),
         updatedAt: row.updated_at
@@ -14231,9 +14235,19 @@ app.get('/api/admin/affiliates', async (req: Request, res: Response) => {
             const setupCommPct = Number(aff.commissionSetup || 0) / 100;
             const estimatedSetupEarnings = totalCompanies * setupPrice * setupCommPct;
 
+            const targetSales = aff.targetSalesMonthly !== undefined ? Number(aff.targetSalesMonthly) : 10;
+            const targetTrainings = aff.targetTrainingsMonthly !== undefined ? Number(aff.targetTrainingsMonthly) : 3;
+            const completedTrainings = linkedCompanies.filter(c => c.trainingCompleted).length;
+
             return {
                 ...aff,
+                targetSalesMonthly: targetSales,
+                targetTrainingsMonthly: targetTrainings,
                 totalCompanies,
+                activeCompaniesCount: activeCompanies.length,
+                completedTrainingsCount: completedTrainings,
+                salesProgressPct: Math.min(100, Math.round((activeCompanies.length / targetSales) * 100)),
+                trainingsProgressPct: Math.min(100, Math.round((completedTrainings / targetTrainings) * 100)),
                 estimatedMonthlyEarnings: Math.round(estimatedMonthlyEarnings * 100) / 100,
                 estimatedSetupEarnings: Math.round(estimatedSetupEarnings * 100) / 100
             };
@@ -14284,6 +14298,8 @@ app.post('/api/admin/affiliates', async (req: Request, res: Response) => {
             referralCode,
             status: req.body.status || 'active',
             trainingStatus: req.body.trainingStatus || 'pending',
+            targetSalesMonthly: req.body.targetSalesMonthly !== undefined ? Number(req.body.targetSalesMonthly) : 10,
+            targetTrainingsMonthly: req.body.targetTrainingsMonthly !== undefined ? Number(req.body.targetTrainingsMonthly) : 3,
             notes: (req.body.notes || '').trim(),
             createdAt: new Date().toISOString()
         };
@@ -14320,6 +14336,8 @@ app.put('/api/admin/affiliates/:id', async (req: Request, res: Response) => {
             ...inMemoryAffiliates[idx],
             ...req.body,
             id,
+            targetSalesMonthly: req.body.targetSalesMonthly !== undefined ? Number(req.body.targetSalesMonthly) : (inMemoryAffiliates[idx].targetSalesMonthly || 10),
+            targetTrainingsMonthly: req.body.targetTrainingsMonthly !== undefined ? Number(req.body.targetTrainingsMonthly) : (inMemoryAffiliates[idx].targetTrainingsMonthly || 3),
             updatedAt: new Date().toISOString()
         };
 
@@ -14369,6 +14387,8 @@ app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response
 
         const matchedAffiliate = affiliateId ? inMemoryAffiliates.find(a => a.id === affiliateId) : null;
         const cIdx = inMemoryCompanies.findIndex(c => c.id === id);
+        const comp = cIdx >= 0 ? inMemoryCompanies[cIdx] : null;
+
         if (cIdx >= 0) {
             inMemoryCompanies[cIdx] = {
                 ...inMemoryCompanies[cIdx],
@@ -14380,11 +14400,105 @@ app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response
 
         try {
             await supabase.from('companies').update({
-                affiliate_id: affiliateId || null
+                affiliate_id: affiliateId || null,
+                affiliate_code: matchedAffiliate ? matchedAffiliate.referralCode : null
             }).eq('id', id);
         } catch {}
 
-        res.json({ success: true, companyId: id, affiliateId });
+        // Log de Auditoria
+        try {
+            const targetAffiliateName = matchedAffiliate ? `${matchedAffiliate.name} (${matchedAffiliate.city || ''}/${matchedAffiliate.state})` : 'Nenhum (Indicação Direta)';
+            await supabase.from('system_activity_logs').insert({
+                id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                company_id: id,
+                user_name: 'Super Administrador (Rogério Belmiro)',
+                user_email: userEmail,
+                user_role: 'admin',
+                is_affiliate_support: false,
+                category: 'settings',
+                action: 'company_affiliate_reallocated',
+                title: 'Representante/Afiliado Alocado ou Alterado',
+                details: `O Super Administrador alocou/transferiu esta empresa (${comp?.name || id}) para o representante ${targetAffiliateName}.`,
+                metadata: { affiliateId, affiliateName: matchedAffiliate?.name, referralCode: matchedAffiliate?.referralCode }
+            });
+        } catch {}
+
+        res.json({ success: true, companyId: id, affiliateId, affiliateCode: matchedAffiliate ? matchedAffiliate.referralCode : null });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Transferência em lote de toda a carteira de um afiliado (ex: caso seja suspenso ou desligado)
+app.post('/api/admin/affiliates/:id/transfer-companies', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Acesso restrito ao Super Administrador.' });
+        }
+
+        const { id: sourceAffiliateId } = req.params;
+        const { targetAffiliateId } = req.body;
+
+        const sourceAffiliate = inMemoryAffiliates.find(a => a.id === sourceAffiliateId);
+        const targetAffiliate = targetAffiliateId ? inMemoryAffiliates.find(a => a.id === targetAffiliateId) : null;
+
+        if (!sourceAffiliate) {
+            return res.status(404).json({ error: 'Afiliado de origem não encontrado.' });
+        }
+
+        const sourceRef = (sourceAffiliate.referralCode || '').toLowerCase();
+
+        // Encontra todas as empresas vinculadas ao afiliado de origem
+        const linkedCompanies = inMemoryCompanies.filter(
+            c => c.affiliateId === sourceAffiliateId || (sourceRef && c.affiliateCode?.toLowerCase() === sourceRef)
+        );
+
+        let transferredCount = 0;
+        for (const comp of linkedCompanies) {
+            const cIdx = inMemoryCompanies.findIndex(c => c.id === comp.id);
+            if (cIdx >= 0) {
+                inMemoryCompanies[cIdx] = {
+                    ...inMemoryCompanies[cIdx],
+                    affiliateId: targetAffiliateId || null,
+                    affiliateCode: targetAffiliate ? targetAffiliate.referralCode : null
+                };
+            }
+
+            try {
+                await supabase.from('companies').update({
+                    affiliate_id: targetAffiliateId || null,
+                    affiliate_code: targetAffiliate ? targetAffiliate.referralCode : null
+                }).eq('id', comp.id);
+            } catch {}
+
+            try {
+                await supabase.from('system_activity_logs').insert({
+                    id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                    company_id: comp.id,
+                    user_name: 'Super Administrador (Rogério Belmiro)',
+                    user_email: userEmail,
+                    user_role: 'admin',
+                    is_affiliate_support: false,
+                    category: 'settings',
+                    action: 'company_affiliate_batch_transfer',
+                    title: 'Carteira de Afiliado Transferida',
+                    details: `Empresa transferida de "${sourceAffiliate.name}" para "${targetAffiliate ? targetAffiliate.name : 'Plataforma Direta'}" pelo Super Administrador.`,
+                    metadata: { sourceAffiliateId, targetAffiliateId }
+                });
+            } catch {}
+
+            transferredCount++;
+        }
+
+        saveLocalAuthStore();
+
+        res.json({
+            success: true,
+            transferredCount,
+            sourceAffiliate: sourceAffiliate.name,
+            targetAffiliate: targetAffiliate ? targetAffiliate.name : 'Indicação Direta'
+        });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -14468,15 +14582,28 @@ app.get('/api/affiliate/my-portal', async (req: Request, res: Response) => {
             .filter(c => c.trainingCompleted)
             .reduce((acc, c) => acc + c.estimatedSetupCommission, 0);
 
+        const targetSales = affiliate?.targetSalesMonthly !== undefined ? Number(affiliate.targetSalesMonthly) : 10;
+        const targetTrainings = affiliate?.targetTrainingsMonthly !== undefined ? Number(affiliate.targetTrainingsMonthly) : 3;
+        const completedTrainings = enrichedCompanies.filter(c => c.trainingCompleted).length;
+
         res.json({
             success: true,
-            affiliate,
+            affiliate: {
+                ...affiliate,
+                targetSalesMonthly: targetSales,
+                targetTrainingsMonthly: targetTrainings
+            },
             allAffiliates: userEmail === 'rogerio@mudadigital.com.br' ? inMemoryAffiliates : undefined,
             referralLink: `https://trackermd.mudadigital.com.br/?ref=${affiliate.referralCode}`,
             stats: {
                 totalCompanies,
                 activeCompanies,
                 trialCompanies,
+                completedTrainings,
+                targetSales,
+                targetTrainings,
+                salesProgressPct: Math.min(100, Math.round((activeCompanies / targetSales) * 100)),
+                trainingsProgressPct: Math.min(100, Math.round((completedTrainings / targetTrainings) * 100)),
                 totalEstimatedMonthly: Math.round(totalEstimatedMonthly * 100) / 100,
                 totalEstimatedSetup: Math.round(totalEstimatedSetup * 100) / 100
             },

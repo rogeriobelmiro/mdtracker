@@ -1826,6 +1826,22 @@ export async function updateAffiliatePixKey(affiliateId: string, pixKeyType: str
   return res.json();
 }
 
+export async function transferAffiliateCompanies(userEmail: string, sourceAffiliateId: string, targetAffiliateId: string): Promise<any> {
+  const res = await fetch(`/api/admin/affiliates/${sourceAffiliateId}/transfer-companies`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify({ targetAffiliateId, userEmail })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao transferir carteira de clientes');
+  }
+  return res.json();
+}
+
 export async function fetchProductReleases(): Promise<ProductRelease[]> {
   const res = await fetch('/api/product-releases');
   if (!res.ok) return [];

@@ -38,7 +38,9 @@ import {
   TrendingUp,
   X,
   KeyRound,
-  Activity
+  Activity,
+  Target,
+  Trophy
 } from 'lucide-react';
 import { User, Company, Affiliate, ProductRelease, SupportTicket, TrainingVideo } from '../types';
 import { 
@@ -550,6 +552,87 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
       {activeTab === 'clients' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           
+          {/* Metas Comerciais do Afiliado */}
+          {(() => {
+            const targetSales = affiliate?.targetSalesMonthly || (stats as any)?.targetSales || 10;
+            const targetTrainings = affiliate?.targetTrainingsMonthly || (stats as any)?.targetTrainings || 3;
+            const completedTrainingsCount = companies.filter(c => c.trainingCompleted).length;
+            const salesPct = Math.min(100, Math.round((stats.activeCompanies / targetSales) * 100));
+            const trainingsPct = Math.min(100, Math.round((completedTrainingsCount / targetTrainings) * 100));
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Meta de Vendas */}
+                <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border border-emerald-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <Target className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">Meta de Vendas do Mês</span>
+                        <h4 className="text-sm font-black text-white">Assinaturas Ativas</h4>
+                      </div>
+                    </div>
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
+                      {salesPct}% Atingido
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-slate-300">
+                      Realizado: <strong className="text-white text-base">{stats.activeCompanies}</strong> de {targetSales} empresas
+                    </span>
+                    <span className="text-slate-400 text-[11px]">
+                      {stats.activeCompanies >= targetSales ? '🎉 Meta Superada!' : `Faltam ${targetSales - stats.activeCompanies} empresas`}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
+                    <div 
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${salesPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Meta de Treinamentos */}
+                <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 border border-indigo-800/60 p-5 rounded-2xl shadow-sm text-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <Trophy className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider block">Meta de Treinamentos VIP</span>
+                        <h4 className="text-sm font-black text-white">Implantação & Setup</h4>
+                      </div>
+                    </div>
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">
+                      {trainingsPct}% Atingido
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-slate-300">
+                      Realizado: <strong className="text-white text-base">{completedTrainingsCount}</strong> de {targetTrainings} treinamentos
+                    </span>
+                    <span className="text-slate-400 text-[11px]">
+                      {completedTrainingsCount >= targetTrainings ? '🏆 Meta Superada!' : `Faltam ${targetTrainings - completedTrainingsCount} treinamentos`}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-black/40 rounded-full h-2.5 overflow-hidden border border-white/10">
+                    <div 
+                      className="bg-gradient-to-r from-indigo-500 to-purple-400 h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${trainingsPct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             

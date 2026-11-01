@@ -564,6 +564,8 @@ CREATE TABLE IF NOT EXISTS public.affiliates (
     referral_code TEXT NOT NULL UNIQUE,                     -- Slug do link (?ref=slug)
     status VARCHAR(20) NOT NULL DEFAULT 'active',            -- 'active', 'inactive'
     training_status VARCHAR(20) NOT NULL DEFAULT 'pending',  -- 'pending', 'scheduled', 'completed'
+    target_sales_monthly INTEGER DEFAULT 10,                 -- Meta mensal de novas vendas/clientes
+    target_trainings_monthly INTEGER DEFAULT 3,              -- Meta mensal de treinamentos VIP realizados
     
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),

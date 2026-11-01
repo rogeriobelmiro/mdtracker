@@ -357,6 +357,8 @@ export interface Affiliate {
   referralCode: string; // Slug único para link de indicação
   status: 'active' | 'inactive';
   trainingStatus?: 'pending' | 'scheduled' | 'completed';
+  targetSalesMonthly?: number; // Meta mensal de novos clientes/assinaturas (padrão: 10)
+  targetTrainingsMonthly?: number; // Meta mensal de treinamentos VIP realizados (padrão: 3)
   notes?: string;
   createdAt: string;
   updatedAt?: string;

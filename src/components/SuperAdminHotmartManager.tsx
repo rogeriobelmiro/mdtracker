@@ -38,7 +38,11 @@ import {
   HelpCircle,
   Tag,
   ChevronRight,
-  Award
+  Award,
+  ArrowRightLeft,
+  Target,
+  Trophy,
+  TrendingUp
 } from 'lucide-react';
 import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate, ProductRelease } from '../types';
 import { 
@@ -52,6 +56,7 @@ import {
   updateAffiliate,
   deleteAffiliate,
   updateCompanyAffiliate,
+  transferAffiliateCompanies,
   fetchProductReleases,
   createProductRelease,
   updateProductRelease,
@@ -201,6 +206,8 @@ const DEFAULT_AFFILIATE_FORM = {
   pixKey: '',
   referralCode: '',
   status: 'active' as 'active' | 'inactive',
+  targetSalesMonthly: 10,
+  targetTrainingsMonthly: 3,
   notes: ''
 };
 
@@ -267,6 +274,11 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
   // Modal to assign affiliate to a company
   const [assigningCompany, setAssigningCompany] = useState<Company | null>(null);
   const [selectedAffiliateIdForAssignment, setSelectedAffiliateIdForAssignment] = useState<string>('');
+
+  // Modal to batch transfer all companies from one affiliate to another
+  const [transferModalSourceAffiliate, setTransferModalSourceAffiliate] = useState<Affiliate | null>(null);
+  const [transferDestinationAffiliateId, setTransferDestinationAffiliateId] = useState<string>('');
+  const [transferringBatch, setTransferringBatch] = useState(false);
 
   // Events Log State
   const [events, setEvents] = useState<HotmartEvent[]>([]);
@@ -599,6 +611,8 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       pixKey: aff.pixKey || '',
       referralCode: aff.referralCode || '',
       status: aff.status || 'active',
+      targetSalesMonthly: aff.targetSalesMonthly !== undefined ? aff.targetSalesMonthly : 10,
+      targetTrainingsMonthly: aff.targetTrainingsMonthly !== undefined ? aff.targetTrainingsMonthly : 3,
       notes: aff.notes || ''
     });
     setIsAffiliateModalOpen(true);
@@ -724,6 +738,40 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       await loadAffiliatesData();
     } catch (err: any) {
       await alert(err.message || 'Erro ao vincular afiliado');
+    }
+  };
+
+  const handleExecuteBatchTransfer = async () => {
+    if (!transferModalSourceAffiliate) return;
+    const sourceName = transferModalSourceAffiliate.name;
+    const targetAff = affiliates.find(a => a.id === transferDestinationAffiliateId);
+    const targetName = targetAff ? `${targetAff.name} (${targetAff.city || ''}/${targetAff.state})` : 'Plataforma Direta (Sem Afiliado)';
+
+    const confirmed = await confirm({
+      title: 'Confirmar Remanejamento de Carteira',
+      message: `Deseja transferir TODAS as empresas de "${sourceName}" para "${targetName}"? As futuras comissões e repasses passarão para o novo representante.`,
+      confirmText: 'Sim, Transferir Carteira',
+      cancelText: 'Cancelar'
+    });
+
+    if (!confirmed) return;
+
+    setTransferringBatch(true);
+    try {
+      const res = await transferAffiliateCompanies(
+        currentUser.email,
+        transferModalSourceAffiliate.id,
+        transferDestinationAffiliateId || ''
+      );
+      await success(`Sucesso! ${res.transferredCount} empresa(s) transferida(s) de "${sourceName}" para "${targetName}".`);
+      setTransferModalSourceAffiliate(null);
+      setSelectedAffiliateForCompanies(null);
+      await loadCompaniesData();
+      await loadAffiliatesData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao transferir carteira');
+    } finally {
+      setTransferringBatch(false);
     }
   };
 
@@ -1820,6 +1868,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                     <th className="py-3.5 px-4">Contatos</th>
                     <th className="py-3.5 px-4">Chave PIX (Repasse)</th>
                     <th className="py-3.5 px-4">% Comissões (Mensal / Treinamento)</th>
+                    <th className="py-3.5 px-4">Metas do Mês (Vendas & Setup)</th>
                     <th className="py-3.5 px-4">Link Exclusivo de Afiliado</th>
                     <th className="py-3.5 px-4">Empresas & Repasse Estimado</th>
                     <th className="py-3.5 px-5 text-right">Ações</th>
@@ -1828,7 +1877,7 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 <tbody className="divide-y divide-slate-100">
                   {filteredAffiliates.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
                         Nenhum afiliado ou representante encontrado. Clique em "+ Novo Afiliado" para cadastrar o primeiro!
                       </td>
                     </tr>
@@ -1947,6 +1996,43 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                             </div>
                           </td>
 
+                          {/* Metas Comerciais */}
+                          <td className="py-4 px-4 min-w-[190px]">
+                            <div className="space-y-2">
+                              <div>
+                                <div className="flex items-center justify-between text-[11px] mb-0.5">
+                                  <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                    <Target className="w-3 h-3 text-emerald-600" />
+                                    <span>Vendas: <strong>{aff.activeCompaniesCount || 0} / {aff.targetSalesMonthly || 10}</strong></span>
+                                  </span>
+                                  <span className="font-bold text-emerald-700">{aff.salesProgressPct || 0}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div 
+                                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min(100, aff.salesProgressPct || 0)}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className="flex items-center justify-between text-[11px] mb-0.5">
+                                  <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                    <Trophy className="w-3 h-3 text-indigo-600" />
+                                    <span>Treinamentos: <strong>{aff.completedTrainingsCount || 0} / {aff.targetTrainingsMonthly || 3}</strong></span>
+                                  </span>
+                                  <span className="font-bold text-indigo-700">{aff.trainingsProgressPct || 0}%</span>
+                                </div>
+                                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div 
+                                    className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min(100, aff.trainingsProgressPct || 0)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
                           {/* Link de Afiliado */}
                           <td className="py-4 px-4">
                             <div className="space-y-1.5">
@@ -1988,6 +2074,20 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                           {/* Ações */}
                           <td className="py-4 px-5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {Boolean(aff.totalCompanies && aff.totalCompanies > 0) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTransferModalSourceAffiliate(aff);
+                                    setTransferDestinationAffiliateId('');
+                                  }}
+                                  className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
+                                  title="Remanejar / Transferir Carteira de Empresas para Outro Afiliado"
+                                >
+                                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => handleOpenEditAffiliateModal(aff)}
                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
@@ -2567,6 +2667,43 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                   />
                 </div>
 
+                {/* Metas Mensais Comerciais (Vendas e Treinamentos) */}
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200/80">
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 uppercase mb-1 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Meta Mensal de Vendas (Clientes)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={affiliateFormData.targetSalesMonthly || 10}
+                      onChange={(e) => setAffiliateFormData({ ...affiliateFormData, targetSalesMonthly: Number(e.target.value) })}
+                      className="w-full px-4 py-2 bg-white border border-emerald-300 rounded-xl text-sm font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                    <p className="text-[10px] text-emerald-700 mt-1">Assinaturas ativas esperadas no mês.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 uppercase mb-1 flex items-center gap-1.5">
+                      <Trophy className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Meta Mensal de Treinamentos VIP</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={affiliateFormData.targetTrainingsMonthly || 3}
+                      onChange={(e) => setAffiliateFormData({ ...affiliateFormData, targetTrainingsMonthly: Number(e.target.value) })}
+                      className="w-full px-4 py-2 bg-white border border-emerald-300 rounded-xl text-sm font-bold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                    <p className="text-[10px] text-emerald-700 mt-1">Treinamentos VIP/Setup vendidos no mês.</p>
+                  </div>
+                </div>
+
                 {/* Status */}
                 <div className="sm:col-span-2 flex items-center gap-4 pt-1">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
@@ -2660,30 +2797,61 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 Nenhuma empresa vinculada a este representante ainda.
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {companies
-                  .filter(c => c.affiliateId === selectedAffiliateForCompanies.id || (selectedAffiliateForCompanies.referralCode && c.affiliateCode?.toLowerCase() === selectedAffiliateForCompanies.referralCode.toLowerCase()))
-                  .map((comp) => {
-                    const isActive = comp.subscriptionStatus === 'active';
-                    return (
-                      <div key={comp.id} className="py-3 flex items-center justify-between gap-4">
-                        <div>
-                          <div className="font-bold text-slate-900 text-sm">{comp.name}</div>
-                          <div className="text-[11px] text-slate-500">
-                            Cadastrada em {new Date(comp.createdAt).toLocaleDateString('pt-BR')} • {comp.responsibleName || 'Responsável não informado'}
+              <div className="space-y-3">
+                {/* Banner de Remanejamento em Lote */}
+                <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-amber-900 font-medium">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Representante suspenso ou precisa remanejar clientes?</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransferModalSourceAffiliate(selectedAffiliateForCompanies);
+                      setTransferDestinationAffiliateId('');
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shrink-0 shadow-xs"
+                  >
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    <span>Transferir Toda a Carteira</span>
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {companies
+                    .filter(c => c.affiliateId === selectedAffiliateForCompanies.id || (selectedAffiliateForCompanies.referralCode && c.affiliateCode?.toLowerCase() === selectedAffiliateForCompanies.referralCode.toLowerCase()))
+                    .map((comp) => {
+                      const isActive = comp.subscriptionStatus === 'active';
+                      return (
+                        <div key={comp.id} className="py-3 flex items-center justify-between gap-4">
+                          <div>
+                            <div className="font-bold text-slate-900 text-sm">{comp.name}</div>
+                            <div className="text-[11px] text-slate-500">
+                              Cadastrada em {new Date(comp.createdAt).toLocaleDateString('pt-BR')} • {comp.responsibleName || 'Responsável não informado'}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                              isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {isActive ? 'Assinatura Ativa' : 'Em Teste / Expirada'}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAssignModal(comp)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition"
+                              title="Remanejar empresa para outro representante"
+                            >
+                              <ArrowRightLeft className="w-3 h-3 text-indigo-500" />
+                              <span>Remanejar</span>
+                            </button>
                           </div>
                         </div>
-
-                        <div className="text-right">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                            isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {isActive ? 'Assinatura Ativa' : 'Em Teste / Expirada'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                </div>
               </div>
             )}
 
@@ -2759,6 +2927,79 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm"
               >
                 Salvar Vínculo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: TRANSFERÊNCIA EM LOTE DE CARTEIRA (REMANEJAMENTO) */}
+      {/* ========================================================= */}
+      {transferModalSourceAffiliate && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5 text-amber-600" />
+                  <span>Transferir Toda a Carteira</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Origem: <strong>{transferModalSourceAffiliate.name}</strong> ({transferModalSourceAffiliate.state})
+                </p>
+              </div>
+
+              <button
+                onClick={() => setTransferModalSourceAffiliate(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+              Esta ação transferirá todas as empresas vinculadas a <strong>{transferModalSourceAffiliate.name}</strong> para o novo representante selecionado abaixo. Ideal em caso de suspensão, desligamento ou transição de região.
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase">
+                Selecione o Novo Representante Destino
+              </label>
+
+              <select
+                value={transferDestinationAffiliateId}
+                onChange={(e) => setTransferDestinationAffiliateId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Plataforma Direta (Sem Afiliado / Desvincular)</option>
+                {affiliates
+                  .filter(a => a.id !== transferModalSourceAffiliate.id)
+                  .map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.state} - {a.city || 'Brasil'}) {a.status === 'inactive' ? '⚠️ (Pausado)' : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setTransferModalSourceAffiliate(null)}
+                className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={transferringBatch}
+                onClick={handleExecuteBatchTransfer}
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                <span>{transferringBatch ? 'Transferindo...' : 'Confirmar Transferência'}</span>
               </button>
             </div>
           </div>
