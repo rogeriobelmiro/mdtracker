@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   FileDown,
   Video,
+  Play,
   Image as ImageIcon,
   Type as TypeIcon,
   CreditCard,
@@ -1288,6 +1289,30 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
           backgroundColor: 'slate'
         };
         break;
+      case 'vsl_pitch':
+        newBlock = {
+          id: newBlockId,
+          type: 'vsl_pitch',
+          title: 'Assista à Apresentação Exclusiva',
+          subtitle: 'Descubra em detalhes o método validado para transformar seus resultados.',
+          videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoCaption: '🔊 Ligue o áudio. As informações e o botão de acesso serão liberados durante o vídeo.',
+          pitchDelayMinutes: 5,
+          pitchDelaySeconds: 30,
+          pitchHeadline: 'Oferta Especial Liberada no Vídeo!',
+          pitchSubheadline: 'Garanta sua condição única com todos os bônus e garantia incondicional de 7 dias.',
+          pitchPriceText: '12x de R$ 29,70 ou R$ 297 à vista',
+          pitchCtaText: 'Quero Garantir Minha Vaga Agora 🚀',
+          pitchCtaUrl: '#capture-form',
+          pitchCtaSubtext: '🔒 Compra 100% Segura • Acesso Imediato • 7 Dias de Garantia',
+          pitchBadge: '🔥 CONDIÇÃO EXCLUSIVA DO PITCH',
+          pitchAnimation: 'bounce',
+          pitchRememberVisitor: true,
+          pitchAutoScroll: true,
+          enabled: true,
+          backgroundColor: 'dark'
+        };
+        break;
       case 'image':
         newBlock = {
           id: newBlockId,
@@ -2363,6 +2388,7 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                           const blockLabels: Record<LandingPageBlockType, { label: string; icon: any; color: string }> = {
                             header_form: { label: 'Cabeçalho com Texto & Formulário', icon: LayoutTemplate, color: 'text-emerald-600 bg-emerald-50' },
                             video: { label: 'Vídeo em Destaque', icon: Video, color: 'text-red-600 bg-red-50' },
+                            vsl_pitch: { label: 'Vídeo VSL com Pitch Delay 🔥', icon: Play, color: 'text-indigo-600 bg-indigo-50' },
                             image: { label: 'Imagem / Banner', icon: ImageIcon, color: 'text-indigo-600 bg-indigo-50' },
                             text: { label: 'Texto Narrativo', icon: TypeIcon, color: 'text-slate-700 bg-slate-100' },
                             features: { label: 'Benefícios & Diferenciais', icon: Layers, color: 'text-blue-600 bg-blue-50' },
@@ -2862,6 +2888,315 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                                           placeholder="Ex: Vídeo gravado com nossa diretoria comercial"
                                           className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
                                         />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Specific Fields: VSL & PITCH DELAY */}
+                                  {block.type === 'vsl_pitch' && (
+                                    <div className="space-y-4 pt-2 border-t border-slate-200">
+                                      {/* Video Embed */}
+                                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                                        <div className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                                          <Video className="w-4 h-4 text-rose-500" />
+                                          <span>Vídeo de Vendas (VSL)</span>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            URL do Vídeo (YouTube, Vimeo, etc.)
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.videoUrl || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, videoUrl: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="https://www.youtube.com/watch?v=..."
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Aviso de Áudio / Legenda
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.videoCaption || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, videoCaption: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔊 Ligue o som. A oferta abaixo será liberada durante a apresentação."
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Pitch Timing */}
+                                      <div className="p-3.5 bg-indigo-50/70 rounded-2xl border border-indigo-100 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                          <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+                                            <Clock className="w-4 h-4 text-indigo-600" />
+                                            <span>Tempo do Pitch Delay</span>
+                                          </div>
+                                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                                            {block.pitchDelayMinutes || 0}m {block.pitchDelaySeconds || 0}s
+                                          </span>
+                                        </div>
+                                        <p className="text-[11px] text-indigo-900/80 leading-relaxed">
+                                          Defina o momento exato em que a oferta e o botão de compra serão revelados na tela.
+                                        </p>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Minutos</label>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="120"
+                                              value={block.pitchDelayMinutes ?? 5}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchDelayMinutes: Math.max(0, parseInt(e.target.value) || 0) };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Segundos</label>
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              max="59"
+                                              value={block.pitchDelaySeconds ?? 30}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchDelaySeconds: Math.max(0, Math.min(59, parseInt(e.target.value) || 0)) };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Quick presets */}
+                                        <div className="flex flex-wrap gap-1.5 pt-1">
+                                          {[
+                                            { label: '3 min', m: 3, s: 0 },
+                                            { label: '5 min', m: 5, s: 0 },
+                                            { label: '8m 30s', m: 8, s: 30 },
+                                            { label: '10 min', m: 10, s: 0 },
+                                            { label: '12m 45s', m: 12, s: 45 },
+                                            { label: '15 min', m: 15, s: 0 }
+                                          ].map(p => (
+                                            <button
+                                              key={p.label}
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchDelayMinutes: p.m, pitchDelaySeconds: p.s };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="px-2 py-1 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white transition text-[10px] font-bold shadow-2xs"
+                                            >
+                                              {p.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Offer Details (Revealed) */}
+                                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                                        <div className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                                          <Sparkles className="w-4 h-4 text-amber-500" />
+                                          <span>Conteúdo da Oferta Revelada</span>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Selo de Destaque da Oferta
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.pitchBadge || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, pitchBadge: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔥 OFERTA LIBERADA NO VÍDEO"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Título da Oferta
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.pitchHeadline || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, pitchHeadline: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Garanta Sua Vaga com Condição Exclusiva!"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Subtítulo / Descrição da Oferta
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.pitchSubheadline || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, pitchSubheadline: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: Aproveite o bônus especial anunciado no vídeo disponível por tempo limitado."
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Preço Promocional em Destaque (Opcional)
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.pitchPriceText || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, pitchPriceText: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: De R$ 997 por apenas 12x de R$ 29,70 (ou R$ 297 à vista)"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-semibold text-emerald-700"
+                                          />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Texto do Botão de Compra / CTA
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.pitchCtaText || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchCtaText: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: Quero Garantir Minha Vaga Agora 🚀"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                              Link de Destino do CTA
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={block.pitchCtaUrl || ''}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchCtaUrl: e.target.value };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              placeholder="Ex: #capture-form ou link da Hotmart"
+                                              className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-mono"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                                            Subtexto de Segurança / Garantia
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={block.pitchCtaSubtext || ''}
+                                            onChange={e => {
+                                              const blocks = [...(editingPage.blocks || [])];
+                                              blocks[idx] = { ...block, pitchCtaSubtext: e.target.value };
+                                              setEditingPage({ ...editingPage, blocks });
+                                            }}
+                                            placeholder="Ex: 🔒 Compra 100% Segura • Acesso Imediato • 7 Dias de Garantia"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Animations & Options */}
+                                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                                        <label className="block text-[10px] font-bold text-slate-600 uppercase">
+                                          Efeito de Entrada do Pitch
+                                        </label>
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                          {[
+                                            { id: 'bounce' as const, label: 'Bounce 💥' },
+                                            { id: 'slide_up' as const, label: 'Subir ⬆️' },
+                                            { id: 'zoom' as const, label: 'Zoom 🔍' },
+                                            { id: 'fade' as const, label: 'Fade 🌫️' }
+                                          ].map(anim => (
+                                            <button
+                                              key={anim.id}
+                                              type="button"
+                                              onClick={() => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchAnimation: anim.id };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className={`py-1.5 px-2 rounded-xl text-center text-xs font-semibold border transition ${
+                                                (block.pitchAnimation || 'bounce') === anim.id
+                                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                                              }`}
+                                            >
+                                              {anim.label}
+                                            </button>
+                                          ))}
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-200 space-y-2">
+                                          <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                                            <input
+                                              type="checkbox"
+                                              checked={block.pitchRememberVisitor !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchRememberVisitor: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-600 rounded-md"
+                                            />
+                                            <span>Lembrar visitante que já assistiu (não atrasa no reload)</span>
+                                          </label>
+
+                                          <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                                            <input
+                                              type="checkbox"
+                                              checked={block.pitchAutoScroll !== false}
+                                              onChange={e => {
+                                                const blocks = [...(editingPage.blocks || [])];
+                                                blocks[idx] = { ...block, pitchAutoScroll: e.target.checked };
+                                                setEditingPage({ ...editingPage, blocks });
+                                              }}
+                                              className="w-4 h-4 text-indigo-600 rounded-md"
+                                            />
+                                            <span>Rolar a página suavemente até o botão quando for liberado</span>
+                                          </label>
+                                        </div>
                                       </div>
                                     </div>
                                   )}
@@ -7046,6 +7381,118 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                             );
                           }
 
+                          if (b.type === 'vsl_pitch') {
+                            const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                            const isDark = b.backgroundColor === 'dark';
+                            return (
+                              <section key={b.id || bIdx} className={`py-14 md:py-20 px-6 sm:px-10 ${bgClass}`}>
+                                <div className="max-w-3xl mx-auto text-center">
+                                  {b.title && <h2 className="text-xl sm:text-2xl md:text-3xl font-black mb-2">{b.title}</h2>}
+                                  {b.subtitle && <p className={`text-xs sm:text-sm mb-6 max-w-xl mx-auto ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{b.subtitle}</p>}
+
+                                  {embedUrl ? (
+                                    <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-700/50 bg-black aspect-video max-w-2xl mx-auto ring-4 ring-black/10">
+                                      <iframe
+                                        className="w-full h-full"
+                                        src={embedUrl}
+                                        title={b.title || 'Vídeo de Vendas (VSL)'}
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-2xl border-2 border-dashed border-slate-600 p-10 text-center text-slate-400 text-xs max-w-2xl mx-auto">
+                                      <Play className="w-10 h-10 mx-auto mb-2 text-rose-500 opacity-80" />
+                                      Insira o link do YouTube ou Vimeo da sua VSL
+                                    </div>
+                                  )}
+                                  {b.videoCaption && (
+                                    <p className={`text-xs mt-3 italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      {b.videoCaption}
+                                    </p>
+                                  )}
+
+                                  {/* PITCH DELAY SECTION (PREVIEW) */}
+                                  {!previewPitchRevealed ? (
+                                    <div
+                                      onClick={() => setPreviewPitchRevealed(true)}
+                                      className="mt-8 p-6 bg-amber-500/10 border-2 border-dashed border-amber-400 rounded-3xl text-center cursor-pointer hover:bg-amber-500/20 transition shadow-sm max-w-xl mx-auto"
+                                      title="Clique para simular a revelação da oferta no preview"
+                                    >
+                                      <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center mx-auto mb-2 shadow-inner">
+                                        <Clock className="w-5 h-5 animate-spin" />
+                                      </div>
+                                      <h4 className="font-black text-amber-950 text-sm sm:text-base">
+                                        Oferta & Botão Ocultos até o Pitch ({b.pitchDelayMinutes || 0}m {b.pitchDelaySeconds || 0}s)
+                                      </h4>
+                                      <p className="text-xs text-amber-900/80 mt-1 max-w-md mx-auto">
+                                        O botão de compra e a condição especial serão revelados aos visitantes neste exato momento do vídeo.
+                                      </p>
+                                      <button
+                                        type="button"
+                                        className="mt-3.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 mx-auto"
+                                      >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>Simular Revelação da Oferta</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="mt-8 p-6 sm:p-8 bg-white/95 text-slate-900 rounded-3xl border-2 border-indigo-200 shadow-2xl max-w-xl mx-auto animate-scale-in text-center relative overflow-hidden">
+                                      {b.pitchBadge && (
+                                        <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm mb-3">
+                                          <span>{b.pitchBadge}</span>
+                                        </div>
+                                      )}
+
+                                      {b.pitchHeadline && (
+                                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                                          {b.pitchHeadline}
+                                        </h3>
+                                      )}
+
+                                      {b.pitchSubheadline && (
+                                        <p className="text-xs sm:text-sm text-slate-600 mb-4 max-w-md mx-auto">
+                                          {b.pitchSubheadline}
+                                        </p>
+                                      )}
+
+                                      {b.pitchPriceText && (
+                                        <div className="my-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 font-extrabold text-sm sm:text-base tracking-wide">
+                                          {b.pitchPriceText}
+                                        </div>
+                                      )}
+
+                                      <div className="pt-2">
+                                        <a
+                                          href={b.pitchCtaUrl || '#capture-form'}
+                                          onClick={e => {
+                                            if (!b.pitchCtaUrl || b.pitchCtaUrl === '#capture-form') {
+                                              e.preventDefault();
+                                              const formEl = document.getElementById('preview-capture-form');
+                                              formEl?.scrollIntoView({ behavior: 'smooth' });
+                                            }
+                                          }}
+                                          className={`w-full py-4 px-6 text-sm sm:text-base font-black text-white shadow-xl transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer ${buttonShapeClass}`}
+                                          style={{ backgroundColor: primaryColor }}
+                                        >
+                                          <span>{b.pitchCtaText || 'Quero Garantir Minha Vaga Agora 🚀'}</span>
+                                          <ArrowRight className="w-5 h-5" />
+                                        </a>
+
+                                        {b.pitchCtaSubtext && (
+                                          <p className="text-[11px] text-slate-500 mt-2.5 font-medium flex items-center justify-center gap-1">
+                                            {b.pitchCtaSubtext}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </section>
+                            );
+                          }
+
                           if (b.type === 'image') {
                             const isFullWidth = b.imageWidth === 'full';
                             return (
@@ -7577,6 +8024,14 @@ export const LandingPagesManager: React.FC<LandingPagesManagerProps> = ({
                   title: 'Vídeo em Destaque',
                   tag: 'Engajamento',
                   description: 'Incorpore vídeo do YouTube ou Vimeo em player responsivo de alta retenção.'
+                },
+                {
+                  type: 'vsl_pitch' as const,
+                  icon: Play,
+                  color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+                  title: 'Vídeo VSL com Pitch Delay',
+                  tag: 'Pitch de Vendas 🔥',
+                  description: 'Vídeo com botão de compra, preço e garantia liberados somente no momento exato do pitch.'
                 },
                 {
                   type: 'image' as const,

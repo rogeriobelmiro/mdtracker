@@ -841,6 +841,7 @@ export type LandingPageBlockType =
   | 'hero' 
   | 'header_form'
   | 'video' 
+  | 'vsl_pitch'
   | 'image' 
   | 'text' 
   | 'features' 
@@ -903,6 +904,20 @@ export interface LandingPageCustomBlock {
   videoUrl?: string;
   videoCaption?: string;
   videoAspectRatio?: '16/9' | '4/3' | '1/1';
+
+  // VSL & Pitch Delay block
+  pitchDelayMinutes?: number;
+  pitchDelaySeconds?: number;
+  pitchHeadline?: string;
+  pitchSubheadline?: string;
+  pitchCtaText?: string;
+  pitchCtaUrl?: string;
+  pitchCtaSubtext?: string;
+  pitchPriceText?: string;
+  pitchBadge?: string;
+  pitchAnimation?: 'fade' | 'slide_up' | 'zoom' | 'bounce';
+  pitchRememberVisitor?: boolean;
+  pitchAutoScroll?: boolean;
 
   // Image block
   imageUrl?: string;

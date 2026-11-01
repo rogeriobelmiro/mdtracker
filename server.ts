@@ -16113,6 +16113,84 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                     `;
                 }
 
+                if (b.type === 'vsl_pitch') {
+                    const embedUrl = normalizeEmbedUrl(b.videoUrl || '');
+                    const isDark = b.backgroundColor === 'dark';
+                    const delaySec = ((Number(b.pitchDelayMinutes || 0)) * 60) + Number(b.pitchDelaySeconds || 0);
+                    const animClass = b.pitchAnimation === 'slide_up' ? 'anim-slide-up' :
+                                      b.pitchAnimation === 'zoom' ? 'anim-zoom' :
+                                      b.pitchAnimation === 'fade' ? 'anim-fade' : 'anim-bounce';
+                    const ctaUrl = b.pitchCtaUrl || '#capture-form';
+                    
+                    return `
+                      <section class="py-14 md:py-20 ${bgClass}">
+                        <div class="max-w-4xl mx-auto px-4 text-center">
+                          ${b.title ? `<h2 class="text-2xl sm:text-3xl md:text-4xl font-black mb-3">${b.title}</h2>` : ''}
+                          ${b.subtitle ? `<p class="text-sm sm:text-base opacity-80 mb-8 max-w-2xl mx-auto">${b.subtitle}</p>` : ''}
+                          ${embedUrl ? `
+                            <div class="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800/60 bg-black aspect-video max-w-3xl mx-auto ring-4 ring-black/10">
+                              <iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                          ` : `
+                            <div class="rounded-2xl border-2 border-dashed border-slate-600 p-12 text-center text-slate-400">
+                              Nenhum vídeo configurado para a VSL
+                            </div>
+                          `}
+                          ${b.videoCaption ? `<p class="text-xs opacity-75 mt-3 italic">${b.videoCaption}</p>` : ''}
+
+                          <!-- Pitch Delay Offer Container -->
+                          <div id="vsl-pitch-${b.id}" 
+                               class="vsl-block-delayed hidden-pitch-delay ${animClass} mt-10 p-6 sm:p-10 bg-white text-slate-900 rounded-3xl border-2 border-indigo-200 shadow-2xl max-w-xl mx-auto text-center relative"
+                               data-block-id="${b.id}"
+                               data-delay-seconds="${delaySec}"
+                               data-anim="${animClass}"
+                               data-remember="${b.pitchRememberVisitor !== false}"
+                               data-autoscroll="${b.pitchAutoScroll !== false}">
+                            
+                            ${b.pitchBadge ? `
+                              <div class="inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm mb-4">
+                                <span>${b.pitchBadge}</span>
+                              </div>
+                            ` : ''}
+
+                            ${b.pitchHeadline ? `
+                              <h3 class="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight mb-2">
+                                ${b.pitchHeadline}
+                              </h3>
+                            ` : ''}
+
+                            ${b.pitchSubheadline ? `
+                              <p class="text-xs sm:text-sm text-slate-600 mb-5 max-w-md mx-auto">
+                                ${b.pitchSubheadline}
+                              </p>
+                            ` : ''}
+
+                            ${b.pitchPriceText ? `
+                              <div class="my-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 font-black text-base sm:text-lg tracking-wide shadow-xs">
+                                ${b.pitchPriceText}
+                              </div>
+                            ` : ''}
+
+                            <div class="pt-2">
+                              <a href="${ctaUrl}" 
+                                 class="inline-flex items-center justify-center gap-2 w-full py-4 px-8 text-base sm:text-lg font-black text-white rounded-2xl shadow-xl transition transform hover:-translate-y-0.5"
+                                 style="background-color: ${primaryColor}">
+                                <span>${b.pitchCtaText || 'Quero Garantir Minha Vaga Agora 🚀'}</span>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                              </a>
+
+                              ${b.pitchCtaSubtext ? `
+                                <p class="text-xs text-slate-500 mt-3 font-medium flex items-center justify-center gap-1.5">
+                                  ${b.pitchCtaSubtext}
+                                </p>
+                              ` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    `;
+                }
+
                 if (b.type === 'image') {
                     const isFullWidth = b.imageWidth === 'full';
                     return `
@@ -17279,6 +17357,40 @@ app.get(['/p/:slug', '/lp/:slug', '/p/:slug/obrigado', '/lp/:slug/obrigado'], as
                   doReveal();
                 } else {
                   setTimeout(doReveal, delaySeconds * 1000);
+                }
+
+                // Individual VSL Pitch Delay Blocks
+                var vslBlocks = document.querySelectorAll('.vsl-block-delayed');
+                if (vslBlocks && vslBlocks.length > 0) {
+                  vslBlocks.forEach(function(vslEl) {
+                    var bId = vslEl.getAttribute('data-block-id') || 'vsl';
+                    var bDelay = parseInt(vslEl.getAttribute('data-delay-seconds') || '0', 10);
+                    var bAnim = vslEl.getAttribute('data-anim') || 'anim-bounce';
+                    var bRemember = vslEl.getAttribute('data-remember') !== 'false';
+                    var bAutoScroll = vslEl.getAttribute('data-autoscroll') === 'true';
+                    var vslStorageKey = 'mdtracker_vsl_block_' + pageSlug + '_' + bId;
+
+                    function revealThisVsl() {
+                      vslEl.classList.remove('hidden-pitch-delay');
+                      vslEl.classList.add('revealed-pitch-delay');
+                      vslEl.classList.add(bAnim);
+                      if (bRemember) {
+                        try { localStorage.setItem(vslStorageKey, '1'); } catch(e) {}
+                      }
+                      if (bAutoScroll) {
+                        setTimeout(function() {
+                          vslEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 250);
+                      }
+                      console.log('[MDTracker] Bloco VSL ' + bId + ' revelado com sucesso após ' + bDelay + 's.');
+                    }
+
+                    if (bypass || (bRemember && localStorage.getItem(vslStorageKey) === '1') || bDelay <= 0) {
+                      revealThisVsl();
+                    } else {
+                      setTimeout(revealThisVsl, bDelay * 1000);
+                    }
+                  });
                 }
               })();
             </script>
