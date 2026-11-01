@@ -42,9 +42,11 @@ import {
   ArrowRightLeft,
   Target,
   Trophy,
-  TrendingUp
+  TrendingUp,
+  Video,
+  Play
 } from 'lucide-react';
-import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate, ProductRelease } from '../types';
+import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate, ProductRelease, TrainingVideo } from '../types';
 import { 
   fetchAdminCompanies, 
   updateCompanySubscription, 
@@ -60,7 +62,11 @@ import {
   fetchProductReleases,
   createProductRelease,
   updateProductRelease,
-  deleteProductRelease
+  deleteProductRelease,
+  fetchTrainingVideos,
+  createTrainingVideo,
+  updateTrainingVideo,
+  deleteTrainingVideo
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { BrazilAffiliatesMap } from './BrazilAffiliatesMap';
@@ -215,11 +221,33 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
   const { alert, confirm, success } = useDialog();
   const isSuperAdmin = currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br';
 
-  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'hotmart_config' | 'affiliates' | 'product_releases' | 'events_log'>('companies');
+  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'affiliates' | 'training_videos' | 'product_releases' | 'hotmart_config' | 'events_log'>('companies');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Training Videos State
+  const [trainingVideos, setTrainingVideos] = useState<TrainingVideo[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  const [videoSearchTerm, setVideoSearchTerm] = useState('');
+  const [videoModuleFilter, setVideoModuleFilter] = useState('all');
+  const [isTrainingVideoModalOpen, setIsTrainingVideoModalOpen] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [previewVideo, setPreviewVideo] = useState<TrainingVideo | null>(null);
+  const [videoFormData, setVideoFormData] = useState<Partial<TrainingVideo>>({
+    title: '',
+    duration: '10:00 min',
+    module: 'Módulo 1: Apresentação & Vendas',
+    description: '',
+    videoUrl: '',
+    thumbnail: '',
+    tags: ['Vendas', 'Scripts'],
+    downloadUrl: '',
+    active: true,
+    orderIndex: 1
+  });
+  const [savingVideo, setSavingVideo] = useState(false);
 
   // Product Releases State
   const [releases, setReleases] = useState<ProductRelease[]>([]);
@@ -418,12 +446,108 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     }
   };
 
+  // Training Videos Actions
+  const loadTrainingVideosData = async () => {
+    setLoadingVideos(true);
+    try {
+      const data = await fetchTrainingVideos(currentUser.email);
+      setTrainingVideos(data);
+    } catch (err: any) {
+      console.warn('Erro ao carregar vídeos de treinamento:', err.message);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
+  const handleOpenNewVideoModal = () => {
+    setEditingVideoId(null);
+    setVideoFormData({
+      title: '',
+      duration: '10:00 min',
+      module: 'Módulo 1: Apresentação & Vendas',
+      description: '',
+      videoUrl: '',
+      thumbnail: '',
+      tags: ['Vendas', 'Scripts'],
+      downloadUrl: '',
+      active: true,
+      orderIndex: trainingVideos.length + 1
+    });
+    setIsTrainingVideoModalOpen(true);
+  };
+
+  const handleOpenEditVideoModal = (vid: TrainingVideo) => {
+    setEditingVideoId(vid.id);
+    setVideoFormData({
+      title: vid.title,
+      duration: vid.duration,
+      module: vid.module,
+      description: vid.description,
+      videoUrl: vid.videoUrl,
+      thumbnail: vid.thumbnail || '',
+      tags: vid.tags || [],
+      downloadUrl: vid.downloadUrl || '',
+      active: vid.active !== false,
+      orderIndex: vid.orderIndex || 1
+    });
+    setIsTrainingVideoModalOpen(true);
+  };
+
+  const handleSaveVideoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoFormData.title?.trim() || !videoFormData.videoUrl?.trim()) {
+      await alert('Por favor, preencha o título e a URL do vídeo.');
+      return;
+    }
+
+    setSavingVideo(true);
+    try {
+      if (editingVideoId) {
+        await updateTrainingVideo(currentUser.email, editingVideoId, videoFormData);
+        await success('Vídeo de treinamento atualizado com sucesso!');
+      } else {
+        await createTrainingVideo(currentUser.email, videoFormData);
+        await success('Novo vídeo de treinamento cadastrado com sucesso!');
+      }
+      setIsTrainingVideoModalOpen(false);
+      loadTrainingVideosData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao salvar vídeo de treinamento');
+    } finally {
+      setSavingVideo(false);
+    }
+  };
+
+  const handleToggleVideoActiveAction = async (vid: TrainingVideo) => {
+    try {
+      await updateTrainingVideo(currentUser.email, vid.id, { active: !vid.active });
+      await success(`Vídeo ${!vid.active ? 'ativado' : 'pausado'} com sucesso!`);
+      loadTrainingVideosData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao alterar status do vídeo');
+    }
+  };
+
+  const handleDeleteVideoAction = async (vid: TrainingVideo) => {
+    const ok = await confirm(`Tem certeza que deseja excluir o vídeo "${vid.title}"?`);
+    if (!ok) return;
+
+    try {
+      await deleteTrainingVideo(currentUser.email, vid.id);
+      await success('Vídeo de treinamento excluído com sucesso.');
+      loadTrainingVideosData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao excluir vídeo');
+    }
+  };
+
   useEffect(() => {
     if (isSuperAdmin) {
       loadCompaniesData();
       loadHotmartConfig();
       loadAffiliatesData();
       loadReleasesData();
+      loadTrainingVideosData();
       if (activeSubTab === 'events_log') {
         loadEventsData();
       }
@@ -921,6 +1045,19 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             <Users className="w-4 h-4 text-cyan-400" />
             <span>Afiliados & Representantes Brasil ({totalAffiliates})</span>
             <span className="px-1.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-bold">Novo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('training_videos')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
+              activeSubTab === 'training_videos'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-emerald-400" />
+            <span>Vídeos de Treinamento ({trainingVideos.length})</span>
+            <span className="px-1.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-bold">Capacitação</span>
           </button>
 
           <button
@@ -2128,6 +2265,211 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     )}
 
       {/* ========================================================= */}
+      {/* TAB: VÍDEOS DE TREINAMENTO (CAPACITAÇÃO DE AFILIADOS) */}
+      {/* ========================================================= */}
+      {activeSubTab === 'training_videos' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-emerald-600" />
+                <span>Gestão de Vídeos de Treinamento & Capacitação</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Cadastre e organize as videoaulas, apresentações e tutoriais exibidos no Portal de Afiliados.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadTrainingVideosData}
+                disabled={loadingVideos}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingVideos ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenNewVideoModal}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Novo Vídeo de Treinamento</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar por título, módulo ou tags do treinamento..."
+                value={videoSearchTerm}
+                onChange={(e) => setVideoSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                value={videoModuleFilter}
+                onChange={(e) => setVideoModuleFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="all">Todos os Módulos</option>
+                <option value="Módulo 1: Apresentação & Vendas">Módulo 1: Apresentação & Vendas</option>
+                <option value="Módulo 2: Configuração Técnica & Implantação">Módulo 2: Configuração Técnica & Implantação</option>
+                <option value="Módulo 3: Suporte & Gestão de Clientes">Módulo 3: Suporte & Gestão de Clientes</option>
+                <option value="Módulo 4: Financeiro & Comissões">Módulo 4: Financeiro & Comissões</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Videos Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {trainingVideos
+              .filter(v => {
+                if (videoModuleFilter !== 'all' && v.module !== videoModuleFilter) return false;
+                if (!videoSearchTerm.trim()) return true;
+                const term = videoSearchTerm.toLowerCase();
+                const matchTitle = v.title.toLowerCase().includes(term);
+                const matchDesc = v.description.toLowerCase().includes(term);
+                const matchModule = v.module.toLowerCase().includes(term);
+                const matchTags = v.tags?.some(t => t.toLowerCase().includes(term));
+                return matchTitle || matchDesc || matchModule || matchTags;
+              })
+              .map((vid) => {
+                const isActive = vid.active !== false;
+                return (
+                  <div
+                    key={vid.id}
+                    className={`bg-white rounded-3xl border transition hover:shadow-md flex flex-col overflow-hidden ${
+                      isActive ? 'border-slate-200/90' : 'border-slate-200 opacity-60 bg-slate-50/50'
+                    }`}
+                  >
+                    {/* Video Card Header / Preview Area */}
+                    <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-indigo-950 flex items-center justify-center text-white overflow-hidden group">
+                      <div className="absolute inset-0 bg-blue-600/10 backdrop-blur-3xs" />
+                      
+                      <button
+                        type="button"
+                        onClick={() => setPreviewVideo(vid)}
+                        className="w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-lg transform transition group-hover:scale-110 z-10"
+                        title="Assistir prévia do vídeo"
+                      >
+                        <Play className="w-5 h-5 ml-0.5" />
+                      </button>
+
+                      <div className="absolute top-3 left-3 z-10">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/60 text-white border border-white/20 backdrop-blur-xs">
+                          {vid.module}
+                        </span>
+                      </div>
+
+                      <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/70 text-slate-200 text-[11px] font-mono font-bold">
+                        <Clock className="w-3 h-3 text-emerald-400" />
+                        <span>{vid.duration}</span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Ordem #{vid.orderIndex || 0}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                            isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {isActive ? 'Ativo no Portal' : 'Pausado'}
+                          </span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
+                          {vid.title}
+                        </h4>
+
+                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                          {vid.description}
+                        </p>
+                      </div>
+
+                      {/* Tags */}
+                      {vid.tags && vid.tags.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap pt-1">
+                          {vid.tags.map((tag, tIdx) => (
+                            <span key={tIdx} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Card Actions */}
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewVideo(vid)}
+                          className="font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          <span>Assistir</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditVideoModal(vid)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                            title="Editar Vídeo"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleVideoActiveAction(vid)}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+                              isActive ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                            }`}
+                            title={isActive ? 'Pausar Vídeo' : 'Ativar Vídeo'}
+                          >
+                            {isActive ? 'Pausar' : 'Ativar'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVideoAction(vid)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 transition"
+                            title="Excluir Vídeo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {trainingVideos.length === 0 && !loadingVideos && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400">
+              <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-base font-bold text-slate-700">Nenhum vídeo de treinamento cadastrado</h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                Clique no botão acima para cadastrar a primeira aula para seus representantes comerciais.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
       {/* TAB 4: WEBHOOK AUDIT LOGS */}
       {/* ========================================================= */}
       {activeSubTab === 'events_log' && (
@@ -3325,6 +3667,240 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CRIAR / EDITAR VÍDEO DE TREINAMENTO */}
+      {/* ========================================================= */}
+      {isTrainingVideoModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-emerald-600" />
+                  <span>{editingVideoId ? 'Editar Vídeo de Treinamento' : 'Novo Vídeo de Treinamento'}</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Preencha as informações da aula que ficará visível aos representantes no portal de afiliados.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsTrainingVideoModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVideoSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Título da Aula / Treinamento *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={videoFormData.title || ''}
+                  onChange={(e) => setVideoFormData({ ...videoFormData, title: e.target.value })}
+                  placeholder="Ex: Pitch Comercial de 15 Minutos para Clínicas e Negócios Locais"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Módulo do Treinamento *
+                  </label>
+                  <select
+                    value={videoFormData.module || 'Módulo 1: Apresentação & Vendas'}
+                    onChange={(e) => setVideoFormData({ ...videoFormData, module: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Módulo 1: Apresentação & Vendas">Módulo 1: Apresentação & Vendas</option>
+                    <option value="Módulo 2: Configuração Técnica & Implantação">Módulo 2: Configuração Técnica & Implantação</option>
+                    <option value="Módulo 3: Suporte & Gestão de Clientes">Módulo 3: Suporte & Gestão de Clientes</option>
+                    <option value="Módulo 4: Financeiro & Comissões">Módulo 4: Financeiro & Comissões</option>
+                    <option value="Aulas Extras & Atualizações">Aulas Extras & Atualizações</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Duração Estimada
+                  </label>
+                  <input
+                    type="text"
+                    value={videoFormData.duration || ''}
+                    onChange={(e) => setVideoFormData({ ...videoFormData, duration: e.target.value })}
+                    placeholder="Ex: 14:20 min"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  URL do Vídeo (Embed / YouTube / Vimeo / Loom / MP4) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={videoFormData.videoUrl || ''}
+                  onChange={(e) => setVideoFormData({ ...videoFormData, videoUrl: e.target.value })}
+                  placeholder="https://www.youtube-nocookie.com/embed/... ou link do vídeo"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Para YouTube, utilize a URL embed (ex: <code>https://www.youtube-nocookie.com/embed/ID_DO_VIDEO</code>).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Descrição e Roteiro da Aula
+                </label>
+                <textarea
+                  rows={3}
+                  value={videoFormData.description || ''}
+                  onChange={(e) => setVideoFormData({ ...videoFormData, description: e.target.value })}
+                  placeholder="Resumo do conteúdo ensinado na aula e principais aprendizados..."
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Tags (separadas por vírgula)
+                  </label>
+                  <input
+                    type="text"
+                    value={Array.isArray(videoFormData.tags) ? videoFormData.tags.join(', ') : (videoFormData.tags || '')}
+                    onChange={(e) => setVideoFormData({ 
+                      ...videoFormData, 
+                      tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) 
+                    })}
+                    placeholder="Vendas, Pitch, Scripts"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Link de Download (Material de Apoio / PDF)
+                  </label>
+                  <input
+                    type="text"
+                    value={videoFormData.downloadUrl || ''}
+                    onChange={(e) => setVideoFormData({ ...videoFormData, downloadUrl: e.target.value })}
+                    placeholder="https://... link de slides ou PDF"
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={videoFormData.active !== false}
+                    onChange={(e) => setVideoFormData({ ...videoFormData, active: e.target.checked })}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                  />
+                  <span>Vídeo Ativo e Visível no Portal de Afiliados</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-semibold">Ordem:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={videoFormData.orderIndex || 1}
+                    onChange={(e) => setVideoFormData({ ...videoFormData, orderIndex: Number(e.target.value) })}
+                    className="w-16 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsTrainingVideoModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingVideo}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingVideo ? 'Salvando...' : (editingVideoId ? 'Atualizar Aula' : 'Salvar e Publicar Aula')}</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: PREVIEW DE VÍDEO DE TREINAMENTO */}
+      {/* ========================================================= */}
+      {previewVideo && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 space-y-4 text-white relative shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {previewVideo.module}
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-white mt-1">
+                  {previewVideo.title}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewVideo(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-inner">
+              <iframe
+                src={previewVideo.videoUrl}
+                title={previewVideo.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {previewVideo.description}
+            </p>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setPreviewVideo(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition"
+              >
+                Fechar Prévia
+              </button>
+            </div>
           </div>
         </div>
       )}

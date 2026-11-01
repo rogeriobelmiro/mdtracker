@@ -46,6 +46,10 @@ export interface TrainingVideo {
   tags: string[];
   isCompleted?: boolean;
   downloadUrl?: string;
+  active?: boolean;
+  orderIndex?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SystemActivityLog {

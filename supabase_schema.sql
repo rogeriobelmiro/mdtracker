@@ -793,3 +793,27 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_company_id ON public.system_activit
 CREATE INDEX IF NOT EXISTS idx_activity_logs_category ON public.system_activity_logs(category);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.system_activity_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_is_affiliate_support ON public.system_activity_logs(is_affiliate_support);
+
+-- ==============================================================================
+-- 9. VÍDEOS DE TREINAMENTO & CAPACITAÇÃO DE AFILIADOS
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.training_videos (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    duration VARCHAR(50) DEFAULT '10:00 min',
+    module VARCHAR(100) NOT NULL DEFAULT 'Módulo 1: Apresentação & Vendas',
+    description TEXT,
+    video_url TEXT NOT NULL,
+    thumbnail TEXT,
+    tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+    download_url TEXT,
+    active BOOLEAN DEFAULT true,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_training_videos_module ON public.training_videos(module);
+CREATE INDEX IF NOT EXISTS idx_training_videos_active ON public.training_videos(active);
+CREATE INDEX IF NOT EXISTS idx_training_videos_order ON public.training_videos(order_index ASC);
+

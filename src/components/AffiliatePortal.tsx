@@ -48,7 +48,8 @@ import {
   updateAffiliatePixKey, 
   fetchProductReleases, 
   fetchSupportTickets, 
-  createSupportTicket 
+  createSupportTicket,
+  fetchTrainingVideos
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { ActivityLogsModal } from './ActivityLogsModal';
@@ -238,6 +239,19 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
     }
   };
 
+  // Load Videos
+  const loadVideosData = async () => {
+    try {
+      const data = await fetchTrainingVideos(currentUser.email);
+      if (Array.isArray(data) && data.length > 0) {
+        setVideos(data);
+        setActiveVideo(data[0]);
+      }
+    } catch (err: any) {
+      console.warn('Erro ao carregar vídeos de treinamento:', err.message);
+    }
+  };
+
   // Load Tickets
   const loadTicketsData = async () => {
     setLoadingTickets(true);
@@ -253,6 +267,7 @@ export const AffiliatePortal: React.FC<AffiliatePortalProps> = ({
 
   useEffect(() => {
     loadPortalData();
+    loadVideosData();
     loadReleasesData();
     loadTicketsData();
   }, []);

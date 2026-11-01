@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket, SystemActivityLog } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket, SystemActivityLog, TrainingVideo } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1930,6 +1930,61 @@ export async function updateSupportTicket(id: string, updates: Partial<SupportTi
   }
   const result = await res.json();
   return result.ticket;
+}
+
+export async function fetchTrainingVideos(userEmail?: string): Promise<TrainingVideo[]> {
+  const params = new URLSearchParams();
+  if (userEmail) params.append('userEmail', userEmail);
+  const res = await fetch(`/api/training-videos?${params.toString()}`, {
+    headers: userEmail ? { 'x-user-email': userEmail } : undefined
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createTrainingVideo(userEmail: string, data: Partial<TrainingVideo>): Promise<TrainingVideo> {
+  const res = await fetch('/api/admin/training-videos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao cadastrar vídeo de treinamento');
+  }
+  const result = await res.json();
+  return result.video;
+}
+
+export async function updateTrainingVideo(userEmail: string, id: string, data: Partial<TrainingVideo>): Promise<TrainingVideo> {
+  const res = await fetch(`/api/admin/training-videos/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar vídeo de treinamento');
+  }
+  const result = await res.json();
+  return result.video;
+}
+
+export async function deleteTrainingVideo(userEmail: string, id: string): Promise<void> {
+  const res = await fetch(`/api/admin/training-videos/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao excluir vídeo de treinamento');
+  }
 }
 
 export async function fetchActivityLogs(companyId?: string, userEmail?: string): Promise<SystemActivityLog[]> {

@@ -248,6 +248,90 @@ const LOCAL_AFFILIATES_FILE = path.join(process.cwd(), 'baileys_auth_info', 'loc
 const LOCAL_HOTMART_CONFIG_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_hotmart_config.json');
 const LOCAL_PRODUCT_RELEASES_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_product_releases.json');
 const LOCAL_SUPPORT_TICKETS_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_support_tickets.json');
+const LOCAL_TRAINING_VIDEOS_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_training_videos.json');
+
+const defaultTrainingVideos = [
+    {
+        id: 'vid-001',
+        title: 'Pitch Comercial de 15 Minutos para Fechar com Clínicas e Empresas',
+        duration: '14:20 min',
+        module: 'Módulo 1: Apresentação & Vendas',
+        description: 'Aprenda a demonstrar o TrackerMD ao vivo para donos de negócios e clínicas, destacando a prevenção de bloqueios e a clareza de saber qual anúncio gerou a venda no WhatsApp.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['Vendas', 'Demonstração', 'Scripts'],
+        orderIndex: 1,
+        active: true,
+        downloadUrl: '#'
+    },
+    {
+        id: 'vid-002',
+        title: 'Quebra de Objeções: Já tenho WhatsApp Business Comum',
+        duration: '11:45 min',
+        module: 'Módulo 1: Apresentação & Vendas',
+        description: 'Como explicar a diferença entre o aplicativo gratuito e uma plataforma profissional com multiatendimento, CAPI Meta Ads e isolamento de equipe.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['Objeções', 'Abordagem Comercial'],
+        orderIndex: 2,
+        active: true,
+        downloadUrl: '#'
+    },
+    {
+        id: 'vid-003',
+        title: 'Configuração Completa do Meta Ads CAPI em Menos de 10 Minutos',
+        duration: '09:30 min',
+        module: 'Módulo 2: Configuração Técnica & Implantação',
+        description: 'Passo a passo prático para gerar o Token Permanente no Gerenciador de Negócios da Meta e validar os eventos de Lead e Purchase pelo servidor.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['Meta CAPI', 'Pixel', 'Técnico'],
+        orderIndex: 3,
+        active: true,
+        downloadUrl: '#'
+    },
+    {
+        id: 'vid-004',
+        title: 'Conexão de Instâncias WhatsApp sem Risco de Bloqueio',
+        duration: '15:10 min',
+        module: 'Módulo 2: Configuração Técnica & Implantação',
+        description: 'Boas práticas de aquecimento de chip, pareamento por QR Code e regras de envio seguro para grandes volumes.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['WhatsApp', 'Aquecimento', 'QR Code'],
+        orderIndex: 4,
+        active: true,
+        downloadUrl: '#'
+    },
+    {
+        id: 'vid-005',
+        title: 'Rotina de Suporte Assistido e Resolução Rápida para o Cliente',
+        duration: '08:50 min',
+        module: 'Módulo 3: Suporte & Gestão de Clientes',
+        description: 'Como utilizar o botão de Gestão Assistida dentro do portal de afiliados para auxiliar seu cliente a configurar funis e analisar logs.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['Suporte', 'Gestão Assistida'],
+        orderIndex: 5,
+        active: true,
+        downloadUrl: '#'
+    },
+    {
+        id: 'vid-006',
+        title: 'Como Funciona o Repasse PIX das Comissões Mensais e de Setup',
+        duration: '06:15 min',
+        module: 'Módulo 4: Financeiro & Comissões',
+        description: 'Entenda o ciclo de faturamento na Hotmart, aprovação dos pagamentos e liquidação da sua comissão de 20% recorrente e 50% de treinamento no seu PIX.',
+        videoUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+        tags: ['Comissões', 'PIX', 'Financeiro'],
+        orderIndex: 6,
+        active: true,
+        downloadUrl: '#'
+    }
+];
+
+let inMemoryTrainingVideos: any[] = [...defaultTrainingVideos];
+
+function saveLocalTrainingVideosStore() {
+    try {
+        fs.writeFileSync(LOCAL_TRAINING_VIDEOS_FILE, JSON.stringify(inMemoryTrainingVideos, null, 2), 'utf-8');
+    } catch {}
+}
 
 const defaultProductReleases = [
     {
@@ -895,6 +979,15 @@ try {
         const parsed = JSON.parse(fs.readFileSync(LOCAL_SUPPORT_TICKETS_FILE, 'utf-8'));
         if (Array.isArray(parsed) && parsed.length > 0) {
             inMemorySupportTickets = parsed;
+        }
+    }
+} catch {}
+
+try {
+    if (fs.existsSync(LOCAL_TRAINING_VIDEOS_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_TRAINING_VIDEOS_FILE, 'utf-8'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            inMemoryTrainingVideos = parsed;
         }
     }
 } catch {}
@@ -14903,6 +14996,166 @@ app.put('/api/support-tickets/:id', async (req: Request, res: Response) => {
             return res.json({ success: true, ticket: inMemorySupportTickets[idx] });
         }
         res.status(404).json({ error: 'Chamado não encontrado.' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// VÍDEOS DE TREINAMENTO (Capacitação de Afiliados - Gerenciado pelo Super-Admin)
+// ==============================================================================
+
+app.get('/api/training-videos', async (req: Request, res: Response) => {
+    try {
+        try {
+            const { data: dbVideos } = await supabase.from('training_videos').select('*').order('order_index', { ascending: true });
+            if (dbVideos && dbVideos.length > 0) {
+                inMemoryTrainingVideos = dbVideos.map((v: any) => ({
+                    id: v.id,
+                    title: v.title,
+                    duration: v.duration || '10:00 min',
+                    module: v.module || 'Módulo 1: Apresentação & Vendas',
+                    description: v.description || '',
+                    videoUrl: v.video_url,
+                    thumbnail: v.thumbnail || '',
+                    tags: Array.isArray(v.tags) ? v.tags : (typeof v.tags === 'string' ? v.tags.split(',') : []),
+                    downloadUrl: v.download_url || '#',
+                    active: v.active !== false,
+                    orderIndex: v.order_index || 0,
+                    createdAt: v.created_at,
+                    updatedAt: v.updated_at
+                }));
+                saveLocalTrainingVideosStore();
+            }
+        } catch {}
+
+        const userEmail = String(req.headers['x-user-email'] || req.query.userEmail || '').toLowerCase().trim();
+        const isAdmin = userEmail === 'rogerio@mudadigital.com.br';
+
+        const result = isAdmin ? inMemoryTrainingVideos : inMemoryTrainingVideos.filter(v => v.active !== false);
+        res.json(result);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/training-videos', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode cadastrar vídeos de treinamento.' });
+        }
+
+        const { title, duration, module, description, videoUrl, thumbnail, tags, downloadUrl, active, orderIndex } = req.body;
+        if (!title || !videoUrl) {
+            return res.status(400).json({ error: 'Título e URL do vídeo são obrigatórios.' });
+        }
+
+        const newVideo = {
+            id: `vid-${Date.now()}`,
+            title: title.trim(),
+            duration: (duration || '10:00 min').trim(),
+            module: (module || 'Módulo 1: Apresentação & Vendas').trim(),
+            description: (description || '').trim(),
+            videoUrl: videoUrl.trim(),
+            thumbnail: (thumbnail || '').trim(),
+            tags: Array.isArray(tags) ? tags : (tags ? String(tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []),
+            downloadUrl: (downloadUrl || '#').trim(),
+            active: active !== false,
+            orderIndex: orderIndex !== undefined ? Number(orderIndex) : inMemoryTrainingVideos.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        inMemoryTrainingVideos.push(newVideo);
+        saveLocalTrainingVideosStore();
+
+        try {
+            await supabase.from('training_videos').insert({
+                id: newVideo.id,
+                title: newVideo.title,
+                duration: newVideo.duration,
+                module: newVideo.module,
+                description: newVideo.description,
+                video_url: newVideo.videoUrl,
+                thumbnail: newVideo.thumbnail,
+                tags: newVideo.tags,
+                download_url: newVideo.downloadUrl,
+                active: newVideo.active,
+                order_index: newVideo.orderIndex
+            });
+        } catch {}
+
+        res.json({ success: true, video: newVideo });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/training-videos/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode editar vídeos de treinamento.' });
+        }
+
+        const { id } = req.params;
+        const idx = inMemoryTrainingVideos.findIndex(v => v.id === id);
+        if (idx >= 0) {
+            const rawTags = req.body.tags;
+            const parsedTags = Array.isArray(rawTags) 
+                ? rawTags 
+                : (rawTags ? String(rawTags).split(',').map((t: string) => t.trim()).filter(Boolean) : inMemoryTrainingVideos[idx].tags);
+
+            const updated = {
+                ...inMemoryTrainingVideos[idx],
+                ...req.body,
+                tags: parsedTags,
+                updatedAt: new Date().toISOString()
+            };
+            inMemoryTrainingVideos[idx] = updated;
+            saveLocalTrainingVideosStore();
+
+            try {
+                await supabase.from('training_videos').update({
+                    title: updated.title,
+                    duration: updated.duration,
+                    module: updated.module,
+                    description: updated.description,
+                    video_url: updated.videoUrl,
+                    thumbnail: updated.thumbnail,
+                    tags: updated.tags,
+                    download_url: updated.downloadUrl,
+                    active: updated.active,
+                    order_index: updated.orderIndex,
+                    updated_at: updated.updatedAt
+                }).eq('id', id);
+            } catch {}
+
+            return res.json({ success: true, video: updated });
+        }
+        res.status(404).json({ error: 'Vídeo não encontrado.' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/admin/training-videos/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode excluir vídeos de treinamento.' });
+        }
+
+        const { id } = req.params;
+        inMemoryTrainingVideos = inMemoryTrainingVideos.filter(v => v.id !== id);
+        saveLocalTrainingVideosStore();
+
+        try {
+            await supabase.from('training_videos').delete().eq('id', id);
+        } catch {}
+
+        res.json({ success: true, id });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
