@@ -29,11 +29,13 @@ import {
   Globe,
   Trophy,
   BrainCircuit,
-  Flame
+  Flame,
+  GraduationCap,
+  HelpCircle
 } from 'lucide-react';
 import { User, Company } from '../types';
 
-export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin';
+export type NavTabId = 'dashboard' | 'visual_funnels' | 'links' | 'landing_pages' | 'surveys' | 'custom_domains' | 'event_gamification' | 'popups' | 'workflows' | 'ai' | 'ai_agents' | 'leads' | 'smart_lists' | 'virtual_phone' | 'teams' | 'supervisor_monitor' | 'chatbot' | 'instagram_auto_dm' | 'chat' | 'broadcast' | 'products' | 'events' | 'users' | 'company' | 'saas_admin' | 'affiliate_clients' | 'affiliate_trainings' | 'affiliate_news' | 'affiliate_support';
 
 interface SidebarProps {
   activeTab: NavTabId;
@@ -54,7 +56,7 @@ interface NavItem {
     text: string;
     variant: 'blue' | 'emerald' | 'amber' | 'purple';
   };
-  allowedRoles?: Array<'admin' | 'manager' | 'attendant'>;
+  allowedRoles?: Array<'admin' | 'manager' | 'attendant' | 'affiliate'>;
 }
 
 interface NavGroup {
@@ -261,8 +263,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
           allowedRoles: ['admin' as const]
         }] : [])
       ]
-    }
+    },
+    ...(currentUser.role === 'affiliate' ||
+        (currentUser as any).isAffiliate === true ||
+        currentUser.email?.toLowerCase().includes('@rep-trackermd.com.br') ||
+        currentUser.email?.toLowerCase() === 'rogerio@mudadigital.com.br' ||
+        currentUser.email?.toLowerCase() === 'rogerio@crysrios.com.br' ? [{
+      title: 'Área do Representante / Afiliado',
+      items: [
+        {
+          id: 'affiliate_clients' as NavTabId,
+          label: 'Meus Clientes Vinculados',
+          icon: Users,
+          badge: { text: 'Comissões', variant: 'emerald' as const },
+          allowedRoles: ['admin' as const, 'manager' as const, 'attendant' as const, 'affiliate' as const]
+        },
+        {
+          id: 'affiliate_trainings' as NavTabId,
+          label: 'Vídeos de Treinamento',
+          icon: GraduationCap,
+          badge: { text: 'Aulas VIP', variant: 'purple' as const },
+          allowedRoles: ['admin' as const, 'manager' as const, 'attendant' as const, 'affiliate' as const]
+        },
+        {
+          id: 'affiliate_news' as NavTabId,
+          label: 'Novidades & Lançamentos',
+          icon: Sparkles,
+          badge: { text: 'Roadmap', variant: 'blue' as const },
+          allowedRoles: ['admin' as const, 'manager' as const, 'attendant' as const, 'affiliate' as const]
+        },
+        {
+          id: 'affiliate_support' as NavTabId,
+          label: 'Suporte, Sugestões & Dicas',
+          icon: HelpCircle,
+          badge: { text: '24h', variant: 'amber' as const },
+          allowedRoles: ['admin' as const, 'manager' as const, 'attendant' as const, 'affiliate' as const]
+        }
+      ]
+    }] : [])
   ];
+
+  // If user is purely an affiliate, show only the affiliate portal groups
+  const displayedNavGroups = currentUser.role === 'affiliate'
+    ? navGroups.filter(g => g.title.includes('Representante'))
+    : navGroups;
 
   const handleSelectTab = (tabId: NavTabId) => {
     setActiveTab(tabId);
@@ -279,6 +323,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-500/30">💼 Gerente</span>;
       case 'attendant':
         return <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">🎧 Atendente</span>;
+      case 'affiliate':
+        return <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">🤝 Representante</span>;
     }
   };
 
@@ -368,7 +414,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. Scrollable Navigation List */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
-        {navGroups.map((group, groupIndex) => {
+        {displayedNavGroups.map((group, groupIndex) => {
           // Filter items based on user role
           const visibleItems = group.items.filter(
             item => !item.allowedRoles || item.allowedRoles.includes(currentUser.role)

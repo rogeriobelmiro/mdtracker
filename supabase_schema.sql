@@ -722,3 +722,46 @@ ALTER TABLE public.settings
 ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS sms_provider TEXT DEFAULT 'zenvia',
 ADD COLUMN IF NOT EXISTS sms_api_key TEXT;
+
+-- ==============================================================================
+-- 6. NOVIDADES & ROADMAP (Alimentada pelo Super-Admin)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.product_releases (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    version VARCHAR(20),
+    status VARCHAR(30) NOT NULL DEFAULT 'planned',
+    category VARCHAR(50) NOT NULL DEFAULT 'Geral',
+    release_date VARCHAR(50),
+    description TEXT NOT NULL,
+    highlight BOOLEAN DEFAULT false,
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_releases_status ON public.product_releases(status);
+CREATE INDEX IF NOT EXISTS idx_product_releases_active ON public.product_releases(active);
+
+-- ==============================================================================
+-- 7. SUPORTE TÉCNICO, SUGESTÕES E CORREÇÕES DO AFILIADO
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+    id TEXT PRIMARY KEY,
+    affiliate_id TEXT,
+    author_name TEXT NOT NULL,
+    author_email TEXT NOT NULL,
+    author_phone TEXT,
+    type VARCHAR(30) NOT NULL DEFAULT 'support',
+    priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'open',
+    admin_response TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_tickets_affiliate_id ON public.support_tickets(affiliate_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_author_email ON public.support_tickets(author_email);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);

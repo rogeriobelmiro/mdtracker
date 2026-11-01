@@ -243,9 +243,95 @@ try {
     console.warn('Could not load local auth store:', err);
 }
 
-// Local stores for Affiliates and Hotmart Pricing / Setup Config
+// Local stores for Affiliates, Hotmart Pricing, Releases and Support
 const LOCAL_AFFILIATES_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_affiliates_store.json');
 const LOCAL_HOTMART_CONFIG_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_hotmart_config.json');
+const LOCAL_PRODUCT_RELEASES_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_product_releases.json');
+const LOCAL_SUPPORT_TICKETS_FILE = path.join(process.cwd(), 'baileys_auth_info', 'local_support_tickets.json');
+
+const defaultProductReleases = [
+    {
+        id: 'rel-001',
+        title: 'Rastreamento Meta Ads CAPI Direto no WhatsApp',
+        version: 'v2.4',
+        status: 'released',
+        category: 'Meta CAPI',
+        releaseDate: 'Novembro 2026',
+        description: 'Envio nativo de conversões (PageView, Lead, Contact, Purchase) para a API de Conversões da Meta direto pelo número do WhatsApp da empresa, sem perda de dados com bloqueadores de cookies.',
+        highlight: true,
+        active: true,
+        createdAt: '2026-11-01T00:00:00.000Z'
+    },
+    {
+        id: 'rel-002',
+        title: 'Funil Visual 360° com Disparo Multicanal',
+        version: 'v2.5',
+        status: 'released',
+        category: 'CRM & Funis',
+        releaseDate: 'Novembro 2026',
+        description: 'Interface drag-and-drop para desenhar jornadas de clientes completas, integrando WhatsApp, E-mail marketing e SMS Gateway automático.',
+        highlight: false,
+        active: true,
+        createdAt: '2026-11-01T00:00:00.000Z'
+    },
+    {
+        id: 'rel-003',
+        title: 'Chatbot com Inteligência Artificial Gemini 2.0',
+        version: 'v2.6',
+        status: 'in_progress',
+        category: 'Inteligência Artificial',
+        releaseDate: 'Dezembro 2026',
+        description: 'Atendimento conversacional inteligente capaz de tirar dúvidas, consultar catálogo de produtos e agendar visitas com linguagem humana e natural no WhatsApp.',
+        highlight: true,
+        active: true,
+        createdAt: '2026-11-01T00:00:00.000Z'
+    },
+    {
+        id: 'rel-004',
+        title: 'Discador Virtual WebRTC e Gravação de Chamadas VoIP',
+        version: 'v2.7',
+        status: 'planned',
+        category: 'Telefonia & VoIP',
+        releaseDate: 'Janeiro 2027',
+        description: 'Ligação direta do navegador com 1 clique para os leads, gravação de áudio, transcrição por IA e resumo automático para os gerentes.',
+        highlight: false,
+        active: true,
+        createdAt: '2026-11-01T00:00:00.000Z'
+    }
+];
+
+let inMemoryProductReleases: any[] = [...defaultProductReleases];
+
+const defaultSupportTickets = [
+    {
+        id: 'ticket-001',
+        affiliateId: 'aff-mt-01',
+        authorName: 'Rogério Belmiro',
+        authorEmail: 'rogerio@mudadigital.com.br',
+        authorPhone: '5565981150758',
+        type: 'suggestion',
+        priority: 'high',
+        subject: 'Sugestão: Criar lâminas de apresentação para clínicas médicas e odontológicas',
+        message: 'Seria excelente termos lâminas comerciais específicas mostrando o funil de agendamento de consultas pelo WhatsApp para clínicas.',
+        status: 'resolved',
+        adminResponse: 'Excelente sugestão! Lâminas e criativos para o nicho de clínicas e consultórios adicionados na aba de treinamentos.',
+        createdAt: '2026-11-01T12:00:00.000Z'
+    }
+];
+
+let inMemorySupportTickets: any[] = [...defaultSupportTickets];
+
+function saveLocalProductReleasesStore() {
+    try {
+        fs.writeFileSync(LOCAL_PRODUCT_RELEASES_FILE, JSON.stringify(inMemoryProductReleases, null, 2), 'utf-8');
+    } catch {}
+}
+
+function saveLocalSupportTicketsStore() {
+    try {
+        fs.writeFileSync(LOCAL_SUPPORT_TICKETS_FILE, JSON.stringify(inMemorySupportTickets, null, 2), 'utf-8');
+    } catch {}
+}
 
 const defaultHotmartPlans = [
     {
@@ -729,6 +815,24 @@ try {
         const parsed = JSON.parse(fs.readFileSync(LOCAL_AFFILIATES_FILE, 'utf-8'));
         if (Array.isArray(parsed)) {
             inMemoryAffiliates = parsed;
+        }
+    }
+} catch {}
+
+try {
+    if (fs.existsSync(LOCAL_PRODUCT_RELEASES_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_PRODUCT_RELEASES_FILE, 'utf-8'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            inMemoryProductReleases = parsed;
+        }
+    }
+} catch {}
+
+try {
+    if (fs.existsSync(LOCAL_SUPPORT_TICKETS_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_SUPPORT_TICKETS_FILE, 'utf-8'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            inMemorySupportTickets = parsed;
         }
     }
 } catch {}
@@ -12749,6 +12853,33 @@ app.post('/api/login', async (req: Request, res: Response) => {
         return res.json({ user: safeUser, company: isolatedCompany });
     }
 
+    // 4. Check if user is an Affiliate / Representative
+    const matchedAff = inMemoryAffiliates.find(a => a.email?.toLowerCase() === cleanEmail);
+    if (matchedAff) {
+        const affCompany = {
+            id: `comp-aff-${matchedAff.id}`,
+            name: `Franquia Oficial - ${matchedAff.name} (${matchedAff.city}/${matchedAff.state})`,
+            plan: 'enterprise' as const,
+            active: true,
+            createdAt: matchedAff.createdAt || new Date().toISOString()
+        };
+        const affUser = {
+            id: `usr-${matchedAff.id}`,
+            companyId: affCompany.id,
+            name: matchedAff.name,
+            email: cleanEmail,
+            role: 'affiliate' as const,
+            isAffiliate: true,
+            affiliateId: matchedAff.id,
+            active: true,
+            createdAt: matchedAff.createdAt || new Date().toISOString()
+        };
+        inMemoryCompanies.push(affCompany);
+        inMemoryUsers.push({ ...affUser, password: '123' });
+        saveLocalAuthStore();
+        return res.json({ user: affUser, company: affCompany });
+    }
+
     return res.status(401).json({ error: 'Usuário ou senha incorretos.' });
 });
 
@@ -14187,6 +14318,397 @@ app.put('/api/admin/companies/:id/affiliate', async (req: Request, res: Response
         } catch {}
 
         res.json({ success: true, companyId: id, affiliateId });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// PORTAL DO AFILIADO / REPRESENTANTE & CLIENTES VINCULADOS
+// ==============================================================================
+
+app.get('/api/affiliate/my-portal', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.email || '').toLowerCase().trim();
+        const affiliateId = String(req.query.affiliateId || '').trim();
+        const referralCode = String(req.query.referralCode || '').toLowerCase().trim();
+
+        // 1. Resolve Affiliate Profile
+        let affiliate: any = null;
+        if (affiliateId) {
+            affiliate = inMemoryAffiliates.find(a => a.id === affiliateId);
+        } else if (referralCode) {
+            affiliate = inMemoryAffiliates.find(a => a.referralCode?.toLowerCase() === referralCode);
+        } else if (userEmail) {
+            affiliate = inMemoryAffiliates.find(a => a.email?.toLowerCase() === userEmail);
+            // Super Admin default to Master MT Rogério Belmiro
+            if (!affiliate && userEmail === 'rogerio@mudadigital.com.br') {
+                affiliate = inMemoryAffiliates.find(a => a.id === 'aff-mt-01') || inMemoryAffiliates[0];
+            }
+        }
+
+        if (!affiliate) {
+            affiliate = inMemoryAffiliates.find(a => a.id === 'aff-mt-01') || inMemoryAffiliates[0];
+        }
+
+        // 2. Fetch linked companies
+        const affCode = (affiliate?.referralCode || '').toLowerCase();
+        const affId = affiliate?.id;
+
+        const linkedCompanies = inMemoryCompanies.filter(c => {
+            if (affId && c.affiliateId === affId) return true;
+            if (affCode && c.affiliateCode && c.affiliateCode.toLowerCase() === affCode) return true;
+            return false;
+        });
+
+        const monthlyCommPct = Number(affiliate?.commissionMonthly || 20) / 100;
+        const setupCommPct = Number(affiliate?.commissionSetup || 50) / 100;
+        const setupPrice = Number(inMemoryHotmartConfig.setupTraining?.price || 997);
+
+        const enrichedCompanies = linkedCompanies.map(c => {
+            const planKey = (c.subscriptionPlan || c.plan || 'starter').toLowerCase();
+            const matchedPlan = (inMemoryHotmartConfig.plans || defaultHotmartPlans).find((p: any) => p.id === planKey);
+            const planPrice = matchedPlan ? Number(matchedPlan.price) : 197;
+            const monthlyComm = Math.round(planPrice * monthlyCommPct * 100) / 100;
+            const setupComm = Math.round(setupPrice * setupCommPct * 100) / 100;
+
+            return {
+                id: c.id,
+                name: c.name,
+                cnpj: c.cnpj || '',
+                responsibleName: c.responsibleName || 'Responsável',
+                phone: c.phone || '',
+                email: c.email || '',
+                plan: planKey,
+                planPrice,
+                subscriptionStatus: c.subscriptionStatus || (c.active !== false ? 'active' : 'expired'),
+                trialEndsAt: c.trialEndsAt,
+                paidUntil: c.paidUntil,
+                trainingCompleted: Boolean(c.trainingCompleted),
+                estimatedMonthlyCommission: monthlyComm,
+                estimatedSetupCommission: setupComm,
+                createdAt: c.createdAt
+            };
+        });
+
+        const totalCompanies = enrichedCompanies.length;
+        const activeCompanies = enrichedCompanies.filter(c => c.subscriptionStatus === 'active').length;
+        const trialCompanies = enrichedCompanies.filter(c => c.subscriptionStatus === 'trial').length;
+        const totalEstimatedMonthly = enrichedCompanies
+            .filter(c => c.subscriptionStatus === 'active')
+            .reduce((acc, c) => acc + c.estimatedMonthlyCommission, 0);
+        const totalEstimatedSetup = enrichedCompanies
+            .filter(c => c.trainingCompleted)
+            .reduce((acc, c) => acc + c.estimatedSetupCommission, 0);
+
+        res.json({
+            success: true,
+            affiliate,
+            allAffiliates: userEmail === 'rogerio@mudadigital.com.br' ? inMemoryAffiliates : undefined,
+            referralLink: `https://trackermd.mudadigital.com.br/?ref=${affiliate.referralCode}`,
+            stats: {
+                totalCompanies,
+                activeCompanies,
+                trialCompanies,
+                totalEstimatedMonthly: Math.round(totalEstimatedMonthly * 100) / 100,
+                totalEstimatedSetup: Math.round(totalEstimatedSetup * 100) / 100
+            },
+            companies: enrichedCompanies
+        });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update affiliate PIX key from inside the system
+app.put('/api/affiliate/pix-key', async (req: Request, res: Response) => {
+    try {
+        const { affiliateId, pixKeyType, pixKey } = req.body;
+        if (!affiliateId || !pixKey) {
+            return res.status(400).json({ error: 'ID do afiliado e chave PIX são obrigatórios.' });
+        }
+
+        const affIdx = inMemoryAffiliates.findIndex(a => a.id === affiliateId);
+        if (affIdx >= 0) {
+            inMemoryAffiliates[affIdx].pixKeyType = pixKeyType || 'cpf';
+            inMemoryAffiliates[affIdx].pixKey = String(pixKey).trim();
+            saveLocalAffiliatesStore();
+
+            try {
+                await supabase.from('affiliates').update({
+                    pix_key_type: pixKeyType || 'cpf',
+                    pix_key: String(pixKey).trim(),
+                    updated_at: new Date().toISOString()
+                }).eq('id', affiliateId);
+            } catch {}
+
+            return res.json({ success: true, affiliate: inMemoryAffiliates[affIdx] });
+        }
+        res.status(404).json({ error: 'Afiliado não encontrado.' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// NOVIDADES & LANÇAMENTOS (Roadmap - Alimentado pelo Super-Admin)
+// ==============================================================================
+
+app.get('/api/product-releases', async (req: Request, res: Response) => {
+    try {
+        try {
+            const { data: dbReleases } = await supabase.from('product_releases').select('*').order('created_at', { ascending: false });
+            if (dbReleases && dbReleases.length > 0) {
+                inMemoryProductReleases = dbReleases.map((r: any) => ({
+                    id: r.id,
+                    title: r.title,
+                    version: r.version,
+                    status: r.status,
+                    category: r.category,
+                    releaseDate: r.release_date,
+                    description: r.description,
+                    highlight: Boolean(r.highlight),
+                    active: r.active !== false,
+                    createdAt: r.created_at,
+                    updatedAt: r.updated_at
+                }));
+            }
+        } catch {}
+
+        res.json(inMemoryProductReleases.filter(r => r.active !== false));
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/product-releases', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode cadastrar novidades.' });
+        }
+
+        const { title, version, status, category, releaseDate, description, highlight, active } = req.body;
+        if (!title || !description) {
+            return res.status(400).json({ error: 'Título e descrição da novidade são obrigatórios.' });
+        }
+
+        const newRelease = {
+            id: `rel-${Date.now()}`,
+            title: title.trim(),
+            version: (version || '').trim(),
+            status: status || 'planned',
+            category: category || 'Geral',
+            releaseDate: (releaseDate || '').trim(),
+            description: description.trim(),
+            highlight: Boolean(highlight),
+            active: active !== false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        inMemoryProductReleases.unshift(newRelease);
+        saveLocalProductReleasesStore();
+
+        try {
+            await supabase.from('product_releases').insert({
+                id: newRelease.id,
+                title: newRelease.title,
+                version: newRelease.version,
+                status: newRelease.status,
+                category: newRelease.category,
+                release_date: newRelease.releaseDate,
+                description: newRelease.description,
+                highlight: newRelease.highlight,
+                active: newRelease.active
+            });
+        } catch {}
+
+        res.json({ success: true, release: newRelease });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/admin/product-releases/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode editar novidades.' });
+        }
+
+        const { id } = req.params;
+        const idx = inMemoryProductReleases.findIndex(r => r.id === id);
+        if (idx >= 0) {
+            const updated = {
+                ...inMemoryProductReleases[idx],
+                ...req.body,
+                updatedAt: new Date().toISOString()
+            };
+            inMemoryProductReleases[idx] = updated;
+            saveLocalProductReleasesStore();
+
+            try {
+                await supabase.from('product_releases').update({
+                    title: updated.title,
+                    version: updated.version,
+                    status: updated.status,
+                    category: updated.category,
+                    release_date: updated.releaseDate,
+                    description: updated.description,
+                    highlight: updated.highlight,
+                    active: updated.active,
+                    updated_at: updated.updatedAt
+                }).eq('id', id);
+            } catch {}
+
+            return res.json({ success: true, release: updated });
+        }
+        res.status(404).json({ error: 'Novidade não encontrada.' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/admin/product-releases/:id', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.body.userEmail || '').toLowerCase().trim();
+        if (userEmail !== 'rogerio@mudadigital.com.br') {
+            return res.status(403).json({ error: 'Apenas o Super Administrador pode excluir novidades.' });
+        }
+
+        const { id } = req.params;
+        inMemoryProductReleases = inMemoryProductReleases.filter(r => r.id !== id);
+        saveLocalProductReleasesStore();
+
+        try {
+            await supabase.from('product_releases').delete().eq('id', id);
+        } catch {}
+
+        res.json({ success: true, id });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================================================
+// SUPORTE TÉCNICO, SUGESTÕES & DICAS
+// ==============================================================================
+
+app.get('/api/support-tickets', async (req: Request, res: Response) => {
+    try {
+        const userEmail = String(req.headers['x-user-email'] || req.query.email || '').toLowerCase().trim();
+        const affiliateId = String(req.query.affiliateId || '').trim();
+
+        try {
+            const { data: dbTickets } = await supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
+            if (dbTickets && dbTickets.length > 0) {
+                inMemorySupportTickets = dbTickets.map((t: any) => ({
+                    id: t.id,
+                    affiliateId: t.affiliate_id,
+                    authorName: t.author_name,
+                    authorEmail: t.author_email,
+                    authorPhone: t.author_phone,
+                    type: t.type,
+                    priority: t.priority,
+                    subject: t.subject,
+                    message: t.message,
+                    status: t.status,
+                    adminResponse: t.admin_response,
+                    createdAt: t.created_at,
+                    updatedAt: t.updated_at
+                }));
+            }
+        } catch {}
+
+        if (userEmail === 'rogerio@mudadigital.com.br') {
+            return res.json(inMemorySupportTickets);
+        }
+
+        const filtered = inMemorySupportTickets.filter(t => 
+            (affiliateId && t.affiliateId === affiliateId) ||
+            (userEmail && t.authorEmail?.toLowerCase() === userEmail)
+        );
+
+        res.json(filtered);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/support-tickets', async (req: Request, res: Response) => {
+    try {
+        const { affiliateId, authorName, authorEmail, authorPhone, type, priority, subject, message } = req.body;
+        if (!authorName || !authorEmail || !subject || !message) {
+            return res.status(400).json({ error: 'Preencha seu nome, e-mail, assunto e a mensagem.' });
+        }
+
+        const newTicket = {
+            id: `ticket-${Date.now()}`,
+            affiliateId: affiliateId || null,
+            authorName: authorName.trim(),
+            authorEmail: authorEmail.trim().toLowerCase(),
+            authorPhone: authorPhone || '',
+            type: type || 'support',
+            priority: priority || 'medium',
+            subject: subject.trim(),
+            message: message.trim(),
+            status: 'open',
+            adminResponse: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        inMemorySupportTickets.unshift(newTicket);
+        saveLocalSupportTicketsStore();
+
+        try {
+            await supabase.from('support_tickets').insert({
+                id: newTicket.id,
+                affiliate_id: newTicket.affiliateId,
+                author_name: newTicket.authorName,
+                author_email: newTicket.authorEmail,
+                author_phone: newTicket.authorPhone,
+                type: newTicket.type,
+                priority: newTicket.priority,
+                subject: newTicket.subject,
+                message: newTicket.message,
+                status: newTicket.status
+            });
+        } catch {}
+
+        res.json({ success: true, ticket: newTicket });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/support-tickets/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status, adminResponse } = req.body;
+
+        const idx = inMemorySupportTickets.findIndex(t => t.id === id);
+        if (idx >= 0) {
+            inMemorySupportTickets[idx] = {
+                ...inMemorySupportTickets[idx],
+                status: status || inMemorySupportTickets[idx].status,
+                adminResponse: adminResponse !== undefined ? adminResponse : inMemorySupportTickets[idx].adminResponse,
+                updatedAt: new Date().toISOString()
+            };
+            saveLocalSupportTicketsStore();
+
+            try {
+                await supabase.from('support_tickets').update({
+                    status: inMemorySupportTickets[idx].status,
+                    admin_response: inMemorySupportTickets[idx].adminResponse,
+                    updated_at: inMemorySupportTickets[idx].updatedAt
+                }).eq('id', id);
+            } catch {}
+
+            return res.json({ success: true, ticket: inMemorySupportTickets[idx] });
+        }
+        res.status(404).json({ error: 'Chamado não encontrado.' });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

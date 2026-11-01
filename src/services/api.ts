@@ -1,4 +1,4 @@
-import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig } from '../types';
+import { CampaignLink, Lead, WebhookLog, IntegrationSettings, StatsSummary, FunnelStage, Company, User, SmartPopup, AIGenerateRequest, AIGeneratedContent, MarketingWorkflow, WorkflowExecutionLog, ScheduledWorkflowAction, VisualFunnel, LandingPage, BroadcastCampaign, BroadcastChannel, BroadcastRecipient, LeadCall, VirtualPhoneSettings, SmartList, LeadScoringConfig, InstagramCommentAutomation, InstagramCommentLog, InstagramSimulateResult, Team, TeamMember, SupervisorMonitorStats, Survey, SurveyResponse, CustomDomain, GamificationEvent, GamificationActivity, GamificationParticipant, GamificationResponse, AIAgent, AIAgentExecutionLog, HotmartConfig, HotmartEvent, Affiliate, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, ProductRelease, SupportTicket } from '../types';
 
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies');
@@ -1768,6 +1768,152 @@ export async function updateCompanyAffiliate(userEmail: string, companyId: strin
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Erro ao vincular afiliado à empresa');
   }
+}
+
+export async function fetchAffiliatePortalData(userEmail: string, affiliateId?: string): Promise<{
+  success: boolean;
+  affiliate: Affiliate;
+  allAffiliates?: Affiliate[];
+  referralLink: string;
+  stats: {
+    totalCompanies: number;
+    activeCompanies: number;
+    trialCompanies: number;
+    totalEstimatedMonthly: number;
+    totalEstimatedSetup: number;
+  };
+  companies: Array<{
+    id: string;
+    name: string;
+    cnpj: string;
+    responsibleName: string;
+    phone: string;
+    email: string;
+    plan: string;
+    planPrice: number;
+    subscriptionStatus: string;
+    trialEndsAt?: string;
+    paidUntil?: string;
+    trainingCompleted: boolean;
+    estimatedMonthlyCommission: number;
+    estimatedSetupCommission: number;
+    createdAt: string;
+  }>;
+}> {
+  const params = new URLSearchParams();
+  if (userEmail) params.append('email', userEmail);
+  if (affiliateId) params.append('affiliateId', affiliateId);
+  const res = await fetch(`/api/affiliate/my-portal?${params.toString()}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao carregar dados do portal do afiliado');
+  }
+  return res.json();
+}
+
+export async function updateAffiliatePixKey(affiliateId: string, pixKeyType: string, pixKey: string): Promise<any> {
+  const res = await fetch('/api/affiliate/pix-key', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ affiliateId, pixKeyType, pixKey })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar chave PIX');
+  }
+  return res.json();
+}
+
+export async function fetchProductReleases(): Promise<ProductRelease[]> {
+  const res = await fetch('/api/product-releases');
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createProductRelease(userEmail: string, data: Partial<ProductRelease>): Promise<ProductRelease> {
+  const res = await fetch('/api/admin/product-releases', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao cadastrar novidade');
+  }
+  const result = await res.json();
+  return result.release;
+}
+
+export async function updateProductRelease(userEmail: string, id: string, data: Partial<ProductRelease>): Promise<ProductRelease> {
+  const res = await fetch(`/api/admin/product-releases/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar novidade');
+  }
+  const result = await res.json();
+  return result.release;
+}
+
+export async function deleteProductRelease(userEmail: string, id: string): Promise<void> {
+  const res = await fetch(`/api/admin/product-releases/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao excluir novidade');
+  }
+}
+
+export async function fetchSupportTickets(userEmail: string, affiliateId?: string): Promise<SupportTicket[]> {
+  const params = new URLSearchParams();
+  if (userEmail) params.append('email', userEmail);
+  if (affiliateId) params.append('affiliateId', affiliateId);
+  const res = await fetch(`/api/support-tickets?${params.toString()}`, {
+    headers: { 'x-user-email': userEmail }
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createSupportTicket(data: Partial<SupportTicket>): Promise<SupportTicket> {
+  const res = await fetch('/api/support-tickets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao enviar chamado de suporte');
+  }
+  const result = await res.json();
+  return result.ticket;
+}
+
+export async function updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket> {
+  const res = await fetch(`/api/support-tickets/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erro ao atualizar chamado');
+  }
+  const result = await res.json();
+  return result.ticket;
 }
 
 

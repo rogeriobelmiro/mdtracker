@@ -2,8 +2,51 @@ export type FunnelStage = 'Novo Lead' | 'Contatado' | 'Em Negociação' | 'Conve
 
 export const FUNNEL_STAGES: FunnelStage[] = ['Novo Lead', 'Contatado', 'Em Negociação', 'Convertido', 'Perdido'];
 
-export type UserRole = 'admin' | 'manager' | 'attendant';
+export type UserRole = 'admin' | 'manager' | 'attendant' | 'affiliate';
 export type TeamMemberStatus = 'online' | 'busy' | 'in_call' | 'break' | 'offline';
+
+export interface ProductRelease {
+  id: string;
+  title: string;
+  version?: string;
+  status: 'released' | 'in_progress' | 'planned';
+  category: string;
+  releaseDate?: string;
+  description: string;
+  highlight?: boolean;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  affiliateId?: string;
+  authorName: string;
+  authorEmail: string;
+  authorPhone?: string;
+  type: 'support' | 'suggestion' | 'bug' | 'commercial';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  subject: string;
+  message: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  adminResponse?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TrainingVideo {
+  id: string;
+  title: string;
+  duration: string;
+  module: string;
+  description: string;
+  videoUrl: string;
+  thumbnail?: string;
+  tags: string[];
+  isCompleted?: boolean;
+  downloadUrl?: string;
+}
 
 
 export type SubscriptionStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'expired';

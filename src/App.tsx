@@ -29,6 +29,7 @@ import { AIAgentsManager } from './components/AIAgentsManager';
 import { FunnelCanvasBuilder } from './components/FunnelCanvasBuilder';
 import { SuperAdminHotmartManager } from './components/SuperAdminHotmartManager';
 import { PublicSalesWebsite } from './components/PublicSalesWebsite';
+import { AffiliatePortal } from './components/AffiliatePortal';
 import {
   fetchCompanies,
   fetchUsers,
@@ -363,7 +364,9 @@ export default function App() {
     loadData(company.id);
 
     // Adjust active tab based on user role
-    if (user.role === 'attendant') {
+    if (user.role === 'affiliate') {
+      setActiveTab('affiliate_clients');
+    } else if (user.role === 'attendant') {
       setActiveTab('chat');
     } else {
       setActiveTab('dashboard');
@@ -939,6 +942,22 @@ export default function App() {
             {activeTab === 'saas_admin' && (
               <SuperAdminHotmartManager
                 currentUser={currentUser}
+              />
+            )}
+
+            {(activeTab === 'affiliate_clients' || 
+              activeTab === 'affiliate_trainings' || 
+              activeTab === 'affiliate_news' || 
+              activeTab === 'affiliate_support') && (
+              <AffiliatePortal
+                currentUser={currentUser}
+                currentCompany={currentCompany}
+                initialTab={
+                  activeTab === 'affiliate_trainings' ? 'trainings' :
+                  activeTab === 'affiliate_news' ? 'news' :
+                  activeTab === 'affiliate_support' ? 'support' : 'clients'
+                }
+                onNavigateToTab={(tab) => setActiveTab(tab as NavTabId)}
               />
             )}
           </div>

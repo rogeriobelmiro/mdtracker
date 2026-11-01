@@ -40,7 +40,7 @@ import {
   ChevronRight,
   Award
 } from 'lucide-react';
-import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate } from '../types';
+import { Company, User, HotmartConfig, HotmartEvent, HotmartPlanOption, SetupTrainingConfig, AffiliatePlanConfig, Affiliate, ProductRelease } from '../types';
 import { 
   fetchAdminCompanies, 
   updateCompanySubscription, 
@@ -51,7 +51,11 @@ import {
   createAffiliate,
   updateAffiliate,
   deleteAffiliate,
-  updateCompanyAffiliate
+  updateCompanyAffiliate,
+  fetchProductReleases,
+  createProductRelease,
+  updateProductRelease,
+  deleteProductRelease
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 import { BrazilAffiliatesMap } from './BrazilAffiliatesMap';
@@ -204,11 +208,28 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
   const { alert, confirm, success } = useDialog();
   const isSuperAdmin = currentUser?.email?.toLowerCase().trim() === 'rogerio@mudadigital.com.br';
 
-  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'hotmart_config' | 'affiliates' | 'events_log'>('companies');
+  const [activeSubTab, setActiveSubTab] = useState<'companies' | 'hotmart_config' | 'affiliates' | 'product_releases' | 'events_log'>('companies');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Product Releases State
+  const [releases, setReleases] = useState<ProductRelease[]>([]);
+  const [loadingReleases, setLoadingReleases] = useState(false);
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
+  const [editingReleaseId, setEditingReleaseId] = useState<string | null>(null);
+  const [releaseFormData, setReleaseFormData] = useState<Partial<ProductRelease>>({
+    title: '',
+    version: 'v2.5',
+    status: 'in_progress',
+    category: 'Geral',
+    releaseDate: '',
+    description: '',
+    highlight: false,
+    active: true
+  });
+  const [savingRelease, setSavingRelease] = useState(false);
 
   // Hotmart Config State
   const [hotmartConfig, setHotmartConfig] = useState<HotmartConfig>({
@@ -312,11 +333,85 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
     }
   };
 
+  // Load Product Releases
+  const loadReleasesData = async () => {
+    if (!isSuperAdmin) return;
+    setLoadingReleases(true);
+    try {
+      const data = await fetchProductReleases();
+      setReleases(data);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setLoadingReleases(false);
+    }
+  };
+
+  const handleOpenCreateReleaseModal = () => {
+    setEditingReleaseId(null);
+    setReleaseFormData({
+      title: '',
+      version: 'v2.5',
+      status: 'in_progress',
+      category: 'Geral',
+      releaseDate: '',
+      description: '',
+      highlight: false,
+      active: true
+    });
+    setIsReleaseModalOpen(true);
+  };
+
+  const handleOpenEditReleaseModal = (rel: ProductRelease) => {
+    setEditingReleaseId(rel.id);
+    setReleaseFormData({ ...rel });
+    setIsReleaseModalOpen(true);
+  };
+
+  const handleSaveRelease = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!releaseFormData.title?.trim() || !releaseFormData.description?.trim()) {
+      await alert('Por favor, informe o título e a descrição da novidade.');
+      return;
+    }
+
+    setSavingRelease(true);
+    try {
+      if (editingReleaseId) {
+        await updateProductRelease(currentUser.email, editingReleaseId, releaseFormData);
+        await success('Novidade atualizada com sucesso!');
+      } else {
+        await createProductRelease(currentUser.email, releaseFormData);
+        await success('Novidade cadastrada com sucesso! Já está visível para os afiliados.');
+      }
+      setIsReleaseModalOpen(false);
+      loadReleasesData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao salvar novidade');
+    } finally {
+      setSavingRelease(false);
+    }
+  };
+
+  const handleDeleteReleaseAction = async (rel: ProductRelease) => {
+    const ok = await confirm(`Tem certeza que deseja excluir a novidade "${rel.title}"?`);
+    if (!ok) return;
+
+    try {
+      await deleteProductRelease(currentUser.email, rel.id);
+      await success('Novidade excluída com sucesso.');
+      loadReleasesData();
+    } catch (err: any) {
+      await alert(err.message || 'Erro ao excluir novidade');
+    }
+  };
+
   useEffect(() => {
     if (isSuperAdmin) {
       loadCompaniesData();
       loadHotmartConfig();
       loadAffiliatesData();
+      loadReleasesData();
       if (activeSubTab === 'events_log') {
         loadEventsData();
       }
@@ -778,6 +873,19 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
             <Users className="w-4 h-4 text-cyan-400" />
             <span>Afiliados & Representantes Brasil ({totalAffiliates})</span>
             <span className="px-1.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 rounded-full font-bold">Novo</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('product_releases')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition shrink-0 ${
+              activeSubTab === 'product_releases'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>Novidades & Roadmap ({releases.length})</span>
+            <span className="px-1.5 py-0.5 text-[10px] bg-purple-500/20 text-purple-300 rounded-full font-bold">Portal Afiliados</span>
           </button>
 
           <button
@@ -1996,8 +2104,124 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: CRIAR / EDITAR AFILIADO */}
+      {/* TAB 4: NOVIDADES & ROADMAP (ALIMENTADO PELO SUPER ADMIN) */}
       {/* ========================================================= */}
+      {activeSubTab === 'product_releases' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <span>Gestão de Novidades & Roadmap do Sistema</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Alimente aqui os lançamentos e novidades que aparecerão automaticamente no portal de todos os afiliados e representantes.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadReleasesData}
+                disabled={loadingReleases}
+                className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingReleases ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenCreateReleaseModal}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nova Novidade / Lançamento</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                    <th className="py-3 px-4">Versão</th>
+                    <th className="py-3 px-4">Título da Novidade</th>
+                    <th className="py-3 px-4">Categoria</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Data / Previsão</th>
+                    <th className="py-3 px-4 text-center">Destaque</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {releases.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-slate-400">
+                        Nenhuma novidade cadastrada ainda. Clique no botão acima para adicionar.
+                      </td>
+                    </tr>
+                  ) : (
+                    releases.map((rel) => (
+                      <tr key={rel.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3 px-4 font-mono font-bold text-blue-600">
+                          {rel.version || '-'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{rel.title}</div>
+                          <div className="text-[11px] text-slate-500 line-clamp-1">{rel.description}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                            {rel.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            rel.status === 'released' ? 'bg-emerald-100 text-emerald-800' :
+                            rel.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {rel.status === 'released' ? 'Lançado' :
+                             rel.status === 'in_progress' ? 'Em Progresso' : 'Planejado'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 text-[11px]">
+                          {rel.releaseDate || '-'}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {rel.highlight ? (
+                            <span className="text-amber-500 font-bold" title="Destaque ativo">⭐ Sim</span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditReleaseModal(rel)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                              title="Editar Novidade"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReleaseAction(rel)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition"
+                              title="Excluir Novidade"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {isAffiliateModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
@@ -2709,6 +2933,157 @@ export const SuperAdminHotmartManager: React.FC<SuperAdminHotmartManagerProps> =
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CRIAR / EDITAR NOVIDADE (ALIMENTA O PORTAL DOS AFILIADOS) */}
+      {/* ========================================================= */}
+      {isReleaseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-150">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  <span>{editingReleaseId ? 'Editar Novidade / Lançamento' : 'Cadastrar Nova Novidade'}</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Essa informação será exibida em tempo real no feed de novidades dos representantes.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsReleaseModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRelease} className="space-y-4">
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Título da Novidade *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={releaseFormData.title || ''}
+                  onChange={(e) => setReleaseFormData({ ...releaseFormData, title: e.target.value })}
+                  placeholder="Ex: Integração nativa com IA Gemini 2.0 no WhatsApp"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Versão
+                  </label>
+                  <input
+                    type="text"
+                    value={releaseFormData.version || ''}
+                    onChange={(e) => setReleaseFormData({ ...releaseFormData, version: e.target.value })}
+                    placeholder="Ex: v2.5"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Categoria *
+                  </label>
+                  <select
+                    value={releaseFormData.category || 'Geral'}
+                    onChange={(e) => setReleaseFormData({ ...releaseFormData, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
+                  >
+                    <option value="Meta CAPI">Meta CAPI</option>
+                    <option value="WhatsApp API">WhatsApp API</option>
+                    <option value="Inteligência Artificial">Inteligência Artificial</option>
+                    <option value="CRM & Funis">CRM & Funis</option>
+                    <option value="Telefonia & VoIP">Telefonia & VoIP</option>
+                    <option value="Geral">Geral</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Status *
+                  </label>
+                  <select
+                    value={releaseFormData.status || 'in_progress'}
+                    onChange={(e) => setReleaseFormData({ ...releaseFormData, status: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
+                  >
+                    <option value="released">🚀 Lançado</option>
+                    <option value="in_progress">⚡ Em Progresso</option>
+                    <option value="planned">💡 Planejado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Data Prevista / Lançamento
+                </label>
+                <input
+                  type="text"
+                  value={releaseFormData.releaseDate || ''}
+                  onChange={(e) => setReleaseFormData({ ...releaseFormData, releaseDate: e.target.value })}
+                  placeholder="Ex: Dezembro 2026 ou 1º Trimestre 2027"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Descrição dos Benefícios *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={releaseFormData.description || ''}
+                  onChange={(e) => setReleaseFormData({ ...releaseFormData, description: e.target.value })}
+                  placeholder="Explique os benefícios que essa nova função traz para as empresas clientes..."
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center gap-4 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={releaseFormData.highlight || false}
+                    onChange={(e) => setReleaseFormData({ ...releaseFormData, highlight: e.target.checked })}
+                    className="rounded border-slate-300 text-purple-600 focus:ring-purple-500 w-4 h-4"
+                  />
+                  <span>Destacar como Novidade Principal (⭐)</span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsReleaseModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRelease}
+                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingRelease ? 'Salvando...' : 'Salvar e Publicar Novidade'}</span>
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}
