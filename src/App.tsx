@@ -286,13 +286,32 @@ export default function App() {
   const companyLeads = useMemo(() => {
     if (!currentCompany) return [];
     let filtered = leads.filter(l => {
-      if (l.companyId) return l.companyId === currentCompany.id;
+      if (l.companyId) {
+        if (l.companyId === currentCompany.id) return true;
+        if (currentCompany.id === 'comp-1788784548541' && l.companyId === 'comp-fachinettiabdalla') return true;
+        if (currentCompany.id === 'comp-fachinettiabdalla' && l.companyId === 'comp-1788784548541') return true;
+        return false;
+      }
       
       const link = links.find(lnk => lnk.id === l.linkId);
-      if (link && link.companyId) return link.companyId === currentCompany.id;
+      if (link && link.companyId) {
+        if (link.companyId === currentCompany.id) return true;
+        if (currentCompany.id === 'comp-1788784548541' && link.companyId === 'comp-fachinettiabdalla') return true;
+        if (currentCompany.id === 'comp-fachinettiabdalla' && link.companyId === 'comp-1788784548541') return true;
+      }
       
       return false;
     });
+
+    // Exclude mock leads from other companies (e.g. TechSolutions Beta Client) unless in demo companies
+    if (currentCompany.id !== 'comp-alfa' && currentCompany.id !== 'comp-beta') {
+      filtered = filtered.filter(l => {
+        const nameLower = (l.name || '').toLowerCase();
+        if (nameLower.includes('techsolutions') || nameLower.includes('beta client')) return false;
+        if (l.id?.includes('lead-beta')) return false;
+        return true;
+      });
+    }
 
     if (startDate && endDate) {
       filtered = filtered.filter(l => {

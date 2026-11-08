@@ -96,10 +96,7 @@ let inMemoryLinks: CampaignLink[] = [
 ];
 
 let inMemoryLeads: Lead[] = [
-    ...initialLeads.map(l => ({ ...l, companyId: l.companyId || 'comp-alfa' })),
-    ...initialLeads
-        .filter(l => !l.companyId || l.companyId === 'comp-alfa')
-        .map(l => ({ ...l, id: `${l.id}-muda`, companyId: 'comp-1786498560971' }))
+    ...initialLeads.map(l => ({ ...l, companyId: l.companyId || 'comp-alfa' }))
 ];
 
 let inMemorySettings: Record<string, any> = {
@@ -13447,16 +13444,23 @@ app.delete('/api/links/:id', async (req: Request, res: Response) => {
 // Leads API
 app.get('/api/leads', async (req: Request, res: Response) => {
     const { companyId } = req.query;
-    const resolvedCompanyId = companyId ? await resolveRealCompanyId(String(companyId)) : '';
-    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
-    if (resolvedCompanyId) {
-        query = query.eq('company_id', resolvedCompanyId);
+    if (!companyId) {
+        // Multi-tenant isolation: do not expose all leads if companyId is missing
+        return res.json([]);
     }
+    const resolvedCompanyId = await resolveRealCompanyId(String(companyId));
+    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
+    
+    // Support aliases (e.g. comp-1788784548541 and comp-fachinettiabdalla)
+    if (resolvedCompanyId === 'comp-1788784548541' || companyId === 'comp-fachinettiabdalla') {
+        query = query.in('company_id', ['comp-1788784548541', 'comp-fachinettiabdalla']);
+    } else {
+        query = query.eq('company_id', resolvedCompanyId || String(companyId));
+    }
+    
     const { data, error } = await query;
     if (error || !data) {
-        const fallbackLeads = companyId
-            ? inMemoryLeads.filter(l => l.companyId === String(companyId) || l.companyId === resolvedCompanyId)
-            : inMemoryLeads;
+        const fallbackLeads = inMemoryLeads.filter(l => l.companyId === String(companyId) || l.companyId === resolvedCompanyId);
         return res.json(fallbackLeads);
     }
     res.json(data.map(mapLeadFromDB));

@@ -254,6 +254,33 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [testRunning, setTestRunning] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
+  // Leads estritamente filtrados para a empresa atual no simulador de fluxo
+  const availableTestLeads = useMemo(() => {
+    const targetCompId = testModalWorkflow?.companyId || currentCompany?.id;
+    return (leads || []).filter(l => {
+      // 1. Isolamento multi-tenant rigoroso por empresa
+      if (targetCompId && l.companyId) {
+        const matchesComp = l.companyId === targetCompId ||
+          (targetCompId === 'comp-1788784548541' && l.companyId === 'comp-fachinettiabdalla') ||
+          (targetCompId === 'comp-fachinettiabdalla' && l.companyId === 'comp-1788784548541');
+        if (!matchesComp) return false;
+      }
+      
+      // 2. Não exibir leads de demo ou de outras empresas (ex: TechSolutions Beta Client)
+      const nameLower = (l.name || '').toLowerCase();
+      if (nameLower.includes('techsolutions') || nameLower.includes('beta client')) {
+        return false;
+      }
+      if (targetCompId !== 'comp-alfa' && targetCompId !== 'comp-beta') {
+        if (l.id?.includes('lead-beta') || l.email?.includes('@empresa.com.br')) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [leads, currentCompany?.id, testModalWorkflow?.companyId]);
+
   // Per-step Email Test State
   const [testEmailInputs, setTestEmailInputs] = useState<Record<string, string>>({});
   const [testEmailLoading, setTestEmailLoading] = useState<Record<string, boolean>>({});
@@ -2371,21 +2398,31 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Selecione um Lead para Teste:
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Selecione um Lead para Teste:
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {availableTestLeads.length} lead{availableTestLeads.length === 1 ? '' : 's'} da empresa
+                  </span>
+                </div>
                 <select
                   value={testSelectedLeadId}
                   onChange={(e) => setTestSelectedLeadId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   <option value="">Lead Simulado de Teste (Padrão)</option>
-                  {leads.map(l => (
+                  {availableTestLeads.map(l => (
                     <option key={l.id} value={l.id}>
-                      {l.name} - {l.phone || 'Sem tel'} ({l.stage})
+                      {l.name} {l.phone ? `• ${l.phone}` : ''} ({l.stage})
                     </option>
                   ))}
                 </select>
+                {availableTestLeads.length === 0 && (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Nenhum lead real cadastrado nesta empresa ainda. A opção &ldquo;Lead Simulado de Teste&rdquo; será usada para testar os disparos e variáveis.
+                  </p>
+                )}
               </div>
 
               {testResult && (
