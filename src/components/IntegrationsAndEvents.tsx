@@ -980,20 +980,37 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                 />
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleTestEvolution}
-                  disabled={evoTestStatus.loading || !formData.evolutionApiUrl || !formData.evolutionApiKey}
-                  className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
-                >
-                  {evoTestStatus.loading ? (
-                    <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
-                  ) : (
-                    <ShieldCheck className="w-4 h-4 text-slate-500" />
-                  )}
-                  Testar Conexão com Evolution
-                </button>
+              <div className="pt-2 space-y-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestEvolution}
+                    disabled={evoTestStatus.loading || !formData.evolutionApiUrl || !formData.evolutionApiKey}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 border border-slate-300 shadow-xs"
+                  >
+                    {evoTestStatus.loading ? (
+                      <RefreshCw className="w-4 h-4 text-slate-500 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    )}
+                    Testar Conexão com Evolution
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2 px-5 rounded text-xs transition flex items-center justify-center gap-2 shadow-xs whitespace-nowrap cursor-pointer"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" /> Salvar Evolution
+                      </>
+                    )}
+                  </button>
+                </div>
                 {evoTestStatus.message && (
                   <div className={`mt-2 p-2 rounded text-xs font-semibold ${
                     evoTestStatus.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
@@ -1051,19 +1068,56 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                   />
                 </label>
               </div>
+
+              {/* Botão Salvar Google Ads */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-5 rounded text-xs transition flex items-center gap-2 shadow-xs whitespace-nowrap cursor-pointer"
+                >
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" /> Salvar Google Ads
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Card 3: SMTP Email Marketing Server */}
           <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 shadow-xs">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-              <div className="w-9 h-9 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                <Mail className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Disparo de E-mail Marketing (SMTP)</h3>
+                  <p className="text-[11px] text-slate-500">Envio automático para Landing Pages, Pop-ups e Automações.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Disparo de E-mail Marketing (SMTP)</h3>
-                <p className="text-[11px] text-slate-500">Envio automático para Landing Pages, Pop-ups e Automações.</p>
-              </div>
+
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-1.5 px-4 rounded text-xs transition flex items-center gap-1.5 shadow-xs whitespace-nowrap self-start sm:self-auto cursor-pointer"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3.5 h-3.5" /> Salvar SMTP
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -1163,7 +1217,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     type="button"
                     onClick={handleTestSmtp}
                     disabled={smtpTestStatus.loading || !smtpTestEmail}
-                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
                   >
                     {smtpTestStatus.loading ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1180,6 +1234,28 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                     {smtpTestStatus.message}
                   </div>
                 )}
+              </div>
+
+              {/* Botão Salvar Configurações de E-mail */}
+              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-[11px] text-slate-500">
+                  Salve para aplicar o host, usuário e senha SMTP nos disparos automáticos.
+                </p>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-2 px-5 rounded text-xs transition flex items-center justify-center gap-2 shadow-xs whitespace-nowrap cursor-pointer"
+                >
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" /> Salvar Configurações de E-mail
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -1310,6 +1386,28 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
                       {smsTestStatus.message}
                     </div>
                   )}
+                </div>
+
+                {/* Botão Salvar Configurações de SMS */}
+                <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <p className="text-[11px] text-slate-500">
+                    Salve para aplicar as credenciais do provedor de SMS em suas automações.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2 px-5 rounded text-xs transition flex items-center justify-center gap-2 shadow-xs whitespace-nowrap cursor-pointer"
+                  >
+                    {isSaving ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" /> Salvar Configurações de SMS
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
