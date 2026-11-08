@@ -33,3 +33,4 @@ VALUES (
 ON CONFLICT (id) DO UPDATE 
 SET descricao = EXCLUDED.descricao, 
     executado_em = NOW();
+

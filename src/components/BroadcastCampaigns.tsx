@@ -79,11 +79,95 @@ interface BroadcastCampaignsProps {
   onNavigateToTab?: (tab: NavTabId) => void;
 }
 
-// 4 Pre-built Email Templates (RD Station style)
+// Templates de Email com Frameworks de Copywriting (Ganho, Lógica, Perda) e Modelos Prontos
 const EMAIL_TEMPLATES = [
   {
+    id: 'tpl-ganho',
+    name: '🟢 Ganho (Benefícios & Resultados)',
+    category: 'Framework Ganho / Benefício',
+    subject: '🚀 {{nome}}, veja o que você tem a ganhar com a {{empresa}}',
+    preheader: 'Acelere o crescimento do seu negócio com resultados previsíveis',
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <span style="background: #ecfdf5; color: #047857; font-weight: bold; font-size: 12px; padding: 6px 14px; border-radius: 9999px; text-transform: uppercase;">Benefício & Ganho</span>
+  </div>
+  <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 12px;">Olá, {{nome}}! Veja o que você tem a ganhar com a {{empresa}} 🚀</h2>
+  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">Imagine alcançar resultados previsíveis e acelerar o crescimento do seu negócio todos os dias, sem complicações operacionais.</p>
+  <div style="background: #f8fafc; border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+    <p style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 700;">Com a gente, você conquista:</p>
+    <ul style="margin: 8px 0 0 16px; padding: 0; color: #475569; font-size: 14px; line-height: 1.7;">
+      <li>Mais eficiência e tempo livre para focar nas suas prioridades</li>
+      <li>Retorno rápido sobre o investimento com processos validados</li>
+      <li>Acompanhamento dedicado e suporte prioritário para sua equipe</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin-top: 28px;">
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #10b981; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(16,185,129,0.25);">Quero Acessar e Começar Hoje &rarr;</a>
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 36px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+    {{empresa}} • Todos os direitos reservados.
+  </p>
+</div>`
+  },
+  {
+    id: 'tpl-logica',
+    name: '🔵 Lógica (Razão & Provas)',
+    category: 'Framework Lógica / Provas',
+    subject: '💡 Os números e fatos que comprovam esta decisão, {{nome}}',
+    preheader: 'Veja os dados, a metodologia e os casos de sucesso validados',
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <span style="background: #eff6ff; color: #1d4ed8; font-weight: bold; font-size: 12px; padding: 6px 14px; border-radius: 9999px; text-transform: uppercase;">Decisão Racional & Fatos</span>
+  </div>
+  <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 12px;">Olá, {{nome}}. Vamos falar sobre números reais? 💡</h2>
+  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">Tomar decisões com base em dados e fatos concretos é o que separa empresas comuns daquelas que realmente crescem com solidez e segurança.</p>
+  <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+    <p style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 700;">Por que a {{empresa}} é a escolha mais lógica:</p>
+    <ul style="margin: 8px 0 0 16px; padding: 0; color: #475569; font-size: 14px; line-height: 1.7;">
+      <li><strong>98%</strong> dos clientes atingem o ponto de equilíbrio nas primeiras semanas</li>
+      <li><strong>0%</strong> complicação: implementação rápida sem depender de programadores</li>
+      <li>Garantia integral de satisfação e segurança de ponta a ponta</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin-top: 28px;">
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">Conferir Demonstração e Dados &rarr;</a>
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 36px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+    {{empresa}} • Dados transparentes e verificados.
+  </p>
+</div>`
+  },
+  {
+    id: 'tpl-perda',
+    name: '🔴 Perda (Urgência & Escassez)',
+    category: 'Framework Perda / Urgência',
+    subject: '⚠️ {{nome}}, quanto custa NÃO tomar essa atitude hoje?',
+    preheader: 'O custo de adiar essa decisão pode ser maior do que você pensa',
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+  <div style="text-align: center; margin-bottom: 20px;">
+    <span style="background: #fef2f2; color: #b91c1c; font-weight: bold; font-size: 12px; padding: 6px 14px; border-radius: 9999px; text-transform: uppercase;">Atenção & Custo de Inação</span>
+  </div>
+  <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 12px;">Quanto custa continuar adiando essa decisão, {{nome}}? ⚠️</h2>
+  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">Todos os dias que você passa sem um processo automatizado e validado, você está perdendo leads qualificados e deixando dinheiro na mesa para a concorrência.</p>
+  <div style="background: #fff1f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+    <p style="margin: 0; color: #991b1b; font-size: 14px; font-weight: 700;">O risco real de não agir agora:</p>
+    <ul style="margin: 8px 0 0 16px; padding: 0; color: #7f1d1d; font-size: 14px; line-height: 1.7;">
+      <li>Clientes prontos para comprar fechando com seus concorrentes</li>
+      <li>Horas preciosas desperdiçadas em processos manuais lentos</li>
+      <li>Perda das condições especiais e bônus deste lote</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin-top: 28px;">
+    <a href="https://trackermd.mudadigital.com.br" style="display: inline-block; background: #dc2626; color: #ffffff; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(220,38,38,0.25);">Evitar Essas Perdas Agora &rarr;</a>
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #94a3b8; margin-top: 36px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+    {{empresa}} • Condição por tempo limitado.
+  </p>
+</div>`
+  },
+  {
     id: 'tpl-welcome',
-    name: 'Boas-Vindas & Apresentação VIP',
+    name: 'Boas-Vindas VIP',
     category: 'Nutrição / Boas-Vindas',
     subject: '🚀 Bem-vindo(a)! Preparamos algo especial para você',
     preheader: 'Acesse agora seu benefício exclusivo de primeiro contato',
@@ -111,7 +195,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: 'tpl-promo',
-    name: 'Promoção Relâmpago com Cupom',
+    name: 'Promoção Relâmpago',
     category: 'Vendas & Urgência',
     subject: '⚡ Cupom VIP Liberado: 15% OFF válido apenas hoje',
     preheader: 'Não perca esta oportunidade de acelerar seus resultados com desconto',
@@ -134,7 +218,7 @@ const EMAIL_TEMPLATES = [
   },
   {
     id: 'tpl-reactivate',
-    name: 'Reativação de Contatos Frios',
+    name: 'Reativação Fria',
     category: 'Reengajamento',
     subject: 'Podemos retomar nossa conversa, {{nome}}?',
     preheader: 'Temos novidades importantes sobre o projeto que conversamos',
@@ -216,6 +300,7 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
   const [emailSenderName, setEmailSenderName] = useState(currentCompany?.name || 'Equipe de Vendas');
   const [emailSenderEmail, setEmailSenderEmail] = useState('contato@empresa.com.br');
   const [emailBodyHtml, setEmailBodyHtml] = useState(EMAIL_TEMPLATES[0].bodyHtml);
+  const [selectedCopyFramework, setSelectedCopyFramework] = useState<string>('tpl-ganho');
   
   // Email editor format mode: 'normal' (Visual / WYSIWYG) vs 'html' (Código fonte)
   const [emailEditorMode, setEmailEditorMode] = useState<'normal' | 'html'>('normal');
@@ -1476,24 +1561,70 @@ export const BroadcastCampaigns: React.FC<BroadcastCampaignsProps> = ({
                       </div>
                     </div>
 
-                    {/* Ready Template Chooser */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Carregar Modelo Pronto</label>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {EMAIL_TEMPLATES.map(tpl => (
+                    {/* Seletor de Template de E-mail: Ganho, Lógica, Perda */}
+                    <div className="bg-gradient-to-r from-indigo-50/70 via-slate-50 to-indigo-50/50 border border-indigo-200/80 rounded-xl p-3 space-y-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-indigo-600" />
+                          <span className="text-xs font-bold text-slate-800">Seletor de Template de E-mail:</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedCopyFramework}
+                            onChange={(e) => setSelectedCopyFramework(e.target.value)}
+                            className="bg-white border border-indigo-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 shadow-2xs cursor-pointer"
+                          >
+                            <option value="tpl-ganho">🟢 Ganho (Benefícios & Resultados)</option>
+                            <option value="tpl-logica">🔵 Lógica (Razão & Provas)</option>
+                            <option value="tpl-perda">🔴 Perda (Urgência & Escassez)</option>
+                          </select>
+
                           <button
-                            key={tpl.id}
                             type="button"
                             onClick={() => {
+                              const tpl = EMAIL_TEMPLATES.find(t => t.id === selectedCopyFramework) || EMAIL_TEMPLATES[0];
                               setEmailSubject(tpl.subject);
                               setEmailPreheader(tpl.preheader);
                               setEmailBodyHtml(tpl.bodyHtml);
                               syncVisualEditorFromHtml(tpl.bodyHtml);
                             }}
-                            className="p-2 border border-slate-200 hover:border-blue-500 rounded-lg text-left text-[11px] bg-slate-50 transition cursor-pointer"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+                            title="Incluir template selecionado no construtor de e-mail"
                           >
-                            <div className="font-bold text-slate-800 truncate">{tpl.name}</div>
-                            <div className="text-[10px] text-slate-500 truncate">{tpl.category}</div>
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Incluir</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Atalhos Rápidos de 1 Clique */}
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-indigo-100">
+                        <span className="text-[10px] text-slate-500 font-medium">Modelos:</span>
+                        {[
+                          { id: 'tpl-ganho', label: 'Ganho', emoji: '🟢', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                          { id: 'tpl-logica', label: 'Lógica', emoji: '🔵', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+                          { id: 'tpl-perda', label: 'Perda', emoji: '🔴', color: 'bg-rose-100 text-rose-800 border-rose-300' }
+                        ].map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCopyFramework(m.id);
+                              const tpl = EMAIL_TEMPLATES.find(t => t.id === m.id);
+                              if (tpl) {
+                                setEmailSubject(tpl.subject);
+                                setEmailPreheader(tpl.preheader);
+                                setEmailBodyHtml(tpl.bodyHtml);
+                                syncVisualEditorFromHtml(tpl.bodyHtml);
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition cursor-pointer flex items-center gap-1 ${
+                              selectedCopyFramework === m.id ? m.color : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span>{m.emoji}</span>
+                            <span>{m.label}</span>
                           </button>
                         ))}
                       </div>

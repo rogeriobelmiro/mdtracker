@@ -64,6 +64,140 @@ import {
 } from '../services/api';
 import { useDialog } from '../contexts/DialogContext';
 
+// Templates de Copywriting para E-mail: Ganho, Lógica e Perda (Framework de Alta Conversão)
+export const EMAIL_COPY_TEMPLATES: Record<'ganho' | 'logica' | 'perda', {
+  label: string;
+  badge: string;
+  badgeColor: string;
+  description: string;
+  subject: string;
+  bodyText: string;
+  bodyHtml: string;
+}> = {
+  ganho: {
+    label: 'Ganho',
+    badge: 'Benefícios & Resultados',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    description: 'Foco no que o lead tem a ganhar, retorno financeiro, tempo livre e transformação positiva.',
+    subject: '🚀 {nome}, veja o que você tem a ganhar com a {empresa}',
+    bodyText: `Olá, {nome}! Tudo bem?
+
+Imagine alcançar resultados previsíveis e acelerar o crescimento do seu negócio todos os dias, sem complicações.
+
+Com a solução da {empresa}, você ganha:
+✅ Mais eficiência e tempo livre para focar no que realmente importa
+✅ Retorno rápido sobre o investimento com processos validados
+✅ Acompanhamento dedicado e suporte prioritário para sua equipe
+✅ Metodologia comprovada por centenas de clientes satisfeitos
+
+Dê esse salto e comece a colher os frutos agora mesmo:
+👉 [Clique aqui para acessar e começar hoje mesmo]
+
+Abraços,
+Equipe {empresa}`,
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+  <span style="background: #ecfdf5; color: #047857; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase;">Benefício & Ganho</span>
+  <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 16px 0 12px;">Olá, {nome}! Veja o que você tem a ganhar com a {empresa} 🚀</h2>
+  <p style="color: #475569; font-size: 14px; line-height: 1.6;">Imagine alcançar resultados previsíveis e acelerar o crescimento do seu negócio todos os dias, sem complicações operacionais.</p>
+  <div style="background: #f8fafc; border-left: 4px solid #10b981; padding: 14px 16px; border-radius: 6px; margin: 18px 0;">
+    <p style="margin: 0 0 8px 0; color: #1e293b; font-size: 13px; font-weight: 700;">Com a gente, você conquista:</p>
+    <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+      <li>Mais eficiência e tempo livre para focar nas suas prioridades</li>
+      <li>Retorno rápido sobre o investimento com processos validados</li>
+      <li>Acompanhamento dedicado e suporte prioritário para sua equipe</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin: 26px 0 16px;">
+    <a href="#" style="background: #10b981; color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; display: inline-block;">Quero Acessar e Começar Hoje &rarr;</a>
+  </div>
+  <p style="color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 14px;">{empresa} • Todos os direitos reservados.</p>
+</div>`
+  },
+  logica: {
+    label: 'Lógica',
+    badge: 'Razão & Fatos',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+    description: 'Foco em dados, metodologia, provas e por que esta é a decisão mais segura e racional.',
+    subject: '💡 Os números e fatos que comprovam esta decisão, {nome}',
+    bodyText: `Olá, {nome},
+
+Tomar decisões com base em dados e fatos concretos é o que separa empresas comuns daquelas que realmente crescem com solidez.
+
+Veja por que a solução da {empresa} é a escolha mais lógica para você:
+📊 98% dos clientes atingem o ponto de equilíbrio já nas primeiras semanas
+⚙️ Implementação rápida, sem necessidade de conhecimentos técnicos avançados
+🔒 Segurança jurídica, proteção de dados e garantia incondicional
+📈 Custo-benefício incomparável em relação a métodos tradicionais
+
+Não precisa confiar apenas na nossa palavra. Veja os detalhes e a demonstração completa:
+👉 [Clique aqui para ver a apresentação detalhada e casos de sucesso]
+
+Qualquer dúvida, basta responder diretamente a este e-mail.
+
+Atenciosamente,
+Equipe {empresa}`,
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+  <span style="background: #eff6ff; color: #1d4ed8; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase;">Razão & Dados</span>
+  <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 16px 0 12px;">Os números e fatos que comprovam esta decisão, {nome} 💡</h2>
+  <p style="color: #475569; font-size: 14px; line-height: 1.6;">Tomar decisões com base em dados concretos é o que separa empresas comuns daquelas que realmente crescem com solidez e segurança.</p>
+  <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 14px 16px; border-radius: 6px; margin: 18px 0;">
+    <p style="margin: 0 0 8px 0; color: #1e293b; font-size: 13px; font-weight: 700;">Fatos comprovados da nossa metodologia:</p>
+    <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+      <li><strong>98% dos clientes</strong> atingem o ponto de equilíbrio já nas primeiras semanas</li>
+      <li>Implementação ágil sem atrito com seus processos atuais</li>
+      <li>Garantia incondicional de satisfação e segurança total</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin: 26px 0 16px;">
+    <a href="#" style="background: #2563eb; color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; display: inline-block;">Ver Demonstração e Detalhes &rarr;</a>
+  </div>
+  <p style="color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 14px;">{empresa} • Todos os direitos reservados.</p>
+</div>`
+  },
+  perda: {
+    label: 'Perda',
+    badge: 'Urgência & Escassez',
+    badgeColor: 'bg-rose-100 text-rose-800 border-rose-300',
+    description: 'Foco no custo de oportunidade, o que o lead está deixando na mesa e risco de adiar.',
+    subject: '⚠️ {nome}, o que você está deixando na mesa hoje? (Aviso importante)',
+    bodyText: `Olá, {nome},
+
+Você já parou para calcular quanto custa para o seu negócio adiar essa decisão por mais um mês?
+
+A cada dia que passa sem uma ferramenta eficiente, você pode estar perdendo:
+❌ Oportunidades diárias de vendas e clientes qualificados
+❌ Dinheiro gasto em retrabalho e processos manuais lentos
+❌ Vantagem competitiva para concorrentes que já se modernizaram
+
+As condições especiais que preparamos na {empresa} estão se encerrando e não temos como segurar os bônus por muito tempo.
+
+Evite o arrependimento de pagar mais caro depois:
+👉 [Clique aqui para garantir sua vaga antes do encerramento]
+
+Esta pode ser a última chamada com essa condição exclusiva.
+
+Um abraço,
+Equipe {empresa}`,
+    bodyHtml: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+  <span style="background: #fff1f2; color: #be123c; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase;">Aviso de Urgência</span>
+  <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 16px 0 12px;">{nome}, o que você está deixando na mesa hoje? ⚠️</h2>
+  <p style="color: #475569; font-size: 14px; line-height: 1.6;">Você já parou para calcular quanto custa para o seu negócio adiar essa decisão por mais um mês?</p>
+  <div style="background: #fff7ed; border-left: 4px solid #f97316; padding: 14px 16px; border-radius: 6px; margin: 18px 0;">
+    <p style="margin: 0 0 8px 0; color: #9a3412; font-size: 13px; font-weight: 700;">O custo real de não agir agora:</p>
+    <ul style="margin: 0; padding-left: 20px; color: #7c2d12; font-size: 13px; line-height: 1.7;">
+      <li>Oportunidades diárias de vendas perdidas para a concorrência</li>
+      <li>Perda de tempo e recursos com tarefas manuais desgastantes</li>
+      <li>Encerramento iminente do lote com condições promocionais</li>
+    </ul>
+  </div>
+  <div style="text-align: center; margin: 26px 0 16px;">
+    <a href="#" style="background: #e11d48; color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; display: inline-block;">Evitar Perdas e Garantir Vaga &rarr;</a>
+  </div>
+  <p style="color: #94a3b8; font-size: 11px; text-align: center; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 14px;">{empresa} • Todos os direitos reservados.</p>
+</div>`
+  }
+};
+
 interface WorkflowsManagerProps {
   currentCompany: Company;
   leads: Lead[];
@@ -107,6 +241,7 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<MarketingWorkflow> | null>(null);
   const [saving, setSaving] = useState(false);
   const [emailStepEditorMode, setEmailStepEditorMode] = useState<Record<string, 'normal' | 'html'>>({});
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<Record<string, 'ganho' | 'logica' | 'perda'>>({});
 
   // Embed & Webhooks Guide Modal
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
@@ -1931,7 +2066,92 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
                         )}
 
                         {step.type === 'send_email' && (
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
+                            {/* Seletor de Template de E-mail: Ganho, Lógica, Perda */}
+                            <div className="bg-gradient-to-r from-indigo-50/70 via-slate-50 to-indigo-50/50 border border-indigo-200/80 rounded-xl p-2.5 space-y-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                                  <span className="text-xs font-bold text-slate-800">Seletor de Template de E-mail:</span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    value={selectedEmailTemplate[step.id] || 'ganho'}
+                                    onChange={(e) => setSelectedEmailTemplate(prev => ({ ...prev, [step.id]: e.target.value as 'ganho' | 'logica' | 'perda' }))}
+                                    className="bg-white border border-indigo-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 shadow-2xs cursor-pointer"
+                                  >
+                                    <option value="ganho">🟢 Ganho (Benefícios & Resultados)</option>
+                                    <option value="logica">🔵 Lógica (Razão & Provas)</option>
+                                    <option value="perda">🔴 Perda (Urgência & Escassez)</option>
+                                  </select>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const key = selectedEmailTemplate[step.id] || 'ganho';
+                                      const tpl = EMAIL_COPY_TEMPLATES[key];
+                                      const isHtml = (emailStepEditorMode[step.id] || 'normal') === 'html';
+                                      handleUpdateStep(step.id, {
+                                        emailSubject: tpl.subject,
+                                        emailBody: isHtml ? tpl.bodyHtml : tpl.bodyText
+                                      });
+                                      setTestEmailFeedback(prev => ({
+                                        ...prev,
+                                        [step.id]: { success: true, message: `✅ Template de "${tpl.label}" (${tpl.badge}) inserido com sucesso!` }
+                                      }));
+                                      setTimeout(() => {
+                                        setTestEmailFeedback(prev => ({ ...prev, [step.id]: undefined as any }));
+                                      }, 3500);
+                                    }}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+                                    title="Incluir modelo de copy no assunto e corpo do e-mail"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Incluir</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Atalhos Rápidos de 1 Clique */}
+                              <div className="flex items-center gap-1.5 pt-1 border-t border-indigo-100">
+                                <span className="text-[10px] text-slate-500 font-medium">Modelos:</span>
+                                {(['ganho', 'logica', 'perda'] as const).map(k => {
+                                  const tpl = EMAIL_COPY_TEMPLATES[k];
+                                  const isSelected = (selectedEmailTemplate[step.id] || 'ganho') === k;
+                                  return (
+                                    <button
+                                      key={k}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEmailTemplate(prev => ({ ...prev, [step.id]: k }));
+                                        const isHtml = (emailStepEditorMode[step.id] || 'normal') === 'html';
+                                        handleUpdateStep(step.id, {
+                                          emailSubject: tpl.subject,
+                                          emailBody: isHtml ? tpl.bodyHtml : tpl.bodyText
+                                        });
+                                        setTestEmailFeedback(prev => ({
+                                          ...prev,
+                                          [step.id]: { success: true, message: `✅ Template de "${tpl.label}" (${tpl.badge}) inserido com sucesso!` }
+                                        }));
+                                        setTimeout(() => {
+                                          setTestEmailFeedback(prev => ({ ...prev, [step.id]: undefined as any }));
+                                        }, 3500);
+                                      }}
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition cursor-pointer flex items-center gap-1 ${
+                                        isSelected 
+                                          ? tpl.badgeColor 
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                      title={tpl.description}
+                                    >
+                                      <span>{k === 'ganho' ? '🟢' : k === 'logica' ? '🔵' : '🔴'}</span>
+                                      <span>{tpl.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                             <div>
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-[10px] font-bold text-slate-500">Assunto do E-mail desta Fase:</span>
