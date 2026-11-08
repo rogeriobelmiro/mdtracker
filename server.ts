@@ -13800,8 +13800,15 @@ app.post('/api/settings', async (req: Request, res: Response) => {
 
     try {
         const dbRecord = mapSettingsToDB(updatedSettings);
-        await supabase.from('settings').upsert(dbRecord);
-    } catch {}
+        const { error } = await supabase.from('settings').upsert(dbRecord);
+        if (error) {
+            console.error(`[POST /api/settings DB Error] (${targetCompanyId}):`, error);
+        } else {
+            console.log(`[POST /api/settings] Configurações da empresa ${targetCompanyId} salvas com sucesso no banco.`);
+        }
+    } catch (err: any) {
+        console.error(`[POST /api/settings Catch Error] (${targetCompanyId}):`, err?.message || err);
+    }
     res.json(updatedSettings);
 });
 

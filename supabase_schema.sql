@@ -120,6 +120,24 @@ CREATE TABLE IF NOT EXISTS settings (
   evolution_instance TEXT,
   evolution_api_url TEXT,
   evolution_api_key TEXT,
+  smtp_host TEXT,
+  smtp_port INTEGER DEFAULT 465,
+  smtp_user TEXT,
+  smtp_pass TEXT,
+  smtp_from_name TEXT,
+  smtp_from_email TEXT,
+  smtp_secure BOOLEAN DEFAULT TRUE,
+  sms_enabled BOOLEAN DEFAULT FALSE,
+  sms_provider TEXT DEFAULT 'z_api',
+  sms_api_key TEXT,
+  sms_api_url TEXT,
+  sms_sender_id TEXT,
+  chatbot_config JSONB,
+  hotmart_hottok TEXT,
+  hotmart_checkout_url TEXT,
+  hotmart_product_id TEXT,
+  trial_days INTEGER DEFAULT 1,
+  superadmin_email TEXT DEFAULT 'rogerio@mudadigital.com.br',
   auto_fire_meta_on_lead BOOLEAN DEFAULT FALSE,
   auto_fire_meta_on_conversion BOOLEAN DEFAULT FALSE,
   auto_fire_google_on_conversion BOOLEAN DEFAULT FALSE,
@@ -130,6 +148,19 @@ CREATE TABLE IF NOT EXISTS settings (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_host TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_port INTEGER DEFAULT 465;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_user TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_pass TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_from_name TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_from_email TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS smtp_secure BOOLEAN DEFAULT TRUE;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS sms_provider TEXT DEFAULT 'z_api';
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS sms_api_key TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS sms_api_url TEXT;
+ALTER TABLE IF EXISTS settings ADD COLUMN IF NOT EXISTS sms_sender_id TEXT;
 
 -- Inserindo Configurações de Exemplo (Settings)
 INSERT INTO settings (

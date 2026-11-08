@@ -89,8 +89,10 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
 
   const { success } = useDialog();
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     
     // Auto-add pending keywords from input fields
     let updatedData = { ...formData };
@@ -400,7 +402,7 @@ export const IntegrationsAndEvents: React.FC<IntegrationsAndEventsProps> = ({
       </div>
 
       {/* Main Settings Form */}
-      <form onSubmit={handleSave} className="space-y-6">
+      <form noValidate onSubmit={handleSave} className="space-y-6">
 
         {/* Conexão WhatsApp Card */}
         <WhatsAppConnectionCard companyId={currentCompany.id} />

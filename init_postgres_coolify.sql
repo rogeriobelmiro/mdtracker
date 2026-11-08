@@ -198,6 +198,11 @@ CREATE TABLE IF NOT EXISTS public.settings (
   smtp_from_name TEXT,
   smtp_from_email TEXT,
   smtp_secure BOOLEAN DEFAULT TRUE,
+  sms_enabled BOOLEAN DEFAULT FALSE,
+  sms_provider TEXT DEFAULT 'z_api',
+  sms_api_key TEXT,
+  sms_api_url TEXT,
+  sms_sender_id TEXT,
   hotmart_hottok TEXT,
   hotmart_checkout_url TEXT,
   hotmart_product_id TEXT,
@@ -205,6 +210,19 @@ CREATE TABLE IF NOT EXISTS public.settings (
   superadmin_email TEXT DEFAULT 'rogerio@mudadigital.com.br',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_host TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_port INTEGER DEFAULT 465;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_user TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_pass TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_from_name TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_from_email TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS smtp_secure BOOLEAN DEFAULT TRUE;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS sms_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS sms_provider TEXT DEFAULT 'z_api';
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS sms_api_key TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS sms_api_url TEXT;
+ALTER TABLE IF EXISTS public.settings ADD COLUMN IF NOT EXISTS sms_sender_id TEXT;
 
 -- 9.1 EVENTOS E WEBHOOKS HOTMART (ASSINATURAS SAAS)
 CREATE TABLE IF NOT EXISTS public.hotmart_events (
