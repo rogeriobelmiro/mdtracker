@@ -1478,7 +1478,8 @@ export async function sendTestPhaseEmail(payload: {
   subject: string;
   body: string;
   phaseName?: string;
-}): Promise<{ success: boolean; messageId?: string; message?: string; error?: string }> {
+  workflowId?: string;
+}): Promise<{ success: boolean; messageId?: string; message?: string; error?: string; workflow?: any }> {
   const res = await fetch('/api/email/test-send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

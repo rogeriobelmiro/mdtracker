@@ -749,13 +749,35 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
         targetEmail: target,
         subject: step.emailSubject || 'Aviso Importante',
         body: step.emailBody || 'Olá {nome}, preparamos esse conteúdo exclusivo para você.',
-        phaseName: step.title || 'Fase de E-mail Marketing'
+        phaseName: step.title || 'Fase de E-mail Marketing',
+        workflowId: editingWorkflow?.id
       });
       if (res.success) {
         setTestEmailFeedback(prev => ({
           ...prev,
-          [step.id]: { success: true, message: `✅ E-mail enviado com sucesso para ${target}!` }
+          [step.id]: { success: true, message: `✅ E-mail enviado com sucesso para ${target}! Execução contabilizada no fluxo.` }
         }));
+        
+        // Atualiza contadores do fluxo localmente e recarrega
+        if (editingWorkflow?.id) {
+          setWorkflows(prev => prev.map(w => {
+            if (w.id === editingWorkflow.id) {
+              return {
+                ...w,
+                enrolledCount: (w.enrolledCount || 0) === 0 ? 1 : w.enrolledCount,
+                executedCount: (w.executedCount || 0) + 1
+              };
+            }
+            return w;
+          }));
+          setEditingWorkflow(prev => prev ? ({
+            ...prev,
+            enrolledCount: (prev.enrolledCount || 0) === 0 ? 1 : prev.enrolledCount,
+            executedCount: (prev.executedCount || 0) + 1
+          }) : prev);
+          fetchWorkflowLogs(currentCompany.id).then(setLogs).catch(() => {});
+          fetchWorkflows(currentCompany.id).then(setWorkflows).catch(() => {});
+        }
       } else {
         setTestEmailFeedback(prev => ({
           ...prev,
@@ -783,7 +805,30 @@ export const WorkflowsManager: React.FC<WorkflowsManagerProps> = ({
         companyId: currentCompany.id
       });
       setTestResult(res);
-      // Reload logs
+      
+      // Atualiza os contadores das métricas do card imediatamente
+      const stepsExecutedCount = res.stepsExecuted?.length || 1;
+      const hasConversion = res.stepsExecuted?.some((s: any) => 
+        s.type === 'change_stage' && (s.message?.includes('Convertido') || s.title?.includes('Convertido'))
+      );
+
+      setWorkflows(prev => prev.map(w => {
+        if (w.id === testModalWorkflow.id) {
+          const nextEnrolled = res.enrolledCount !== undefined ? res.enrolledCount : ((w.enrolledCount || 0) + 1);
+          const nextExecuted = res.executedCount !== undefined ? res.executedCount : ((w.executedCount || 0) + stepsExecutedCount);
+          const nextConversions = res.conversionsCount !== undefined ? res.conversionsCount : (hasConversion ? ((w.conversionsCount || 0) + 1) : (w.conversionsCount || 0));
+          return {
+            ...w,
+            enrolledCount: nextEnrolled,
+            executedCount: nextExecuted,
+            conversionsCount: nextConversions
+          };
+        }
+        return w;
+      }));
+
+      // Reload logs e fluxos do servidor
+      fetchWorkflows(currentCompany.id).then(setWorkflows).catch(() => {});
       const updatedLogs = await fetchWorkflowLogs(currentCompany.id);
       setLogs(updatedLogs);
     } catch (err: any) {

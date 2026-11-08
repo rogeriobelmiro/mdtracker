@@ -6242,6 +6242,12 @@ async function executeSingleStep(
                     await supabase.from('leads').update({ stage: step.targetStage, updated_at: new Date().toISOString() }).eq('id', lead.id);
                 } catch {}
                 detail = `Lead movido automaticamente para o estágio: "${step.targetStage}"`;
+                if ((step.targetStage === 'Convertido' || step.target_stage === 'Convertido') && wf) {
+                    wf.conversionsCount = (wf.conversionsCount || 0) + 1;
+                    try {
+                        await supabase.from('marketing_workflows').update({ conversions_count: wf.conversionsCount }).eq('id', wf.id);
+                    } catch {}
+                }
             }
         } else if (step.type === 'send_email') {
             const subject = formatWorkflowText(step.emailSubject || 'Aviso Importante', lead, companyName, context);
@@ -6787,11 +6793,63 @@ app.post('/api/workflows/:id/test-run', async (req: Request, res: Response) => {
             });
         }
 
+        // Atualização e persistência das métricas no banco de dados e memória
+        const stepsCount = (wf.steps || []).length || 1;
+        const nextEnrolled = Number(wf.enrolledCount || wf.enrolled_count || 0) + 1;
+        const nextExecuted = Number(wf.executedCount || wf.executed_count || 0) + stepsCount;
+        const hasConversion = (wf.steps || []).some(
+            (s: any) => s.type === 'change_stage' && (s.targetStage === 'Convertido' || s.target_stage === 'Convertido')
+        );
+        const nextConversions = hasConversion
+            ? Number(wf.conversionsCount || wf.conversions_count || 0) + 1
+            : Number(wf.conversionsCount || wf.conversions_count || 0);
+
+        try {
+            await supabase.from('marketing_workflows').update({
+                enrolled_count: nextEnrolled,
+                executed_count: nextExecuted,
+                conversions_count: nextConversions
+            }).eq('id', id);
+        } catch {}
+
+        wf.enrolledCount = nextEnrolled;
+        wf.executedCount = nextExecuted;
+        wf.conversionsCount = nextConversions;
+
+        const memWf = inMemoryWorkflows.find(m => m.id === id);
+        if (memWf) {
+            memWf.enrolled_count = nextEnrolled;
+            memWf.executed_count = nextExecuted;
+            memWf.conversions_count = nextConversions;
+        }
+
+        // Gravação do log no histórico de execuções
+        const simLog = {
+            id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+            company_id: companyId || wf.companyId,
+            workflow_id: wf.id,
+            workflow_name: wf.name,
+            lead_id: testLead.id,
+            lead_name: `${testLead.name} (Simulador)`,
+            lead_phone: testLead.phone,
+            action_type: wf.steps?.[0]?.type || 'simulation',
+            status: 'success',
+            detail: `Simulação de fluxo executada com sucesso: ${stepsCount} passos processados.`,
+            executed_at: new Date().toISOString()
+        };
+        inMemoryWorkflowLogs.unshift(simLog);
+        try {
+            await supabase.from('workflow_logs').insert(simLog);
+        } catch {}
+
         res.json({
             success: true,
             workflowName: wf.name,
             lead: testLead,
-            stepsExecuted: executionStepsLog
+            stepsExecuted: executionStepsLog,
+            enrolledCount: nextEnrolled,
+            executedCount: nextExecuted,
+            conversionsCount: nextConversions
         });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13963,7 +14021,7 @@ app.post('/api/settings/test-sms', async (req: Request, res: Response) => {
 // Test Phase Email Dispatch (used in Workflows, Landing Pages, Pop-ups and Surveys)
 app.post('/api/email/test-send', async (req: Request, res: Response) => {
     try {
-        const { companyId, targetEmail, subject, body, phaseName } = req.body;
+        const { companyId, targetEmail, subject, body, phaseName, workflowId } = req.body;
         if (!targetEmail || !targetEmail.includes('@')) {
             return res.status(400).json({ success: false, error: 'Por favor, informe um endereço de e-mail válido para o teste.' });
         }
@@ -13998,10 +14056,52 @@ app.post('/api/email/test-send', async (req: Request, res: Response) => {
         });
 
         if (result.success) {
+            let updatedWf: any = null;
+            if (workflowId) {
+                try {
+                    const { data: wfDb } = await supabase.from('marketing_workflows').select('*').eq('id', workflowId).maybeSingle();
+                    if (wfDb) {
+                        const nextEnrolled = Number(wfDb.enrolled_count || 0) === 0 ? 1 : Number(wfDb.enrolled_count || 0);
+                        const nextExecuted = Number(wfDb.executed_count || 0) + 1;
+                        await supabase.from('marketing_workflows').update({
+                            enrolled_count: nextEnrolled,
+                            executed_count: nextExecuted
+                        }).eq('id', workflowId);
+                        updatedWf = { ...wfDb, enrolled_count: nextEnrolled, executed_count: nextExecuted };
+                    }
+                } catch {}
+
+                const mem = inMemoryWorkflows.find(w => w.id === workflowId);
+                if (mem) {
+                    mem.enrolled_count = Number(mem.enrolled_count || 0) === 0 ? 1 : Number(mem.enrolled_count || 0);
+                    mem.executed_count = Number(mem.executed_count || 0) + 1;
+                    if (!updatedWf) updatedWf = mem;
+                }
+
+                const logItem = {
+                    id: `log-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                    company_id: effectiveCompanyId,
+                    workflow_id: workflowId,
+                    workflow_name: phaseName || 'Automação de E-mail',
+                    lead_id: 'lead-test-simulated',
+                    lead_name: `Disparo Teste (${targetEmail})`,
+                    lead_phone: '(11) 99999-8888',
+                    action_type: 'send_email',
+                    status: 'success',
+                    detail: `E-mail de teste da fase "${phaseName || 'E-mail Marketing'}" disparado com sucesso para ${targetEmail}`,
+                    executed_at: new Date().toISOString()
+                };
+                inMemoryWorkflowLogs.unshift(logItem);
+                try {
+                    await supabase.from('workflow_logs').insert(logItem);
+                } catch {}
+            }
+
             res.json({
                 success: true,
                 messageId: result.messageId,
-                message: `E-mail de teste da fase "${phaseName || 'E-mail Marketing'}" disparado com sucesso para ${targetEmail}!`
+                message: `E-mail de teste da fase "${phaseName || 'E-mail Marketing'}" disparado com sucesso para ${targetEmail}!`,
+                workflow: updatedWf
             });
         } else {
             res.status(400).json({
